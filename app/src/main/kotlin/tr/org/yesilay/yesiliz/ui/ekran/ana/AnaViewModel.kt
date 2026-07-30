@@ -120,6 +120,10 @@ class AnaViewModel @Inject constructor(
         .combine(bildirimDeposu.okunmamisSayisi) { ara, okunmamis ->
             ara.copy(okunmamisBildirim = okunmamis)
         }
+        .combine(tercihler.oturum) { ara, oturum ->
+            // Misafir kullanıcının adı yok; sabit ada düşülüyor.
+            ara.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
+        }
         .combine(
             combine(tercihler.sonAnketTarihi, degerlendirmeGizlendi) { sonAnket, gizli ->
                 !gizli && sonAnket != null &&
@@ -130,7 +134,7 @@ class AnaViewModel @Inject constructor(
             val tamamlananIdler = tamamlananlar.map { it.gorevId }.toSet()
             AnaDurum(
                 selamlama = selamlama(),
-                isim = SABIT_ISIM,
+                isim = ara.isim,
                 serideGun = ara.seriGun,
                 agacEvresi = agacEvresi(ara.seriGun),
                 puan = ara.toplamPuan,
@@ -221,6 +225,7 @@ class AnaViewModel @Inject constructor(
         val seriGun: Int,
         val hedefDk: Int,
         val ebeveynAktifMi: Boolean = false,
+        val isim: String = SABIT_ISIM,
         val ruhHali: RuhHaliDurumu = RuhHaliDurumu(),
         val okunmamisBildirim: Int = 0,
         val degerlendirmeYenilensin: Boolean = false,

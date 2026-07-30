@@ -23,6 +23,9 @@ import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziViewModel
 import tr.org.yesilay.yesiliz.ui.ekran.ebeveyn.EbeveynEkran
 import tr.org.yesilay.yesiliz.ui.ekran.hedef.HedefEkran
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.GirisEkran
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.KayitEkran
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.SifreEkran
 import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategoriEkran
 import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategorizeEtEkran
 import tr.org.yesilay.yesiliz.ui.ekran.istatistik.IstatistikEkran
@@ -92,6 +95,28 @@ fun YesilizGezinme(
             startDestination = baslangicRotasi,
             modifier = Modifier.padding(bosluk),
         ) {
+            // Hesap akışı — uygulama akışının dışında, yalnızca ilk açılışta.
+            composable(Rota.GIRIS) {
+                GirisEkran(
+                    onBasarili = { navController.hesaptanCik(Rota.ONBOARDING) },
+                    onKayit = { navController.navigate(Rota.KAYIT) },
+                    onSifremiUnuttum = { navController.navigate(Rota.SIFRE) },
+                )
+            }
+            composable(Rota.KAYIT) {
+                KayitEkran(
+                    onBasarili = { navController.hesaptanCik(Rota.ONBOARDING) },
+                    onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
+                    onGeri = { navController.popBackStack() },
+                )
+            }
+            composable(Rota.SIFRE) {
+                SifreEkran(
+                    onGeri = { navController.popBackStack() },
+                    onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
+                )
+            }
+
             onboardingAkisi(navController)
 
             composable(Rota.ANA) {
@@ -207,6 +232,19 @@ fun YesilizGezinme(
  * gelince geri yığını şişmesin, geri tuşu uygulamadan çıksın. `saveState`
  * ile her sekme kendi kaydırma konumunu koruyor.
  */
+/**
+ * Hesap akışından çıkış.
+ *
+ * `popUpTo(GIRIS, inclusive)` şart: geri tuşuyla giriş ekranına dönmek,
+ * onboarding'i yarıda bırakıp kimliksiz bir duruma düşürürdü.
+ */
+private fun NavHostController.hesaptanCik(hedef: String) {
+    navigate(hedef) {
+        popUpTo(Rota.GIRIS) { inclusive = true }
+        launchSingleTop = true
+    }
+}
+
 private fun NavHostController.sekmeyeGit(sekme: Sekme) {
     navigate(sekme.rota) {
         popUpTo(graph.startDestinationId) { saveState = true }

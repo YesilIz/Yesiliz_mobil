@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
@@ -35,8 +35,22 @@ class AcilisViewModel @Inject constructor(
     private val saat: Clock,
 ) : ViewModel() {
 
-    val baslangicRotasi: StateFlow<String?> = tercihler.onboardingBitti
-        .map { bitti -> if (bitti) Rota.ANA else Rota.ONBOARDING }
+    /**
+     * Açılış rotası: hesap → onboarding → ana.
+     *
+     * Hesap ekranı yalnızca **ilk açılışta** görünüyor; misafir seçen
+     * kullanıcıya bir daha sorulmuyor (`Oturum.karsilamaGerekliMi`).
+     */
+    val baslangicRotasi: StateFlow<String?> = combine(
+        tercihler.onboardingBitti,
+        tercihler.oturum,
+    ) { onboardingBitti, oturum ->
+        when {
+            oturum.karsilamaGerekliMi -> Rota.GIRIS
+            onboardingBitti -> Rota.ANA
+            else -> Rota.ONBOARDING
+        }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,

@@ -37,6 +37,8 @@ class ProfilViewModel @Inject constructor(
         tercihler.gunlukHedefDk,
         tercihler.bildirimSaatleri,
     ) { paylasim, ligde, molaHatirlatici, hedef, saatler ->
+        // `combine` en fazla beş akış alıyor; oturum ayrı bir halkada
+        // ekleniyor.
         ProfilDurum(
             isim = SABIT_ISIM,
             ligAdi = SABIT_LIG,
@@ -47,6 +49,9 @@ class ProfilViewModel @Inject constructor(
             bildirimSaatleri = saatler,
             demoKullanilabilir = demoVeri.kullanilabilir,
         )
+    }.combine(tercihler.oturum) { durum, oturum ->
+        // Misafir kullanıcının adı yok; sabit ada düşülüyor.
+        durum.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),

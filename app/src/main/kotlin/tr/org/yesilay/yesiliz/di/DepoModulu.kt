@@ -4,7 +4,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import tr.org.yesilay.yesiliz.data.depo.YerelSahteHesapDeposu
 import tr.org.yesilay.yesiliz.data.depo.YerelSahteLigDeposu
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import javax.inject.Singleton
 
@@ -23,4 +25,8 @@ abstract class DepoModulu {
     @Binds
     @Singleton
     abstract fun ligDeposu(yerel: YerelSahteLigDeposu): LigDeposu
+
+    @Binds
+    @Singleton
+    abstract fun hesapDeposu(yerel: YerelSahteHesapDeposu): HesapDeposu
 }

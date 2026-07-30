@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -91,6 +92,19 @@ class Tercihler @Inject constructor(
      * paylaşılan davet geçersizleşir.
      */
     val davetKodu: Flow<String?> = depo.data.map { it[DAVET_KODU] }
+
+    // --- hesap ---
+    // Şifre BURADA YOK ve olmayacak: yerelde saklamak, güvenli olmayan bir
+    // kimlik doğrulamayı güvenliymiş gibi göstermek olur. Sunucu Faz 2'de.
+
+    val oturum: Flow<Oturum> = depo.data.map { p ->
+        Oturum(
+            girisYapildiMi = p[HESAP_GIRIS] ?: false,
+            misafirMi = p[HESAP_MISAFIR] ?: false,
+            ad = p[HESAP_AD] ?: "",
+            eposta = p[HESAP_EPOSTA] ?: "",
+        )
+    }
 
     // --- ebeveyn paneli eşleştirmesi ---
     // MVP'de gerçek `EbeveynBaglantiEntity` yok (CLAUDE.md §6 — Faz 2'ye
@@ -185,6 +199,24 @@ class Tercihler @Inject constructor(
         depo.edit { it[LIGDE_GORUN] = acik }
     }
 
+    suspend fun oturumuKaydet(ad: String, eposta: String, misafir: Boolean) {
+        depo.edit { p ->
+            p[HESAP_GIRIS] = !misafir
+            p[HESAP_MISAFIR] = misafir
+            p[HESAP_AD] = ad
+            p[HESAP_EPOSTA] = eposta
+        }
+    }
+
+    suspend fun oturumuSil() {
+        depo.edit { p ->
+            p.remove(HESAP_GIRIS)
+            p.remove(HESAP_MISAFIR)
+            p.remove(HESAP_AD)
+            p.remove(HESAP_EPOSTA)
+        }
+    }
+
     suspend fun ligeKatildiIsaretle() {
         depo.edit { it[LIGE_KATILDI] = true }
     }
@@ -247,6 +279,10 @@ class Tercihler @Inject constructor(
         val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
         val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
+        val HESAP_GIRIS = booleanPreferencesKey("hesap_giris")
+        val HESAP_MISAFIR = booleanPreferencesKey("hesap_misafir")
+        val HESAP_AD = stringPreferencesKey("hesap_ad")
+        val HESAP_EPOSTA = stringPreferencesKey("hesap_eposta")
         val DAVET_KODU = stringPreferencesKey("davet_kodu")
         val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
         val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
