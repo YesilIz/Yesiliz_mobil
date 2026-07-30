@@ -27,10 +27,10 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 71)
-./gradlew :core-risk:test              # 20 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 44 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 15 · emülatör gerektirir
+# testler  (toplam 120)
+./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
+./gradlew :app:testDebugUnitTest       # 75 · saf JVM
+./gradlew :app:connectedDebugAndroidTest   # 23 · emülatör gerektirir
 
 # UsageStats izni — Ayarlar'dan verilir, adb ile de verilebilir.
 # Verilmezse ilgili emülatör testleri Assume ile ATLANIR (kırmızıya dönmez).
@@ -204,19 +204,25 @@ app/…/yesiliz/
 ├─ ui/
 │  ├─ tema/               Renk · Tipografi · Sekil · Boyut · Tema
 │  ├─ TurkceMetin.kt      buyukHarf() / kucukHarf()
-│  ├─ bilesen/            AgacGorseli · GorevKarti · IlerlemeCubugu · YesilizButon
-│  │  │                   RiskGostergesi · BantRozeti · Kart · Cip · LikertSecici
-│  │  │                   LigSatiri · OdulBasamagi · KullaniciAvatari
-│  │  └─ veri/            CubukGrafik · CizgiGrafik · DaireselGosterge · TrendCizgisi
+│  ├─ bilesen/            AyarSatiri · BosDurum · Cip · IlerlemeCubugu · Kart
+│  │  │                   KodKutusu · KullaniciAvatari · LikertSecici · OnayKutusu
+│  │  │                   SallananYapraklar · UstBaslik · YaprakZemini · YesilizButon
+│  │  └─ veri/            CubukGrafik · DaireselGosterge · YiginBar
 │  ├─ gezinme/            NavHost, rotalar
-│  └─ ekran/              onboarding ana istatistik gorev spor nefes
-│                         riskdetay lig odul ebeveyn yedam profil
-├─ nudge/                 Tetikleyici.kt · NudgeOverlayService.kt
+│  └─ ekran/              onboarding ana istatistik nefes riskdetay
+│                         lig odul ebeveyn profil
+│                         (henüz yok: spor/aktif-yürüyüş, yedam — §11)
+├─ nudge/                 Tetikleyici.kt · NudgeSabitleri.kt · NudgeDurum.kt ·
+│                         NudgeOverlay.kt · NudgeOverlayService.kt · NudgeIzni.kt
 ├─ arkaplan/              WorkManager worker'ları
 └─ widget/                Glance
 ```
 
-Her ekran klasörü **üç dosya**: `<Ad>Ekran.kt` · `<Ad>ViewModel.kt` · `<Ad>Durum.kt`
+Her ekran klasörü **üç dosya**: `<Ad>Ekran.kt` · `<Ad>ViewModel.kt` · `<Ad>Durum.kt`.
+İstisna: `nefes/` dört dosya — `NefesFazHesapla.kt` saf faz/tempo hesabını
+ViewModel'den ayırıp emülatörsüz test edilebilir kılıyor (`OturumCikar`/
+`Tetikleyici` ile aynı desen). Ekran mantığı gerçekten saf bir alt-hesaba
+ayrıştırılabiliyorsa bu istisna kabul edilir; kural genel olarak geçerli.
 
 > Paket adları Türkçe olabilir ama Kotlin anahtar kelimesi olamaz —
 > `is in as for object val var when` yasak. Bu yüzden "iş" değil `arkaplan`.
@@ -388,7 +394,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | Alan | İçerik | Doğrulama |
 |---|---|---|
 | Araç zinciri | JDK 17 · Android Studio · SDK 37 · AVD | emülatör açılıyor |
-| `core-risk/` | 6 dosya — risk motoru tam | **20 test**, referansla birebir |
+| `core-risk/` | 6 dosya — risk motoru tam | **22 test**, referansla birebir |
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
@@ -399,7 +405,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | Tasarım | **Dışarıdan 31 ekranlık teslim** (29 Tem + 30 Tem ek 2026) | `docs/tasarim-referans.md` · palet DESIGN.md §1 ile birebir |
 | `app/ui/bilesen/` | Kart · Cip · YesilizButon · IkonRozeti · AyarSatiri · LikertSecici · KullaniciAvatari · UstBaslik · IlerlemeCubugu + `veri/` CubukGrafik · DaireselGosterge · YiginBar | emülatörde görüldü |
 | `app/ui/gezinme/` | NavHost · 4 sekmeli alt bar · onboarding alt grafiği · çift gezinme koruması | akış uçtan uca yürüdü |
-| `app/ui/ekran/` | onboarding (7) · ana · istatistik · lig · profil · ödül (+3 alt sayfa) | emülatörde ekran ekran doğrulandı |
+| `app/ui/ekran/` | onboarding (7) · ana (+ görev detayı alt sayfası) · istatistik · riskdetay · lig · profil (+6 alt sayfa) · ödül (+3 alt sayfa) · ebeveyn · nefes | emülatörde ekran ekran doğrulandı |
 | `app/di/` | Hilt — `VeriModulu`, `@HiltAndroidApp`, `HiltWorkerFactory` | uygulama açılıyor |
 | `app/data/tercih/` | DataStore: hedef · onboarding bayrağı · kurulum tarihi · gizlilik | yeniden başlatmada korunuyor |
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
@@ -411,7 +417,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
 | `app/data/depo/GecmisVeriDeposu` | Kurulumda geçmiş veri — `queryAndAggregateUsageStats` ile izin onaylandıktan sonra bir kez `Tercihler.gecmisGunSayisi`'ni gerçek sayıyla günceller | **4 birim testi**; gerçek sayı yalnızca gerçek cihazda doğrulanabilir (§10) |
 
-**Toplam 118 test** (95 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
+**Toplam 120 test** (97 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 
@@ -438,11 +444,14 @@ kullanıcı adı ve lig adı (hesap sistemi Faz 2).
 | ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında |
 | — | *Faz 2* | FastAPI backend · gerçek lig · uzman paneli |
 
-**Tasarımı hâlâ eksik 4 ekran** (`docs/tasarim-referans.md §4`) — tasarımcıya
-sıradaki iş listesi: Görev detayı, Aktif yürüyüş, YEDAM onayı (rıza/köprü),
-Widget. Hepsi şu an yalnızca eski Stitch yerleşiminde (tonlar/tipografi
-güncel değil). Mola hatırlatıcı (nudge) bu listeden çıktı — `stitch/
-mola_hat_rlat_c` yerleşimi + gerçek tokenlarla uygulandı (madde 1, BİTTİ).
+**Tasarımı hâlâ eksik 3 ekran** (`docs/tasarim-referans.md §4`) — tasarımcıya
+sıradaki iş listesi: Aktif yürüyüş, YEDAM onayı (rıza/köprü), Widget. Hepsi
+şu an yalnızca eski Stitch yerleşiminde (tonlar/tipografi güncel değil).
+Mola hatırlatıcı (nudge) ve Görev detayı bu listeden çıktı — ikisi de
+`stitch_markdown_design_system/` yerleşimi + gerçek tokenlarla uygulandı
+(madde 1 ve 3, BİTTİ) — bu, §8 adım 3'teki kabul edilmiş yöntem, ayrıca
+resmi tasarım beklenmiyor. `docs/tasarim-referans.md §4` tablosu da
+güncellendi.
 
 ### Kapanan açık iş — Stitch tasarım sistemi
 
@@ -477,6 +486,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K8 | Kategori kaynağı | LMU veri seti + referans tablo + Türkiye | LMU (doi:10.5334/jopd.59) 3.091 uygulama veriyor ama Almanya örneklemi; referans tablo Snapchat/TikTok gibi kritik çakışmaları düzeltiyor |
 | K9 | `sistem` kategorisi | Risk hesabına girmez | LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
 | K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** | Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
+| K11 | Görev detayı ayrı `gorev/` ekran klasörü **değil** | Alt sayfa içeriği `GorevDetayi` — `AnaEkran.kt` içinde private composable, `ProfilEkran`/`OdulEkran`'ın kendi alt sayfaları gibi | §6'daki mimari şema `gorev`'i ayrı bir `ui/ekran/` klasörü gibi listeliyordu ama bu hiç uygulanmadı — `ProfilEkran`/`OdulEkran` emsali (alt sayfa = yerel `remember` state + private composable, ayrı ViewModel yok) daha güçlü ve daha yeni. Şema buna göre düzeltildi (§6). Bir daha `gorev/` klasörü **açılmasın** |
 
 ### Açık
 

@@ -322,14 +322,17 @@ gölgeleri ve tipografisi taşınmaz.
 
 | Ekran | Stitch klasörü | Uyarlama notu |
 |---|---|---|
-| Mola hatırlatıcı (nudge) | `mola_hat_rlat_c/` | Ortada beyaz kart, 20dp yarıçap; ikon rozeti `YesilNane`. Zemin karartma yok, blur var. 3–5 sn |
-| Görev detayı | `g_rev_detay/` | Alt sayfa; ikon rozeti + puan çipi sağ üstte, meta çipleri (`15 dk` · `Doğrulanmış` · `Bugün 1 kez`) |
 | Aktif yürüyüş | `aktif_y_r_y_d_zeltilmi/` | Sayaç + ilerleme; ana sayfanın gradyan diliyle |
 | YEDAM onayı *(rıza/köprü akışı — 27 "YEDAM hakkında" ile karıştırılmaz)* | `yedam_onay/` | `yedam_iki_figur.png`; paylaşılacak bilgiler listesi aynen; "Bu onayı istedi" alt notu kalır |
 | Widget | `widget_tasar_m/` | Glance ile yeniden yazılır; sadece hizalama referansı |
 
 > **Risk detayı artık teslimde** (30 Tem ek teslimi, ekran **30**) — bu
 > tablodan çıkarıldı, `stitch/risk_detay/` yerleşimi kullanılmıyor.
+
+> **Mola hatırlatıcı (nudge) ve Görev detayı uygulandı** (30 Tem) — ikisi
+> de bu tablodan çıkarıldı. `stitch/mola_hat_rlat_c/` ve `stitch/g_rev_detay/`
+> yerleşimleri gerçek tokenlarla uygulanıp `nudge/` ve `AnaEkran`'ın görev
+> detayı alt sayfasına dönüştü; resmi tasarım teslimi beklenmiyor.
 
 ---
 
