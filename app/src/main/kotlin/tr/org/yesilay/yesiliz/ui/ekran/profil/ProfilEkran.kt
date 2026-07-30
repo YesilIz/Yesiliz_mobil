@@ -2,17 +2,20 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -33,6 +36,8 @@ import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.AyarSatiri
@@ -79,6 +85,7 @@ import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
+import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
@@ -98,6 +105,10 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 @Composable
 fun ProfilEkran(
     onEbeveyn: () -> Unit,
+    onGunlukHedef: () -> Unit,
+    onKategoriler: () -> Unit,
+    onAnketYenile: () -> Unit,
+    onSaglikIzni: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
@@ -110,6 +121,8 @@ fun ProfilEkran(
     var hesabiSilAcik by remember { mutableStateOf(false) }
     var yardimAcik by remember { mutableStateOf(false) }
     var hakkindaAcik by remember { mutableStateOf(false) }
+    var yedamAcik by remember { mutableStateOf(false) }
+    var bildirimSaatleriAcik by remember { mutableStateOf(false) }
     val sayfaDurumu = rememberModalBottomSheetState()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -143,11 +156,21 @@ fun ProfilEkran(
             BolumBasligi("Hedeflerim")
             Spacer(modifier = Modifier.height(Bosluk.S))
             Kart(icBosluk = Olcu.Aralik) {
-                AyarSatiri(Icons.Filled.TrackChanges, "Günlük hedef") {}
+                AyarSatiri(Icons.Filled.TrackChanges, "Günlük hedef", onTikla = onGunlukHedef)
                 KartAyraci()
-                AyarSatiri(Icons.Filled.Apps, "Uygulama kategorileri") {}
+                AyarSatiri(Icons.Filled.Apps, "Uygulama kategorileri", onTikla = onKategoriler)
                 KartAyraci()
-                AyarSatiri(Icons.Filled.Notifications, "Bildirim saatleri") {}
+                AyarSatiri(
+                    Icons.Filled.Notifications,
+                    "Bildirim saatleri",
+                    onTikla = { bildirimSaatleriAcik = true },
+                )
+                KartAyraci()
+                AyarSatiri(
+                    Icons.AutoMirrored.Filled.FactCheck,
+                    "Değerlendirmeyi yenile",
+                    onTikla = onAnketYenile,
+                )
             }
 
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
@@ -177,6 +200,12 @@ fun ProfilEkran(
                     Icons.Filled.DeleteForever,
                     "Hesabımı sil",
                     onTikla = { hesabiSilAcik = true },
+                )
+                KartAyraci()
+                AyarSatiri(
+                    Icons.Filled.MonitorHeart,
+                    "Adım ve hareket izni",
+                    onTikla = onSaglikIzni,
                 )
             }
 
@@ -227,6 +256,12 @@ fun ProfilEkran(
                     Icons.AutoMirrored.Filled.HelpOutline,
                     "Yardım",
                     onTikla = { yardimAcik = true },
+                )
+                KartAyraci()
+                AyarSatiri(
+                    Icons.Filled.SupportAgent,
+                    "YEDAM hakkında",
+                    onTikla = { yedamAcik = true },
                 )
                 KartAyraci()
                 AyarSatiri(
@@ -324,6 +359,30 @@ fun ProfilEkran(
             containerColor = Beyaz,
         ) {
             HakkindaIcerik(onKapat = { hakkindaAcik = false })
+        }
+    }
+
+    if (yedamAcik) {
+        ModalBottomSheet(
+            onDismissRequest = { yedamAcik = false },
+            sheetState = sayfaDurumu,
+            containerColor = Beyaz,
+        ) {
+            YedamHakkindaIcerik(onKapat = { yedamAcik = false })
+        }
+    }
+
+    if (bildirimSaatleriAcik) {
+        ModalBottomSheet(
+            onDismissRequest = { bildirimSaatleriAcik = false },
+            sheetState = sayfaDurumu,
+            containerColor = Beyaz,
+        ) {
+            BildirimSaatleriIcerik(
+                durum = durum,
+                onDegis = viewModel::bildirimSaatleriAyarla,
+                onKapat = { bildirimSaatleriAcik = false },
+            )
         }
     }
 }
@@ -745,5 +804,167 @@ private fun GizlilikNotu(
             style = MaterialTheme.typography.bodyMedium,
             color = MetinBirincil,
         )
+    }
+}
+
+/**
+ * Alt sayfa 27 — YEDAM hakkında.
+ *
+ * **Sadece bilgilendirme.** Yönlendirme/rıza akışı ayrı bir ekran
+ * (`ui/ekran/yedam/`), yalnızca yüksek bantta ve kullanıcı onayıyla açılıyor
+ * (`docs/tasarim-referans.md §2 / 27` notu).
+ */
+@Composable
+private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        AltSayfaBasligi("YEDAM hakkında", onKapat)
+        Spacer(modifier = Modifier.height(Bosluk.S))
+
+        IkonRozeti(
+            ikon = Icons.Filled.SupportAgent,
+            zemin = YesilKoyu,
+            renk = Beyaz,
+            sekil = RoundedCornerShape(Yaricap.Cip),
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        Text(
+            text = "YEDAM (Yeşilay Danışmanlık Merkezi), bağımlılık alanında " +
+                "ücretsiz danışmanlık veriyor. Başvurmak için bir tanı almış " +
+                "olman gerekmiyor.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Yaricap.Buton))
+                .background(YesilNane)
+                .padding(Olcu.KartIci),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.SupportAgent,
+                contentDescription = null,
+                tint = YesilAna,
+            )
+            Spacer(modifier = Modifier.width(Olcu.Aralik))
+            Text(
+                text = "115 — YEDAM Hattı, 7/24 ücretsiz ve gizli",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MetinBirincil,
+            )
+        }
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        Text(
+            text = "Görüşmeler gizlidir; kimseyle paylaşılmaz.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Text(
+            text = "Görüşmeyi uzman psikologlar yürütür.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        // ACTION_DIAL: numarayı çevirici uygulamasına yazıyor ama kendisi
+        // aramıyor. ACTION_CALL izin isterdi ve kullanıcının onayı olmadan
+        // arama başlatmak bu ekranın işi değil.
+        BirincilButon(
+            metin = "115'i ara",
+            onTikla = {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_DIAL,
+                        android.net.Uri.parse("tel:115"),
+                    ),
+                )
+            },
+        )
+    }
+}
+
+/** Alt sayfa — Bildirim saatleri (Profil › Hedeflerim). */
+@Composable
+private fun BildirimSaatleriIcerik(
+    durum: ProfilDurum,
+    onDegis: (BildirimSaatleri) -> Unit,
+    onKapat: () -> Unit,
+) {
+    val saatler = durum.bildirimSaatleri
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        AltSayfaBasligi("Bildirim saatleri", onKapat)
+        Spacer(modifier = Modifier.height(Bosluk.S))
+
+        Text(
+            text = "Günde en fazla iki kısa hatırlatma. İstediğin zaman " +
+                "kapatabilirsin.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        Kart(icBosluk = Olcu.Aralik) {
+            AnahtarSatiri(
+                ikon = Icons.Filled.Notifications,
+                etiket = "Günlük hatırlatma",
+                acik = saatler.acik,
+                onDegis = { acik -> onDegis(saatler.copy(acik = acik)) },
+            )
+        }
+
+        // Saat seçimi yalnızca hatırlatma açıkken — kapalıyken seçim
+        // sunmak, ayarın çalıştığı izlenimini verirdi.
+        if (saatler.acik) {
+            Spacer(modifier = Modifier.height(Olcu.Aralik))
+            BolumBasligi("Sabah")
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            SaatSeridi(
+                secenekler = BildirimSaatleri.SABAH_SECENEKLERI,
+                secili = saatler.sabahSaati,
+                onSec = { saatDegeri -> onDegis(saatler.copy(sabahSaati = saatDegeri)) },
+            )
+
+            Spacer(modifier = Modifier.height(Olcu.Aralik))
+            BolumBasligi("Akşam")
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            SaatSeridi(
+                secenekler = BildirimSaatleri.AKSAM_SECENEKLERI,
+                secili = saatler.aksamSaati,
+                onSec = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SaatSeridi(secenekler: List<Int>, secili: Int, onSec: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
+        secenekler.forEach { saatDegeri ->
+            Cip(
+                metin = "%02d:00".format(saatDegeri),
+                zemin = if (saatDegeri == secili) YesilAna else Yesil50,
+                renk = if (saatDegeri == secili) Beyaz else MetinBirincil,
+                onTikla = { onSec(saatDegeri) },
+            )
+        }
     }
 }

@@ -97,6 +97,17 @@ class Tercihler @Inject constructor(
     /** Varsayılan **kapalı** — overlay izni gerektirdiği için opt-in. */
     val molaHatirlaticiAcikMi: Flow<Boolean> = depo.data.map { it[MOLA_HATIRLATICI] ?: false }
 
+    // --- günlük hatırlatma saatleri ---
+
+    /** Varsayılan **kapalı** — istenmeyen bildirim göndermiyoruz. */
+    val bildirimSaatleri: Flow<BildirimSaatleri> = depo.data.map { p ->
+        p[BILDIRIM_SAATLERI]?.let(BildirimSaatleri::coz) ?: BildirimSaatleri()
+    }
+
+    suspend fun bildirimSaatleriniKaydet(saatler: BildirimSaatleri) {
+        depo.edit { it[BILDIRIM_SAATLERI] = saatler.metin() }
+    }
+
     // --- yazma ---
 
     suspend fun onboardingiBitir(hedefDk: Int, anketTarihi: LocalDate?) {
@@ -218,7 +229,13 @@ class Tercihler @Inject constructor(
         val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
         val MOLA_HATIRLATICI = booleanPreferencesKey("mola_hatirlatici_acik")
 
-        @Suppress("unused")
+        /**
+         * `"acik|sabahSaati|aksamSaati"` — ör. `"true|9|21"`.
+         *
+         * Üç değer için üç ayrı anahtar açmak yerine tek satır: birlikte
+         * okunuyorlar, birlikte yazılıyorlar ve ayrı ayrı hiçbir yerde
+         * kullanılmıyorlar.
+         */
         val BILDIRIM_SAATLERI = stringPreferencesKey("bildirim_saatleri")
 
         /** Hedef henüz belirlenmediyse — onboarding'i atlayan kullanıcı. */

@@ -7,7 +7,9 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDate
@@ -76,14 +78,51 @@ class IsPlanlayici @Inject constructor(
     }
 
     /**
+     * Günlük hatırlatmaları planlar.
+     *
+     * Ayar kapalıysa iki iş de **iptal ediliyor** — kapalı ayarla her gün
+     * uyanıp hiçbir şey yapmayan bir iş, pil bütçesini boşa harcar.
+     * `HatirlatmaWorker` yine de kendi içinde kontrol ediyor: kullanıcı
+     * ayarı değiştirip uygulamayı kapatırsa kuyruktaki iş yanlış davranmasın.
+     */
+    fun hatirlatmayiPlanla(saatler: BildirimSaatleri) {
+        if (!saatler.acik) {
+            isYoneticisi.cancelUniqueWork(HatirlatmaWorker.SABAH_IS_ADI)
+            isYoneticisi.cancelUniqueWork(HatirlatmaWorker.AKSAM_IS_ADI)
+            return
+        }
+
+        planla(HatirlatmaWorker.SABAH_IS_ADI, saatler.sabahSaati, aksamMi = false)
+        planla(HatirlatmaWorker.AKSAM_IS_ADI, saatler.aksamSaati, aksamMi = true)
+    }
+
+    private fun planla(isAdi: String, saatDegeri: Int, aksamMi: Boolean) {
+        val istek = PeriodicWorkRequestBuilder<HatirlatmaWorker>(Duration.ofDays(1))
+            .setInitialDelay(saateKalanSure(LocalTime.of(saatDegeri, 0)))
+            .setInputData(workDataOf(HatirlatmaWorker.AKSAM_MI to aksamMi))
+            .build()
+
+        // UPDATE: kullanıcı saati değiştirdiğinde plan gerçekten değişsin.
+        // KEEP olsaydı ilk seçilen saat kalıcı olurdu ve ayar çalışmazdı.
+        isYoneticisi.enqueueUniquePeriodicWork(
+            isAdi,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            istek,
+        )
+    }
+
+    /**
      * Bir sonraki [CALISMA_SAATI]'ne kalan süre.
      *
      * Gece 03:00 seçildi: gün dönmüş oluyor ve kullanıcı büyük olasılıkla
      * uyuyor, yani işin telefonu yavaşlatması kimseyi rahatsız etmiyor.
      */
-    private fun geceyeKalanSure(): Duration {
+    private fun geceyeKalanSure(): Duration = saateKalanSure(CALISMA_SAATI)
+
+    /** Bugünkü [hedefSaat] geçtiyse yarınkine — negatif gecikme olmasın. */
+    private fun saateKalanSure(hedefSaat: LocalTime): Duration {
         val simdi = LocalDate.now(saat).atTime(LocalTime.now(saat)).atZone(zon)
-        var hedef = simdi.toLocalDate().atTime(CALISMA_SAATI).atZone(zon)
+        var hedef = simdi.toLocalDate().atTime(hedefSaat).atZone(zon)
         if (!hedef.isAfter(simdi)) hedef = hedef.plusDays(1)
         return Duration.between(simdi, hedef)
     }

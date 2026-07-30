@@ -2,6 +2,8 @@ package tr.org.yesilay.yesiliz.ui.ekran.riskdetay
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.ui.graphics.vector.ImageVector
 import tr.org.yesilay.yesiliz.risk.Bant
@@ -32,20 +34,48 @@ data class OnerilenEylem(
     val eylemMetni: String,
 )
 
-/** Ekranın statik öneri kataloğu — gerçek ayara bağlanması sıradaki iş. */
+/**
+ * Öneri kataloğu — her maddenin gerçek bir hedefi var.
+ *
+ * [OnerilenEylem.id] ekranın dokunma işleyicisinde rotaya çevriliyor;
+ * tıklanınca hiçbir şey yapmayan kart bırakılmıyor.
+ */
 val VarsayilanOneriler = listOf(
     OnerilenEylem(
-        id = "gece_bildirim",
+        id = "bildirim_saatleri",
         ikon = Icons.Filled.DarkMode,
-        baslik = "Gece 23:00'ten sonra bildirimleri kapat",
+        baslik = "Hatırlatma saatlerini ayarla",
         aciklama = "Gece kullanımını azaltmanın en etkili yolu",
         eylemMetni = "Aç",
     ),
     OnerilenEylem(
         id = "hedef_azalt",
         ikon = Icons.Filled.TrackChanges,
-        baslik = "Günlük hedefini 20 dk azalt",
+        baslik = "Günlük hedefini gözden geçir",
         aciklama = "Kademeli azaltma daha kalıcı sonuç verir",
         eylemMetni = "Ayarla",
     ),
+    OnerilenEylem(
+        id = "nefes",
+        ikon = Icons.Filled.SelfImprovement,
+        baslik = "İki dakikalık nefes molası",
+        aciklama = "Kesintisiz kullanımı bölmenin en kısa yolu",
+        eylemMetni = "Başlat",
+    ),
+)
+
+/**
+ * Yalnızca **yüksek bantta** eklenen öneri.
+ *
+ * YEDAM yönlendirmesi düşük ve orta bantta önerilmiyor: ihtiyaç yokken
+ * uzman desteği önermek, kullanıcıya olduğundan ağır bir tablo çizer
+ * (CLAUDE.md §4 teşhis yasağı). Yüksek bantta bile bu yalnızca bir
+ * **teklif** — dokunulmadan hiçbir şey olmuyor.
+ */
+val YedamOnerisi = OnerilenEylem(
+    id = "yedam",
+    ikon = Icons.Filled.SupportAgent,
+    baslik = "Bir uzmanla konuşmak ister misin?",
+    aciklama = "YEDAM ücretsiz ve gizli danışmanlık veriyor",
+    eylemMetni = "Gör",
 )

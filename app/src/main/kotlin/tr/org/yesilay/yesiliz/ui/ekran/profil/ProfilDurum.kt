@@ -1,5 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.profil
 
+import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
+
 /**
  * Profil ekranı durumu — `docs/tasarim-referans.md §2 / 12`.
  *
@@ -13,6 +15,7 @@ data class ProfilDurum(
     val ligdeGorun: Boolean = true,
     val molaHatirlaticiAcik: Boolean = false,
     val gunlukHedefDk: Int = 0,
+    val bildirimSaatleri: BildirimSaatleri = BildirimSaatleri(),
     /** Debug derlemesinde demo tohumu satırı gösterilsin mi. */
     val demoKullanilabilir: Boolean = false,
 )

@@ -8,8 +8,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.demo.DemoVeri
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
+import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import javax.inject.Inject
 
@@ -25,6 +27,7 @@ class ProfilViewModel @Inject constructor(
     private val tercihler: Tercihler,
     private val demoVeri: DemoVeri,
     private val veriYonetimi: VeriYonetimiDeposu,
+    private val isPlanlayici: IsPlanlayici,
 ) : ViewModel() {
 
     val durum: StateFlow<ProfilDurum> = combine(
@@ -32,7 +35,8 @@ class ProfilViewModel @Inject constructor(
         tercihler.ligdeGorun,
         tercihler.molaHatirlaticiAcikMi,
         tercihler.gunlukHedefDk,
-    ) { paylasim, ligde, molaHatirlatici, hedef ->
+        tercihler.bildirimSaatleri,
+    ) { paylasim, ligde, molaHatirlatici, hedef, saatler ->
         ProfilDurum(
             isim = SABIT_ISIM,
             ligAdi = SABIT_LIG,
@@ -40,6 +44,7 @@ class ProfilViewModel @Inject constructor(
             ligdeGorun = ligde,
             molaHatirlaticiAcik = molaHatirlatici,
             gunlukHedefDk = hedef,
+            bildirimSaatleri = saatler,
             demoKullanilabilir = demoVeri.kullanilabilir,
         )
     }.stateIn(
@@ -64,6 +69,20 @@ class ProfilViewModel @Inject constructor(
      */
     fun molaHatirlaticiAyarla(acik: Boolean) {
         viewModelScope.launch { tercihler.molaHatirlaticiAyarla(acik) }
+    }
+
+    /**
+     * Günlük hatırlatma ayarı.
+     *
+     * Kaydetmenin yanında WorkManager planını da güncelliyor: kullanıcı
+     * saati değiştirip ekranı kapattığında planın eski saatte kalması,
+     * ayarın hiç çalışmaması demek olurdu.
+     */
+    fun bildirimSaatleriAyarla(saatler: BildirimSaatleri) {
+        viewModelScope.launch {
+            tercihler.bildirimSaatleriniKaydet(saatler)
+            isPlanlayici.hatirlatmayiPlanla(saatler)
+        }
     }
 
     /**

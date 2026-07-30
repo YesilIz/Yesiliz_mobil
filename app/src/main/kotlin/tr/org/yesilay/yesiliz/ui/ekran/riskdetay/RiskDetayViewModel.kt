@@ -50,7 +50,12 @@ class RiskDetayViewModel @Inject constructor(
                         trendMesaji = trendMesaji(Trend.valueOf(risk.trend)),
                         oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
                         faktorler = faktorler,
-                        oneriler = VarsayilanOneriler,
+                        // YEDAM teklifi yalnızca yüksek bantta.
+                        oneriler = if (bant == Bant.COK) {
+                            VarsayilanOneriler + YedamOnerisi
+                        } else {
+                            VarsayilanOneriler
+                        },
                     )
                 }
             }

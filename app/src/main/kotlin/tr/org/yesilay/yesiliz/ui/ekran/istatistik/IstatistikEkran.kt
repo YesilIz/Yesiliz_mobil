@@ -39,6 +39,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
+import tr.org.yesilay.yesiliz.ui.bilesen.RiskGirisKarti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.CubukGrafik
@@ -83,7 +84,7 @@ fun IstatistikEkran(
 
             durum.riskBandi?.let { bant ->
                 Spacer(modifier = Modifier.height(Olcu.Aralik))
-                RiskKarti(bant = bant, onTikla = onRiskDetay)
+                RiskGirisKarti(bant = bant, onTikla = onRiskDetay)
             }
 
             Spacer(modifier = Modifier.height(Olcu.Aralik))
@@ -274,51 +275,6 @@ private fun OlcumKarti(
  * `riskdetay` ekranına (30) açılıyor. Koyu yeşil gradyan — kırmızı YOK,
  * uyarı ikonu risk bandını değil "bir şey var, bak" iması taşıyor.
  */
-@Composable
-private fun RiskKarti(bant: Bant, onTikla: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Yaricap.Kart))
-            .background(Gradyan.PuanKarti)
-            .clickable(onClick = onTikla)
-            .padding(Olcu.KartIci),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
-    ) {
-        IkonRozeti(
-            ikon = Icons.Filled.WarningAmber,
-            zemin = Beyaz.copy(alpha = 0.15f),
-            renk = Beyaz,
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Risk analizi: ${bant.kisaEtiket()} düzey",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = Beyaz,
-            )
-            Text(
-                text = "Sonuçları ve önerilen eylemleri gör",
-                style = MaterialTheme.typography.bodySmall,
-                color = Beyaz.copy(alpha = 0.8f),
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Beyaz,
-        )
-    }
-}
-
-/** Ekranda gösterilen kısa bant adı — `Bant.etiket` ("ORTA RİSKLİ") teşhis gibi duruyor. */
-private fun Bant.kisaEtiket(): String = when (this) {
-    Bant.AZ -> "Düşük"
-    Bant.ORTA -> "Orta"
-    Bant.COK -> "Yüksek"
-}
-
 /** Grafik ekseninin tavanı — tasarımda ekran 8s, adım 8b'de sabit. */
 private const val EkranTavani = 480
 private const val AdimTavani = 8_000

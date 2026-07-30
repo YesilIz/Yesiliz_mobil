@@ -22,13 +22,18 @@ import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziViewModel
 import tr.org.yesilay.yesiliz.ui.ekran.ebeveyn.EbeveynEkran
+import tr.org.yesilay.yesiliz.ui.ekran.hedef.HedefEkran
+import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategoriEkran
+import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategorizeEtEkran
 import tr.org.yesilay.yesiliz.ui.ekran.istatistik.IstatistikEkran
 import tr.org.yesilay.yesiliz.ui.ekran.lig.LigEkran
 import tr.org.yesilay.yesiliz.ui.ekran.nefes.NefesEkran
 import tr.org.yesilay.yesiliz.ui.ekran.odul.OdulEkran
 import tr.org.yesilay.yesiliz.ui.ekran.profil.ProfilEkran
 import tr.org.yesilay.yesiliz.ui.ekran.riskdetay.RiskDetayEkran
+import tr.org.yesilay.yesiliz.ui.ekran.saglik.SaglikIzinEkran
 import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
+import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamOnayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 
@@ -126,7 +131,32 @@ fun YesilizGezinme(
             }
             composable(Rota.LIG) { LigEkran() }
             composable(Rota.PROFIL) {
-                ProfilEkran(onEbeveyn = { navController.navigate(Rota.EBEVEYN) })
+                ProfilEkran(
+                    onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
+                    onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
+                    onKategoriler = { navController.navigate(Rota.KATEGORI) },
+                    onAnketYenile = { navController.navigate(Rota.ANKET_YENILE) },
+                    onSaglikIzni = { navController.navigate(Rota.SAGLIK_IZIN) },
+                )
+            }
+            composable(Rota.GUNLUK_HEDEF) {
+                HedefEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.KATEGORI) {
+                KategoriEkran(
+                    onGeri = { navController.popBackStack() },
+                    onRiskDetay = { navController.navigate(Rota.RISK_DETAY) },
+                    onKategorizeEt = { navController.navigate(Rota.KATEGORIZE_ET) },
+                )
+            }
+            composable(Rota.KATEGORIZE_ET) {
+                KategorizeEtEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.SAGLIK_IZIN) {
+                SaglikIzinEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.YEDAM_ONAY) {
+                YedamOnayEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.ODUL) {
                 OdulEkran(onGeri = { navController.popBackStack() })
@@ -135,7 +165,21 @@ fun YesilizGezinme(
                 EbeveynEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.RISK_DETAY) {
-                RiskDetayEkran(onGeri = { navController.popBackStack() })
+                RiskDetayEkran(
+                    onGeri = { navController.popBackStack() },
+                    // Öneri kartları gerçek ekranlara gidiyor. "Bildirim
+                    // saatleri" Profil'in alt sayfası olduğu için sekmeye
+                    // götürülüyor; ayrı bir rota açmak o alt sayfayı iki
+                    // yerde tanımlamak olurdu.
+                    onEylem = { id ->
+                        when (id) {
+                            "bildirim_saatleri" -> navController.sekmeyeGit(Sekme.PROFIL)
+                            "hedef_azalt" -> navController.navigate(Rota.GUNLUK_HEDEF)
+                            "nefes" -> navController.navigate(Rota.NEFES)
+                            "yedam" -> navController.navigate(Rota.YEDAM_ONAY)
+                        }
+                    },
+                )
             }
             composable(Rota.NEFES) {
                 NefesEkran(onKapat = { navController.popBackStack() })

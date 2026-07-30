@@ -48,6 +48,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 @Composable
 fun RiskDetayEkran(
     onGeri: () -> Unit,
+    onEylem: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RiskDetayViewModel = hiltViewModel(),
 ) {
@@ -143,8 +144,12 @@ fun RiskDetayEkran(
                                     color = MetinUcuncul,
                                 )
                             }
-                            // Gerçek ayara bağlanması sıradaki iş — şimdilik yalnızca görsel.
-                            Cip(metin = oneri.eylemMetni, zemin = YesilNane, renk = YesilAna, onTikla = {})
+                            Cip(
+                                metin = oneri.eylemMetni,
+                                zemin = YesilNane,
+                                renk = YesilAna,
+                                onTikla = { onEylem(oneri.id) },
+                            )
                         }
                     }
                 }
