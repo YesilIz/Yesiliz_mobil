@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.ui.ekran.istatistik
 
+import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Dilim
@@ -69,6 +70,8 @@ enum class Aralik(val etiket: String) {
 data class IstatistikDurum(
     val aralik: Aralik = Aralik.HAFTA,
     val gunSayisi: Int = 0,
+    /** Penceredeki ham satırlar — gün seçimi bunun üzerinden çalışıyor. */
+    val gunler: List<GunlukOzetEntity> = emptyList(),
     val tarihAraligi: String = "",
     val ekranOrtalama: Int = 0,
     val ekranCubuklari: List<Cubuk> = emptyList(),
@@ -83,4 +86,28 @@ data class IstatistikDurum(
     val adimArtti: Boolean = true,
     /** `null` — henüz `risk_sonuc` yok, kart hiç gösterilmiyor. */
     val riskBandi: Bant? = null,
-)
+
+    // --- gün seçimi (grafiğe dokunma) ---
+    /** -1 = seçim yok, kartlar ortalamayı gösteriyor. */
+    val seciliIndeks: Int = -1,
+    val seciliGun: LocalDate? = null,
+    /** "24 Temmuz Perşembe" */
+    val seciliBaslik: String = "",
+    val ekranSecili: Int = 0,
+    val adimSecili: Int = 0,
+    val ekranSeciliFark: String = "",
+    val adimSeciliFark: String = "",
+) {
+    val secimVarMi: Boolean get() = seciliIndeks >= 0
+
+    /** Kart başlığı: seçim varken tarih, yokken "ORTALAMA". */
+    val ekranKartBasligi: String get() = if (secimVarMi) seciliBaslik else "Ortalama"
+
+    val ekranGosterilen: Int get() = if (secimVarMi) ekranSecili else ekranOrtalama
+
+    val adimGosterilen: Int get() = if (secimVarMi) adimSecili else adimOrtalama
+
+    val ekranAltMetni: String get() = if (secimVarMi) ekranSeciliFark else ekranFark
+
+    val adimAltMetni: String get() = if (secimVarMi) adimSeciliFark else adimFark
+}

@@ -4,7 +4,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.WeekFields
-import java.util.Locale
 
 /**
  * Bildirim listesinin gün gruplarına ayrılması (tasarım 35: BUGÜN · DÜN ·
@@ -27,14 +26,17 @@ object BildirimGrupla {
      * "Bu hafta", takvim haftasıdır (Pazartesi başlangıçlı, `WeekFields.ISO`)
      * — `Aralik.HAFTA` ile aynı tanım. Kayan 7 gün kullanılsaydı pazartesi
      * sabahı "geçen çarşamba" da bu haftaya düşerdi.
+     *
+     * `WeekFields.ISO` şart: `WeekFields.of(Locale.ROOT)` haftayı **Pazar**
+     * günü başlatıyor ve o zaman geçen pazar bu haftaya düşüyor —
+     * İstatistik'teki hafta penceresiyle çelişirdi.
      */
     fun grubu(zaman: Instant, bugun: LocalDate, zon: ZoneId): BildirimGrubu {
         val gun = zaman.atZone(zon).toLocalDate()
         return when {
             gun == bugun -> BildirimGrubu.BUGUN
             gun == bugun.minusDays(1) -> BildirimGrubu.DUN
-            gun >= bugun.with(WeekFields.of(Locale.ROOT).dayOfWeek(), 1) ->
-                BildirimGrubu.BU_HAFTA
+            gun >= bugun.with(WeekFields.ISO.dayOfWeek(), 1) -> BildirimGrubu.BU_HAFTA
             else -> BildirimGrubu.DAHA_ONCE
         }
     }

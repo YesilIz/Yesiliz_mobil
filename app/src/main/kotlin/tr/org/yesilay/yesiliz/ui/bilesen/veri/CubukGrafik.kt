@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.bilesen.veri
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,6 +42,8 @@ data class Cubuk(val etiket: String, val deger: Float)
  * kütüphanelerde ya yok ya da kendi paletini dayatıyor.
  *
  * @param vurgulanan vurgulanacak çubuğun indeksi (bugün / en iyi gün); -1 yoksa
+ * @param secili kullanıcının dokunarak seçtiği çubuk; -1 yoksa
+ * @param onCubukSecildi dokunma işleyicisi; null ise grafik tıklanamaz
  * @param eksenEtiketleri sağ eksende gösterilecek 3 etiket (üst → alt)
  */
 @Composable
@@ -47,6 +51,8 @@ fun CubukGrafik(
     cubuklar: List<Cubuk>,
     modifier: Modifier = Modifier,
     vurgulanan: Int = -1,
+    secili: Int = -1,
+    onCubukSecildi: ((Int) -> Unit)? = null,
     renk: Color = YesilAna,
     soluk: Color = Yesil200,
     eksenEtiketleri: List<String> = emptyList(),
@@ -55,12 +61,32 @@ fun CubukGrafik(
     val enBuyuk = cubuklar.maxOf { it.deger }.coerceAtLeast(1f)
     val yogunluk = LocalDensity.current
 
+    // Kullanıcı bir gün seçtiyse vurgu ona geçiyor; seçim yokken eski
+    // davranış (en yüksek gün / bugün) korunuyor.
+    val one = if (secili >= 0) secili else vurgulanan
+
     Row(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.weight(1f)) {
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(Olcu.GrafikYuksekligi),
+                    .height(Olcu.GrafikYuksekligi)
+                    .then(
+                        if (onCubukSecildi == null) {
+                            Modifier
+                        } else {
+                            Modifier.pointerInput(cubuklar.size) {
+                                detectTapGestures { konum ->
+                                    val i = CubukSecim.indeks(
+                                        x = konum.x,
+                                        toplamGenislik = size.width.toFloat(),
+                                        cubukSayisi = cubuklar.size,
+                                    )
+                                    if (i >= 0) onCubukSecildi(i)
+                                }
+                            }
+                        },
+                    ),
             ) {
                 // kesikli ızgara — 0, orta, tavan
                 val kesik = PathEffect.dashPathEffect(floatArrayOf(6f, 8f), 0f)
@@ -76,16 +102,28 @@ fun CubukGrafik(
                 }
 
                 val yuva = size.width / cubuklar.size
-                val genislik = yuva * 0.46f
+                val genislik = yuva * CubukSecim.CUBUK_ORANI
                 val yaricap = with(yogunluk) { Olcu.CubukYaricapi.toPx() }
 
                 cubuklar.forEachIndexed { i, cubuk ->
                     val yukseklik = size.height * (cubuk.deger / enBuyuk)
                     val x = yuva * i + (yuva - genislik) / 2f
                     drawRoundRect(
-                        color = if (i == vurgulanan) renk else soluk,
+                        color = if (i == one) renk else soluk,
                         topLeft = Offset(x, size.height - yukseklik),
                         size = Size(genislik, yukseklik),
+                        cornerRadius = CornerRadius(yaricap, yaricap),
+                    )
+                }
+
+                // Seçili çubuğun altını çizen ince şerit — hangi güne
+                // dokunulduğu, çubuk kısa olsa da görünsün.
+                if (secili in cubuklar.indices) {
+                    val x = yuva * secili + (yuva - genislik) / 2f
+                    drawRoundRect(
+                        color = renk,
+                        topLeft = Offset(x, size.height - yaricap),
+                        size = Size(genislik, yaricap),
                         cornerRadius = CornerRadius(yaricap, yaricap),
                     )
                 }
@@ -100,8 +138,8 @@ fun CubukGrafik(
                     Text(
                         text = cubuk.etiket,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (i == vurgulanan) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (i == vurgulanan) MetinBirincil else MetinUcuncul,
+                        fontWeight = if (i == one) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (i == one) MetinBirincil else MetinUcuncul,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f),
                     )

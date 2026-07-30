@@ -38,6 +38,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
+import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.CubukGrafik
@@ -98,16 +99,19 @@ fun IstatistikEkran(
 
             Yigin {
                 OlcumKarti(
-                    etiket = "Ortalama",
-                    deger = durum.ekranOrtalama.sureMetni(),
+                    etiket = durum.ekranKartBasligi,
+                    deger = durum.ekranGosterilen.sureMetni(),
                     birim = "ekran süresi",
-                    tarih = durum.tarihAraligi,
-                    karsilastirma = durum.ekranFark,
+                    tarih = if (durum.secimVarMi) "" else durum.tarihAraligi,
+                    karsilastirma = durum.ekranAltMetni,
                     azaldi = durum.ekranAzaldi,
+                    onOrtalamayaDon = if (durum.secimVarMi) viewModel::secimiKaldir else null,
                 ) {
                     CubukGrafik(
                         cubuklar = durum.ekranCubuklari,
                         vurgulanan = durum.ekranVurgu,
+                        secili = durum.seciliIndeks,
+                        onCubukSecildi = viewModel::gunSecildi,
                         renk = YesilAna,
                         soluk = Yesil200,
                         eksenEtiketleri = listOf(EkranTavani.kisaSaat(), (EkranTavani / 2).kisaSaat(), "0"),
@@ -121,6 +125,15 @@ fun IstatistikEkran(
                         fontWeight = FontWeight.Bold,
                         color = MetinBirincil,
                     )
+                    // Gün seçiliyken dağılım da o güne ait — hangi veriye
+                    // baktığı belirsiz kalmasın.
+                    if (durum.secimVarMi) {
+                        Text(
+                            text = durum.seciliBaslik,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MetinIkincil,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(Olcu.Aralik))
                     YiginBar(dilimler = durum.kategoriler)
                     Spacer(modifier = Modifier.height(Olcu.Aralik))
@@ -128,19 +141,32 @@ fun IstatistikEkran(
                 }
 
                 OlcumKarti(
-                    etiket = "Ortalama",
-                    deger = durum.adimOrtalama.binlik(),
+                    etiket = durum.ekranKartBasligi,
+                    deger = durum.adimGosterilen.binlik(),
                     birim = "adım",
-                    tarih = durum.tarihAraligi,
-                    karsilastirma = durum.adimFark,
+                    tarih = if (durum.secimVarMi) "" else durum.tarihAraligi,
+                    karsilastirma = durum.adimAltMetni,
                     azaldi = !durum.adimArtti,
+                    onOrtalamayaDon = if (durum.secimVarMi) viewModel::secimiKaldir else null,
                 ) {
                     CubukGrafik(
                         cubuklar = durum.adimCubuklari,
                         vurgulanan = durum.adimVurgu,
+                        secili = durum.seciliIndeks,
+                        onCubukSecildi = viewModel::gunSecildi,
                         renk = YesilAna,
                         soluk = AdimMavi,
                         eksenEtiketleri = listOf(AdimTavani.kisaBin(), (AdimTavani / 2).kisaBin(), "0"),
+                    )
+                }
+
+                if (!durum.secimVarMi) {
+                    Text(
+                        text = "Bir güne dokunarak o günün dökümünü görebilirsin.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MetinUcuncul,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -192,10 +218,17 @@ private fun OlcumKarti(
     tarih: String,
     karsilastirma: String,
     azaldi: Boolean,
+    onOrtalamayaDon: (() -> Unit)? = null,
     grafik: @Composable () -> Unit,
 ) {
     Kart {
-        BolumBasligi(etiket)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BolumBasligi(etiket, modifier = Modifier.weight(1f))
+            // Seçimden çıkış yolu her zaman görünür olmalı — kullanıcı
+            // grafiğe dokunduktan sonra ortalamaya nasıl döneceğini
+            // aramak zorunda kalmasın.
+            onOrtalamayaDon?.let { MetinBaglanti(metin = "Ortalamaya dön", onTikla = it) }
+        }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = deger,

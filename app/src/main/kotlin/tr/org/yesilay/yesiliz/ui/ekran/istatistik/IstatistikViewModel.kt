@@ -47,6 +47,9 @@ class IstatistikViewModel @Inject constructor(
 
     private val secilenAralik = MutableStateFlow(Aralik.HAFTA)
 
+    /** Grafikte dokunulan gün; -1 = seçim yok, ekran ortalamayı gösteriyor. */
+    private val secilenIndeks = MutableStateFlow(SECIM_YOK)
+
     val durum: StateFlow<IstatistikDurum> = secilenAralik
         .flatMapLatest { aralik ->
             val bugun = LocalDate.now(saat)
@@ -62,6 +65,7 @@ class IstatistikViewModel @Inject constructor(
                     durumKur(aralik, pencere.first, pencere.second, simdiki, onceki)
                 }
         }
+        .combine(secilenIndeks) { durum, indeks -> secimiUygula(durum, indeks) }
         .combine(riskDao.sonuncuAkisi()) { durum, risk ->
             durum.copy(riskBandi = risk?.let { Bant.valueOf(it.gosterilenBant) })
         }
@@ -72,8 +76,55 @@ class IstatistikViewModel @Inject constructor(
         )
 
     fun aralikSecildi(aralik: Aralik) {
+        // Aralık değişince gün seçimi anlamını yitiriyor — "geçen haftanın
+        // 3. çubuğu" bu haftanın 3. çubuğu değil.
+        secilenIndeks.value = SECIM_YOK
         secilenAralik.value = aralik
     }
+
+    /** Aynı çubuğa ikinci dokunuş seçimi kaldırıyor. */
+    fun gunSecildi(indeks: Int) {
+        secilenIndeks.value = if (secilenIndeks.value == indeks) SECIM_YOK else indeks
+    }
+
+    fun secimiKaldir() {
+        secilenIndeks.value = SECIM_YOK
+    }
+
+    /**
+     * Seçili gün varsa ekranın tamamı o güne dönüyor: ekran süresi kartının
+     * başlığı, büyük sayısı, kategori dağılımı ve adım kartı.
+     *
+     * Yalnızca grafiği vurgulayıp kartları ortalamada bırakmak, Apple Ekran
+     * Süresi'nden gelen beklentiyi karşılamaz — kullanıcı çubuğa dokunduğunda
+     * **o günü** görmek istiyor.
+     */
+    private fun secimiUygula(durum: IstatistikDurum, indeks: Int): IstatistikDurum {
+        val gunler = durum.gunler
+        if (indeks !in gunler.indices) return durum.copy(seciliIndeks = SECIM_YOK, seciliGun = null)
+
+        val gun = gunler[indeks]
+        val ekranDk = gun.toplamEkranDk()
+        return durum.copy(
+            seciliIndeks = indeks,
+            seciliGun = gun.tarih,
+            seciliBaslik = gunBasligi(gun.tarih),
+            ekranSecili = ekranDk.roundToInt(),
+            adimSecili = gun.adim.roundToInt(),
+            ekranSeciliFark = ortalamayaGoreFark(ekranDk, durum.ekranOrtalama.toDouble(), "dk"),
+            adimSeciliFark = ortalamayaGoreFark(gun.adim, durum.adimOrtalama.toDouble(), "adım"),
+            kategoriler = kategoriDagilimi(listOf(gun)),
+        )
+    }
+
+    private fun ortalamayaGoreFark(deger: Double, ortalama: Double, birim: String): String {
+        val fark = abs(deger - ortalama).roundToInt()
+        if (fark == 0) return "Ortalamayla aynı"
+        val yon = if (deger < ortalama) "daha az" else "daha fazla"
+        return "Ortalamaya göre $fark $birim $yon"
+    }
+
+    private fun gunBasligi(tarih: LocalDate): String = tarih.format(GUN_BASLIK_BICIM)
 
     private fun durumKur(
         aralik: Aralik,
@@ -97,6 +148,7 @@ class IstatistikViewModel @Inject constructor(
         return IstatistikDurum(
             aralik = aralik,
             gunSayisi = simdiki.size,
+            gunler = simdiki,
             tarihAraligi = tarihAraligi(bas, bit),
             ekranOrtalama = ekranOrt.roundToInt(),
             ekranCubuklari = ekranCubuklari,
@@ -170,12 +222,16 @@ class IstatistikViewModel @Inject constructor(
 
     private companion object {
         const val AKIS_BEKLEME_MS = 5_000L
+        const val SECIM_YOK = -1
         val TR: Locale = Locale.forLanguageTag("tr")
         val GUN_AY_BICIM: DateTimeFormatter = DateTimeFormatter.ofPattern("d", TR)
         val TAM_BICIM: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", TR)
+
+        /** "24 Temmuz Perşembe" — seçili gün kartının başlığı. */
+        val GUN_BASLIK_BICIM: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM EEEE", TR)
     }
 }
 
-private fun GunlukOzetEntity.toplamEkranDk(): Double =
+internal fun GunlukOzetEntity.toplamEkranDk(): Double =
     socialDk + entertainmentDk + gamesDk + communicationDk +
         productivityDk + educationDk + healthDk + otherDk
