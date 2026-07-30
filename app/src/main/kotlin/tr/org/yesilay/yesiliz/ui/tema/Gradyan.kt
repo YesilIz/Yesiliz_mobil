@@ -55,4 +55,7 @@ object Gradyan {
      * "dikkat" tonu (CLAUDE.md §4 kırmızı yasağı bunu kapsamaz).
      */
     val RiskHalkasi: Brush = Brush.sweepGradient(listOf(RuhHaliBas, YesilAna))
+
+    /** Nefes egzersizi — dolu iç daire, sol üstte hafif parlaklık. */
+    val NefesDairesi: Brush = Brush.radialGradient(listOf(PuanKartiSon, YesilAna))
 }

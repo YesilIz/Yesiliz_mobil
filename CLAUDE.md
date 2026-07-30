@@ -48,6 +48,29 @@ adb shell appops set tr.org.yesilay.yesiliz android:get_usage_stats allow
 
 `python3 tests/kontrol_stitch.py <klasör>` — üretilen Stitch ekranlarını DESIGN.md §7'ye göre denetler.
 
+### Git çalışma düzeni
+
+**`main`'e kesinlikle doğrudan push atılmaz.** Herkes kendi branch'inde
+çalışır (`feature/<ad>` veya `fix/<ad>`, `dev`'den dallanır), işi bitince
+o branch'e push edip Pull Request açar. **Merge işlemini yalnızca
+`tchkechagia0` yapar.**
+
+Bu, kod yazan ajanlar için de geçerli — ekip vibe coding ile çalışıyor,
+yani bir ajan kullanıcı adına git komutu çalıştırabiliyor. **Hiçbir ajan
+`main`'e (ya da `dev`'e) doğrudan commit/push/merge yapmamalı**; bir ajana
+"şu PR'ı incele, sorun yoksa merge et" gibi bir yetki açıkça verilmedikçe,
+varsayılan davranış kendi feature/fix branch'inde çalışıp push etmek,
+merge kararını `tchkechagia0`'a bırakmaktır.
+
+```
+main   ──────────●──────────────●────────  (yalnızca release/demo noktaları, sadece tchkechagia0 merge eder)
+                  \              /
+dev    ───●───●────●───●────●──●─────────  (PR ile, entegrasyon)
+           \       \        /
+feature/x   ●──●──●
+fix/y             ●────●───
+```
+
 ---
 
 ## 2. DOSYA HARİTASI
@@ -383,8 +406,12 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
 | `app/data/saglik/` | Health Connect — adım + egzersiz; yoksa `D = 1.0` | HC'siz cihazda sessiz |
+| `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
+| `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
+| `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
+| `app/data/depo/GecmisVeriDeposu` | Kurulumda geçmiş veri — `queryAndAggregateUsageStats` ile izin onaylandıktan sonra bir kez `Tercihler.gecmisGunSayisi`'ni gerçek sayıyla günceller | **4 birim testi**; gerçek sayı yalnızca gerçek cihazda doğrulanabilir (§10) |
 
-**Toplam 98 test** (75 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
+**Toplam 118 test** (95 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 
@@ -399,11 +426,11 @@ kullanıcı adı ve lig adı (hesap sistemi Faz 2).
 
 | # | İş | Not |
 |---|---|---|
-| 1 | Nudge tetikleyici + overlay | **kritik yol, hâlâ bekliyor.** Tasarım da yok (yalnızca `stitch/mola_hat_rlat_c` yerleşim referansı) |
+| ~~1~~ | ~~Nudge tetikleyici + overlay~~ | **BİTTİ** (30 Tem) — `nudge/` (Tetikleyici, NudgeOverlayService, NudgeOverlay, NudgeIzni), Profil'de opt-in anahtarı; nefes derin bağlantısı yer tutucu `Rota.NEFES`'e gidiyor (madde 3 bitince gerçek ekrana bağlanacak) |
 | ~~2~~ | ~~Risk detayı ekranı~~ | **BİTTİ** (31 Tem) — `ui/ekran/riskdetay/`, core-risk 4-faktör bantlama + test vektörleri, İstatistik'e giriş kartı |
-| 3 | Görev detayı alt sayfası + nefes/yürüyüş | Tasarım yok (`stitch/g_rev_detay` yerleşim referansı); ana sayfadaki `onGorev` boşta |
+| ~~3~~ | ~~Görev detayı alt sayfası + nefes~~ | **BİTTİ** (30 Tem) — `AnaEkran`'da alt sayfa (`GorevDetayi`, tasarımı yok, `stitch/g_rev_detay` yerleşimi uyarlandı) + `ui/ekran/nefes/` (resmi teslim, ekran 16). "Yürüyüşü başlat" bilinçli olarak devre dışı ("Yakında") — **Aktif yürüyüş** (canlı sayaç/adım takibi) hâlâ ayrı, tasarımsız bir iş (aşağıdaki eksik-tasarım listesinde) |
 | 4 | Health Connect izin akışı | `SaglikOkuyucu` hazır, izni isteyen ekran yok — tasarım da yok |
-| 5 | Kurulumda geçmiş veri | `queryUsageStats` ile geriye dönük hacim → `Tercihler.gecmisGunSayisi` (şimdilik 0) — ekran değil, kod işi |
+| ~~5~~ | ~~Kurulumda geçmiş veri~~ | **BİTTİ** (30 Tem) — `GecmisVeriDeposu`, `KullanimOkuyucu.gunlukToplamSureler`, `GecmisGunSayaci`; `IzinEkran` artık gerçekten izin istiyor (`MainActivity.onResume` tetikliyor) |
 | 6 | Widget | Glance; tasarım yok (`stitch/widget_tasar_m` yerleşim referansı) |
 | ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard, mock veri |
 | 7b | YEDAM onayı (köprü/rıza ekranı) | Hâlâ tasarım yok — `docs/tasarim-referans.md §4`; ekran 27 "YEDAM hakkında" ile karıştırılmaz, o yalnızca bilgilendirme |
@@ -411,10 +438,11 @@ kullanıcı adı ve lig adı (hesap sistemi Faz 2).
 | ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında |
 | — | *Faz 2* | FastAPI backend · gerçek lig · uzman paneli |
 
-**Tasarımı hâlâ eksik 5 ekran** (`docs/tasarim-referans.md §4`) — tasarımcıya
-sıradaki iş listesi: Mola hatırlatıcı (nudge), Görev detayı, Aktif yürüyüş,
-YEDAM onayı (rıza/köprü), Widget. Hepsi şu an yalnızca eski Stitch
-yerleşiminde (tonlar/tipografi güncel değil).
+**Tasarımı hâlâ eksik 4 ekran** (`docs/tasarim-referans.md §4`) — tasarımcıya
+sıradaki iş listesi: Görev detayı, Aktif yürüyüş, YEDAM onayı (rıza/köprü),
+Widget. Hepsi şu an yalnızca eski Stitch yerleşiminde (tonlar/tipografi
+güncel değil). Mola hatırlatıcı (nudge) bu listeden çıktı — `stitch/
+mola_hat_rlat_c` yerleşimi + gerçek tokenlarla uygulandı (madde 1, BİTTİ).
 
 ### Kapanan açık iş — Stitch tasarım sistemi
 

@@ -1,0 +1,250 @@
+package tr.org.yesilay.yesiliz.ui.ekran.nefes
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
+import tr.org.yesilay.yesiliz.ui.buyukHarf
+import tr.org.yesilay.yesiliz.ui.tema.Bosluk
+import tr.org.yesilay.yesiliz.ui.tema.Gradyan
+import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
+import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
+import tr.org.yesilay.yesiliz.ui.tema.Olcu
+import tr.org.yesilay.yesiliz.ui.tema.Yesil200
+import tr.org.yesilay.yesiliz.ui.tema.Yesil50
+import tr.org.yesilay.yesiliz.ui.tema.YesilAna
+import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
+import tr.org.yesilay.yesiliz.ui.tema.YesilNane
+import tr.org.yesilay.yesiliz.ui.tema.Beyaz
+
+/**
+ * Nefes egzersizi — kutu nefesi. `docs/tasarim-referans.md §2 / 16`,
+ * `docs/tasarim/ekranlar/16_nefes.png`.
+ *
+ * Tam ekran, alt gezinme çubuğu yok (`YesilizGezinme.kt`'deki `sekmede`
+ * kontrolü bu rotayı hariç tutuyor). Nudge overlay'in "Nefes egzersizi
+ * yapmak ister misin? → Evet" derin bağlantısı da buraya düşüyor.
+ */
+@Composable
+fun NefesEkran(
+    onKapat: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: NefesViewModel = hiltViewModel(),
+) {
+    val durum by viewModel.durum.collectAsStateWithLifecycle()
+    val faz = NefesFazi.entries[durum.ilerleme.fazIndeksi]
+
+    // Nefes al/tut'ta daire büyür, nefes ver/tut'ta küçülür — süre tempoyla eşleniyor.
+    val genisMi = faz == NefesFazi.NEFES_AL || faz == NefesFazi.TUT_1
+    val olcek by animateFloatAsState(
+        targetValue = if (genisMi) 1f else DaralmaOlcegi,
+        animationSpec = tween(durationMillis = durum.fazSaniye * 1_000, easing = LinearEasing),
+        label = "nefesOlcegi",
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Yesil50)
+            .padding(horizontal = Olcu.EkranKenari),
+    ) {
+        Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+        Spacer(modifier = Modifier.height(Bosluk.S))
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(onClick = onKapat, modifier = Modifier.align(Alignment.CenterStart)) {
+                Icon(imageVector = Icons.Filled.Close, contentDescription = "Kapat", tint = MetinBirincil)
+            }
+            Text(
+                text = kalanMetni(durum.ilerleme.toplamKalanSaniye),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MetinIkincil,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Kutu nefesi".buyukHarf(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MetinIkincil,
+            )
+            Text(
+                text = "Sakinleşme seansı",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MetinBirincil,
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(Olcu.NefesDairesiDis)
+                    .clip(CircleShape)
+                    .background(YesilAna.copy(alpha = DisHalkaSaydamligi)),
+            )
+            Box(
+                modifier = Modifier
+                    .size(Olcu.NefesDairesiIc)
+                    .scale(olcek)
+                    .clip(CircleShape)
+                    .background(Gradyan.NefesDairesi),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = faz.etiket,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Beyaz,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Text(
+            text = "${durum.fazSaniye} saniye boyunca ${faz.yonerge}",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+        FazGostergesi(fazIndeksi = durum.ilerleme.fazIndeksi)
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = Olcu.BolumArasi),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NefesKontrolu(
+                olcu = Olcu.NefesKontrolKucuk,
+                zemin = YesilNane,
+                onTikla = viewModel::fazSuresiDegistir,
+            ) {
+                Text(
+                    text = "${durum.fazSaniye}s",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = YesilKoyu,
+                )
+            }
+            NefesKontrolu(
+                olcu = Olcu.NefesKontrolBuyuk,
+                zemin = YesilAna,
+                onTikla = viewModel::oynatDuraklat,
+            ) {
+                Icon(
+                    imageVector = if (durum.oynatiliyor) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (durum.oynatiliyor) "Duraklat" else "Oynat",
+                    tint = Beyaz,
+                )
+            }
+            NefesKontrolu(
+                olcu = Olcu.NefesKontrolKucuk,
+                zemin = YesilNane,
+                onTikla = viewModel::bastanBaslat,
+            ) {
+                Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Baştan başlat", tint = YesilKoyu)
+            }
+        }
+    }
+}
+
+/** 4 fazlık ilerleme noktaları — `AdimGostergesi` tam genişlik çubuk olduğu için burada uymuyor. */
+@Composable
+private fun FazGostergesi(fazIndeksi: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        repeat(NefesFazi.entries.size) { i ->
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = Bosluk.Xs)
+                    .size(Olcu.NefesFazNoktasi)
+                    .clip(CircleShape)
+                    .background(if (i == fazIndeksi) YesilAna else Yesil200),
+            )
+        }
+    }
+}
+
+/** Dairesel kontrol butonu — `IkonRozeti` tıklama desteklemediği için ayrı. */
+@Composable
+private fun NefesKontrolu(
+    olcu: Dp,
+    zemin: Color,
+    onTikla: () -> Unit,
+    icerik: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(olcu)
+            .clip(CircleShape)
+            .background(zemin)
+            .clickable(onClick = onTikla),
+        contentAlignment = Alignment.Center,
+    ) {
+        icerik()
+    }
+}
+
+private fun kalanMetni(toplamSaniye: Int): String {
+    val dakika = toplamSaniye / 60
+    val saniye = toplamSaniye % 60
+    return "%d:%02d kaldı".format(dakika, saniye)
+}
+
+/** Nefes ver/tut fazlarında dairenin küçüldüğü ölçek. */
+private const val DaralmaOlcegi = 0.75f
+
+/** Dış halkanın saydamlığı — soluk, dekoratif. */
+private const val DisHalkaSaydamligi = 0.15f

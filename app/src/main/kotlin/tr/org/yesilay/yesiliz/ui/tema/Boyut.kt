@@ -102,6 +102,21 @@ object Olcu {
 
     /** boşluksuz kart için */
     val Sifir = 0.dp
+
+    /** nefes ekranı — dolu iç daire */
+    val NefesDairesiIc = 180.dp
+
+    /** nefes ekranı — soluk dış halka (iç dairenin etrafında) */
+    val NefesDairesiDis = 260.dp
+
+    /** nefes ekranı — oynat/duraklat ana kontrolü */
+    val NefesKontrolBuyuk = 72.dp
+
+    /** nefes ekranı — tempo seçici ve baştan başlat kontrolleri */
+    val NefesKontrolKucuk = 56.dp
+
+    /** nefes ekranı — faz göstergesi noktası */
+    val NefesFazNoktasi = 8.dp
 }
 
 /**

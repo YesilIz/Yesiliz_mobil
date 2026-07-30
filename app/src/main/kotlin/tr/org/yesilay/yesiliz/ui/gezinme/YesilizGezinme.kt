@@ -1,15 +1,10 @@
 package tr.org.yesilay.yesiliz.ui.gezinme
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,6 +17,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.ana.AnaEkran
 import tr.org.yesilay.yesiliz.ui.ekran.ebeveyn.EbeveynEkran
 import tr.org.yesilay.yesiliz.ui.ekran.istatistik.IstatistikEkran
 import tr.org.yesilay.yesiliz.ui.ekran.lig.LigEkran
+import tr.org.yesilay.yesiliz.ui.ekran.nefes.NefesEkran
 import tr.org.yesilay.yesiliz.ui.ekran.odul.OdulEkran
 import tr.org.yesilay.yesiliz.ui.ekran.profil.ProfilEkran
 import tr.org.yesilay.yesiliz.ui.ekran.riskdetay.RiskDetayEkran
@@ -86,7 +82,7 @@ fun YesilizGezinme(
             composable(Rota.ANA) {
                 AnaEkran(
                     onOdul = { navController.navigate(Rota.ODUL) },
-                    onGorev = { /* görev detayı alt sayfası — sıradaki iş */ },
+                    onNefesBaslat = { navController.navigate(Rota.NEFES) },
                 )
             }
             composable(Rota.ISTATISTIK) {
@@ -105,12 +101,8 @@ fun YesilizGezinme(
             composable(Rota.RISK_DETAY) {
                 RiskDetayEkran(onGeri = { navController.popBackStack() })
             }
-            // Yer tutucu — gerçek nefes ekranı CLAUDE.md §11 sıradaki iş #3.
-            // Yalnızca nudge'ın "Evet" derin bağlantısının çökmemesi için var.
             composable(Rota.NEFES) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nefes egzersizi — yakında", style = MaterialTheme.typography.bodyLarge)
-                }
+                NefesEkran(onKapat = { navController.popBackStack() })
             }
         }
     }
