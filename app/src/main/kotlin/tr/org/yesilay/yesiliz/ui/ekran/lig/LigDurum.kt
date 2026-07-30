@@ -1,7 +1,9 @@
 package tr.org.yesilay.yesiliz.ui.ekran.lig
 
+import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
+
 /**
- * Lig ekranı durumu — `docs/tasarim-referans.md §2 / 10`.
+ * Lig ekranı durumu — `docs/tasarim-referans.md §2 / 10` ve boş durum **37**.
  *
  * Lig seviyeleri Fidan → Filiz → Ağaç → Koru → Orman (CLAUDE.md §12 K1).
  */
@@ -11,6 +13,12 @@ data class LigDurum(
     val yukselen: Int = 7,
     val dusen: Int = 7,
     val siralama: List<LigSatiriModel> = emptyList(),
+    /**
+     * false ise **boş durum** (37) gösteriliyor: kullanıcı ne lige katılmış
+     * ne de arkadaş eklemiş.
+     */
+    val katildiMi: Boolean = false,
+    val yukleniyor: Boolean = true,
 )
 
 data class LigSatiriModel(
@@ -18,4 +26,13 @@ data class LigSatiriModel(
     val isim: String,
     val puan: Int,
     val benMiyim: Boolean = false,
+    val arkadasMi: Boolean = false,
+)
+
+/** Arkadaş ekle ekranı — tasarım 36. */
+data class ArkadasEkleDurum(
+    val davetKodu: String = "",
+    val onerilenler: List<OnerilenKisi> = emptyList(),
+    val kopyalandi: Boolean = false,
+    val yukleniyor: Boolean = true,
 )

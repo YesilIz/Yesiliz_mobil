@@ -26,6 +26,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.hedef.HedefEkran
 import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategoriEkran
 import tr.org.yesilay.yesiliz.ui.ekran.kategori.KategorizeEtEkran
 import tr.org.yesilay.yesiliz.ui.ekran.istatistik.IstatistikEkran
+import tr.org.yesilay.yesiliz.ui.ekran.lig.ArkadasEkleEkran
 import tr.org.yesilay.yesiliz.ui.ekran.lig.LigEkran
 import tr.org.yesilay.yesiliz.ui.ekran.nefes.NefesEkran
 import tr.org.yesilay.yesiliz.ui.ekran.odul.OdulEkran
@@ -129,7 +130,12 @@ fun YesilizGezinme(
             composable(Rota.ISTATISTIK) {
                 IstatistikEkran(onRiskDetay = { navController.navigate(Rota.RISK_DETAY) })
             }
-            composable(Rota.LIG) { LigEkran() }
+            composable(Rota.LIG) {
+                LigEkran(onArkadasEkle = { navController.navigate(Rota.ARKADAS_EKLE) })
+            }
+            composable(Rota.ARKADAS_EKLE) {
+                ArkadasEkleEkran(onGeri = { navController.popBackStack() })
+            }
             composable(Rota.PROFIL) {
                 ProfilEkran(
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },

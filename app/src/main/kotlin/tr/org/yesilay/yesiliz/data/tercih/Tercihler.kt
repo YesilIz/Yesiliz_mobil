@@ -80,6 +80,18 @@ class Tercihler @Inject constructor(
 
     val ligdeGorun: Flow<Boolean> = depo.data.map { it[LIGDE_GORUN] ?: true }
 
+    /** Kullanıcı bir lige katıldı mı — false ise Lig sekmesi boş durum (37). */
+    val ligeKatildiMi: Flow<Boolean> = depo.data.map { it[LIGE_KATILDI] ?: false }
+
+    /**
+     * Cihaz başına bir kez üretilen davet kodu (tasarım 36).
+     *
+     * Sunucu olmadığı için kod yerelde üretiliyor; Faz 2'de backend'den
+     * gelecek. Bir kez üretilip saklanması şart — kod her açılışta değişirse
+     * paylaşılan davet geçersizleşir.
+     */
+    val davetKodu: Flow<String?> = depo.data.map { it[DAVET_KODU] }
+
     // --- ebeveyn paneli eşleştirmesi ---
     // MVP'de gerçek `EbeveynBaglantiEntity` yok (CLAUDE.md §6 — Faz 2'ye
     // ertelendi, backend gerektiriyor). Eşleştirme durumu bu yüzden Room'a
@@ -173,6 +185,15 @@ class Tercihler @Inject constructor(
         depo.edit { it[LIGDE_GORUN] = acik }
     }
 
+    suspend fun ligeKatildiIsaretle() {
+        depo.edit { it[LIGE_KATILDI] = true }
+    }
+
+    /** Var olan kodu **ezmiyor** — paylaşılmış bir kod geçersizleşmesin. */
+    suspend fun davetKodunuKaydet(kod: String) {
+        depo.edit { p -> if (p[DAVET_KODU] == null) p[DAVET_KODU] = kod }
+    }
+
     suspend fun ebeveynEslesmeyiKaydet(rol: String) {
         depo.edit { p ->
             p[EBEVEYN_ESLESMIS] = true
@@ -225,6 +246,8 @@ class Tercihler @Inject constructor(
         val SON_ANKET = longPreferencesKey("son_anket_gunu")
         val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
+        val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
+        val DAVET_KODU = stringPreferencesKey("davet_kodu")
         val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
         val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
         val MOLA_HATIRLATICI = booleanPreferencesKey("mola_hatirlatici_acik")

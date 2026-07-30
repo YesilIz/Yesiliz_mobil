@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.ui.ekran.lig
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -27,12 +28,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
+import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
@@ -53,6 +57,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
  */
 @Composable
 fun LigEkran(
+    onArkadasEkle: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LigViewModel = hiltViewModel(),
 ) {
@@ -61,6 +66,14 @@ fun LigEkran(
     // İçerik zemini beyaz: sıralama satırları `Yesil50` dolgulu, zemin de
     // `Yesil50` olsaydı satırlar kaybolurdu.
     YesilBaslikliEkran(baslik = "Lig", icerikZemini = Beyaz, modifier = modifier) {
+        // Boş durum (tasarım 37): kullanıcı ne lige katılmış ne de arkadaşı
+        // var. Sahte bir sıralama göstermektense ne yapabileceğini söylemek
+        // doğru — aynı ilke İstatistik'in boş durumunda da geçerli.
+        if (!durum.yukleniyor && !durum.katildiMi) {
+            BosLig(onKatil = viewModel::ligeKatil, onArkadasEkle = onArkadasEkle)
+            return@YesilBaslikliEkran
+        }
+
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Bosluk.S),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -71,7 +84,49 @@ fun LigEkran(
             items(durum.siralama, key = { it.sira }) { satir ->
                 LigSatiri(satir)
             }
+            item {
+                Spacer(modifier = Modifier.height(Olcu.Aralik))
+                IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
+            }
         }
+    }
+}
+
+/** Lig — boş durum (tasarım 37). */
+@Composable
+private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Olcu.BolumArasi),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+        Image(
+            painter = painterResource(tr.org.yesilay.yesiliz.R.drawable.agac_evre1_cicek),
+            contentDescription = null,
+            modifier = Modifier.height(Olcu.AgacBoyu),
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Text(
+            text = "Henüz kimseyle yarışmıyorsun",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "Bir lige katıl ya da arkadaşlarını davet et, birlikte " +
+                "ilerlemenizi görün.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinUcuncul,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+        BirincilButon(metin = "Lige katıl", onTikla = onKatil)
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
     }
 }
 
