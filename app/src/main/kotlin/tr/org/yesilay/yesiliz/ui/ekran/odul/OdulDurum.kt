@@ -12,6 +12,8 @@ enum class OdulHali { KAZANILDI, AKTIF, KILITLI }
  * 10.000, en altta 500) — kullanıcı nereden geldiğini görüyor.
  */
 data class OdulDurum(
+    /** Sertifikada görünen ad — hesap oturumundan geliyor. */
+    val isim: String = "",
     val puan: Int = 0,
     val sonrakiEsik: Int = 0,
     val basamaklar: List<Odul> = emptyList(),

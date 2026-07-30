@@ -38,6 +38,7 @@ import javax.inject.Inject
 @HiltViewModel
 class OdulViewModel @Inject constructor(
     private val puanDeposu: PuanDeposu,
+    tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
 ) : ViewModel() {
 
@@ -45,7 +46,8 @@ class OdulViewModel @Inject constructor(
         puanDeposu.toplamPuan,
         puanDeposu.aktifGunSayisi,
         puanDeposu.sonKayitlar(),
-    ) { puan, aktifGun, kayitlar ->
+        tercihler.oturum,
+    ) { puan, aktifGun, kayitlar, oturum ->
         val ham = KADEMELER.map { it.duruma(puan, aktifGun) }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
         // gösterilen, kullanıcının hedeflediği ödül bu.
@@ -55,6 +57,8 @@ class OdulViewModel @Inject constructor(
         }
 
         OdulDurum(
+            // Misafirin adı yok; sertifikada sabite düşülüyor.
+            isim = oturum.ad.ifBlank { SABIT_ISIM },
             puan = puan,
             sonrakiEsik = siradaki?.esik ?: ham.maxOf { it.esik },
             basamaklar = basamaklar.sortedByDescending { it.esik },
@@ -89,6 +93,9 @@ class OdulViewModel @Inject constructor(
     }
 
     private companion object {
+        /** Hesap sistemi öncesi ad — AnaViewModel ve Profil ile aynı. */
+        const val SABIT_ISIM = "Turan"
+
         const val AKIS_BEKLEME_MS = 5_000L
 
         val KADEMELER = listOf(

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dışa aktarım dosyalarının paylaşılabildiği tek yol.
+
+  Yalnızca `cacheDir/disa_aktarim` — veritabanı, DataStore ya da başka
+  hiçbir dizin paylaşıma açık değil. FileProvider'ın kapsamı bilerek dar.
+-->
+<paths>
+    <cache-path name="disa_aktarim" path="disa_aktarim/" />
+</paths>

@@ -124,6 +124,7 @@ fun ProfilEkran(
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
     val sayfaDurumu = rememberModalBottomSheetState()
+    val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
         Column(
@@ -306,7 +307,17 @@ fun ProfilEkran(
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
         ) {
-            GecmisiIndirIcerik(onKapat = { gecmisiIndirAcik = false })
+            GecmisiIndirIcerik(
+                onKapat = { gecmisiIndirAcik = false },
+                onDisaAktar = {
+                    viewModel.gecmisiDisaAktar { niyet ->
+                        context.startActivity(
+                            android.content.Intent.createChooser(niyet, "Verilerini paylaş"),
+                        )
+                        gecmisiIndirAcik = false
+                    }
+                },
+            )
         }
     }
 
@@ -380,7 +391,17 @@ fun ProfilEkran(
         ) {
             BildirimSaatleriIcerik(
                 durum = durum,
-                onDegis = viewModel::bildirimSaatleriAyarla,
+                onDegis = { saatler ->
+                    // Hatırlatma AÇILIRKEN bildirim izni isteniyor.
+                    // Reddedilirse defter yine çalışıyor (Bildirimler
+                    // ekranında görünüyor), yalnızca sistem bildirimi
+                    // gelmiyor — HatirlatmaWorker bunu kendi içinde
+                    // kontrol ediyor.
+                    if (saatler.acik && !durum.bildirimSaatleri.acik) {
+                        bildirimIzni?.invoke()
+                    }
+                    viewModel.bildirimSaatleriAyarla(saatler)
+                },
                 onKapat = { bildirimSaatleriAcik = false },
             )
         }
@@ -468,7 +489,7 @@ private fun ToplananVerilerIcerik(onKapat: () -> Unit) {
 
 /** Alt sayfa 24 — Geçmişi indir. PDF üretimi Faz 2, burada yalnızca akış. */
 @Composable
-private fun GecmisiIndirIcerik(onKapat: () -> Unit) {
+private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -484,10 +505,14 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
+        // Tasarım 24'te tek seçenek "PDF raporu" var; PDF üretimi backend
+        // işi ve çevrimdışı çalışmıyor. Ham veri dışa aktarımı KVKK
+        // taşınabilirliğini zaten karşılıyor ve dosya gerçekten
+        // taşınabilir oluyor (Excel'de açılıyor).
         SecenekKarti(
             ikon = Icons.Filled.Description,
-            baslik = "PDF raporu",
-            aciklama = "Okunabilir özet, grafiklerle",
+            baslik = "Ham veri (JSON + CSV)",
+            aciklama = "Cihazda üretilir, hemen paylaşılır",
             secili = true,
             onayIkonuMu = true,
             onTikla = {},
@@ -495,12 +520,14 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit) {
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         GizlilikNotu(
-            "Dosya hazırlanınca kayıtlı e-posta adresine gönderilecek.",
+            "Dosyalar telefonunda üretilir; istediğin uygulamayla paylaşabilirsin. " +
+                "Uygulama kullanım olayların (hangi uygulama, ne zaman) dosyaya " +
+                "dahil edilmez.",
             ikon = androidx.compose.material.icons.Icons.Filled.Sync,
         )
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        BirincilButon(metin = "İndirmeyi başlat", onTikla = { /* PDF üretimi Faz 2 — backend gerekiyor */ })
+        BirincilButon(metin = "Dosyaları oluştur ve paylaş", onTikla = onDisaAktar)
     }
 }
 
@@ -967,4 +994,23 @@ private fun SaatSeridi(secenekler: List<Int>, secili: Int, onSec: (Int) -> Unit)
             )
         }
     }
+}
+
+
+/**
+ * Bildirim izni isteği (API 33+).
+ *
+ * `null` dönerse izin gerekmiyor (API 32 ve altı) ya da zaten verilmiş.
+ * İzin **yalnızca kullanıcı hatırlatmayı açtığında** isteniyor; açılışta
+ * sormak, henüz istemediği bir şey için rahatsız etmek olurdu.
+ */
+@Composable
+private fun bildirimIzniIstegi(): (() -> Unit)? {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return null
+
+    val baslatici = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { /* Reddedilse de defter çalışmaya devam ediyor. */ }
+
+    return { baslatici.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
 }

@@ -427,6 +427,7 @@ private fun EbeveynPaneli(durum: EbeveynDurum, onYedam: () -> Unit) {
 /** Ekran 27 — bilgilendirme. "YEDAM onayı" (köprü/rıza akışı) İLE KARIŞTIRILMAZ. */
 @Composable
 private fun YedamHakkinda(onKapat: () -> Unit) {
+    val baglam = androidx.compose.ui.platform.LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -490,7 +491,20 @@ private fun YedamHakkinda(onKapat: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        // Gerçek arama başlatma (ör. ACTION_DIAL) kapsam dışı — bilgilendirme yeterli.
-        BirincilButon(metin = "115'i ara", onTikla = {})
+        // ACTION_DIAL: numarayı çeviriciye yazıyor, aramayı KENDİ
+        // başlatmıyor. ACTION_CALL izin isterdi ve kullanıcının onayı
+        // olmadan arama başlatmak bu ekranın işi değil. Profil › YEDAM
+        // hakkında alt sayfasıyla aynı desen.
+        BirincilButon(
+            metin = "115'i ara",
+            onTikla = {
+                baglam.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_DIAL,
+                        android.net.Uri.parse("tel:115"),
+                    ),
+                )
+            },
+        )
     }
 }

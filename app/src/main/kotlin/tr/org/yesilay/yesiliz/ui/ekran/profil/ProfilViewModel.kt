@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.demo.DemoVeri
+import tr.org.yesilay.yesiliz.data.depo.DisaAktarDeposu
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
@@ -28,6 +29,7 @@ class ProfilViewModel @Inject constructor(
     private val demoVeri: DemoVeri,
     private val veriYonetimi: VeriYonetimiDeposu,
     private val isPlanlayici: IsPlanlayici,
+    private val disaAktarDeposu: DisaAktarDeposu,
 ) : ViewModel() {
 
     val durum: StateFlow<ProfilDurum> = combine(
@@ -88,6 +90,16 @@ class ProfilViewModel @Inject constructor(
             tercihler.bildirimSaatleriniKaydet(saatler)
             isPlanlayici.hatirlatmayiPlanla(saatler)
         }
+    }
+
+    /**
+     * Geçmişi JSON + CSV olarak dışa aktarır ve paylaş sayfasını açar.
+     *
+     * Niyeti başlatmak Composable'ın işi (ViewModel Context tutmaz,
+     * CLAUDE.md §6); burada yalnızca dosyalar üretilip niyet hazırlanıyor.
+     */
+    fun gecmisiDisaAktar(onHazir: (android.content.Intent) -> Unit) {
+        viewModelScope.launch { onHazir(disaAktarDeposu.disaAktar()) }
     }
 
     /**

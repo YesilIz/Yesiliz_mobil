@@ -81,10 +81,15 @@ abstract class YesilizDb : RoomDatabase() {
         private var ornek: YesilizDb? = null
 
         /**
-         * Prototip boyunca `fallbackToDestructiveMigration` (CLAUDE.md §6):
-         * şema sık değişecek, gerçek migration stratejisi yarışma sonrasına
-         * bırakıldı. **Yayına çıkmadan önce mutlaka değiştirilmeli** —
-         * yoksa her güncellemede kullanıcının geçmişi silinir.
+         * **Yıkıcı geri düşüş KALDIRILDI** (31 Tem 2026).
+         *
+         * Artık gerçek `Migration` nesneleri kullanılıyor (`Gecisler.kt`).
+         * Bir şema değişikliği için geçiş yazılmazsa uygulama açılışta
+         * çöküyor — sessizce kullanıcının geçmişini silmektense gürültülü
+         * başarısız olmak yeğ. Ekran süresi geçmişi bu uygulamanın
+         * biriktirdiği tek değerli şey.
+         *
+         * Entity değiştiren her PR bir geçiş de yazmak zorunda (CLAUDE.md §7).
          */
         fun al(baglam: Context): YesilizDb = ornek ?: synchronized(this) {
             ornek ?: Room.databaseBuilder(
@@ -92,7 +97,7 @@ abstract class YesilizDb : RoomDatabase() {
                 YesilizDb::class.java,
                 AD,
             )
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                .addMigrations(*TUM_GECISLER)
                 .build()
                 .also { ornek = it }
         }

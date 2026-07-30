@@ -53,6 +53,11 @@ android {
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
     sourceSets["debug"].kotlin.srcDir("src/debug/kotlin")
     sourceSets["release"].kotlin.srcDir("src/release/kotlin")
+    sourceSets["androidTest"].kotlin.srcDir("src/androidTest/kotlin")
+
+    // MigrationTestHelper eski şema JSON'larını assets'ten okuyor —
+    // `room.schemaLocation` çıktısı testlere de verilmeli.
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

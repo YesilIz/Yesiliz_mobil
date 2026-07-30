@@ -82,7 +82,9 @@ fun OdulEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikOdul by remember { mutableStateOf<Odul?>(null) }
+    var sertifikaOdulu by remember { mutableStateOf<Odul?>(null) }
     var gecmisAcik by remember { mutableStateOf(false) }
+    val baglam = androidx.compose.ui.platform.LocalContext.current
     val sayfaDurumu = rememberModalBottomSheetState()
 
     YesilBaslikliEkran(baslik = "Ödüller", onGeri = onGeri, modifier = modifier) {
@@ -116,7 +118,46 @@ fun OdulEkran(
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
         ) {
-            OdulDetayi(odul = odul, puan = durum.puan, onKapat = { acikOdul = null })
+            OdulDetayi(
+                odul = odul,
+                puan = durum.puan,
+                onKapat = { acikOdul = null },
+                onSertifika = {
+                    acikOdul = null
+                    sertifikaOdulu = odul
+                },
+            )
+        }
+    }
+
+    sertifikaOdulu?.let { odul ->
+        ModalBottomSheet(
+            onDismissRequest = { sertifikaOdulu = null },
+            sheetState = sayfaDurumu,
+            containerColor = Beyaz,
+        ) {
+            SertifikaIcerik(
+                odulAdi = odul.ad,
+                kullaniciAdi = durum.isim,
+                bagisTarihi = odul.bagisTarihi.orEmpty(),
+                sertifikaNo = odul.sertifikaNo.orEmpty(),
+                onPaylas = {
+                    baglam.startActivity(
+                        android.content.Intent.createChooser(
+                            android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    android.content.Intent.EXTRA_TEXT,
+                                    "Yeşilİz'de \"${odul.ad}\" ödülünü kazandım. " +
+                                        "Belge no: ${odul.sertifikaNo.orEmpty()}",
+                                )
+                            },
+                            "Sertifikanı paylaş",
+                        ),
+                    )
+                },
+                onKapat = { sertifikaOdulu = null },
+            )
         }
     }
 
@@ -305,7 +346,12 @@ private fun TamamlandiSatiri() {
 
 /** Alt sayfa 18/19 — kilitli ve kazanılmış ödül aynı iskelet. */
 @Composable
-private fun OdulDetayi(odul: Odul, puan: Int, onKapat: () -> Unit) {
+private fun OdulDetayi(
+    odul: Odul,
+    puan: Int,
+    onKapat: () -> Unit,
+    onSertifika: () -> Unit,
+) {
     val kazanildi = odul.hal == OdulHali.KAZANILDI
 
     Column(
@@ -367,7 +413,7 @@ private fun OdulDetayi(odul: Odul, puan: Int, onKapat: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BirincilButon(metin = "Sertifikayı görüntüle", onTikla = onKapat)
+            BirincilButon(metin = "Sertifikayı görüntüle", onTikla = onSertifika)
         } else {
             val oran = (puan.toFloat() / odul.esik).coerceIn(0f, 1f)
             Row(modifier = Modifier.fillMaxWidth()) {

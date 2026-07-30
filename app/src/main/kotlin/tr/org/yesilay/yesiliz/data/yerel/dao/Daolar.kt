@@ -188,6 +188,10 @@ interface GorevTamamlamaDao {
     /** Puan geçmişi alt sayfası — son kayıtlar, yeniden eskiye. */
     @Query("SELECT * FROM gorev_tamamlama ORDER BY tarih DESC, id DESC LIMIT :adet")
     fun sonKayitlarAkisi(adet: Int): Flow<List<GorevTamamlamaEntity>>
+
+    /** Dışa aktarım — tüm görev geçmişi (DisaAktarDeposu). */
+    @Query("SELECT * FROM gorev_tamamlama ORDER BY tarih")
+    suspend fun hepsi(): List<GorevTamamlamaEntity>
 }
 
 @Dao

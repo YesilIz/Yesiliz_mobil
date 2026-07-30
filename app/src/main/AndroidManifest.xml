@@ -40,6 +40,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
+      Günlük hatırlatma (Profil › Bildirim saatleri). Varsayılan KAPALI ve
+      izin yalnızca kullanıcı hatırlatmayı açtığında isteniyor — açılışta
+      izin sormak, henüz istemediği bir şey için rahatsız etmek olurdu.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
       Paket görünürlüğü (Android 11+).
 
       QUERY_ALL_PACKAGES KULLANILMIYOR — Play Store gerekçe istiyor ve
@@ -81,6 +88,21 @@
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
+        </provider>
+
+        <!--
+          "Geçmişi indir" dosyalarının paylaşılması. Kapsam bilerek dar:
+          yalnızca `cacheDir/disa_aktarim` (bkz. res/xml/dosya_yollari.xml).
+          Veritabanı ve DataStore paylaşıma açık DEĞİL.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.dosyalar"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dosya_yollari" />
         </provider>
 
         <activity

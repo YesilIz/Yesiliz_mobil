@@ -1,0 +1,91 @@
+package tr.org.yesilay.yesiliz.data.yerel
+
+import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.IOException
+
+/**
+ * Şema geçişleri.
+ *
+ * `fallbackToDestructiveMigration` kaldırıldı; artık geçiş yazılmazsa
+ * uygulama açılışta çöküyor. Bu test o çöküşü **kullanıcıdan önce**
+ * yakalıyor: sürüm 1 veritabanı kurulup 2'ye taşınıyor ve Room'un
+ * doğrulaması (`validateDroppedTables = true`) şemanın beklenenle birebir
+ * olduğunu kontrol ediyor.
+ *
+ * Yeni bir sürüm eklendiğinde buraya bir test daha eklenmesi gerekiyor.
+ *
+ * **Metod adları camelCase** — emülatör testlerinde backtick'li boşluklu
+ * ad DEX'te yasak ("Space characters in SimpleName ... are not allowed").
+ * Birim testlerde (`src/test/`) serbest, burada değil.
+ */
+@RunWith(AndroidJUnit4::class)
+class GecisTest {
+
+    @get:Rule
+    val yardimci = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        YesilizDb::class.java,
+        emptyList(),
+        FrameworkSQLiteOpenHelperFactory(),
+    )
+
+    @Test
+    @Throws(IOException::class)
+    fun gecisSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+
+        // `validateDroppedTables = true`: Room şemanın beklenenle birebir
+        // olduğunu doğruluyor. Eksik bir sütun ya da indeks burada patlıyor.
+        yardimci.runMigrationsAndValidate(TEST_DB, 2, true, GECIS_1_2)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun gecisVarOlanVeriyiKoruyor() {
+        yardimci.createDatabase(TEST_DB, 1).apply {
+            execSQL(
+                "INSERT INTO gunluk_ozet (tarih, socialDk, entertainmentDk, gamesDk, " +
+                    "communicationDk, productivityDk, educationDk, healthDk, otherDk, " +
+                    "gece, oturum, acilis, sabah, uykuOncesi, yerDegis, adim, sporDk, " +
+                    "bTuketim, bIslevsel, P, A, D, S, geceKullanimDk, acilisSayisi) " +
+                    "VALUES ('2026-07-30', 120.0, 0,0,0,0,0,0,0, 0,0,0,0,0,0, 0,0, " +
+                    "0,0,1,0,1,0, 0,0)",
+            )
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 2, true, GECIS_1_2)
+
+        db.query("SELECT tarih, socialDk FROM gunluk_ozet").use { imlec ->
+            assertTrue("Geçişten sonra satır kaybolmuş", imlec.moveToFirst())
+            assertEquals("2026-07-30", imlec.getString(0))
+            assertEquals(120.0, imlec.getDouble(1), 0.001)
+        }
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun yeniTablolarOlusuyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 2, true, GECIS_1_2)
+
+        listOf("ruh_hali", "uyku_beyani", "farkindalik_testi", "bildirim", "arkadas").forEach { ad ->
+            db.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?", arrayOf(ad))
+                .use { imlec ->
+                    assertTrue("$ad tablosu oluşmamış", imlec.moveToFirst())
+                }
+        }
+    }
+
+    private companion object {
+        const val TEST_DB = "gecis_testi.db"
+    }
+}
