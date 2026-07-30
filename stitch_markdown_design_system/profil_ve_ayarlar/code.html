@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profil ve Ayarlar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "secondary-fixed-dim": "#9dd2b8",
+                  "risk-mid": "#70ab70",
+                  "on-secondary": "#ffffff",
+                  "on-primary": "#ffffff",
+                  "primary": "#006e27",
+                  "on-secondary-fixed-variant": "#1c4f3c",
+                  "on-tertiary-container": "#00380e",
+                  "risk-high": "#124734",
+                  "tertiary-container": "#69a46a",
+                  "primary-fixed": "#72fe86",
+                  "surface-bright": "#f2fcf4",
+                  "on-primary-fixed-variant": "#00531b",
+                  "surface-container-lowest": "#ffffff",
+                  "inverse-primary": "#54e16d",
+                  "surface-muted": "#c4dec9",
+                  "on-error-container": "#93000a",
+                  "surface-container-low": "#ecf6ee",
+                  "on-error": "#ffffff",
+                  "inverse-surface": "#29322d",
+                  "divider": "#E3EDE6",
+                  "tertiary-fixed-dim": "#98d596",
+                  "on-tertiary-fixed-variant": "#185121",
+                  "error-container": "#ffdad6",
+                  "surface-container-high": "#e1ebe3",
+                  "primary-container": "#00ae42",
+                  "outline-variant": "#bccbb8",
+                  "on-primary-container": "#00380f",
+                  "surface-container": "#e6f0e8",
+                  "on-tertiary-fixed": "#002106",
+                  "risk-low": "#00AE42",
+                  "surface-tint": "#006e27",
+                  "surface-container-highest": "#dbe5dd",
+                  "background": "#f2fcf4",
+                  "tertiary-fixed": "#b3f2b0",
+                  "outline": "#6d7b6b",
+                  "on-secondary-container": "#3a6c57",
+                  "surface-white": "#FFFFFF",
+                  "on-surface-variant": "#3d4a3c",
+                  "surface": "#f2fcf4",
+                  "secondary-container": "#b6ebd1",
+                  "inverse-on-surface": "#e9f3eb",
+                  "surface-dim": "#d2dcd5",
+                  "secondary": "#366853",
+                  "on-secondary-fixed": "#002115",
+                  "on-surface": "#151d19",
+                  "tertiary": "#326a36",
+                  "secondary-fixed": "#b9eed3",
+                  "on-background": "#151d19",
+                  "on-tertiary": "#ffffff",
+                  "on-primary-fixed": "#002107",
+                  "text-secondary": "#5A6B60",
+                  "surface-variant": "#dbe5dd",
+                  "error": "#ba1a1a",
+                  "primary-fixed-dim": "#54e16d"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "base": "8px",
+                  "stack-md": "16px",
+                  "stack-lg": "32px",
+                  "gutter": "16px",
+                  "screen-margin": "20px",
+                  "stack-sm": "4px",
+                  "card-padding": "20px"
+          },
+          "fontFamily": {
+                  "caption": ["Inter"],
+                  "display-hero": ["Inter"],
+                  "label-sm": ["Inter"],
+                  "headline-h2": ["Inter"],
+                  "headline-h1": ["Inter"],
+                  "headline-h1-mobile": ["Inter"],
+                  "body-md": ["Inter"]
+          },
+          "fontSize": {
+                  "caption": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "display-hero": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                  "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                  "headline-h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                  "headline-h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                  "headline-h1-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                  "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen text-on-background font-body-md antialiased md:hidden pb-24">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim flex justify-between items-center px-screen-margin py-stack-md max-w-full z-40">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="A gentle, supportive portrait of a young professional in an optimistic light-mode setting. Soft, natural lighting highlights a calm expression. The color palette focuses on muted greens and pure whites, emphasizing a clean, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPQMKc2xGe9ydWVvFVmvMLmVp5AAX1BBWC48QxVMgHQoWA8KlpQ0OB4NF5Tm6rDflqnE1G0F3VgGjzkqfJEaiSIdagkb8SRcVrv06ueD2hDONyFO9KTF09CJby0tOA0l17DJFz0AviLW2nxLqv890jhKF7V91Pfx5ZwLqmmEvzn9t8hmfKmZkfSzU5k-746Pre5bBU6PiBXJWm4ina5tE6nRguW3QXE21_Wbl1ujijmvaVgqa0VF3Ee7UxNbga9DYO9Lv2mKFV1c8X"/>
+</div>
+<h1 class="font-headline-h1-mobile text-headline-h1-mobile font-bold text-primary dark:text-primary-fixed-dim">Yeşilİz</h1>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="px-screen-margin pt-stack-lg pb-stack-lg flex flex-col gap-stack-lg">
+<!-- Profile Header -->
+<section class="flex flex-col items-center justify-center text-center gap-stack-sm pt-4">
+<div class="w-24 h-24 rounded-full overflow-hidden bg-surface-variant border-4 border-surface-white shadow-[0_2px_12px_rgba(18,71,52,0.06)] mb-2 relative">
+<img class="w-full h-full object-cover" data-alt="A gentle, supportive portrait of a young professional in an optimistic light-mode setting. Soft, natural lighting highlights a calm expression. The color palette focuses on muted greens and pure whites, emphasizing a clean, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANXd5OtVp3sdaUuAl4XV5g2Ke5nDaB95090UweTrvArzs_qiq46NXRnKie-44FfNpaPhCsYYZJsVIDQlcZMuuQJgBWyWMSL-i3niAhieQ4rSoXwtg-S72qbbMF7L-HaXMWvxlN7KHRQuko_1Iu0Mny4Pd0IZ-K0rPzNx0_mn59DI5sxCp67K_SAlI13EvFlXkVlJSHdZdgVcXhe1yNJ6Uip1Kl0AfX0u6ae6FHSW99CJvmAAFi7JZxolTeQOrPqK5o-_P1WCXooy4U"/>
+<button class="absolute bottom-0 right-0 bg-primary-container text-on-primary w-8 h-8 rounded-full flex items-center justify-center border-2 border-surface-white active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[16px]" data-icon="edit">edit</span>
+</button>
+</div>
+<h2 class="font-headline-h2 text-headline-h2 text-on-background">Turan</h2>
+<div class="bg-surface-container px-3 py-1 rounded-[12px] inline-flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="energy_savings_leaf" data-weight="fill" style="font-variation-settings: 'FILL' 1;">energy_savings_leaf</span>
+<span class="font-label-sm text-label-sm text-primary">Filiz Ligi</span>
+</div>
+</section>
+<!-- Settings Groups -->
+<div class="flex flex-col gap-stack-md">
+<!-- Group: Hedeflerim -->
+<section>
+<h3 class="font-caption text-caption text-text-secondary mb-2 px-2 uppercase tracking-wider">Hedeflerim</h3>
+<div class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] overflow-hidden flex flex-col">
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="track_changes">track_changes</span>
+<span class="font-body-md text-body-md text-on-surface">Günlük hedef</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-divider mx-card-padding"></div>
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="category">category</span>
+<span class="font-body-md text-body-md text-on-surface">Uygulama kategorileri</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-divider mx-card-padding"></div>
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="schedule">schedule</span>
+<span class="font-body-md text-body-md text-on-surface">Bildirim saatleri</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Group: Verilerim -->
+<section>
+<h3 class="font-caption text-caption text-text-secondary mb-2 px-2 uppercase tracking-wider mt-2">Verilerim</h3>
+<div class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] overflow-hidden flex flex-col">
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="database">database</span>
+<span class="font-body-md text-body-md text-on-surface">Toplanan veriler</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-divider mx-card-padding"></div>
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="download">download</span>
+<span class="font-body-md text-body-md text-on-surface">Geçmişi indir</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-divider mx-card-padding"></div>
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="delete">delete</span>
+<span class="font-body-md text-body-md text-on-surface">Verilerimi sil</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Group: Gizlilik -->
+<section>
+<h3 class="font-caption text-caption text-text-secondary mb-2 px-2 uppercase tracking-wider mt-2">Gizlilik</h3>
+<div class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] overflow-hidden flex flex-col">
+<div class="w-full flex items-center justify-between px-card-padding py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="share">share</span>
+<span class="font-body-md text-body-md text-on-surface">Yeşilay ile paylaşım</span>
+</div>
+<!-- Toggle Off -->
+<button class="w-12 h-6 bg-surface-variant rounded-full relative transition-colors duration-300">
+<div class="absolute left-1 top-1 w-4 h-4 bg-text-secondary rounded-full transition-transform duration-300"></div>
+</button>
+</div>
+<div class="h-[1px] bg-divider mx-card-padding"></div>
+<div class="w-full flex items-center justify-between px-card-padding py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="visibility">visibility</span>
+<span class="font-body-md text-body-md text-on-surface">Leaderboard'da görün</span>
+</div>
+<!-- Toggle On -->
+<button class="w-12 h-6 bg-primary-container rounded-full relative transition-colors duration-300">
+<div class="absolute left-1 top-1 w-4 h-4 bg-surface-white rounded-full transition-transform duration-300 translate-x-6"></div>
+</button>
+</div>
+</div>
+</section>
+<!-- Group: Destek -->
+<section>
+<div class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] overflow-hidden flex flex-col mt-2">
+<button class="w-full flex items-center justify-between px-card-padding py-4 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary" data-icon="help_center">help_center</span>
+<span class="font-body-md text-body-md text-on-surface">Destek</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-opacity-50" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Logout Action -->
+<div class="flex justify-center pt-4 pb-8">
+<button class="font-body-md text-body-md text-text-secondary hover:text-on-surface transition-colors">
+        Çıkış yap
+      </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface-container dark:bg-surface-container-lowest rounded-t-xl shadow-[0_-2px_12px_rgba(18,71,52,0.06)]">
+<button class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg p-2">
+<span class="material-symbols-outlined text-[24px] mb-1" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Ana Sayfa</span>
+</button>
+<button class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg p-2">
+<span class="material-symbols-outlined text-[24px] mb-1" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-sm text-label-sm">İstatistik</span>
+</button>
+<button class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg p-2">
+<span class="material-symbols-outlined text-[24px] mb-1" data-icon="emoji_events">emoji_events</span>
+<span class="font-label-sm text-label-sm">Lig</span>
+</button>
+<!-- Active State: Profil -->
+<button class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim font-bold after:content-['\2022'] after:text-[8px] after:mt-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg p-2 scale-98 transition-all duration-200">
+<span class="material-symbols-outlined text-[24px] mb-1" data-icon="person" data-weight="fill" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm">Profil</span>
+</button>
+</nav>
+<script>
+    // Simple toggle interaction logic for demonstration
+    document.querySelectorAll('button.w-12').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const thumb = this.querySelector('div');
+        if (this.classList.contains('bg-primary-container')) {
+          // Switch Off
+          this.classList.remove('bg-primary-container');
+          this.classList.add('bg-surface-variant');
+          thumb.classList.remove('translate-x-6', 'bg-surface-white');
+          thumb.classList.add('bg-text-secondary');
+        } else {
+          // Switch On
+          this.classList.remove('bg-surface-variant');
+          this.classList.add('bg-primary-container');
+          thumb.classList.remove('bg-text-secondary');
+          thumb.classList.add('translate-x-6', 'bg-surface-white');
+        }
+      });
+    });
+  </script>
+</body></html>

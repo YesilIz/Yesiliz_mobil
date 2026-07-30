@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yeşilİz - Anket</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed-dim": "#9dd2b8",
+                      "risk-mid": "#70ab70",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "primary": "#006e27",
+                      "on-secondary-fixed-variant": "#1c4f3c",
+                      "on-tertiary-container": "#00380e",
+                      "risk-high": "#124734",
+                      "tertiary-container": "#69a46a",
+                      "primary-fixed": "#72fe86",
+                      "surface-bright": "#f2fcf4",
+                      "on-primary-fixed-variant": "#00531b",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-primary": "#54e16d",
+                      "surface-muted": "#c4dec9",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#ecf6ee",
+                      "on-error": "#ffffff",
+                      "inverse-surface": "#29322d",
+                      "divider": "#E3EDE6",
+                      "tertiary-fixed-dim": "#98d596",
+                      "on-tertiary-fixed-variant": "#185121",
+                      "error-container": "#ffdad6",
+                      "surface-container-high": "#e1ebe3",
+                      "primary-container": "#00ae42",
+                      "outline-variant": "#bccbb8",
+                      "on-primary-container": "#00380f",
+                      "surface-container": "#e6f0e8",
+                      "on-tertiary-fixed": "#002106",
+                      "risk-low": "#00AE42",
+                      "surface-tint": "#006e27",
+                      "surface-container-highest": "#dbe5dd",
+                      "background": "#f2fcf4",
+                      "tertiary-fixed": "#b3f2b0",
+                      "outline": "#6d7b6b",
+                      "on-secondary-container": "#3a6c57",
+                      "surface-white": "#FFFFFF",
+                      "on-surface-variant": "#3d4a3c",
+                      "surface": "#f2fcf4",
+                      "secondary-container": "#b6ebd1",
+                      "inverse-on-surface": "#e9f3eb",
+                      "surface-dim": "#d2dcd5",
+                      "secondary": "#366853",
+                      "on-secondary-fixed": "#002115",
+                      "on-surface": "#151d19",
+                      "tertiary": "#326a36",
+                      "secondary-fixed": "#b9eed3",
+                      "on-background": "#151d19",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#002107",
+                      "text-secondary": "#5A6B60",
+                      "surface-variant": "#dbe5dd",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#54e16d"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "stack-md": "16px",
+                      "stack-lg": "32px",
+                      "gutter": "16px",
+                      "screen-margin": "20px",
+                      "stack-sm": "4px",
+                      "card-padding": "20px"
+              },
+              "fontFamily": {
+                      "caption": [
+                              "Inter"
+                      ],
+                      "display-hero": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-h2": [
+                              "Inter"
+                      ],
+                      "headline-h1": [
+                              "Inter"
+                      ],
+                      "headline-h1-mobile": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "caption": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-hero": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-h2": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-h1": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-h1-mobile": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #edf7ef; /* Fallback */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .scale-interaction {
+            transition: transform 0.2s ease-in-out, background-color 0.2s ease, border-color 0.2s ease;
+        }
+        
+        .scale-interaction:active {
+            transform: scale(0.96);
+        }
+
+        .radio-hidden {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        /* Smooth transitions for progressive enhancement */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col items-center">
+<!-- Top Navigation App Bar -->
+<!-- Suppressed TopAppBar and BottomNavBar as this is a linear transactional/onboarding task flow -->
+<header class="w-full flex justify-between items-center px-screen-margin py-stack-md sticky top-0 bg-surface z-10 fade-in">
+<button aria-label="Geri" class="w-10 h-10 flex items-center justify-center rounded-full text-primary hover:bg-surface-container-low transition-colors scale-interaction">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<span class="font-headline-h1-mobile text-headline-h1-mobile font-bold text-primary tracking-tight">Yeşilİz</span>
+<div class="w-10 h-10"></div> <!-- Spacer for balance -->
+</header>
+<main class="w-full max-w-[600px] flex-1 flex flex-col px-screen-margin py-stack-md">
+<!-- Progress Header -->
+<div class="mb-stack-lg fade-in" style="animation-delay: 0.1s;">
+<div class="flex justify-between items-end mb-stack-sm">
+<h1 class="font-headline-h2 text-headline-h2 text-on-surface">Değerlendirme</h1>
+<span class="font-label-sm text-label-sm text-text-secondary">2 / 5</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full transition-all duration-500 ease-out" style="width: 40%;"></div>
+</div>
+</div>
+<!-- Questionnaire Content -->
+<div class="flex flex-col gap-stack-md flex-1">
+<!-- Question 1 -->
+<div class="bg-surface-white p-card-padding rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] fade-in" style="animation-delay: 0.2s;">
+<p class="font-body-md text-body-md text-on-surface mb-stack-md">
+                    "Akıllı telefon olmadan yapamam."
+                </p>
+<div class="flex justify-between items-center w-full mb-2">
+<span class="font-caption text-caption text-text-secondary text-left w-1/3 leading-tight">Kesinlikle<br/>katılmıyorum</span>
+<span class="font-caption text-caption text-text-secondary text-right w-1/3 leading-tight">Kesinlikle<br/>katılıyorum</span>
+</div>
+<div class="flex justify-between w-full gap-2">
+<!-- Options 1-6 -->
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="1"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            1
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="2"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            2
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="3"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            3
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="4"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            4
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="5"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            5
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q1" type="radio" value="6"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            6
+                        </div>
+</label>
+</div>
+</div>
+<!-- Question 2 -->
+<div class="bg-surface-white p-card-padding rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] fade-in" style="animation-delay: 0.3s;">
+<p class="font-body-md text-body-md text-on-surface mb-stack-md">
+                    "Telefonumu her an kontrol etme ihtiyacı duyarım."
+                </p>
+<div class="flex justify-between items-center w-full mb-2">
+<span class="font-caption text-caption text-text-secondary text-left w-1/3 leading-tight">Kesinlikle<br/>katılmıyorum</span>
+<span class="font-caption text-caption text-text-secondary text-right w-1/3 leading-tight">Kesinlikle<br/>katılıyorum</span>
+</div>
+<div class="flex justify-between w-full gap-2">
+<!-- Options 1-6 -->
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="1"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            1
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="2"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            2
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="3"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            3
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="4"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            4
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="5"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            5
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer scale-interaction">
+<input class="radio-hidden peer" name="q2" type="radio" value="6"/>
+<div class="h-12 flex items-center justify-center rounded-[12px] bg-surface border-[1.5px] border-divider text-on-surface-variant font-label-sm text-label-sm peer-checked:bg-primary-container peer-checked:border-primary-container peer-checked:text-on-primary transition-all duration-200">
+                            6
+                        </div>
+</label>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Action -->
+<div class="mt-stack-lg pb-stack-md pt-stack-sm sticky bottom-0 bg-surface fade-in" style="animation-delay: 0.4s;">
+<button class="w-full h-[56px] rounded-[16px] bg-primary-container text-on-primary font-headline-h2 text-headline-h2 flex items-center justify-center scale-interaction hover:opacity-90">
+                Devam
+            </button>
+</div>
+</main>
+<script>
+        // Simple script to handle visual feedback on radio selection if needed beyond CSS peer-checked
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Optional: trigger subtle haptic feedback or sound if environment supports it
+                // console.log(this.name + ' selected: ' + this.value);
+            });
+        });
+    </script>
+</body></html>

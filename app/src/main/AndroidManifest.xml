@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      İZİNLER — CLAUDE.md §4'e göre bilerek DAR tutuldu.
+      YOK ve olmayacak: konum/GPS, rehber, arama geçmişi, mesaj/içerik erişimi.
+
+      PACKAGE_USAGE_STATS normal bir izin değil; kullanıcı Ayarlar → Kullanım
+      erişimi ekranından elle vermek zorunda. `tools:ignore` bu yüzden —
+      lint "korumalı izin" diye uyarıyor ama kullanımı meşru.
+    -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+      Nudge overlay — kısa mola hatırlatıcısı için (CLAUDE.md §11 madde 1).
+      SYSTEM_ALERT_WINDOW da PACKAGE_USAGE_STATS gibi normal izin değil;
+      kullanıcı Ayarlar → "diğer uygulamaların üzerinde göster" ekranından
+      elle vermek zorunda (`NudgeIzni`).
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!--
+      Health Connect — SADECE adım ve egzersiz süresi.
+      Kalp atışı, uyku, kilo, konum içeren egzersiz rotası İSTENMİYOR.
+      Aktivite sönümlemesinin (%15 tavan) tek girdisi bu ikisi.
+    -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
+    <!--
+      Paket görünürlüğü (Android 11+).
+
+      QUERY_ALL_PACKAGES KULLANILMIYOR — Play Store gerekçe istiyor ve
+      gereğinden geniş. Bunun yerine yalnızca **başlatıcıda görünen**
+      uygulamalar sorgulanabiliyor; zaten ekran süresi üreten onlar.
+      Bu görünürlük ApplicationInfo.category yedeği için gerekli.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".YesilizApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/uygulama_adi"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.Yesiliz">
+
+        <!--
+          WorkManager'ın kendi kendine başlamasını KAPAT.
+
+          `YesilizApp` `Configuration.Provider` uyguluyor ve worker fabrikası
+          olarak Hilt'inkini veriyor. Bu sağlayıcı kaldırılmazsa WorkManager
+          uygulama açılmadan varsayılan yapılandırmayla başlar, `@HiltWorker`
+          ile işaretli worker'lar bağımlılıklarını alamaz ve çalışma anında
+          "Could not instantiate worker" ile düşer.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/uygulama_adi"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Yesiliz"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Nudge tetikleyicisi + overlay penceresi. `specialUse` — bu servis
+          veri senkronize etmiyor, canlı davranışsal bir hatırlatıcı
+          gösteriyor; mevcut FGS tiplerinden hiçbiri tam karşılamıyor.
+        -->
+        <service
+            android:name=".nudge.NudgeOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Kısa mola hatırlatıcı göstermek için ekran kullanımını canlı izler" />
+        </service>
+    </application>
+
+</manifest>

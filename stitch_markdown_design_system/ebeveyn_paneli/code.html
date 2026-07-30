@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yeşilİz - Ebeveyn Paneli</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#9dd2b8",
+                        "risk-mid": "#70ab70",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#006e27",
+                        "on-secondary-fixed-variant": "#1c4f3c",
+                        "on-tertiary-container": "#00380e",
+                        "risk-high": "#124734",
+                        "tertiary-container": "#69a46a",
+                        "primary-fixed": "#72fe86",
+                        "surface-bright": "#f2fcf4",
+                        "on-primary-fixed-variant": "#00531b",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#54e16d",
+                        "surface-muted": "#c4dec9",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#ecf6ee",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#29322d",
+                        "divider": "#E3EDE6",
+                        "tertiary-fixed-dim": "#98d596",
+                        "on-tertiary-fixed-variant": "#185121",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e1ebe3",
+                        "primary-container": "#00ae42",
+                        "outline-variant": "#bccbb8",
+                        "on-primary-container": "#00380f",
+                        "surface-container": "#e6f0e8",
+                        "on-tertiary-fixed": "#002106",
+                        "risk-low": "#00AE42",
+                        "surface-tint": "#006e27",
+                        "surface-container-highest": "#dbe5dd",
+                        "background": "#f2fcf4",
+                        "tertiary-fixed": "#b3f2b0",
+                        "outline": "#6d7b6b",
+                        "on-secondary-container": "#3a6c57",
+                        "surface-white": "#FFFFFF",
+                        "on-surface-variant": "#3d4a3c",
+                        "surface": "#f2fcf4",
+                        "secondary-container": "#b6ebd1",
+                        "inverse-on-surface": "#e9f3eb",
+                        "surface-dim": "#d2dcd5",
+                        "secondary": "#366853",
+                        "on-secondary-fixed": "#002115",
+                        "on-surface": "#151d19",
+                        "tertiary": "#326a36",
+                        "secondary-fixed": "#b9eed3",
+                        "on-background": "#151d19",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#002107",
+                        "text-secondary": "#5A6B60",
+                        "surface-variant": "#dbe5dd",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#54e16d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "gutter": "16px",
+                        "screen-margin": "20px",
+                        "stack-sm": "4px",
+                        "card-padding": "20px"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "display-hero": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-h2": ["Inter"],
+                        "headline-h1": ["Inter"],
+                        "headline-h1-mobile": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-hero": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-h2": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-h1": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-h1-mobile": ["22px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen relative pb-[80px]">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim z-40 transition-transform duration-200">
+<div class="flex justify-between items-center px-screen-margin py-stack-md w-full max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="User Profile Photo" class="w-full h-full object-cover" data-alt="A small, circular avatar portrait of a smiling parent in a brightly lit, modern environment with soft green and white tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkOR950n6RWHaDGe7PdYuJRx6EanF_ySD-Vz4JIZMnRgydOdGO6EL0ICcc_yPfr_OYirKuBsQhtNHz2C-fzC622y-qaIn-VogeszMnv-3PzayF3Zv5EZnh0m5kurFdVs3yZSHA3DOGoHQdw1JBEAi1GlENMmitdzkC1CcHUPVHFN68CYDmodgQJ6idChcjSKnzUirI6Uctp-k6uaqs6NTjIfHxW2kQ8F_UU2r7gWKLeP6A58SomItV5xZJyDRUGinSEjJHELt8UGUp"/>
+</div>
+<h1 class="font-headline-h1-mobile text-headline-h1-mobile font-bold text-primary dark:text-primary-fixed-dim">Yeşilİz</h1>
+</div>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="px-screen-margin flex flex-col gap-stack-lg pt-4">
+<!-- Profile Header -->
+<section class="flex flex-col items-center justify-center text-center gap-stack-sm pt-4">
+<div class="w-24 h-24 rounded-full overflow-hidden border-4 border-surface-white shadow-[0_2px_12px_rgba(18,71,52,0.06)] mb-2">
+<img alt="Elif" class="w-full h-full object-cover" data-alt="A portrait photo of a 14 year old girl with a calm, friendly expression, set against a soft natural green background. The lighting is bright and optimistic, fitting a light-mode modern app design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHT3TRe8aeqDI42r-swzBAccemABhIgtWAuZ-llD0KAQEgQBEn8qLJfjdpubwWtmCVJqgqbYnlsbItYOkwpNcPFmKBzWoOXvhJnD2Uzy1ZWJ-fyuzUQhZ_J9nBQlr9YKrbpRUA3nkaYq-vxKwL3ViQPecPkboMhzyCwuV6G3HaAy31hSIUF6PCi7xsZ8L3mukusjTzxGQJHvx-2NJCX5rzZmZ94lagzOqX_DQVOXhDjJ9dOAYlvMiy-yVyG5bjm1yYRNbPKZfPmOC4"/>
+</div>
+<h2 class="font-headline-h1-mobile text-headline-h1-mobile text-on-surface">Elif</h2>
+<div class="bg-surface-container text-primary font-label-sm text-label-sm px-3 py-1 rounded-full">
+                14 yaşında
+            </div>
+</section>
+<!-- Card 1: Summary & Chart -->
+<section class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] p-card-padding flex flex-col gap-stack-md relative overflow-hidden transition-all duration-200 active:scale-[0.98]">
+<!-- Decorative accent line indicating neutral/good status -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-risk-low rounded-l-[20px]"></div>
+<div class="pl-2">
+<p class="font-caption text-caption text-text-secondary mb-1">Günlük Ortalama</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-hero text-display-hero text-on-surface">3s 40dk</span>
+</div>
+</div>
+<!-- Weekly Bar Chart -->
+<div class="mt-4 pt-4 border-t border-divider flex items-end justify-between h-32 pl-2">
+<!-- Bar 1 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-muted rounded-full h-[40%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary">Pz</span>
+</div>
+<!-- Bar 2 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-muted rounded-full h-[60%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary">Pt</span>
+</div>
+<!-- Bar 3 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-muted rounded-full h-[30%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary">Sa</span>
+</div>
+<!-- Bar 4 (Today/Active) -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-primary-container rounded-full h-[75%] transition-all shadow-[0_4px_8px_rgba(0,174,66,0.2)]"></div>
+<span class="font-label-sm text-label-sm text-primary font-bold">Ça</span>
+</div>
+<!-- Bar 5 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-container rounded-full h-[10%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary opacity-50">Pe</span>
+</div>
+<!-- Bar 6 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-container rounded-full h-[10%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary opacity-50">Cu</span>
+</div>
+<!-- Bar 7 -->
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-4 bg-surface-container rounded-full h-[10%] transition-all"></div>
+<span class="font-label-sm text-label-sm text-text-secondary opacity-50">Ct</span>
+</div>
+</div>
+</section>
+<!-- Card 2: Status/Risk -->
+<section class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] p-card-padding flex items-center gap-4 transition-all duration-200 active:scale-[0.98]">
+<div class="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-risk-mid text-[32px]" style="font-variation-settings: 'FILL' 1;">park</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-headline-h2 text-headline-h2 text-on-surface">Durum</h3>
+<span class="font-label-sm text-label-sm bg-surface-container text-risk-mid font-bold px-2 py-0.5 rounded-full">ORTA</span>
+</div>
+<p class="font-body-md text-body-md text-text-secondary">Geçen haftaya göre iyileşiyor.</p>
+</div>
+</section>
+<!-- Notifications/Updates -->
+<section class="flex flex-col gap-stack-md">
+<h3 class="font-headline-h2 text-headline-h2 text-on-surface pl-2">Gelişmeler</h3>
+<div class="bg-surface-white rounded-[20px] shadow-[0_2px_12px_rgba(18,71,52,0.06)] p-card-padding flex flex-col gap-4">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]">trending_down</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Ekran süresi azaldı</p>
+<p class="font-caption text-caption text-text-secondary mt-1">Bu hafta sosyal medya kullanımında %15 düşüş gözlemlendi.</p>
+</div>
+</div>
+<div class="h-px w-full bg-divider"></div>
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-tertiary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Odaklanma süresi stabil</p>
+<p class="font-caption text-caption text-text-secondary mt-1">Eğitim uygulamalarında geçirilen süre hedeflenen düzeyde.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Footnote -->
+<div class="mt-4 pb-8 flex justify-center">
+<div class="flex items-center gap-2 text-text-secondary bg-surface-container-low px-4 py-3 rounded-xl max-w-sm">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+<p class="font-caption text-caption text-center">Elif'in gizliliğini korumak için yalnızca özet bilgiler paylaşılır.</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 shadow-[0_-2px_12px_rgba(18,71,52,0.06)] bg-surface-container dark:bg-surface-container-lowest rounded-t-xl hidden md:hidden block sm:flex">
+<!-- Active Tab: Ana Sayfa -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim font-bold after:content-['•'] after:text-[8px] after:mt-1 active:scale-98 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm mt-1">Ana Sayfa</span>
+</a>
+<!-- Inactive Tab: İstatistik -->
+<a class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg px-2 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">leaderboard</span>
+<span class="font-label-sm text-label-sm mt-1">İstatistik</span>
+</a>
+<!-- Inactive Tab: Lig -->
+<a class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg px-2 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">emoji_events</span>
+<span class="font-label-sm text-label-sm mt-1">Lig</span>
+</a>
+<!-- Inactive Tab: Profil -->
+<a class="flex flex-col items-center justify-center text-text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-lg px-2 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profil</span>
+</a>
+</nav>
+<!-- Adding a duplicate flex class set specifically to ensure it shows up in snippets testing standard tailwind responsive classes if needed -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl shadow-[0_-2px_12px_rgba(18,71,52,0.06)] bg-surface-container flex justify-around items-center px-4 py-3">
+<a class="flex flex-col items-center justify-center text-primary font-bold after:content-['•'] after:text-[8px] after:mt-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm mt-1">Ana Sayfa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">leaderboard</span>
+<span class="font-label-sm text-label-sm mt-1">İstatistik</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">emoji_events</span>
+<span class="font-label-sm text-label-sm mt-1">Lig</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profil</span>
+</a>
+</nav>
+</body></html>

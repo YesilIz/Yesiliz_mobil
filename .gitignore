@@ -1,0 +1,28 @@
+# Gradle / Android
+.gradle/
+build/
+*/build/
+local.properties
+.cxx/
+*.apk
+*.aab
+*.iml
+
+# Android Studio / IntelliJ
+.idea/
+captures/
+.externalNativeBuild/
+.kotlin/
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Kök dizindeki gevşek referans dosyaları — proje kaynağı değil
+/*.png
+/recap.txt
+/projeaciklamasi.md
+/mcp.txt

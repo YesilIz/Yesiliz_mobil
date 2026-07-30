@@ -1,0 +1,262 @@
+package tr.org.yesilay.yesiliz.nudge
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Intent
+import android.graphics.PixelFormat
+import android.os.Build
+import android.os.IBinder
+import android.view.WindowManager
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.app.NotificationCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.MainActivity
+import tr.org.yesilay.yesiliz.R
+import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
+import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
+import tr.org.yesilay.yesiliz.data.kullanim.OturumCikar
+import tr.org.yesilay.yesiliz.domain.kullanim.KullanimOlay
+import tr.org.yesilay.yesiliz.domain.kullanim.OruntuCikar
+import tr.org.yesilay.yesiliz.risk.Sabitler
+import tr.org.yesilay.yesiliz.ui.gezinme.Rota
+import tr.org.yesilay.yesiliz.ui.tema.YesilizTemasi
+import java.time.Clock
+import java.time.Instant
+import javax.inject.Inject
+
+/**
+ * Nudge'ın canlı tetikleyicisi + overlay pencere sahibi.
+ *
+ * `MainActivity.onResume()` bu servisi izin + kullanıcı tercihine göre
+ * başlatıp durduruyor (CLAUDE.md §5 "Foreground Service" — WorkManager'ın
+ * ~15dk asgari periyodu canlı izleme için uygun değil).
+ *
+ * Tek Activity + NavHost mimarisinde (CLAUDE.md §6) bu servis kendi
+ * `WindowManager` penceresine bağlı bir `ComposeView` tutan **yeni** bir
+ * kalıp — başka hiçbir ekran bunu yapmıyor, overlay'in doğası gereği.
+ */
+@AndroidEntryPoint
+class NudgeOverlayService : Service() {
+
+    @Inject lateinit var kullanimOkuyucu: KullanimOkuyucu
+    @Inject lateinit var kategoriDeposu: KategoriDeposu
+    @Inject lateinit var saat: Clock
+
+    private val servisIsi = SupervisorJob()
+    private val kapsam = CoroutineScope(Dispatchers.Default + servisIsi)
+
+    private var sonEylem: SonEylem? = null
+    private var overlayGorunumu: ComposeView? = null
+    private var overlaySahibi: OverlayYasamDongusu? = null
+    private var otoKapanmaIsi: Job? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                BILDIRIM_ID,
+                bildirimOlustur(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else {
+            startForeground(BILDIRIM_ID, bildirimOlustur())
+        }
+        kapsam.launch { izlemeDongusu() }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        overlayiKapat()
+        kapsam.cancel()
+        super.onDestroy()
+    }
+
+    private suspend fun izlemeDongusu() {
+        val esleyici = kategoriDeposu.esleyiciAl()
+
+        while (kapsam.isActive) {
+            if (overlayGorunumu == null) {
+                val simdi = Instant.now(saat)
+                val pencere = NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5)
+                val hamOlaylar = kullanimOkuyucu.sonPencereOlaylari(pencere, simdi)
+                val oturumlar = OturumCikar.cikar(hamOlaylar, simdi.minus(pencere), simdi)
+
+                val tuketimOlaylari = oturumlar.mapNotNull { oturum ->
+                    val kategori = esleyici.bul(
+                        oturum.paketAdi,
+                        kullanimOkuyucu.androidKategorisi(oturum.paketAdi),
+                    )
+                    if (kategori.anahtar !in Sabitler.TUKETIM) return@mapNotNull null
+                    KullanimOlay(oturum.paketAdi, kategori, oturum.baslangic, oturum.bitis)
+                }
+
+                if (Tetikleyici.degerlendir(tuketimOlaylari, simdi, sonEylem) == TetikSonucu.GOSTER) {
+                    overlayiGoster()
+                }
+            }
+            delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
+        }
+    }
+
+    private fun overlayiGoster() {
+        val yasamDongusu = OverlayYasamDongusu().apply { baslat() }
+        val viewModelSahibi = object : ViewModelStoreOwner {
+            override val viewModelStore = ViewModelStore()
+        }
+
+        val composeView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(yasamDongusu)
+            setViewTreeViewModelStoreOwner(viewModelSahibi)
+            setViewTreeSavedStateRegistryOwner(yasamDongusu)
+            setContent {
+                YesilizTemasi {
+                    NudgeOverlay(
+                        esikDakika = NudgeSabitleri.ESIK.toMinutes(),
+                        onDevamEt = { eylemVeKapat(EylemTuru.DEVAM_EDILDI) },
+                        onNefesEvet = {
+                            nefesEkraninaGit()
+                            eylemVeKapat(EylemTuru.MOLA_VERILDI)
+                        },
+                        onNefesHayir = { eylemVeKapat(EylemTuru.MOLA_VERILDI) },
+                    )
+                }
+            }
+        }
+
+        val katmanTuru = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        var bayraklar = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            bayraklar = bayraklar or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+        }
+
+        val katmanParametreleri = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            katmanTuru,
+            bayraklar,
+            PixelFormat.TRANSLUCENT,
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            katmanParametreleri.blurBehindRadius = BULANIKLIK_YARICAPI_PX
+        }
+
+        val pencereYoneticisi = getSystemService(WINDOW_SERVICE) as WindowManager
+        pencereYoneticisi.addView(composeView, katmanParametreleri)
+
+        overlayGorunumu = composeView
+        overlaySahibi = yasamDongusu
+
+        otoKapanmaIsi = kapsam.launch {
+            delay(NudgeSabitleri.OTO_KAPANMA.toMillis())
+            eylemVeKapat(EylemTuru.DEVAM_EDILDI)
+        }
+    }
+
+    private fun eylemVeKapat(tur: EylemTuru) {
+        sonEylem = SonEylem(tur, Instant.now(saat))
+        overlayiKapat()
+    }
+
+    private fun overlayiKapat() {
+        otoKapanmaIsi?.cancel()
+        otoKapanmaIsi = null
+
+        val gorunum = overlayGorunumu ?: return
+        overlayGorunumu = null
+        val pencereYoneticisi = getSystemService(WINDOW_SERVICE) as WindowManager
+        runCatching { pencereYoneticisi.removeView(gorunum) }
+        overlaySahibi?.durdur()
+        overlaySahibi = null
+    }
+
+    private fun nefesEkraninaGit() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(MainActivity.EXTRA_HEDEF_ROTA, Rota.NEFES)
+        }
+        startActivity(intent)
+    }
+
+    private fun bildirimOlustur(): android.app.Notification {
+        val yonetici = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val kanal = NotificationChannel(
+                KANAL_ID,
+                "Mola hatırlatıcı",
+                NotificationManager.IMPORTANCE_MIN,
+            )
+            yonetici.createNotificationChannel(kanal)
+        }
+
+        val acilisIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        return NotificationCompat.Builder(this, KANAL_ID)
+            .setContentTitle("Yeşilİz kullanım süreni takip ediyor")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(acilisIntent)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .build()
+    }
+
+    private companion object {
+        const val KANAL_ID = "nudge_servis"
+        const val BILDIRIM_ID = 1
+        const val BULANIKLIK_YARICAPI_PX = 48
+    }
+}
+
+/**
+ * Servisin kendi `WindowManager` penceresine bağladığı `ComposeView`'a
+ * gereken minimal `LifecycleOwner` + `SavedStateRegistryOwner` — tek
+ * Activity mimarisinde bunun bir emsali yok, overlay'in kendine özgü
+ * gereksinimi.
+ */
+private class OverlayYasamDongusu : SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+
+    fun baslat() {
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    fun durdur() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
+}

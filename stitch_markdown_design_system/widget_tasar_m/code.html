@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yeşilİz Home Screen Widget</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed-dim": "#9dd2b8",
+                      "risk-mid": "#70ab70",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "primary": "#006e27",
+                      "on-secondary-fixed-variant": "#1c4f3c",
+                      "on-tertiary-container": "#00380e",
+                      "risk-high": "#124734",
+                      "tertiary-container": "#69a46a",
+                      "primary-fixed": "#72fe86",
+                      "surface-bright": "#f2fcf4",
+                      "on-primary-fixed-variant": "#00531b",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-primary": "#54e16d",
+                      "surface-muted": "#c4dec9",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#ecf6ee",
+                      "on-error": "#ffffff",
+                      "inverse-surface": "#29322d",
+                      "divider": "#E3EDE6",
+                      "tertiary-fixed-dim": "#98d596",
+                      "on-tertiary-fixed-variant": "#185121",
+                      "error-container": "#ffdad6",
+                      "surface-container-high": "#e1ebe3",
+                      "primary-container": "#00ae42",
+                      "outline-variant": "#bccbb8",
+                      "on-primary-container": "#00380f",
+                      "surface-container": "#e6f0e8",
+                      "on-tertiary-fixed": "#002106",
+                      "risk-low": "#00AE42",
+                      "surface-tint": "#006e27",
+                      "surface-container-highest": "#dbe5dd",
+                      "background": "#f2fcf4",
+                      "tertiary-fixed": "#b3f2b0",
+                      "outline": "#6d7b6b",
+                      "on-secondary-container": "#3a6c57",
+                      "surface-white": "#FFFFFF",
+                      "on-surface-variant": "#3d4a3c",
+                      "surface": "#f2fcf4",
+                      "secondary-container": "#b6ebd1",
+                      "inverse-on-surface": "#e9f3eb",
+                      "surface-dim": "#d2dcd5",
+                      "secondary": "#366853",
+                      "on-secondary-fixed": "#002115",
+                      "on-surface": "#151d19",
+                      "tertiary": "#326a36",
+                      "secondary-fixed": "#b9eed3",
+                      "on-background": "#151d19",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#002107",
+                      "text-secondary": "#5A6B60",
+                      "surface-variant": "#dbe5dd",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#54e16d"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "stack-md": "16px",
+                      "stack-lg": "32px",
+                      "gutter": "16px",
+                      "screen-margin": "20px",
+                      "stack-sm": "4px",
+                      "card-padding": "20px"
+              },
+              "fontFamily": {
+                      "caption": ["Inter"],
+                      "display-hero": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-h2": ["Inter"],
+                      "headline-h1": ["Inter"],
+                      "headline-h1-mobile": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "caption": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "display-hero": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "headline-h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-h1-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>body {
+    font-family: "Inter", sans-serif;
+    /* Simulating a phone home screen background */
+    background-color: #f2fcf4;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuBV1iCkCE8p9JfVA3gfP_Qtk1UECAI2HAJpXmWPSzwDO4-nmwQWoxvaWehzXpVMXMGOhuRaMjFVyISbQ58P8bsXrPGu_31EduZ0bxCmemiM2hhvFSyxVthxtT-F6fe9h5YSKyiZDzvwc2I-PqTvgy0f4-CBfWGNDiBrmGm0SzYFH8vFBABqjpRu5A7p07XzKW30hrkH7st2sUkWk6tRmydW36diG2Y5SjwN6OqR_r2s7qjbpn8moGmMPLmme2Picnl10GmUJwA4Wevb);
+    background-size: cover;
+    background-position: center
+    }
+.widget-container {
+    /* Simulating Android 4x2 grid size roughly */
+    width: 320px;
+    height: 160px
+    }</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="h-screen w-full flex items-center justify-center bg-surface" data-alt="A softly blurred, abstract natural landscape serving as a calm, light-mode phone wallpaper. The image features gentle gradients of pale greens, warm sunlight filtering through out-of-focus foliage, and subtle organic shapes. The mood is tranquil, uplifting, and harmonious, providing a perfect backdrop for a digital wellbeing application. No harsh lines or alarming colors." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAHgyGhNivGqAwiCJVam4k2Nx0ajToA62EroUDf8x5NnYlPF-D4LmrY1OQfiqiQTpYdi-BqdOsYX9FN5c8tm-30L8uyuGDS1a1f_mOr5WZg0S_-xwQ7dFyekP2UBsH2_OM9T0dYiWqb94IfTVytCd8jzupQzKq585qyAfHgJw9JFWID_D4MOdehkAB_T1Oic-mlIQQs9zfepVjxS9EbOdNyIKrmSF3cksOOhH_3rW_vWwCpMWsu1F01NWqjyTuhRxzjFMqwbIIWXgYe')">
+<!-- Simulated Phone Screen / Widget Placement Area -->
+<div class="relative w-full max-w-[400px] h-[800px] flex items-center justify-center p-screen-margin">
+<!-- The Widget (4x2 equivalent) -->
+<div class="widget-container bg-surface-white rounded-[20px] border-[1.5px] border-primary-container shadow-[0_2px_12px_rgba(18,71,52,0.06)] p-4 flex flex-col justify-between overflow-hidden relative group transition-transform duration-200 hover:scale-[0.98]">
+<!-- Top Section: Info & Actions -->
+<div class="flex justify-between items-start h-full mb-3">
+<!-- Left: Identity & Score -->
+<div class="flex flex-col justify-between h-full">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-surface-container-low flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined" data-icon="nature" style="font-variation-settings: 'FILL' 1;">nature</span>
+</div>
+<span class="font-headline-h2 text-headline-h2 text-on-surface">Yeşilİz</span>
+</div>
+<div class="mt-auto">
+<span class="font-display-hero text-display-hero text-primary font-bold">68</span>
+<span class="font-caption text-caption text-text-secondary ml-1">puan</span>
+</div>
+</div>
+<!-- Right: Quick Actions -->
+<div class="flex flex-col gap-2 w-[120px]">
+<button class="w-full h-10 bg-primary-container text-on-primary font-label-sm text-label-sm rounded-[12px] flex items-center justify-center gap-1 transition-colors hover:bg-primary active:scale-95">
+<span class="material-symbols-outlined text-[16px]" data-icon="directions_run">directions_run</span>
+                        Spor başlat
+                    </button>
+<button class="w-full h-10 bg-transparent border-[1.5px] border-primary-container text-primary-container font-label-sm text-label-sm rounded-[12px] flex items-center justify-center gap-1 transition-colors hover:bg-surface-container-low active:scale-95">
+<span class="material-symbols-outlined text-[16px]" data-icon="bedtime">bedtime</span>
+                        Uyku gir
+                    </button>
+</div>
+</div>
+<!-- Bottom Section: Progress -->
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-1">
+<span class="font-caption text-caption text-text-secondary text-[10px] uppercase tracking-wider">Günlük Hedef</span>
+<span class="font-label-sm text-label-sm text-primary-container">Hedefe 42 dk</span>
+</div>
+<div class="h-2 w-full bg-surface-muted rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[60%] transition-all duration-1000 ease-out" style="width: 60%;"></div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

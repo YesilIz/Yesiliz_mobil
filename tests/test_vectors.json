@@ -1,0 +1,1778 @@
+{
+  "surum": 1,
+  "kaynak": "docs/referans/yesiliz_hesap.py",
+  "uretici": "tests/vektor_uret.py",
+  "tolerans": 0.0001,
+  "not": "ELLE DÜZENLEME. Referans Python değişince 'python3 tests/vektor_uret.py' ile yeniden üret. Kotlin portu (core-risk) bu dosyayı okuyup aynı sonucu vermeli — CLAUDE.md §7.",
+  "sabitler": {
+    "S_REF": 300.0,
+    "SASSV_KESME": 29.5,
+    "MAKS_SONUMLEME": 0.15,
+    "BANT_AZ_UST": 40.0,
+    "BANT_ORTA_UST": 65.0,
+    "GUVENLIK_GUN": 5,
+    "GUN_YUKARI": 3,
+    "GUN_ASAGI": 7,
+    "KATEGORI_AGIRLIK": {
+      "social": 1.0,
+      "entertainment": 1.0,
+      "games": 0.8,
+      "communication": 0.5,
+      "productivity": 0.3,
+      "education": 0.2,
+      "health": 0.1,
+      "other": 0.5
+    },
+    "TUKETIM": [
+      "entertainment",
+      "games",
+      "social"
+    ],
+    "ORUNTU_KATSAYI": {
+      "gece": 0.6,
+      "oturum": 0.4,
+      "acilis": 0.3,
+      "sabah": 0.2,
+      "uyku_oncesi": 0.3,
+      "yer_degis": 0.4
+    },
+    "FAKTOR_ESIK_DUSUK": 0.33,
+    "FAKTOR_ESIK_ORTA": 0.66
+  },
+  "vektorler": {
+    "dogrulama_profilleri": [
+      {
+        "ad": "profil_hafif",
+        "aciklama": "Hafif (2,5 sa, üretim ağırlıklı) — beklenen bant AZ",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 40.0,
+            "entertainment": 20.0,
+            "productivity": 50.0,
+            "communication": 30.0,
+            "education": 10.0
+          },
+          "oruntu": {
+            "gece": 0.1,
+            "oturum": 0.3,
+            "acilis": 0.4,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.3,
+            "yer_degis": 0.1
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 6000.0,
+          "spor_dk": 20.0
+        },
+        "beklenen": {
+          "S": 112.01300000000002,
+          "P": 1.4900000000000004,
+          "D": 0.895,
+          "B_tuketim": 60.0,
+          "B_islevsel": 32.0,
+          "R_b": 22.798402023953578,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 22.798402023953578,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "productivity"
+          ],
+          "bant": "AZ RİSKLİ",
+          "toplam_dk": 150.0
+        }
+      },
+      {
+        "ad": "profil_uretim_iyi_oruntu",
+        "aciklama": "Üretim ağırlıklı (5,5 sa), iyi örüntü — beklenen bant AZ",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 60.0,
+            "entertainment": 30.0,
+            "productivity": 150.0,
+            "communication": 50.0,
+            "education": 40.0
+          },
+          "oruntu": {
+            "gece": 0.05,
+            "oturum": 0.15,
+            "acilis": 0.25,
+            "sabah": 0.1,
+            "uyku_oncesi": 0.1,
+            "yer_degis": 0.05
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 9000.0,
+          "spor_dk": 45.0
+        },
+        "beklenen": {
+          "S": 172.47750000000002,
+          "P": 1.235,
+          "D": 0.85,
+          "B_tuketim": 90.0,
+          "B_islevsel": 78.0,
+          "R_b": 32.86220420787047,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 32.86220420787047,
+          "surukleyiciler": [
+            "social",
+            "productivity",
+            "entertainment"
+          ],
+          "bant": "AZ RİSKLİ",
+          "toplam_dk": 330.0
+        }
+      },
+      {
+        "ad": "profil_ortalama_dengeli",
+        "aciklama": "Ortalama (4 sa, dengeli) — beklenen bant ORTA",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 70.0,
+            "entertainment": 50.0,
+            "games": 30.0,
+            "communication": 50.0,
+            "productivity": 30.0,
+            "education": 10.0
+          },
+          "oruntu": {
+            "gece": 0.15,
+            "oturum": 0.3,
+            "acilis": 0.4,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.3,
+            "yer_degis": 0.2
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 5000.0,
+          "spor_dk": 15.0
+        },
+        "beklenen": {
+          "S": 242.10720000000003,
+          "P": 1.5600000000000003,
+          "D": 0.9175,
+          "B_tuketim": 144.0,
+          "B_islevsel": 36.0,
+          "R_b": 42.83724476864374,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 42.83724476864374,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ",
+          "toplam_dk": 240.0
+        }
+      },
+      {
+        "ad": "profil_uretim_kotu_oruntu",
+        "aciklama": "Üretim ağırlıklı (5,5 sa), kötü örüntü — beklenen bant ORTA",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 80.0,
+            "entertainment": 30.0,
+            "productivity": 140.0,
+            "communication": 60.0,
+            "education": 20.0
+          },
+          "oruntu": {
+            "gece": 0.5,
+            "oturum": 0.7,
+            "acilis": 0.8,
+            "sabah": 0.8,
+            "uyku_oncesi": 0.7,
+            "yer_degis": 0.6
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 3000.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "S": 337.28574999999995,
+          "P": 2.4299999999999997,
+          "D": 0.9775,
+          "B_tuketim": 110.0,
+          "B_islevsel": 76.0,
+          "R_b": 54.119503978227534,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 54.119503978227534,
+          "surukleyiciler": [
+            "social",
+            "productivity",
+            "entertainment"
+          ],
+          "bant": "ORTA RİSKLİ",
+          "toplam_dk": 330.0
+        }
+      },
+      {
+        "ad": "profil_agir_tuketici",
+        "aciklama": "Ağır tüketici (6,5 sa, gece ağırlıklı) — beklenen bant ÇOK",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 180.0,
+            "entertainment": 150.0,
+            "games": 40.0,
+            "communication": 20.0
+          },
+          "oruntu": {
+            "gece": 0.7,
+            "oturum": 0.6,
+            "acilis": 0.5,
+            "sabah": 0.5,
+            "uyku_oncesi": 0.5,
+            "yer_degis": 0.15
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 1500.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "S": 768.8063000000001,
+          "P": 2.12,
+          "D": 0.98875,
+          "B_tuketim": 362.0,
+          "B_islevsel": 10.0,
+          "R_b": 83.06762223728838,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 83.06762223728838,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "games"
+          ],
+          "bant": "ÇOK RİSKLİ",
+          "toplam_dk": 390.0
+        }
+      }
+    ],
+    "risk_skoru_kenar": [
+      {
+        "ad": "anket_yok_alpha_sifir",
+        "aciklama": "Anket girilmemiş → alpha = 0, R = R_b",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 46.28772361074274,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "gun_sifir_alpha_bir",
+        "aciklama": "d=0, anket taze → alpha = 1.0, R = R_s",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 35.0,
+          "kacinci_gun": 0,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 59.01639344262295,
+          "alpha": 1.0,
+          "R": 59.01639344262295,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "gun_uc_alpha_dusuyor",
+        "aciklama": "d=3 → alpha0 = 1.00 - 0.5*(3/7)",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 35.0,
+          "kacinci_gun": 3,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 59.01639344262295,
+          "alpha": 0.7857142857142857,
+          "R": 56.288821335791475,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "gun_yedi_alpha_yarim",
+        "aciklama": "d=7 sınırı → ikinci kola geçiş, alpha0 = 0.50",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 35.0,
+          "kacinci_gun": 7,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 59.01639344262295,
+          "alpha": 0.5,
+          "R": 52.65205852668284,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "gun_yirmisekiz_alpha_taban",
+        "aciklama": "d=28 → alpha0 tabanı 0.30",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 35.0,
+          "kacinci_gun": 28,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 59.01639344262295,
+          "alpha": 0.3,
+          "R": 50.1063245603068,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "anket_altmis_gun_once_alpha_sifir",
+        "aciklama": "g=60 → anket ağırlığı tamamen sönüyor, alpha = 0",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 35.0,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 60,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 59.01639344262295,
+          "alpha": 0.0,
+          "R": 46.28772361074274,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "anket_kesme_noktasi_elli",
+        "aciklama": "SAS-SV = 29.5 (kesme) → R_s tam 50.0",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 29.5,
+          "kacinci_gun": 0,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 50.0,
+          "alpha": 1.0,
+          "R": 50.0,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "ad": "anket_taban_on",
+        "aciklama": "SAS-SV = 10 (mümkün en düşük) → R_s = 0.0",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 10.0,
+          "kacinci_gun": 0,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 0.0,
+          "alpha": 1.0,
+          "R": 0.0,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "ad": "anket_tavan_altmis",
+        "aciklama": "SAS-SV = 60 (mümkün en yüksek) → R_s = 100.0",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 90.0,
+            "entertainment": 60.0,
+            "communication": 40.0,
+            "productivity": 50.0
+          },
+          "oruntu": {
+            "gece": 0.2,
+            "oturum": 0.35,
+            "acilis": 0.45,
+            "sabah": 0.3,
+            "uyku_oncesi": 0.35,
+            "yer_degis": 0.25
+          },
+          "anket_puani": 60.0,
+          "kacinci_gun": 0,
+          "anket_kac_gun_once": 0,
+          "adim": 4000.0,
+          "spor_dk": 10.0
+        },
+        "beklenen": {
+          "S": 269.06,
+          "P": 1.6600000000000001,
+          "D": 0.94,
+          "B_tuketim": 150.0,
+          "B_islevsel": 35.0,
+          "R_b": 46.28772361074274,
+          "R_s": 100.0,
+          "alpha": 1.0,
+          "R": 100.0,
+          "surukleyiciler": [
+            "social",
+            "entertainment",
+            "communication"
+          ],
+          "bant": "ÇOK RİSKLİ"
+        }
+      },
+      {
+        "ad": "sifir_kullanim",
+        "aciklama": "Hiç kullanım yok → S = 0, R_b = 0",
+        "girdi": {
+          "kategori_dakika": {},
+          "oruntu": {},
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "S": 0.0,
+          "P": 1.0,
+          "D": 1.0,
+          "B_tuketim": 0.0,
+          "B_islevsel": 0.0,
+          "R_b": 0.0,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 0.0,
+          "surukleyiciler": [],
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "ad": "sonumleme_tavani",
+        "aciklama": "adım ve spor tavanda → A = 1.0, D = 0.85 (tavan %15)",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 200.0
+          },
+          "oruntu": {},
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 20000.0,
+          "spor_dk": 120.0
+        },
+        "beklenen": {
+          "S": 170.0,
+          "P": 1.0,
+          "D": 0.85,
+          "B_tuketim": 200.0,
+          "B_islevsel": 0.0,
+          "R_b": 32.476871341025934,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 32.476871341025934,
+          "surukleyiciler": [
+            "social"
+          ],
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "ad": "sonumleme_yok",
+        "aciklama": "hiç hareket yok → A = 0, D = 1.0",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 200.0
+          },
+          "oruntu": {},
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "S": 200.0,
+          "P": 1.0,
+          "D": 1.0,
+          "B_tuketim": 200.0,
+          "B_islevsel": 0.0,
+          "R_b": 36.997766005808764,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 36.997766005808764,
+          "surukleyiciler": [
+            "social"
+          ],
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "ad": "bilinmeyen_kategori_other",
+        "aciklama": "tabloda olmayan kategori → 'other' ağırlığı 0.5, işlevsel tarafta",
+        "girdi": {
+          "kategori_dakika": {
+            "other": 200.0
+          },
+          "oruntu": {
+            "gece": 1.0
+          },
+          "anket_puani": null,
+          "kacinci_gun": 14,
+          "anket_kac_gun_once": 0,
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "S": 100.0,
+          "P": 1.6,
+          "D": 1.0,
+          "B_tuketim": 0.0,
+          "B_islevsel": 100.0,
+          "R_b": 20.62605339647572,
+          "R_s": null,
+          "alpha": 0.0,
+          "R": 20.62605339647572,
+          "surukleyiciler": [
+            "other"
+          ],
+          "bant": "AZ RİSKLİ"
+        }
+      }
+    ],
+    "kategorilendirme": [
+      {
+        "ad": "tablodan_eslesme",
+        "girdi": {
+          "kullanim_listesi": [
+            [
+              "com.instagram.android",
+              120
+            ],
+            [
+              "com.zhiliaoapp.musically",
+              90
+            ],
+            [
+              "com.supercell.clashofclans",
+              45
+            ],
+            [
+              "com.whatsapp",
+              30
+            ],
+            [
+              "com.lemon.lvoverseas",
+              25
+            ],
+            [
+              "com.duolingo",
+              15
+            ],
+            [
+              "com.strava",
+              10
+            ]
+          ],
+          "kullanici_secimleri": null
+        },
+        "beklenen": {
+          "kategori_dakika": {
+            "social": 120.0,
+            "entertainment": 90.0,
+            "games": 45.0,
+            "communication": 30.0,
+            "productivity": 25.0,
+            "education": 15.0,
+            "health": 10.0
+          }
+        }
+      },
+      {
+        "ad": "tabloda_yok_other",
+        "girdi": {
+          "kullanim_listesi": [
+            [
+              "com.bilinmeyen.uygulama",
+              60
+            ]
+          ],
+          "kullanici_secimleri": null
+        },
+        "beklenen": {
+          "kategori_dakika": {
+            "other": 60.0
+          }
+        }
+      },
+      {
+        "ad": "kullanici_secimi_tabloyu_ezer",
+        "girdi": {
+          "kullanim_listesi": [
+            [
+              "com.instagram.android",
+              100
+            ]
+          ],
+          "kullanici_secimleri": {
+            "com.instagram.android": "productivity"
+          }
+        },
+        "beklenen": {
+          "kategori_dakika": {
+            "productivity": 100.0
+          }
+        }
+      },
+      {
+        "ad": "ayni_kategoride_toplama",
+        "girdi": {
+          "kullanim_listesi": [
+            [
+              "com.instagram.android",
+              40
+            ],
+            [
+              "com.twitter.android",
+              35
+            ],
+            [
+              "com.snapchat.android",
+              25
+            ]
+          ],
+          "kullanici_secimleri": null
+        },
+        "beklenen": {
+          "kategori_dakika": {
+            "social": 100.0
+          }
+        }
+      }
+    ],
+    "esikten_bant": [
+      {
+        "girdi": {
+          "skor": 0.0
+        },
+        "beklenen": {
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 39.9
+        },
+        "beklenen": {
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 39.99999
+        },
+        "beklenen": {
+          "bant": "AZ RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 40.0
+        },
+        "beklenen": {
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 40.1
+        },
+        "beklenen": {
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 64.9
+        },
+        "beklenen": {
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 64.99999
+        },
+        "beklenen": {
+          "bant": "ORTA RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 65.0
+        },
+        "beklenen": {
+          "bant": "ÇOK RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 65.1
+        },
+        "beklenen": {
+          "bant": "ÇOK RİSKLİ"
+        }
+      },
+      {
+        "girdi": {
+          "skor": 100.0
+        },
+        "beklenen": {
+          "bant": "ÇOK RİSKLİ"
+        }
+      }
+    ],
+    "guvenlik_tabani": [
+      {
+        "ad": "yetersiz_gun_sayisi",
+        "aciklama": "4 gün < GUVENLIK_GUN(5) → taban yok",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 120
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": null,
+          "kural": null
+        }
+      },
+      {
+        "ad": "cok_taban_480_ustu",
+        "aciklama": "5 gün üst üste tüketim > 480 → ÇOK",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": "ÇOK RİSKLİ",
+          "kural": "5 gün üst üste 8 saat+ tüketim"
+        }
+      },
+      {
+        "ad": "orta_taban_360_ustu",
+        "aciklama": "5 gün üst üste tüketim > 360 (ama 480 altı) → ORTA",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 400,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 400,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 400,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 400,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 400,
+              "gece_dk": 10
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": "ORTA RİSKLİ",
+          "kural": "5 gün üst üste 6 saat+ tüketim"
+        }
+      },
+      {
+        "ad": "orta_taban_gece_90_ustu",
+        "aciklama": "5 gün üst üste gece > 90 dk → ORTA",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 120
+            },
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 120
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": "ORTA RİSKLİ",
+          "kural": "5 gün üst üste 90 dk+ gece kullanımı"
+        }
+      },
+      {
+        "ad": "sinir_tam_480_tetiklemez",
+        "aciklama": "tüketim tam 480 → '> 480' sağlanmaz, ORTA'ya düşer",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 480,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 480,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 480,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 480,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 480,
+              "gece_dk": 10
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": "ORTA RİSKLİ",
+          "kural": "5 gün üst üste 6 saat+ tüketim"
+        }
+      },
+      {
+        "ad": "bir_gun_bozunca_tetiklemez",
+        "aciklama": "son 5 günün biri eşiğin altında → taban yok",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 100,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            },
+            {
+              "tuketim_dk": 500,
+              "gece_dk": 10
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": null,
+          "kural": null
+        }
+      },
+      {
+        "ad": "sadece_son_bes_gun_sayilir",
+        "aciklama": "eski günler kötü ama son 5 gün temiz → taban yok",
+        "girdi": {
+          "gunluk_veri": [
+            {
+              "tuketim_dk": 600,
+              "gece_dk": 200
+            },
+            {
+              "tuketim_dk": 600,
+              "gece_dk": 200
+            },
+            {
+              "tuketim_dk": 600,
+              "gece_dk": 200
+            },
+            {
+              "tuketim_dk": 60,
+              "gece_dk": 0
+            },
+            {
+              "tuketim_dk": 60,
+              "gece_dk": 0
+            },
+            {
+              "tuketim_dk": 60,
+              "gece_dk": 0
+            },
+            {
+              "tuketim_dk": 60,
+              "gece_dk": 0
+            },
+            {
+              "tuketim_dk": 60,
+              "gece_dk": 0
+            }
+          ]
+        },
+        "beklenen": {
+          "taban": null,
+          "kural": null
+        }
+      }
+    ],
+    "histerezis": [
+      {
+        "ad": "ilk_gun_dogrudan_yerlesir",
+        "aciklama": "mevcut bant yokken ilk aday sorgusuz kabul edilir",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ"
+          ],
+          "son_bant": "ORTA RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "yukari_uc_gun",
+        "aciklama": "GUN_YUKARI=3 → üçüncü günde ÇOK'a çıkar",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ"
+          ],
+          "son_bant": "ÇOK RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "yukari_iki_gun_yetmez",
+        "aciklama": "2 gün aday sonra geri dönüş → bant değişmez",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ORTA RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ"
+          ],
+          "son_bant": "ORTA RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "asagi_yedi_gun",
+        "aciklama": "GUN_ASAGI=7 → yedinci günde AZ'a iner, altıncıda inmez",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ"
+          ],
+          "son_bant": "AZ RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "asagi_alti_gun_yetmez",
+        "aciklama": "6 gün aşağı adayı yeterli değil",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ"
+          ],
+          "son_bant": "ORTA RİSKLİ",
+          "son_durum": "AZ RİSKLİ adayı: 6/7 gün"
+        }
+      },
+      {
+        "ad": "TUZAK_ayni_yon_sayac_sifirlanmaz",
+        "aciklama": "spec-risk.md §5.4 tuzağı: ÇOK'tan inerken aday ORTA iken AZ'a derinleşiyor. Yön aynı (aşağı) olduğu için sayaç SIFIRLANMAMALI; 7. günde AZ'a inmeli. Bu hata bir kez yapıldı, düzeltildi.",
+        "girdi": {
+          "aday_dizisi": [
+            "ÇOK RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "AZ RİSKLİ"
+          ],
+          "son_bant": "AZ RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "yon_degisince_sayac_sifirlanir",
+        "aciklama": "aşağı adayı sürerken yukarı adayı gelirse sayaç 1'e döner",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ",
+            "ÇOK RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ÇOK RİSKLİ"
+          ],
+          "son_bant": "ÇOK RİSKLİ",
+          "son_durum": null
+        }
+      },
+      {
+        "ad": "ayni_banda_donunce_bekleyen_temizlenir",
+        "aciklama": "aday mevcut banda dönerse bekleyen sıfırlanır",
+        "girdi": {
+          "aday_dizisi": [
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ",
+            "ORTA RİSKLİ",
+            "AZ RİSKLİ",
+            "AZ RİSKLİ"
+          ]
+        },
+        "beklenen": {
+          "gosterilen_dizisi": [
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ",
+            "ORTA RİSKLİ"
+          ],
+          "son_bant": "ORTA RİSKLİ",
+          "son_durum": "AZ RİSKLİ adayı: 2/7 gün"
+        }
+      }
+    ],
+    "trend": [
+      {
+        "ad": "veri_yetersiz",
+        "aciklama": "14 günden az geçmiş → belirsiz",
+        "girdi": {
+          "skor_gecmisi": [
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0
+          ]
+        },
+        "beklenen": {
+          "trend": "belirsiz"
+        }
+      },
+      {
+        "ad": "sabit",
+        "aciklama": "iki hafta ortalaması aynı → sabit",
+        "girdi": {
+          "skor_gecmisi": [
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0
+          ]
+        },
+        "beklenen": {
+          "trend": "sabit"
+        }
+      },
+      {
+        "ad": "iyilesiyor",
+        "aciklama": "son hafta 10 puan düşük (< -5) → iyileşiyor",
+        "girdi": {
+          "skor_gecmisi": [
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0
+          ]
+        },
+        "beklenen": {
+          "trend": "iyileşiyor"
+        }
+      },
+      {
+        "ad": "kotulesiyor",
+        "aciklama": "son hafta 10 puan yüksek (> +5) → kötüleşiyor",
+        "girdi": {
+          "skor_gecmisi": [
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0,
+            60.0
+          ]
+        },
+        "beklenen": {
+          "trend": "kötüleşiyor"
+        }
+      },
+      {
+        "ad": "sinir_bes_puan_sabit",
+        "aciklama": "fark tam +5 → '> 5' sağlanmaz, sabit",
+        "girdi": {
+          "skor_gecmisi": [
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0
+          ]
+        },
+        "beklenen": {
+          "trend": "sabit"
+        }
+      },
+      {
+        "ad": "sinir_eksi_bes_puan_sabit",
+        "aciklama": "fark tam -5 → '< -5' sağlanmaz, sabit",
+        "girdi": {
+          "skor_gecmisi": [
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            55.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0
+          ]
+        },
+        "beklenen": {
+          "trend": "sabit"
+        }
+      },
+      {
+        "ad": "sadece_son_ondort_gun",
+        "aciklama": "14 günden eski skorlar hesaba katılmaz",
+        "girdi": {
+          "skor_gecmisi": [
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            90.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0,
+            50.0
+          ]
+        },
+        "beklenen": {
+          "trend": "sabit"
+        }
+      }
+    ],
+    "etkileyen_faktorler": [
+      {
+        "ad": "hafif_kullanim_iyi_hareket",
+        "aciklama": "Düşük gece/oturum/sosyal, tavan hareket → 4 faktör de DÜŞÜK",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 20.0,
+            "productivity": 80.0
+          },
+          "oruntu": {
+            "gece": 0.05,
+            "oturum": 0.1
+          },
+          "adim": 9000.0,
+          "spor_dk": 40.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "DUSUK",
+              "oran": 0.05
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "DUSUK",
+              "oran": 0.1
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "DUSUK",
+              "oran": 0.2
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "DUSUK",
+              "oran": 0.0
+            }
+          ]
+        }
+      },
+      {
+        "ad": "agir_kullanim_hareketsiz",
+        "aciklama": "Yüksek gece/oturum/sosyal, sıfır hareket → 4 faktör de YÜKSEK",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 180.0,
+            "entertainment": 20.0
+          },
+          "oruntu": {
+            "gece": 0.8,
+            "oturum": 0.9
+          },
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "YUKSEK",
+              "oran": 0.8
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "YUKSEK",
+              "oran": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "ad": "orta_karisik",
+        "aciklama": "Sınır civarı değerler → ORTA bandı ağırlıklı",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 60.0,
+            "productivity": 60.0
+          },
+          "oruntu": {
+            "gece": 0.4,
+            "oturum": 0.5
+          },
+          "adim": 4000.0,
+          "spor_dk": 15.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "ORTA",
+              "oran": 0.4
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "ORTA",
+              "oran": 0.5
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "ORTA",
+              "oran": 0.5
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "ORTA",
+              "oran": 0.5
+            }
+          ]
+        }
+      },
+      {
+        "ad": "sifir_ekran",
+        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0",
+        "girdi": {
+          "kategori_dakika": {},
+          "oruntu": {},
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "DUSUK",
+              "oran": 0.0
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "DUSUK",
+              "oran": 0.0
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "DUSUK",
+              "oran": 0.0
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "YUKSEK",
+              "oran": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "ad": "esik_sinirlari_tam",
+        "aciklama": "oran tam 0.33/0.66 sınırında — '< eşik' katı, sınır bir üst banda düşer",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 33.0,
+            "productivity": 67.0
+          },
+          "oruntu": {
+            "gece": 0.33,
+            "oturum": 0.66
+          },
+          "adim": 8000.0,
+          "spor_dk": 30.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "ORTA",
+              "oran": 0.33
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "YUKSEK",
+              "oran": 0.66
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "ORTA",
+              "oran": 0.33
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "DUSUK",
+              "oran": 0.0
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

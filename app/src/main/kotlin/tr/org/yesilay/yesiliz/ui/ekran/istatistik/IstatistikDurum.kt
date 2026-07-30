@@ -1,0 +1,86 @@
+package tr.org.yesilay.yesiliz.ui.ekran.istatistik
+
+import tr.org.yesilay.yesiliz.risk.Bant
+import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
+import tr.org.yesilay.yesiliz.ui.bilesen.veri.Dilim
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.WeekFields
+import java.util.Locale
+
+private val TR: Locale = Locale.forLanguageTag("tr")
+
+/**
+ * Gün / Hafta / Ay segmenti.
+ *
+ * Pencereler **takvim hizalı**: "son 7 gün" değil "bu hafta". Kullanıcı
+ * "Pzt–Paz" beklerken kayan pencere görürse grafiği okuyamaz.
+ * Hafta Pazartesi başlıyor (`WeekFields.ISO`), Türkiye'de de böyle.
+ */
+enum class Aralik(val etiket: String) {
+    GUN("Gün"),
+    HAFTA("Hafta"),
+    AY("Ay"),
+    ;
+
+    /** Seçili pencerenin [başlangıç, bitiş] sınırları — bitiş bugün. */
+    fun pencere(bugun: LocalDate): Pair<LocalDate, LocalDate> = when (this) {
+        GUN -> bugun to bugun
+        HAFTA -> bugun.with(WeekFields.ISO.dayOfWeek(), 1) to bugun
+        AY -> bugun.withDayOfMonth(1) to bugun
+    }
+
+    /** Karşılaştırma için bir önceki pencerenin başlangıcı. */
+    fun oncekiPencere(bugun: LocalDate): Pair<LocalDate, LocalDate> {
+        val (bas, _) = pencere(bugun)
+        return when (this) {
+            GUN -> bas.minusDays(1) to bas.minusDays(1)
+            HAFTA -> bas.minusWeeks(1) to bas.minusDays(1)
+            AY -> bas.minusMonths(1) to bas.minusDays(1)
+        }
+    }
+
+    /** Karşılaştırma cümlesinin öznesi: "Dün'e göre…", "Geçen haftaya göre…" */
+    val karsilastirmaOznesi: String
+        get() = when (this) {
+            GUN -> "Düne göre"
+            HAFTA -> "Geçen haftaya göre"
+            AY -> "Geçen aya göre"
+        }
+
+    /** Çubuk etiketi: gün adı (Pzt) ya da ayın günü (14). */
+    fun etiketle(tarih: LocalDate): String = when (this) {
+        GUN, HAFTA -> tarih.format(GUN_ADI)
+        AY -> tarih.dayOfMonth.toString()
+    }
+
+    private companion object {
+        val GUN_ADI: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE", TR)
+    }
+}
+
+/**
+ * İstatistik ekranı durumu — `docs/tasarim-referans.md §2 / 09`.
+ *
+ * [gunSayisi] sıfırsa ekran **boş durum** gösteriyor: kullanıcının ilk günü
+ * ya da izin henüz verilmedi. Uydurma çubuk çizmek yerine "birkaç gün
+ * ölçelim" demek doğru (CLAUDE.md §10).
+ */
+data class IstatistikDurum(
+    val aralik: Aralik = Aralik.HAFTA,
+    val gunSayisi: Int = 0,
+    val tarihAraligi: String = "",
+    val ekranOrtalama: Int = 0,
+    val ekranCubuklari: List<Cubuk> = emptyList(),
+    val ekranVurgu: Int = -1,
+    val ekranFark: String = "",
+    val ekranAzaldi: Boolean = true,
+    val kategoriler: List<Dilim> = emptyList(),
+    val adimOrtalama: Int = 0,
+    val adimCubuklari: List<Cubuk> = emptyList(),
+    val adimVurgu: Int = -1,
+    val adimFark: String = "",
+    val adimArtti: Boolean = true,
+    /** `null` — henüz `risk_sonuc` yok, kart hiç gösterilmiyor. */
+    val riskBandi: Bant? = null,
+)

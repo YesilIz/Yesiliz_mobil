@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yeşilİz - Onboarding Step 2</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#151d19",
+                    "on-secondary-fixed": "#002115",
+                    "surface-white": "#FFFFFF",
+                    "surface-muted": "#c4dec9",
+                    "tertiary": "#326a36",
+                    "tertiary-fixed-dim": "#98d596",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#00531b",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed-variant": "#1c4f3c",
+                    "on-error-container": "#93000a",
+                    "text-secondary": "#5A6B60",
+                    "on-surface-variant": "#3d4a3c",
+                    "on-primary-fixed": "#002107",
+                    "risk-mid": "#70ab70",
+                    "on-tertiary-fixed": "#002106",
+                    "surface-dim": "#d2dcd5",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#ecf6ee",
+                    "surface-variant": "#dbe5dd",
+                    "tertiary-container": "#69a46a",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f2fcf4",
+                    "secondary": "#366853",
+                    "secondary-fixed-dim": "#9dd2b8",
+                    "on-tertiary-container": "#00380e",
+                    "risk-low": "#00AE42",
+                    "on-secondary": "#ffffff",
+                    "divider": "#E3EDE6",
+                    "inverse-surface": "#29322d",
+                    "inverse-primary": "#54e16d",
+                    "primary-fixed-dim": "#54e16d",
+                    "on-background": "#151d19",
+                    "surface-container": "#e6f0e8",
+                    "primary": "#006e27",
+                    "on-secondary-container": "#3a6c57",
+                    "tertiary-fixed": "#b3f2b0",
+                    "surface-container-highest": "#dbe5dd",
+                    "background": "#f2fcf4",
+                    "secondary-container": "#b6ebd1",
+                    "outline-variant": "#bccbb8",
+                    "secondary-fixed": "#b9eed3",
+                    "surface-bright": "#f2fcf4",
+                    "primary-container": "#00ae42",
+                    "primary-fixed": "#72fe86",
+                    "on-primary-container": "#00380f",
+                    "on-tertiary": "#ffffff",
+                    "risk-high": "#124734",
+                    "on-tertiary-fixed-variant": "#185121",
+                    "surface-container-high": "#e1ebe3",
+                    "outline": "#6d7b6b",
+                    "surface-tint": "#006e27",
+                    "inverse-on-surface": "#e9f3eb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "4px",
+                    "card-padding": "20px",
+                    "stack-md": "16px",
+                    "stack-lg": "32px",
+                    "screen-margin": "20px",
+                    "gutter": "16px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "headline-h1-mobile": [
+                            "Inter"
+                    ],
+                    "headline-h2": [
+                            "Inter"
+                    ],
+                    "headline-h1": [
+                            "Inter"
+                    ],
+                    "caption": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-hero": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-h1-mobile": [
+                            "22px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-h2": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-h1": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "caption": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-hero": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #edf7ef;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col min-h-screen text-on-surface p-6 pb-8">
+<!-- Progress Indicator -->
+<div class="flex justify-center items-center space-x-2 pt-8">
+<div class="w-2 h-2 rounded-full bg-surface-muted"></div>
+<div class="w-8 h-2 rounded-full bg-primary-container"></div>
+<div class="w-2 h-2 rounded-full bg-surface-muted"></div>
+<div class="w-2 h-2 rounded-full bg-surface-muted"></div>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center space-y-stack-lg">
+<!-- Center Icon Graphic -->
+<div class="w-32 h-32 rounded-full bg-surface-white flex items-center justify-center shadow-[0_2px_12px_0_rgba(18,71,52,0.06)]">
+<span class="material-symbols-outlined text-primary-container" style="font-size: 64px; font-variation-settings: 'FILL' 1;">
+                bar_chart
+            </span>
+</div>
+<!-- Typography Section -->
+<div class="text-center space-y-stack-md px-4">
+<h1 class="font-headline-h1-mobile text-headline-h1-mobile text-risk-high">Ekran kullanımını görebilmemiz için</h1>
+<p class="font-body-md text-body-md text-text-secondary">
+                Hangi uygulamada ne kadar zaman geçirdiğini görebilmemiz gerekiyor. İçeriklerine asla bakmayız — sadece süre ve kategori.
+            </p>
+</div>
+<!-- Reassurance Card -->
+<div class="bg-surface-white rounded-[20px] p-4 flex items-center space-x-3 shadow-[0_2px_12px_0_rgba(18,71,52,0.06)] w-full max-w-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container text-xl" style="font-variation-settings: 'FILL' 1;">
+                    lock
+                </span>
+</div>
+<p class="font-caption text-caption text-text-secondary">Verilerin telefonunda kalır.</p>
+</div>
+</main>
+<!-- Bottom Actions -->
+<div class="flex flex-col space-y-stack-md w-full mt-auto pt-stack-lg">
+<button class="w-full h-14 bg-primary-container text-on-primary font-body-md text-body-md rounded-2xl active:scale-95 transition-transform duration-200 shadow-sm flex items-center justify-center font-semibold">
+            İzin ver
+        </button>
+<button class="w-full h-14 bg-transparent text-text-secondary font-body-md text-body-md rounded-2xl active:opacity-70 transition-opacity duration-200 flex items-center justify-center">
+            Şimdi değil
+        </button>
+</div>
+</body></html>

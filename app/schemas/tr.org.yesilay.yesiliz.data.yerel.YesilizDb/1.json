@@ -1,0 +1,540 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "26148fb30ee8258fbc88ff98f437c6ba",
+    "entities": [
+      {
+        "tableName": "kullanim_olay",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `baslangic` INTEGER NOT NULL, `bitis` INTEGER NOT NULL, `tarih` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paketAdi",
+            "columnName": "paketAdi",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategori",
+            "columnName": "kategori",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baslangic",
+            "columnName": "baslangic",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bitis",
+            "columnName": "bitis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_kullanim_olay_tarih",
+            "unique": false,
+            "columnNames": [
+              "tarih"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_kullanim_olay_tarih` ON `${TABLE_NAME}` (`tarih`)"
+          },
+          {
+            "name": "index_kullanim_olay_baslangic",
+            "unique": false,
+            "columnNames": [
+              "baslangic"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_kullanim_olay_baslangic` ON `${TABLE_NAME}` (`baslangic`)"
+          }
+        ]
+      },
+      {
+        "tableName": "gunluk_ozet",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tarih` TEXT NOT NULL, `socialDk` REAL NOT NULL, `entertainmentDk` REAL NOT NULL, `gamesDk` REAL NOT NULL, `communicationDk` REAL NOT NULL, `productivityDk` REAL NOT NULL, `educationDk` REAL NOT NULL, `healthDk` REAL NOT NULL, `otherDk` REAL NOT NULL, `gece` REAL NOT NULL, `oturum` REAL NOT NULL, `acilis` REAL NOT NULL, `sabah` REAL NOT NULL, `uykuOncesi` REAL NOT NULL, `yerDegis` REAL NOT NULL, `adim` REAL NOT NULL, `sporDk` REAL NOT NULL, `bTuketim` REAL NOT NULL, `bIslevsel` REAL NOT NULL, `P` REAL NOT NULL, `A` REAL NOT NULL, `D` REAL NOT NULL, `S` REAL NOT NULL, `geceKullanimDk` REAL NOT NULL, `acilisSayisi` INTEGER NOT NULL, PRIMARY KEY(`tarih`))",
+        "fields": [
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "socialDk",
+            "columnName": "socialDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entertainmentDk",
+            "columnName": "entertainmentDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gamesDk",
+            "columnName": "gamesDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "communicationDk",
+            "columnName": "communicationDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "productivityDk",
+            "columnName": "productivityDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "educationDk",
+            "columnName": "educationDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthDk",
+            "columnName": "healthDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otherDk",
+            "columnName": "otherDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gece",
+            "columnName": "gece",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oturum",
+            "columnName": "oturum",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acilis",
+            "columnName": "acilis",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sabah",
+            "columnName": "sabah",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uykuOncesi",
+            "columnName": "uykuOncesi",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "yerDegis",
+            "columnName": "yerDegis",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adim",
+            "columnName": "adim",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sporDk",
+            "columnName": "sporDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bTuketim",
+            "columnName": "bTuketim",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bIslevsel",
+            "columnName": "bIslevsel",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "P",
+            "columnName": "P",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "A",
+            "columnName": "A",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "D",
+            "columnName": "D",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "S",
+            "columnName": "S",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geceKullanimDk",
+            "columnName": "geceKullanimDk",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acilisSayisi",
+            "columnName": "acilisSayisi",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tarih"
+          ]
+        }
+      },
+      {
+        "tableName": "risk_sonuc",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tarih` TEXT NOT NULL, `S` REAL NOT NULL, `rB` REAL NOT NULL, `rS` REAL, `alpha` REAL NOT NULL, `R` REAL NOT NULL, `adayBant` TEXT NOT NULL, `gosterilenBant` TEXT NOT NULL, `guvenlikKurali` TEXT, `trend` TEXT NOT NULL, `surukleyiciler` TEXT NOT NULL, PRIMARY KEY(`tarih`))",
+        "fields": [
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "S",
+            "columnName": "S",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rB",
+            "columnName": "rB",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rS",
+            "columnName": "rS",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "alpha",
+            "columnName": "alpha",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "R",
+            "columnName": "R",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adayBant",
+            "columnName": "adayBant",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gosterilenBant",
+            "columnName": "gosterilenBant",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "guvenlikKurali",
+            "columnName": "guvenlikKurali",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "trend",
+            "columnName": "trend",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "surukleyiciler",
+            "columnName": "surukleyiciler",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tarih"
+          ]
+        }
+      },
+      {
+        "tableName": "anket_yanit",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `madde1` INTEGER NOT NULL, `madde2` INTEGER NOT NULL, `madde3` INTEGER NOT NULL, `madde4` INTEGER NOT NULL, `madde5` INTEGER NOT NULL, `madde6` INTEGER NOT NULL, `madde7` INTEGER NOT NULL, `madde8` INTEGER NOT NULL, `madde9` INTEGER NOT NULL, `madde10` INTEGER NOT NULL, `hamPuan` REAL NOT NULL, `rS` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde1",
+            "columnName": "madde1",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde2",
+            "columnName": "madde2",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde3",
+            "columnName": "madde3",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde4",
+            "columnName": "madde4",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde5",
+            "columnName": "madde5",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde6",
+            "columnName": "madde6",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde7",
+            "columnName": "madde7",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde8",
+            "columnName": "madde8",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde9",
+            "columnName": "madde9",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "madde10",
+            "columnName": "madde10",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hamPuan",
+            "columnName": "hamPuan",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rS",
+            "columnName": "rS",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "kategori_esleme",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `kaynak` TEXT NOT NULL, PRIMARY KEY(`paketAdi`))",
+        "fields": [
+          {
+            "fieldPath": "paketAdi",
+            "columnName": "paketAdi",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategori",
+            "columnName": "kategori",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kaynak",
+            "columnName": "kaynak",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "paketAdi"
+          ]
+        }
+      },
+      {
+        "tableName": "gorev_tamamlama",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `gorevId` TEXT NOT NULL, `puan` INTEGER NOT NULL, `dogrulamaTuru` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gorevId",
+            "columnName": "gorevId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "puan",
+            "columnName": "puan",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dogrulamaTuru",
+            "columnName": "dogrulamaTuru",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_gorev_tamamlama_tarih",
+            "unique": false,
+            "columnNames": [
+              "tarih"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_gorev_tamamlama_tarih` ON `${TABLE_NAME}` (`tarih`)"
+          }
+        ]
+      },
+      {
+        "tableName": "puan_gunluk",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tarih` TEXT NOT NULL, `puanHam` INTEGER NOT NULL, `puanNet` INTEGER NOT NULL, `seriGun` INTEGER NOT NULL, `carpani` REAL NOT NULL, PRIMARY KEY(`tarih`))",
+        "fields": [
+          {
+            "fieldPath": "tarih",
+            "columnName": "tarih",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "puanHam",
+            "columnName": "puanHam",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "puanNet",
+            "columnName": "puanNet",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seriGun",
+            "columnName": "seriGun",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carpani",
+            "columnName": "carpani",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tarih"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '26148fb30ee8258fbc88ff98f437c6ba')"
+    ]
+  }
+}

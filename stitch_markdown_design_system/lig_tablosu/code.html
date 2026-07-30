@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yeşilİz - Lig Liderlik Tablosu</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#9dd2b8",
+                        "risk-mid": "#70ab70",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#006e27",
+                        "on-secondary-fixed-variant": "#1c4f3c",
+                        "on-tertiary-container": "#00380e",
+                        "risk-high": "#124734",
+                        "tertiary-container": "#69a46a",
+                        "primary-fixed": "#72fe86",
+                        "surface-bright": "#f2fcf4",
+                        "on-primary-fixed-variant": "#00531b",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#54e16d",
+                        "surface-muted": "#c4dec9",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#ecf6ee",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#29322d",
+                        "divider": "#E3EDE6",
+                        "tertiary-fixed-dim": "#98d596",
+                        "on-tertiary-fixed-variant": "#185121",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e1ebe3",
+                        "primary-container": "#00ae42",
+                        "outline-variant": "#bccbb8",
+                        "on-primary-container": "#00380f",
+                        "surface-container": "#e6f0e8",
+                        "on-tertiary-fixed": "#002106",
+                        "risk-low": "#00AE42",
+                        "surface-tint": "#006e27",
+                        "surface-container-highest": "#dbe5dd",
+                        "background": "#f2fcf4",
+                        "tertiary-fixed": "#b3f2b0",
+                        "outline": "#6d7b6b",
+                        "on-secondary-container": "#3a6c57",
+                        "surface-white": "#FFFFFF",
+                        "on-surface-variant": "#3d4a3c",
+                        "surface": "#f2fcf4",
+                        "secondary-container": "#b6ebd1",
+                        "inverse-on-surface": "#e9f3eb",
+                        "surface-dim": "#d2dcd5",
+                        "secondary": "#366853",
+                        "on-secondary-fixed": "#002115",
+                        "on-surface": "#151d19",
+                        "tertiary": "#326a36",
+                        "secondary-fixed": "#b9eed3",
+                        "on-background": "#151d19",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#002107",
+                        "text-secondary": "#5A6B60",
+                        "surface-variant": "#dbe5dd",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#54e16d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "gutter": "16px",
+                        "screen-margin": "20px",
+                        "stack-sm": "4px",
+                        "card-padding": "20px"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "display-hero": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-h2": ["Inter"],
+                        "headline-h1": ["Inter"],
+                        "headline-h1-mobile": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-hero": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-h2": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-h1": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-h1-mobile": ["22px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md pb-[90px] antialiased">
+<!-- TopAppBar from JSON -->
+<header class="w-full top-0 sticky bg-surface flex justify-between items-center px-screen-margin py-stack-md max-w-full z-40">
+<div class="flex items-center gap-stack-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="A highly stylized, flat vector illustration of a friendly user avatar. The character has a welcoming smile, wearing a simple organic green top. The lighting is soft and even, typical of modern UI illustrations. The background is a solid light green, perfectly matching the app's optimistic light mode color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJZ3EFkKKTpNGSo-VrwLU8ytFRlPcefJOhG5aps2ZAeKhInco7J8Dm4UG2p4Dj31VMkSUjUT5LKG2_O9luczzgv_5B7jzSIiPLALAuC95EM8xucDyLYoYAvMKkL3hl99P1S_6s_9_GbM3GPVbMTRVPwQV1n_C-61et0PZms201a0WNUmTPfVnddSqhFwygamtTteVVghWAyOUaF750-1qPuKmlhyL-xmjndq8otj-qbWM3D9yywTnb_rvDhGHKdWd--59R0aUTA5yA"/>
+</div>
+<h1 class="font-headline-h1-mobile text-headline-h1-mobile font-bold text-primary">Yeşilİz</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-transform duration-200 active:scale-95 text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl">notifications</span>
+</button>
+</header>
+<main class="px-screen-margin py-stack-md flex flex-col gap-stack-lg max-w-2xl mx-auto">
+<!-- League Header -->
+<section class="flex flex-col items-center justify-center text-center gap-stack-sm pt-4">
+<div class="w-24 h-24 rounded-full bg-surface-container-high flex items-center justify-center mb-2 shadow-[0_4px_20px_rgba(18,71,52,0.08)]">
+<span class="material-symbols-outlined text-primary text-[48px]">local_florist</span>
+</div>
+<h2 class="font-display-hero text-display-hero text-on-surface">Filiz Ligi</h2>
+<p class="font-body-md text-body-md text-text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span> 5 gün kaldı
+            </p>
+</section>
+<!-- Rule Chips -->
+<section class="flex justify-center gap-stack-md">
+<div class="bg-surface-container px-4 py-2 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+<span class="font-label-sm text-label-sm text-on-surface">İlk 7 yükselir</span>
+</div>
+<!-- Optimistic friction: Neutral falling state, no red -->
+<div class="bg-surface-dim px-4 py-2 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">trending_down</span>
+<span class="font-label-sm text-label-sm text-text-secondary">Son 7 düşer</span>
+</div>
+</section>
+<!-- Leaderboard List -->
+<section class="flex flex-col gap-base">
+<!-- Rank 1 (Top 7 Tint) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">1</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A flat vector UI avatar of a cheerful young woman with glasses and dark hair tied in a bun. She is wearing a soft pastel green shirt. The lighting is bright and optimistic, set against a solid off-white background to fit perfectly within a clean, modern dashboard aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwNyLYcAnhNw9tj-x7LnHclPQpxdM6ntaRMBfwz-M7T-W0M4gJz3T8qYn9Pj2L2mJWdj56YXlNHlxMrSw8LxTFZZsiQvNFwZcAESAaSxMs-VJuWioeTf0Whc8y6afHdvfR3031LIEV6UK_YB2DpCmdi1AD3mtdqUWGUaAK7EiKzNnB1_CqG9DXgFHur8cEmkAgiVjQWQi5Vqit17YwfwZXiccOTmCFWcnID_jeOXwb9UdZYTqGALnYJkNZ57cseY8qOcgCXxOqHOcX"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Ayşe Y.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1450</p>
+</div>
+</div>
+<!-- Rank 2 (Top 7 Tint) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">2</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A minimalist flat vector avatar of a man with short brown hair and a light beard, smiling gently. He wears a dark green organic-toned jacket. Set against a soft mint background. The illustration style is clean, optimistic, and utilizes a restricted palette of greens and whites." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf0ytcdvV61pXIWbH_-r4FlYT1R58i096eBII3JFPzxfoNL0QMmcspv4-i2mUj30tWCytkrAiU28RLsRXTPb9qwmDicD5EFA3DkrR9TP5mRBCRuDgWw6evdRPbkzeasSA3ozhJaJquqEafIAI7HxBC3fkh9vbUEm0KxGhuWAw6A2F8kNphw2woiPvDTTN49Aqr1ODBoc8erDenkQ3xLA0JlDPVabfN4yeFT-kZ7IJ5KHbg7LXlaj6XX6AvA7hhdtnRhX-RmHP6yMzo"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Burak K.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1380</p>
+</div>
+</div>
+<!-- Rank 3 (Top 7 Tint) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">3</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A supportive and calm flat vector illustration of an elderly woman smiling warmly. She has short grey hair and wears a pale green blouse. The background is a pristine white. Designed to evoke feelings of digital wellbeing and gentle community support." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDDDtyDRve542WxukeYLDvH0JEpfHXUdgFiZ8OhVy-vNs81bglqBp92pd9NEoGLfY4W7wsROqPgTO70zjYLrAiy71WCjgTTxWtX_yk7nKd6tp7xFDnaXmeJI9iiHR6BD-KPF3Frv_eSLe6F_yO-coc9mBwCiekCq71T4XLFHGgfyi3zO_GfqETc-h_lNk6WhLA_4or94voARFcmEk2X30dRdpBqFeTuOvyZSNgJH9EJVQEFo_xUaX2ogb1cuHP-U9pwe4Y10U0jahy"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Canan M.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1310</p>
+</div>
+</div>
+<!-- Rank 4 (CURRENT USER - Highlighted) -->
+<div class="bg-secondary-container border-[1.5px] border-primary rounded-xl p-4 flex items-center gap-4 shadow-[0_4px_16px_rgba(18,71,52,0.08)] transform scale-[1.01]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">4</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright overflow-hidden ring-2 ring-primary ring-offset-2 ring-offset-secondary-container">
+<img class="w-full h-full object-cover" data-alt="A highly stylized, flat vector illustration of a friendly user avatar. The character has a welcoming smile, wearing a simple organic green top. The lighting is soft and even, typical of modern UI illustrations. The background is a solid light green, perfectly matching the app's optimistic light mode color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmVwIOO9R6q0mBlXgTewPGQvE43ujCxw1QnDz7ZHlq2gSxId4TGHM-ndOA6IGTHh3rz142mEWhuRbcJpL0UNe2Edj-1IOvbpD1RXio5YYkd-Vj1-1h1doolyOC5aydHZSAXgW9eP72V0zTMtMLIqjrEr36nU2a3l4IUkBkXlia1dOV8aqYZ_TpS_8HUufueB05KBgLIqfNG8OER2SGrX_Vh5Onl1qXngH9EdROr9MIYQXUtcciUyl9q9SAlfUp25smwOkFYFb-WvSd"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-bold">Sen</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary font-bold">1250</p>
+</div>
+</div>
+<!-- Rank 5 (Top 7 Tint) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">5</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean, flat vector avatar of a person with curly hair and a neutral but pleasant expression. Wearing a light grey-green sweater. The lighting is high-key and soft, set against a white background to maintain a breathable, minimalist aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6eU_ywniqjR_n9DWqJXwe2PzLgp0ocntUwvI8mESQWadzZ5AyVDYcALZSR1G93RZqnqC0A65BxdaqelODNQ-dphTewHyYQDlZlVag2fTCz-i23qI2lao7KorTPLpHAPABX8czIqBbNZ5gIKrWQDwOUeavn6r_L38oCxUxRnMHutvulkApsflXcenV06VggSCfskJ7vcfUAjFbfw0VhfKLPcSYnKJXibFt1jNe7Ch_7qf_pbdpAo5-IxCefCF4BBfcVoCSp9_9RoIk"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Deniz T.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1190</p>
+</div>
+</div>
+<!-- Rank 6 (Top 7 Tint) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">6</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Emre S.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1120</p>
+</div>
+</div>
+<!-- Rank 7 (Top 7 Tint - Borderline) -->
+<div class="bg-surface-container rounded-xl p-4 flex items-center gap-4 shadow-[0_2px_12px_rgba(18,71,52,0.04)]">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-primary font-bold">7</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-bright flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-semibold">Fatih O.</p>
+</div>
+<div class="text-right">
+<p class="font-headline-h2 text-headline-h2 text-primary">1050</p>
+</div>
+</div>
+<!-- Rank 8 (Bottom 3 - Neutral/Dim) -->
+<div class="bg-surface-container-lowest border-[1.5px] border-divider rounded-xl p-4 flex items-center gap-4 opacity-80">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-text-secondary font-medium">8</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-dim flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface-variant">Gizem L.</p>
+</div>
+<div class="text-right">
+<p class="font-body-md text-body-md text-text-secondary font-medium">980</p>
+</div>
+</div>
+<!-- Rank 9 (Bottom 3 - Neutral/Dim) -->
+<div class="bg-surface-container-lowest border-[1.5px] border-divider rounded-xl p-4 flex items-center gap-4 opacity-80">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-text-secondary font-medium">9</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-dim flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface-variant">Hakan V.</p>
+</div>
+<div class="text-right">
+<p class="font-body-md text-body-md text-text-secondary font-medium">920</p>
+</div>
+</div>
+<!-- Rank 10 (Bottom 3 - Neutral/Dim) -->
+<div class="bg-surface-container-lowest border-[1.5px] border-divider rounded-xl p-4 flex items-center gap-4 opacity-80">
+<div class="w-8 flex justify-center">
+<span class="font-headline-h2 text-headline-h2 text-text-secondary font-medium">10</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-dim flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface-variant">Irmak Ç.</p>
+</div>
+<div class="text-right">
+<p class="font-body-md text-body-md text-text-secondary font-medium">850</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar from JSON - Lig active -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 shadow-[0_-2px_12px_rgba(18,71,52,0.06)] bg-surface-container md:hidden rounded-t-xl">
+<!-- Ana Sayfa (Inactive) -->
+<a class="flex flex-col items-center justify-center text-text-secondary hover:bg-surface-container-high transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">home</span>
+<span class="font-label-sm text-label-sm">Ana Sayfa</span>
+</a>
+<!-- İstatistik (Inactive) -->
+<a class="flex flex-col items-center justify-center text-text-secondary hover:bg-surface-container-high transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">leaderboard</span>
+<span class="font-label-sm text-label-sm">İstatistik</span>
+</a>
+<!-- Lig (Active) -->
+<a class="flex flex-col items-center justify-center text-primary font-bold after:content-['•'] after:text-[8px] after:mt-1 p-2 scale-98 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+<span class="font-label-sm text-label-sm">Lig</span>
+</a>
+<!-- Profil (Inactive) -->
+<a class="flex flex-col items-center justify-center text-text-secondary hover:bg-surface-container-high transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">person</span>
+<span class="font-label-sm text-label-sm">Profil</span>
+</a>
+</nav>
+</body></html>
