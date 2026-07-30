@@ -1,0 +1,45 @@
+# Yeşilİz — yerel geliştirme yığını.
+#
+# `docker compose up -d` → PostgreSQL 16 + API (localhost:8000).
+# Android emülatöründen API'ye `http://10.0.2.2:8000` ile ulaşılıyor;
+# emülatörde `localhost` cihazın kendisi demek.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: yesiliz
+      POSTGRES_PASSWORD: yesiliz
+      POSTGRES_DB: yesiliz
+    ports:
+      # 5433: makinede başka bir Postgres varsa çakışmasın.
+      - "5433:5432"
+    volumes:
+      - yesiliz_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yesiliz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      YESILIZ_VERITABANI_URL: postgresql+psycopg://yesiliz:yesiliz@db:5432/yesiliz
+      # Geliştirme anahtarı. Üretimde ortam değişkeninden gelir ve ASLA
+      # depoya girmez.
+      YESILIZ_JWT_ANAHTARI: gelistirme-anahtari-uretimde-degistir
+    ports:
+      - "8000:8000"
+    volumes:
+      # Canlı yeniden yükleme — kaynak değişince kap yeniden kurulmasın.
+      - .:/uygulama
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:uygulama --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  yesiliz_db:

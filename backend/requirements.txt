@@ -1,0 +1,17 @@
+# Yeşilİz backend — CLAUDE.md §5: FastAPI (ASP.NET DEĞİL, ML aynı dilde olsun)
+fastapi==0.118.0
+uvicorn[standard]==0.37.0
+sqlalchemy==2.0.43
+alembic==1.16.5
+psycopg[binary]==3.2.10
+pydantic==2.11.9
+# EmailStr için şart — pydantic tek başına e-posta doğrulamıyor.
+email-validator==2.3.0
+pydantic-settings==2.11.0
+argon2-cffi==25.1.0
+pyjwt==2.10.1
+python-multipart==0.0.20
+
+# test
+pytest==8.4.2
+httpx==0.28.1
