@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.ui.bilesen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -132,6 +133,29 @@ fun MetinBaglanti(
     ) {
         Text(text = metin, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+/**
+ * Satır içi metin bağlantısı — "Hesabın yok mu? **Kayıt ol**".
+ *
+ * [MetinBaglanti]'den tek farkı genişliği doldurmaması. O, tek başına duran
+ * bir eylem ("Vazgeç", "Şimdi değil") için tasarlandı ve `fillMaxWidth`
+ * dayatıyor; bir cümlenin içine konduğunda satırı ortadan ikiye bölüyor.
+ * Rengi de `YesilAna`: cümlenin geri kalanından ayrışması gerekiyor.
+ */
+@Composable
+fun SatirBaglanti(
+    metin: String,
+    onTikla: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = metin,
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = YesilAna,
+        modifier = modifier.clickable(onClick = onTikla),
+    )
 }
 
 /**

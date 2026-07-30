@@ -33,7 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani as Alan
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
-import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
+import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -121,7 +121,7 @@ fun GirisEkran(
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                MetinBaglanti(metin = "Şifremi unuttum", onTikla = onSifremiUnuttum)
+                SatirBaglanti(metin = "Şifremi unuttum", onTikla = onSifremiUnuttum)
             }
 
             BirincilButon(
@@ -158,7 +158,7 @@ fun GirisEkran(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MetinIkincil,
                 )
-                MetinBaglanti(metin = "Kayıt ol", onTikla = onKayit)
+                SatirBaglanti(metin = "Kayıt ol", onTikla = onKayit)
             }
         }
 

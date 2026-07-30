@@ -38,7 +38,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
-import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
+import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.RiskGirisKarti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
@@ -224,11 +224,25 @@ private fun OlcumKarti(
 ) {
     Kart {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            BolumBasligi(etiket, modifier = Modifier.weight(1f))
+            // Seçim varken başlık bir TARİH ("24 Temmuz Perşembe"); onu
+            // `BolumBasligi`'nden geçirmek büyük harfe çevirip dar sütunda
+            // harf harf sardırıyordu. Bölüm başlığı yalnızca "ORTALAMA"
+            // gibi kısa etiketler için.
+            if (onOrtalamayaDon == null) {
+                BolumBasligi(etiket, modifier = Modifier.weight(1f))
+            } else {
+                Text(
+                    text = etiket,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MetinIkincil,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             // Seçimden çıkış yolu her zaman görünür olmalı — kullanıcı
             // grafiğe dokunduktan sonra ortalamaya nasıl döneceğini
             // aramak zorunda kalmasın.
-            onOrtalamayaDon?.let { MetinBaglanti(metin = "Ortalamaya dön", onTikla = it) }
+            onOrtalamayaDon?.let { SatirBaglanti(metin = "Ortalamaya dön", onTikla = it) }
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(

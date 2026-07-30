@@ -34,7 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani as Alan
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
-import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
+import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -163,7 +163,7 @@ fun SifreEkran(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MetinIkincil,
                     )
-                    MetinBaglanti(metin = "Giriş yap", onTikla = onGiris)
+                    SatirBaglanti(metin = "Giriş yap", onTikla = onGiris)
                 }
 
                 Text(

@@ -2,6 +2,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.ana
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -423,6 +425,7 @@ private fun DikeyAyrac() {
  * "risk kırmızıyla gösterilmez" kuralıyla çakışmıyor (CLAUDE.md §4);
  * turuncu uç da kırmızı değil.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RuhHaliKarti(
     deger: Float,
@@ -481,6 +484,19 @@ private fun RuhHaliKarti(
                     inactiveTrackColor = Color.Transparent,
                     thumbColor = Beyaz,
                 ),
+                // Varsayılan tutamak düz beyaz; kart zemini de beyaz olduğu
+                // için gradyan çubuğun dışında kalan kısmı **görünmüyordu**.
+                // Tasarım 07'deki "beyaz dolgu, yeşil kenarlık" tutamağı
+                // burada da kullanılıyor.
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .size(TutamakBoyu)
+                            .clip(CircleShape)
+                            .background(Beyaz)
+                            .border(TutamakKenari, YesilAna, CircleShape),
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -698,6 +714,10 @@ private val AyracBoyu: Dp = Olcu.AyracBoyu
 
 /** Zil rozeti — sayı değil nokta. */
 private val NoktaBoyu: Dp = Bosluk.S
+
+/** Ruh hali tutamağı — beyaz dolgu, yeşil kenarlık (tasarım 07 dili). */
+private val TutamakBoyu: Dp = Bosluk.L
+private val TutamakKenari: Dp = Olcu.ButonKenarligi
 
 /** Yeşil zemin üstündeki beyaz dolguların opaklığı. */
 private const val YariSaydam = 0.2f

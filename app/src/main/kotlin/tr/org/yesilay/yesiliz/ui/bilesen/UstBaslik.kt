@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
@@ -67,6 +68,11 @@ fun YesilBaslikliEkran(
                 fontWeight = FontWeight.Bold,
                 color = Beyaz,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
+                // Başlık ortada duruyor ama genişliği sınırsız olsaydı geri
+                // okunun ve sağ eylemin ("Tümünü oku") üstüne binerdi.
+                // Kenar payı ikisine de yer bırakıyor.
+                modifier = Modifier.padding(horizontal = BaslikKenarPayi),
             )
             if (onGeri != null) {
                 IconButton(
@@ -108,3 +114,6 @@ fun YesilBaslikliEkran(
         }
     }
 }
+
+/** Geri oku ve sağ eylem için ayrılan yatay pay. */
+private val BaslikKenarPayi = 96.dp

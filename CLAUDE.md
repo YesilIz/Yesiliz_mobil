@@ -27,9 +27,9 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 120)
+# testler  (toplam 170)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 75 · saf JVM
+./gradlew :app:testDebugUnitTest       # 125 · saf JVM
 ./gradlew :app:connectedDebugAndroidTest   # 23 · emülatör gerektirir
 
 # UsageStats izni — Ayarlar'dan verilir, adb ile de verilebilir.
@@ -204,18 +204,21 @@ app/…/yesiliz/
 ├─ ui/
 │  ├─ tema/               Renk · Tipografi · Sekil · Boyut · Tema
 │  ├─ TurkceMetin.kt      buyukHarf() / kucukHarf()
+│  ├─ EkranAcikTut.kt     FLAG_KEEP_SCREEN_ON sarmalayıcı (nefes, yürüyüş)
 │  ├─ bilesen/            AyarSatiri · BosDurum · Cip · IlerlemeCubugu · Kart
 │  │  │                   KodKutusu · KullaniciAvatari · LikertSecici · OnayKutusu
-│  │  │                   SallananYapraklar · UstBaslik · YaprakZemini · YesilizButon
-│  │  └─ veri/            CubukGrafik · DaireselGosterge · YiginBar
+│  │  │                   RiskGirisKarti · SallananYapraklar · UstBaslik ·
+│  │  │                   YaprakZemini · YesilizButon
+│  │  └─ veri/            CubukGrafik · CubukSecim · DaireselGosterge · YiginBar
 │  ├─ gezinme/            NavHost, rotalar
 │  └─ ekran/              onboarding ana istatistik nefes riskdetay
-│                         lig odul ebeveyn profil
-│                         (henüz yok: spor/aktif-yürüyüş, yedam — §11)
+│                         lig odul ebeveyn profil hesap hedef kategori
+│                         bilgi test bildirim anket yuruyus saglik yedam
 ├─ nudge/                 Tetikleyici.kt · NudgeSabitleri.kt · NudgeDurum.kt ·
 │                         NudgeOverlay.kt · NudgeOverlayService.kt · NudgeIzni.kt
-├─ arkaplan/              WorkManager worker'ları
-└─ widget/                Glance
+├─ arkaplan/              GunlukOzetWorker · HatirlatmaWorker · IsPlanlayici
+└─ widget/                Glance — EkranSuresiWidget · GununSorusuWidget ·
+                          WidgetVerisi (@EntryPoint) · WidgetEylemleri
 ```
 
 Her ekran klasörü **üç dosya**: `<Ad>Ekran.kt` · `<Ad>ViewModel.kt` · `<Ad>Durum.kt`.
@@ -416,13 +419,28 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
 | `app/data/depo/GecmisVeriDeposu` | Kurulumda geçmiş veri — `queryAndAggregateUsageStats` ile izin onaylandıktan sonra bir kez `Tercihler.gecmisGunSayisi`'ni gerçek sayıyla günceller | **4 birim testi**; gerçek sayı yalnızca gerçek cihazda doğrulanabilir (§10) |
+| `domain/test/` + `ui/ekran/test/` | Kısa farkındalık testi (5 soru) — **SAS-SV değil** (§12 K12) | **9 birim testi** |
+| `domain/bilgi/` + `ui/ekran/bilgi/` | Bilgi Bankası — `assets/bilgi_bankasi.json` (13 yazı, çevrimdışı), liste + yazı ekranı | **6 birim testi** |
+| `domain/bildirim/` + `data/depo/BildirimDeposu` + `ui/ekran/bildirim/` | Uygulama içi bildirim defteri; ana ekran başlığında okunmamış noktalı zil | **8 birim testi** |
+| `ui/ekran/hedef/` | Günlük hedef (ekran 34) — halka, −/+, hızlı seçim; taban 120 dk | Profil › Hedeflerim |
+| `ui/ekran/kategori/` | Uygulama kategorileri + Kategorize et + kategori seç (31, 32, 33) | `KategoriDeposu.kullaniciSecti`'ye bağlı |
+| `ui/ekran/anket/` | SAS-SV yeniden değerlendirme + 4 hafta hatırlatması | madde metni `SasSv`'den paylaşılıyor |
+| `ui/ekran/yuruyus/` | Aktif yürüyüş — `YuruyusHesapla` (saf) + canlı sayaç | **7 birim testi** |
+| `ui/ekran/saglik/` | Health Connect izin akışı (tasarımı yok, ekran 02 uyarlandı) | HC yoksa Play Store yönlendirmesi |
+| `ui/ekran/yedam/` | YEDAM onayı (rıza/köprü) — yalnızca `Bant.COK`, onay kutusu zorunlu | risk detayındaki öneri kartından |
+| `ui/ekran/lig/` + `domain/lig/` + `YerelSahteLigDeposu` | Lig boş durumu (37) + Arkadaş ekle (36); `LigDeposu` arayüzü artık gerçekten var | **6 birim testi** (`DavetKodu`) |
+| `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
+| `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
+| `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
 
-**Toplam 120 test** (97 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
+**Toplam 170 test** (147 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
+Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
 
-**Hâlâ bilinçli sahte olanlar:** lig sıralaması (§12 K7, backend Faz 2),
-kullanıcı adı ve lig adı (hesap sistemi Faz 2).
+**Hâlâ bilinçli sahte olanlar:** lig sıralaması ve lig adı (§12 K7, backend
+Faz 2), önerilen kişiler listesi (rehber okunmuyor — §12 K14). Kullanıcı adı
+artık gerçek: hesap ekranından ya da misafir modunda sabitten geliyor.
 
 **Demo tohumu:** `app/src/debug/` kaynak setinde — release derlemesine
 **giremiyor**. Profil → Geliştirici → "Örnek veri oluştur". Tohum yalnızca
@@ -434,24 +452,23 @@ kullanıcı adı ve lig adı (hesap sistemi Faz 2).
 |---|---|---|
 | ~~1~~ | ~~Nudge tetikleyici + overlay~~ | **BİTTİ** (30 Tem) — `nudge/` (Tetikleyici, NudgeOverlayService, NudgeOverlay, NudgeIzni), Profil'de opt-in anahtarı; nefes derin bağlantısı yer tutucu `Rota.NEFES`'e gidiyor (madde 3 bitince gerçek ekrana bağlanacak) |
 | ~~2~~ | ~~Risk detayı ekranı~~ | **BİTTİ** (31 Tem) — `ui/ekran/riskdetay/`, core-risk 4-faktör bantlama + test vektörleri, İstatistik'e giriş kartı |
-| ~~3~~ | ~~Görev detayı alt sayfası + nefes~~ | **BİTTİ** (30 Tem) — `AnaEkran`'da alt sayfa (`GorevDetayi`, tasarımı yok, `stitch/g_rev_detay` yerleşimi uyarlandı) + `ui/ekran/nefes/` (resmi teslim, ekran 16). "Yürüyüşü başlat" bilinçli olarak devre dışı ("Yakında") — **Aktif yürüyüş** (canlı sayaç/adım takibi) hâlâ ayrı, tasarımsız bir iş (aşağıdaki eksik-tasarım listesinde) |
-| 4 | Health Connect izin akışı | `SaglikOkuyucu` hazır, izni isteyen ekran yok — tasarım da yok |
+| ~~3~~ | ~~Görev detayı alt sayfası + nefes~~ | **BİTTİ** (30 Tem) — `AnaEkran`'da alt sayfa (`GorevDetayi`, tasarımı yok, `stitch/g_rev_detay` yerleşimi uyarlandı) + `ui/ekran/nefes/` (resmi teslim, ekran 16) |
+| ~~4~~ | ~~Health Connect izin akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/saglik/`, ekran 02'nin yerleşimi uyarlandı; HC kurulu değilse Play Store, izin yoksa `PermissionController` sözleşmesi. Profil › Verilerim'den erişiliyor |
 | ~~5~~ | ~~Kurulumda geçmiş veri~~ | **BİTTİ** (30 Tem) — `GecmisVeriDeposu`, `KullanimOkuyucu.gunlukToplamSureler`, `GecmisGunSayaci`; `IzinEkran` artık gerçekten izin istiyor (`MainActivity.onResume` tetikliyor) |
-| 6 | Widget | Glance; tasarım yok (`stitch/widget_tasar_m` yerleşim referansı) |
+| ~~6~~ | ~~Widget~~ | **BİTTİ** (31 Tem) — `app/widget/`, Glance 1.1.1. Tasarım 39 (etkileşimli Bugünün sorusu) ve 40 (ekran süresi). Tasarım 41 (kilit ekranı) **uygulanmadı**, §12 K13 |
 | ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard, mock veri |
-| 7b | YEDAM onayı (köprü/rıza ekranı) | Hâlâ tasarım yok — `docs/tasarim-referans.md §4`; ekran 27 "YEDAM hakkında" ile karıştırılmaz, o yalnızca bilgilendirme |
-| 8 | Hesap ekranları (giriş/kayıt) | teslimde var, backend Faz 2 |
-| ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında |
-| — | *Faz 2* | FastAPI backend · gerçek lig · uzman paneli |
+| ~~7b~~ | ~~YEDAM onayı (köprü/rıza ekranı)~~ | **BİTTİ** (31 Tem) — `ui/ekran/yedam/`, `stitch/yedam_onay/` yerleşimi gerçek tokenlarla. Yalnızca `Bant.COK` + kullanıcı onayı. Ekran 27 "YEDAM hakkında" ayrıca Profil › Destek'e alt sayfa olarak eklendi |
+| ~~8~~ | ~~Hesap ekranları (giriş/kayıt)~~ | **BİTTİ** (31 Tem) — `ui/ekran/hesap/` (14, 15, 38) + `HesapDeposu` arayüzü. Şifre hiçbir yere yazılmıyor, backend Faz 2 |
+| ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında, YEDAM hakkında, Bildirim saatleri |
+| ~~10~~ | ~~Aktif yürüyüş~~ | **BİTTİ** (31 Tem) — `ui/ekran/yuruyus/` + saf `YuruyusHesapla`. Foreground service **yok**, ekran açıkken sayıyor (§12 K15) |
+| — | *Faz 2* | FastAPI backend · gerçek lig · uzman paneli · gerçek kimlik doğrulama |
 
-**Tasarımı hâlâ eksik 3 ekran** (`docs/tasarim-referans.md §4`) — tasarımcıya
-sıradaki iş listesi: Aktif yürüyüş, YEDAM onayı (rıza/köprü), Widget. Hepsi
-şu an yalnızca eski Stitch yerleşiminde (tonlar/tipografi güncel değil).
-Mola hatırlatıcı (nudge) ve Görev detayı bu listeden çıktı — ikisi de
-`stitch_markdown_design_system/` yerleşimi + gerçek tokenlarla uygulandı
-(madde 1 ve 3, BİTTİ) — bu, §8 adım 3'teki kabul edilmiş yöntem, ayrıca
-resmi tasarım beklenmiyor. `docs/tasarim-referans.md §4` tablosu da
-güncellendi.
+**Tasarımı eksik ekran kalmadı.** 30 Tem ikinci ek teslimi (8 ekran +
+3 widget, `docs/tasarim-referans.md §2 / 31–41`) son boşlukları kapattı;
+tasarımı hiç gelmeyen üç ekran (Aktif yürüyüş, YEDAM onayı, Health Connect
+izni) §8 adım 3'teki kabul edilmiş yöntemle — mevcut ekranların yerleşimi
++ gerçek tokenlar — uygulandı. `docs/tasarim-referans.md §4` tablosunda
+yalnızca Health Connect izni bilgi amaçlı duruyor.
 
 ### Kapanan açık iş — Stitch tasarım sistemi
 
@@ -487,6 +504,11 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K9 | `sistem` kategorisi | Risk hesabına girmez | LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
 | K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** | Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
 | K11 | Görev detayı ayrı `gorev/` ekran klasörü **değil** | Alt sayfa içeriği `GorevDetayi` — `AnaEkran.kt` içinde private composable, `ProfilEkran`/`OdulEkran`'ın kendi alt sayfaları gibi | §6'daki mimari şema `gorev`'i ayrı bir `ui/ekran/` klasörü gibi listeliyordu ama bu hiç uygulanmadı — `ProfilEkran`/`OdulEkran` emsali (alt sayfa = yerel `remember` state + private composable, ayrı ViewModel yok) daha güçlü ve daha yeni. Şema buna göre düzeltildi (§6). Bir daha `gorev/` klasörü **açılmasın** |
+| K12 | "Kendini Test Et" kısa farkındalık testi, **SAS-SV değil** | 5 soru, 3'lü seçim, kesme puanı yok, risk motoruna girmiyor. `domain/test/` + ayrı `farkindalik_testi` tablosu | SAS-SV'nin 29,5 kesme puanı yayınlanmış bir çalışmaya dayanıyor ve ölçeğin **birebir** korunmasına bağlı (`docs/spec-anket.md §6.1`). Kısaltmak geçersizleştirirdi; ayrı bir araç yazmak tek doğru yol. İkisini aynı tabloda tutmak da kalibre edilmemiş bir puanın kalibre edilmişle karışması riskini doğururdu — bu yüzden `anket_yanit` ve `farkindalik_testi` ayrı |
+| K13 | Kilit ekranı widget'ı (tasarım 41) **uygulanmadı** | Aynı bilgi tasarım 40'taki ana ekran widget'ıyla veriliyor | iOS'un kilit ekranı widget'ının Android'de karşılığı yok; platformda genel kullanıma açık bir yetenek değil. Tasarım arşivde referans olarak duruyor |
+| K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı | CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
+| K15 | Aktif yürüyüş **foreground service'siz** | Ekran açık kaldığı sürece sayıyor (`EkranAcikTut`), ekranda tek satırla belirtiliyor | Arka planda adım takibi ayrı izin, ayrı bildirim kanalı ve ayrı pil bütçesi demek; MVP'nin kritik yolunda değil. Kullanıcının telefonu cebine koyup sayacın durduğunu sonradan öğrenmemesi için davranış açıkça yazılı |
+| K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi ve sunucu Faz 2'de. Giriş ekranı bunu kullanıcıya da söylüyor |
 
 ### Açık
 
