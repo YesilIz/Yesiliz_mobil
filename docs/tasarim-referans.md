@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| Kaynak | `Yeşilİz Mobil Arayüz-selection.png` (dışarıdan teslim, 29 Tem 2026, 19 ekran) + ek teslim (30 Tem 2026, 12 ekran/varyasyon) |
-| Kesilmiş ekranlar | `docs/tasarim/ekranlar/*.png` — 31 adet, 2× ölçek |
-| Kapsam | 31 ekran (19 + 12 ek) + modal/alt sayfalar |
+| Kaynak | `Yeşilİz Mobil Arayüz-selection.png` (dışarıdan teslim, 29 Tem 2026, 19 ekran) + ek teslim (30 Tem 2026, 12 ekran/varyasyon) + ikinci ek teslim (30 Tem 2026, 8 ekran + 3 widget) |
+| Kesilmiş ekranlar | `docs/tasarim/ekranlar/*.png` — 41 adet, 2× ölçek |
+| Kapsam | 38 ekran + 3 widget tasarımı (biri uygulanmıyor, bkz. **41**) + modal/alt sayfalar |
 
 ---
 
@@ -288,6 +288,95 @@ turuncu + "Orta" çipi; Fiziksel hareket: `YesilAna` + "Düşük risk" çipi) ·
 > istisnaları". Diğer üç çubuk turuncu/yeşil, mevcut kategori paletiyle
 > tutarlı.
 
+### 31 · Uygulama kategorileri — `kategori`
+Geri oklu yeşil başlık "Uygulama kategorileri" · üstte **risk analizi kartı**
+(09'daki kartın aynısı: `PuanKartiBas`→`PuanKartiSon` gradyan, uyarı üçgeni,
+"Risk analizi: Orta düzey", sağda `›`) → **30**'a gider · açıklama paragrafı ·
+**akordiyon kategori grupları**: `⌄`/`›` + kategori adı büyük harf + sağda
+toplam süre; açık grupta uygulama satırları (renkli yuvarlak kare baş harf
+avatarı, uygulama adı, sağda süre + "bugün") · altta ince **yığın bar**
+(kategori paleti) + "Bugünkü ekran süresinin %65'i sosyal medya ve videoda
+geçti" · birincil buton `Ebeveyn paneline gönder` · altında metin bağlantı
+`Kategorize et` → **32**
+
+> Buton yalnızca ebeveyn eşleştirmesi tamamlanmış kullanıcıda görünür ve
+> ebeveyne **kategori özeti** gider, uygulama adı değil (`docs/spec-veri.md`).
+
+### 32 · Kategorize et — `kategori/duzenle`
+Geri oklu yeşil başlık "Kategorize et" · "Henüz kategorisi olmayan **10
+uygulama** var. Birine dokun, kategorisini seç." · 3 sütunlu ızgara:
+yuvarlatılmış kare baş harf avatarı (uygulamadan türetilen ton) + altında
+uygulama adı · altta birincil buton `Kaydet`
+
+### 33 · Kategori seç *(alt sayfa — 32 üstünde)*
+Zemin karartılır · beyaz alt sayfa, sürükleme çubuğu · başlıkta uygulama
+avatarı + adı + "Bu uygulama için bir kategori seç" + sağda `×` · 6 seçim
+satırı (ikon rozeti + kategori adı + sağda radio): seçili olan `YesilAna`
+kenarlık + `Yesil50` dolgu + dolu onay ikonu, tablodan gelen tahminin altında
+küçük yeşil "Önerilen" etiketi · birincil buton `Kategoriyi kaydet`
+
+### 34 · Günlük hedef — `hedef` *(Profil › Hedeflerim)*
+Geri oklu yeşil başlık "Günlük hedef" · **kalın dairesel gösterge**, ortada
+`4s 45dk` + "günlük ekran hedefi" · altında "Bugün 4s 20dk kullandın · %75" ·
+`Yesil50` zeminli ayar satırı: sol `−` (beyaz daire), ortada "4 saat 45 dakika",
+sağ `+` (`YesilAna` daire) · **HIZLI SEÇİM** 4 çip (3s · 4s · seçili olan ·
+6s), seçili çip `YesilAna` kenarlık + yeşil metin · saat ikonlu bilgi şeridi
+(`Yesil50`) · birincil buton `Hedefi kaydet`
+
+> Bilgi şeridindeki "Hedefini aştığında ebeveynine bilgilendirme gönderilir"
+> cümlesi yalnızca ebeveyn eşleşmişse; değilse yalnızca "Değişiklikler
+> yarından itibaren geçerli olur" kalır.
+
+### 35 · Bildirimler — `bildirim`
+Geri oklu yeşil başlık "Bildirimler" + sağda metin eylem "Tümünü oku" ·
+**BUGÜN / DÜN / BU HAFTA** bölüm başlıkları (büyük harf, `MetinUcuncul`) ·
+bildirim satırları: ikon rozeti + başlık + gövde + göreli zaman.
+**Okunmamış** satır `Yesil50` dolgulu ve sağ üstte `YesilAna` nokta taşır;
+okunmuş satır beyaz + `Ayrac` kenarlıklı.
+
+### 36 · Arkadaş ekle — `lig/arkadas`
+Geri oklu yeşil başlık "Arkadaş ekle" · koyu→açık yeşil gradyan kart:
+ortada iki kişi ikonu, "Birlikte daha güçlüsünüz", açıklama ·
+`Yesil50` zeminli **davet kodu** satırı ("Davet kodun" + büyük kod + sağda
+`Kopyala` butonu) · 3'lü eylem ızgarası (Mesajla paylaş · Bağlantı paylaş ·
+Kişilerden bul) · **ÖNERİLEN KİŞİLER** listesi: avatar + isim + alt metin +
+sağda `Ekle` çerçeveli buton; davet gönderilmişse pasif "Davet gönderildi" çipi
+
+> "Kişilerden bul" **bilinçli olarak devre dışı** — rehber verisi toplanmıyor
+> (CLAUDE.md §4). Ekranda tek satırla belirtilir.
+
+### 37 · Lig — boş durum *(varyasyon — 10)*
+Yeşil başlık "Lig" · ortada boş durum illüstrasyonu (tek başına duran fidan) ·
+"Henüz kimseyle yarışmıyorsun" · açıklama · birincil `Lige katıl` ·
+ikincil `Arkadaş davet et` → **36**
+
+### 38 · Şifremi unuttum — `hesap/sifre`
+Geri oklu beyaz ekran · `Yesil50` daire içinde kilit ikonu · "Şifreni mi
+unuttun?" · açıklama · "E-posta" etiketi + `Yesil50` zeminli alan ·
+birincil `Sıfırlama bağlantısı gönder` · altta "Şifreni hatırladın mı?
+**Giriş yap**"
+
+### 39 · Widget — Bugünün sorusu *(ana ekran, orta boy)*
+Beyaz kart, 20dp yarıçap · başlıkta `YesilAna` yuvarlatılmış kare içinde
+yaprak logosu + "Bugünün sorusu" · soru metni "Bugün kaç saat uyudun?" ·
+2×2 seçenek ızgarası, seçilmemişler `Yesil50` zemin / `MetinIkincil` metin,
+seçili olan `YesilAna` dolgu / beyaz kalın metin
+
+> **Etkileşimli widget** — seçim Glance `actionRunCallback` ile doğrudan
+> kaydedilir, uygulama açılmaz. Görev kataloğundaki "Uyku beyanı" (3 puan,
+> günlük limit 1) tamamlanır.
+
+### 40 · Widget — Ekran süresi *(ana ekran, küçük kare)*
+Beyaz kart · üstte kalın halka (`YesilAna` yay, `Yesil50` zemin), ortasında
+telefon ikonu · altında `1s 42dk` (kalın, `YesilKoyu`) + "ekran süresi"
+(`MetinIkincil`). Halka oranı günlük hedefe göre. Dokununca uygulama açılır.
+
+### 41 · Widget — kilit ekranı *(UYGULANMIYOR)*
+iOS kilit ekranı widget'ı: saat altında küçük halka + `1s 42dk`.
+**Android'de karşılığı yok** — kilit ekranı widget'ı platformda genel
+kullanıma açık bir yetenek değil. Tasarım referans olarak arşivde durur;
+aynı bilgi **40**'taki ana ekran widget'ıyla veriliyor.
+
 ---
 
 ## 3. GEZİNME
@@ -299,15 +388,22 @@ Alt sekmeler:  Ana Sayfa · İstatistik · Lig · Profil
         ↓
 Ana Sayfa → Ödüller → [17][18][19] alt sayfaları
 Ana Sayfa → Görev detayı (alt sayfa) → Nefes / Yürüyüş
-Ana Sayfa / İstatistik → Risk detayı [30]
+Ana Sayfa → Bilgi Bankası (liste → yazı) · Kendini Test Et (quiz → sonuç)
+Ana Sayfa → Bildirimler [35]  ← başlıktaki zil ikonu
+Ana Sayfa / İstatistik → Risk detayı [30] → YEDAM onayı (önerilen eylem)
+Lig [10] ⇄ boş durum [37] → Arkadaş ekle [36]
 Profil → Ebeveyn paneli [13] → ilk kurulum [20]→[21]→[22] (yalnızca
-        eşleştirilmemiş kullanıcıda) → Ebeveyn paneli [13] → YEDAM hakkında [27]
-Profil → Ebeveyn paneli → YEDAM onayı  ← köprü/rıza ekranı, hâlâ teslimde yok (§4)
+        eşleştirilmemiş kullanıcıda) → Ebeveyn paneli [13]
+Profil → Hedeflerim → Günlük hedef [34] / Uygulama kategorileri [31] →
+        Kategorize et [32] → Kategori seç [33] / Değerlendirmeyi yenile [04]
 Profil → Verilerim → Toplanan veriler [23] / Geçmişi indir [24] /
-        Verilerimi sil [25] / Hesabı sil [26]
-Profil → Yardım [28] / Hakkında [29]
-Hesap (14/15) — akış dışı, uygulamayı ilk açışta
+        Verilerimi sil [25] / Hesabı sil [26] / Health Connect izni
+Profil → Yardım [28] / Hakkında [29] / YEDAM hakkında [27]
+Hesap (14/15/38) — akış dışı, uygulamayı ilk açışta
 ```
+
+Ana ekran widget'ları [39][40] uygulamadan bağımsız; [39] uygulamayı
+açmadan doğrudan cevap kaydeder.
 
 Alt gezinme çubuğu **yalnızca** 4 sekmede görünür; onboarding, nefes,
 alt sayfalar ve ödül akışı tam ekran.
@@ -324,7 +420,10 @@ gölgeleri ve tipografisi taşınmaz.
 |---|---|---|
 | Aktif yürüyüş | `aktif_y_r_y_d_zeltilmi/` | Sayaç + ilerleme; ana sayfanın gradyan diliyle |
 | YEDAM onayı *(rıza/köprü akışı — 27 "YEDAM hakkında" ile karıştırılmaz)* | `yedam_onay/` | `yedam_iki_figur.png`; paylaşılacak bilgiler listesi aynen; "Bu onayı istedi" alt notu kalır |
-| Widget | `widget_tasar_m/` | Glance ile yeniden yazılır; sadece hizalama referansı |
+| Health Connect izni | — | Tasarımı yok; **02 · İzin** ekranının yerleşimi birebir uyarlanır |
+
+> **Widget artık teslimde** (30 Tem ikinci ek teslimi, ekran **39–41**) — bu
+> tablodan çıkarıldı, `stitch/widget_tasar_m/` yerleşimi kullanılmıyor.
 
 > **Risk detayı artık teslimde** (30 Tem ek teslimi, ekran **30**) — bu
 > tablodan çıkarıldı, `stitch/risk_detay/` yerleşimi kullanılmıyor.
