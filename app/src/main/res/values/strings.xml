@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="uygulama_adi">Yeşilİz</string>
+
+    <!-- Widget seçicide görünen açıklamalar (tasarım 39, 40). -->
+    <string name="widget_ekran_suresi_aciklama">Bugünkü ekran süren ve hedefe oranı</string>
+    <string name="widget_gunun_sorusu_aciklama">Günün sorusunu tek dokunuşla cevapla</string>
 </resources>

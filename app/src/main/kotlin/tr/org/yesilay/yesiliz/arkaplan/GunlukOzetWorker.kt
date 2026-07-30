@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
@@ -13,8 +14,10 @@ import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 import tr.org.yesilay.yesiliz.data.saglik.SaglikOkuyucu
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
+import tr.org.yesilay.yesiliz.widget.widgetlariTazele
 import java.time.Clock
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 /**
  * Günlük özet + risk hesabı — CLAUDE.md §11 md.1.
@@ -47,6 +50,8 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val saglikOkuyucu: SaglikOkuyucu,
     private val ozetDao: GunlukOzetDao,
     private val olayDao: KullanimOlayDao,
+    private val bildirimDeposu: BildirimDeposu,
+    private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
 ) : CoroutineWorker(baglam, parametreler) {
 
@@ -73,14 +78,55 @@ class GunlukOzetWorker @AssistedInject constructor(
                 puanDeposu.gunuYenidenHesapla(gun)
             }
 
+            // Bildirim defterine bugünün kazanımları. `birKezGunde` koruması
+            // sayesinde worker gün içinde tekrar koşsa da satır katlanmıyor.
+            bugunuBildir(bugun)
+
             // Ham olaylar sonsuza kadar tutulmuyor (veri minimizasyonu,
             // CLAUDE.md §4). Özet zaten çıkarıldı.
             olayDao.eskileriSil(bugun.minusDays(HAM_OLAY_SAKLAMA_GUN))
+
+            // Bildirim defteri de sınırsız büyümüyor.
+            bildirimDeposu.eskileriTemizle()
+
+            // Widget'lar özet yazıldıktan sonra tazeleniyor. Kendi periyodik
+            // güncellemelerini beklemek, ana ekranda saatlerce eski sayı
+            // göstermek demek (updatePeriodMillis zaten 0).
+            widgetlariTazele(applicationContext)
+
             Result.success()
         }.getOrElse { Result.retry() }
     }
 
+    /**
+     * Bugünün olumlu sonuçlarını bildirim defterine yazar.
+     *
+     * **Yalnızca kazanımlar.** "Hedefini aştın" diye bir satır bilinçli
+     * olarak yok — CLAUDE.md §4: ceza suçluluk üretir. Kötü giden bir günü
+     * kullanıcıya bildirimle hatırlatmak, uygulamayı sildiren davranış.
+     */
+    private suspend fun bugunuBildir(bugun: LocalDate) {
+        val ozet = ozetDao.getir(bugun) ?: return
+        val hedef = tercihler.anlik().gunlukHedefDk
+        val ekranDk = ozet.let {
+            it.socialDk + it.entertainmentDk + it.gamesDk + it.communicationDk +
+                it.productivityDk + it.educationDk + it.healthDk + it.otherDk
+        }.roundToInt()
+
+        if (ekranDk <= hedef) {
+            bildirimDeposu.hedefTutturuldu(ekranDk, hedef)
+        }
+
+        val seri = puanDeposu.seriGunu(bugun)
+        if (seri in SERI_ESIKLERI) {
+            bildirimDeposu.seriIlerledi(seri)
+        }
+    }
+
     companion object {
+        /** Serinin kutlandığı gün eşikleri — her gün bildirim göndermiyoruz. */
+        val SERI_ESIKLERI = setOf(3, 7, 14, 30, 60, 100)
+
         /** Kaçırılan günler için geriye dönük tarama penceresi. */
         const val TELAFI_GUN = 7L
 

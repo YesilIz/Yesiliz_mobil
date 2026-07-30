@@ -89,6 +89,13 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Ana ekran widget'ları (tasarım 39, 40). Glance kendi Composable
+    // ağacını kullanıyor — `androidx.compose.*` bileşenleri widget içinde
+    // çalışmıyor, o yüzden widget'lar ui/bilesen'i paylaşmıyor. Renkler
+    // yine de ui/tema'dan okunuyor (CLAUDE.md §7).
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // DI — CLAUDE.md §5. `hilt-work` @HiltWorker için; WorkManager Faz 4'te
     // gelecek ama fabrika Application'da baştan kuruluyor ki sonradan
     // manifest/Application değişikliği gerekmesin.

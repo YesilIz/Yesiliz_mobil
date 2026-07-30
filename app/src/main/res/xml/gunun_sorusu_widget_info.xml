@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bugünün sorusu widget'ı — docs/tasarim-referans.md §2 / 39.
+
+  Etkileşimli: seçeneklere dokunmak uygulamayı açmadan cevabı kaydediyor.
+  4x2 hücre; daha dar bir alanda dört seçenek okunmuyor.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_gunun_sorusu_aciklama"
+    android:initialLayout="@layout/glance_default_loading_layout" />

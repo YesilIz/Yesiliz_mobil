@@ -89,6 +89,37 @@
         </activity>
 
         <!--
+          Ana ekran widget'ları (docs/tasarim-referans.md §2 / 39, 40).
+
+          `exported="true"` zorunlu: widget'ı yerleştiren ve güncelleyen
+          launcher başka bir uygulama. `APPWIDGET_UPDATE` dışında bir eylem
+          dinlenmiyor, yani dışarıdan tetiklenebilecek başka bir yüzey yok.
+        -->
+        <receiver
+            android:name=".widget.EkranSuresiWidgetAlicisi"
+            android:exported="true"
+            android:label="@string/uygulama_adi">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/ekran_suresi_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.GununSorusuWidgetAlicisi"
+            android:exported="true"
+            android:label="@string/uygulama_adi">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/gunun_sorusu_widget_info" />
+        </receiver>
+
+        <!--
           Nudge tetikleyicisi + overlay penceresi. `specialUse` — bu servis
           veri senkronize etmiyor, canlı davranışsal bir hatırlatıcı
           gösteriyor; mevcut FGS tiplerinden hiçbiri tam karşılamıyor.

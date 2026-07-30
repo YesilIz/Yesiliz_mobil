@@ -32,6 +32,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.MainActivity
 import tr.org.yesilay.yesiliz.R
+import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
 import tr.org.yesilay.yesiliz.data.kullanim.OturumCikar
@@ -60,6 +61,7 @@ class NudgeOverlayService : Service() {
 
     @Inject lateinit var kullanimOkuyucu: KullanimOkuyucu
     @Inject lateinit var kategoriDeposu: KategoriDeposu
+    @Inject lateinit var bildirimDeposu: BildirimDeposu
     @Inject lateinit var saat: Clock
 
     private val servisIsi = SupervisorJob()
@@ -115,6 +117,12 @@ class NudgeOverlayService : Service() {
 
                 if (Tetikleyici.degerlendir(tuketimOlaylari, simdi, sonEylem) == TetikSonucu.GOSTER) {
                     overlayiGoster()
+                    // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
+                    // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
+                    // "neden mola önerdi" sorusunun cevabını saklıyor.
+                    bildirimDeposu.molaHatirlatildi(
+                        NudgeSabitleri.ESIK.toMinutes().toInt(),
+                    )
                 }
             }
             delay(NudgeSabitleri.POLL_ARALIGI.toMillis())

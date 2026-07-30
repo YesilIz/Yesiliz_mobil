@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ekran süresi widget'ı — docs/tasarim-referans.md §2 / 40.
+
+  minWidth/minHeight 2x2 hücreye denk geliyor (57dp × hücre − 30dp).
+  updatePeriodMillis 0: sistem periyodik güncellemesi kapalı, tazeleme
+  GunlukOzetWorker ve görev tamamlamadan tetikleniyor (widgetlariTazele).
+  Sistemin en kısa periyodu zaten 30 dakika ve pil harcıyor.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_ekran_suresi_aciklama"
+    android:initialLayout="@layout/glance_default_loading_layout" />
