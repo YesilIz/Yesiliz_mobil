@@ -72,17 +72,23 @@ class RetrofitHesapDeposu @Inject constructor(
     private fun alan(hata: HttpException): HesapAlani = when (hata.code()) {
         KOD_CAKISMA -> HesapAlani.EPOSTA
         KOD_YETKISIZ -> HesapAlani.SIFRE
+        // 422 sunucunun girdi doğrulaması (geçersiz e-posta biçimi, kısa
+        // şifre). Cihaz tarafı da doğruluyor ama sunucu daha katı
+        // olabiliyor — ör. `.test` gibi özel amaçlı alan adları.
+        KOD_DOGRULAMA -> HesapAlani.EPOSTA
         else -> HesapAlani.GENEL
     }
 
     private fun mesaj(hata: HttpException): String = when (hata.code()) {
         KOD_CAKISMA -> "Bu e-posta zaten kayıtlı."
         KOD_YETKISIZ -> "E-posta ya da şifre hatalı."
+        KOD_DOGRULAMA -> "Bu e-posta adresi kabul edilmedi. Gerçek bir adres yazmayı dene."
         else -> "Şu an bağlanılamıyor. Biraz sonra tekrar deneyebilirsin."
     }
 
     private companion object {
         const val KOD_CAKISMA = 409
         const val KOD_YETKISIZ = 401
+        const val KOD_DOGRULAMA = 422
     }
 }

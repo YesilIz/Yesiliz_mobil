@@ -27,10 +27,13 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 170)
+# testler  (toplam 221)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
 ./gradlew :app:testDebugUnitTest       # 125 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 23 · emülatör gerektirir
+./gradlew :app:connectedDebugAndroidTest   # 26 · emülatör gerektirir
+
+# backend  (48 pytest)
+cd backend && docker compose up -d && docker compose exec api pytest -q
 
 # UsageStats izni — Ayarlar'dan verilir, adb ile de verilebilir.
 # Verilmezse ilgili emülatör testleri Assume ile ATLANIR (kırmızıya dönmez).
@@ -167,7 +170,7 @@ kullanıma ve gerçek hayat aktivitelerine yönlendiren Android uygulaması.
 yesiliz/
 ├─ app/          Android uygulaması
 ├─ core-risk/    SAF KOTLIN (JVM) — android.* import YASAK
-├─ backend/      FastAPI (Faz 2, boş)
+├─ backend/      FastAPI + PostgreSQL — hesap, senkron, lig, ebeveyn
 ├─ docs/         spec'ler + referans Python
 ├─ tests/        doğrulama vektörleri + üreticiler
 └─ tools/        veri/görsel/doküman üreticileri
@@ -254,9 +257,13 @@ sadece DI modülü. Backend yetişmese bile 4 nav sekmesi demo günü çalışı
 
 ### Veritabanı
 
-Tam şema `DB.md`'de. Prototip boyunca
-`fallbackToDestructiveMigration` — **yayından önce gerçek migration yazılmalı**,
-yoksa her güncellemede kullanıcı geçmişi silinir.
+Tam şema `DB.md`'de. **`fallbackToDestructiveMigration` kaldırıldı**
+(31 Tem 2026): `data/yerel/Gecisler.kt` gerçek `Migration` nesneleri
+taşıyor ve `GecisTest` emülatörde doğruluyor.
+
+> **Entity değiştiren her PR bir `Migration` de yazmak zorunda.** Yazılmazsa
+> uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
+> gürültülü başarısız olmak yeğ.
 
 **Faz 2'de eklenecek tablolar:** `LigUyelikEntity` (haftaBaslangic, grupId,
 seviye, haftalikPuan, siraliListe) ve `EbeveynBaglantiEntity` (cocukKullaniciId,
@@ -433,7 +440,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
 
-**Toplam 170 test** (147 birim + 23 emülatör). Zincir uçtan uca çalışıyor:
+**Toplam 221 test** (147 Android birim + 26 emülatör + 48 backend pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
@@ -508,6 +515,9 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K13 | Kilit ekranı widget'ı (tasarım 41) **uygulanmadı** | Aynı bilgi tasarım 40'taki ana ekran widget'ıyla veriliyor | iOS'un kilit ekranı widget'ının Android'de karşılığı yok; platformda genel kullanıma açık bir yetenek değil. Tasarım arşivde referans olarak duruyor |
 | K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı | CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
 | K15 | Aktif yürüyüş **foreground service'siz** | Ekran açık kaldığı sürece sayıyor (`EkranAcikTut`), ekranda tek satırla belirtiliyor | Arka planda adım takibi ayrı izin, ayrı bildirim kanalı ve ayrı pil bütçesi demek; MVP'nin kritik yolunda değil. Kullanıcının telefonu cebine koyup sayacın durduğunu sonradan öğrenmemesi için davranış açıkça yazılı |
+| K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor | İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
+| K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor |
+| K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor | `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi ve sunucu Faz 2'de. Giriş ekranı bunu kullanıcıya da söylüyor |
 
 ### Açık

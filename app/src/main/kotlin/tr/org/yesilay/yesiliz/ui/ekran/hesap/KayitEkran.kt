@@ -115,7 +115,7 @@ fun KayitEkran(
                 secili = durum.kosullarOnaylandi,
                 onDegis = viewModel::kosullariDegistir,
             )
-            durum.hata(Alan.KOSULLAR)?.let { mesaj ->
+            listOfNotNull(durum.hata(Alan.KOSULLAR), durum.hata(Alan.GENEL)).forEach { mesaj ->
                 Text(
                     text = mesaj,
                     style = MaterialTheme.typography.labelMedium,

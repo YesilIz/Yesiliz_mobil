@@ -124,6 +124,16 @@ fun GirisEkran(
                 SatirBaglanti(metin = "Şifremi unuttum", onTikla = onSifremiUnuttum)
             }
 
+            // Alan bazlı olmayan hatalar (ağ, sunucu) burada görünüyor —
+            // aksi hâlde butona basılıyor ve hiçbir şey olmuyordu.
+            durum.hata(Alan.GENEL)?.let { mesaj ->
+                Text(
+                    text = mesaj,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tr.org.yesilay.yesiliz.ui.tema.Hata,
+                )
+            }
+
             BirincilButon(
                 metin = "Giriş yap",
                 onTikla = { viewModel.girisYap(onBasarili) },

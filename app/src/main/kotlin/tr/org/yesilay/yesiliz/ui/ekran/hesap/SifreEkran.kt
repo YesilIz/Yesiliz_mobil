@@ -147,6 +147,16 @@ fun SifreEkran(
                     klavyeTuru = KeyboardType.Email,
                 )
 
+                // Alan bazlı olmayan hatalar (ağ, sunucu) burada görünüyor —
+                // aksi hâlde butona basılıyor ve hiçbir şey olmuyordu.
+                durum.hata(Alan.GENEL)?.let { mesaj ->
+                    Text(
+                        text = mesaj,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tr.org.yesilay.yesiliz.ui.tema.Hata,
+                    )
+                }
+
                 BirincilButon(
                     metin = "Sıfırlama bağlantısı gönder",
                     onTikla = viewModel::sifreSifirla,

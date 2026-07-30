@@ -75,9 +75,15 @@ class SenkronDeposu @Inject constructor(
         }
     }
 
-    /** Cihazın canlı olduğunu bildirir — ebeveyn paneli bunu okuyor. */
+    /**
+     * Cihazın canlı olduğunu bildirir — ebeveyn paneli bunu okuyor.
+     *
+     * Giriş yapılmamışsa **hiç denenmiyor**: jetonsuz istek sunucuda 401
+     * üretiyor ve günlüğü kirletiyor.
+     */
     suspend fun heartbeat() {
-        if (tercihler.oturum.first().misafirMi) return
+        val oturum = tercihler.oturum.first()
+        if (oturum.misafirMi || !oturum.girisYapildiMi) return
         runCatching { api.heartbeat() }
     }
 
