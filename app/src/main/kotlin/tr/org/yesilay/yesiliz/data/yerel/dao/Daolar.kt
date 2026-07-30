@@ -7,12 +7,17 @@ import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.FarkindalikTestiEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KategoriEslemeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.RuhHaliEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
 import java.time.LocalDate
 
 @Dao
@@ -218,4 +223,84 @@ interface PuanGunlukDao {
     /** Ana Sayfa'daki seri çipi. */
     @Query("SELECT * FROM puan_gunluk WHERE tarih = :tarih")
     fun gununAkisi(tarih: LocalDate): Flow<PuanGunlukEntity?>
+}
+
+@Dao
+interface RuhHaliDao {
+    @Upsert
+    suspend fun kaydet(kayit: RuhHaliEntity)
+
+    @Query("SELECT * FROM ruh_hali WHERE tarih = :tarih")
+    fun gununAkisi(tarih: LocalDate): Flow<RuhHaliEntity?>
+
+    @Query("SELECT * FROM ruh_hali WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih")
+    suspend fun aralik(bas: LocalDate, bit: LocalDate): List<RuhHaliEntity>
+}
+
+@Dao
+interface UykuBeyaniDao {
+    @Upsert
+    suspend fun kaydet(kayit: UykuBeyaniEntity)
+
+    @Query("SELECT * FROM uyku_beyani WHERE tarih = :tarih")
+    suspend fun getir(tarih: LocalDate): UykuBeyaniEntity?
+
+    @Query("SELECT * FROM uyku_beyani WHERE tarih = :tarih")
+    fun gununAkisi(tarih: LocalDate): Flow<UykuBeyaniEntity?>
+}
+
+@Dao
+interface FarkindalikTestiDao {
+    @Insert
+    suspend fun ekle(sonuc: FarkindalikTestiEntity)
+
+    @Query("SELECT * FROM farkindalik_testi ORDER BY tarih DESC, id DESC LIMIT 1")
+    suspend fun sonuncu(): FarkindalikTestiEntity?
+
+    @Query("SELECT * FROM farkindalik_testi ORDER BY tarih DESC, id DESC LIMIT 1")
+    fun sonuncuAkisi(): Flow<FarkindalikTestiEntity?>
+
+    @Query("SELECT * FROM farkindalik_testi ORDER BY tarih")
+    fun hepsiAkisi(): Flow<List<FarkindalikTestiEntity>>
+}
+
+@Dao
+interface BildirimDao {
+    @Insert
+    suspend fun ekle(bildirim: BildirimEntity)
+
+    @Query("SELECT * FROM bildirim ORDER BY zaman DESC LIMIT :adet")
+    fun sonlarAkisi(adet: Int): Flow<List<BildirimEntity>>
+
+    @Query("SELECT COUNT(*) FROM bildirim WHERE okundu = 0")
+    fun okunmamisSayisiAkisi(): Flow<Int>
+
+    @Query("UPDATE bildirim SET okundu = 1 WHERE okundu = 0")
+    suspend fun tumunuOku(): Int
+
+    /**
+     * Aynı olayın iki kez yazılmasını engeller — worker gün içinde birden çok
+     * kez koşabiliyor (bkz. [KullanimOlayDao.gununuSil] gerekçesi).
+     */
+    @Query("SELECT COUNT(*) FROM bildirim WHERE tur = :tur AND zaman >= :zamandanSonra")
+    suspend fun sayi(tur: String, zamandanSonra: java.time.Instant): Int
+
+    /** Defter sonsuza kadar büyümesin. */
+    @Query("DELETE FROM bildirim WHERE zaman < :zaman")
+    suspend fun eskileriSil(zaman: java.time.Instant): Int
+}
+
+@Dao
+interface ArkadasDao {
+    @Upsert
+    suspend fun kaydet(arkadas: ArkadasEntity)
+
+    @Query("SELECT * FROM arkadas ORDER BY eklenmeTarihi DESC")
+    fun hepsiAkisi(): Flow<List<ArkadasEntity>>
+
+    @Query("SELECT COUNT(*) FROM arkadas")
+    fun sayiAkisi(): Flow<Int>
+
+    @Query("DELETE FROM arkadas WHERE isim = :isim")
+    suspend fun sil(isim: String)
 }

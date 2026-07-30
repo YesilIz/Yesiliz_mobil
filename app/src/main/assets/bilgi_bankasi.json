@@ -1,0 +1,201 @@
+{
+  "surum": 1,
+  "yazilar": [
+    {
+      "id": "ekran-ve-uyku",
+      "baslik": "Ekran süresi ve uyku",
+      "ozet": "Yatmadan önceki son yarım saat, uykunun kalitesini en çok etkileyen aralık.",
+      "kategori": "Uyku",
+      "okumaDk": 3,
+      "govde": [
+        "Uykuya dalmak, vücudun yavaşlamasını gerektiren bir geçiş. Ekran bu geçişi iki yönden zorlaştırıyor: ışık ve içerik.",
+        "Işık tarafı görece basit. Akşam saatlerinde göze gelen parlak ışık, vücudun \"gece oldu\" sinyalini geciktiriyor. Telefonun gece modu bu etkiyi azaltıyor ama tamamen ortadan kaldırmıyor.",
+        "İçerik tarafı çoğu zaman daha belirleyici. Kaydırdığın akış, izlediğin video ya da okuduğun tartışma zihni yavaşlatmıyor, hızlandırıyor. Işığı kısılmış bir ekranda gergin bir tartışma okumak da uykuyu geciktiriyor.",
+        "Deneyebileceğin şeyler: telefonu yatak odasının dışında şarj etmek, son yarım saatte akış uygulamalarını açmamak, ya da yalnızca \"yatmadan önce ne yaptığımı\" bir hafta boyunca fark etmeye çalışmak.",
+        "Uykunun kısalması yalnızca ertesi günü yormuyor; yorgun bir gün telefonda geçirilen süreyi de artırıyor. Döngünün en kolay kırıldığı yer genelde akşam."
+      ]
+    },
+    {
+      "id": "gece-mavi-isik",
+      "baslik": "Gece kullanımı neden ayrı sayılıyor",
+      "ozet": "Aynı süre, gece yarısından sonra farklı bir anlam taşıyor.",
+      "kategori": "Uyku",
+      "okumaDk": 2,
+      "govde": [
+        "Yeşilİz'in risk hesabında gece kullanımı ayrı bir örüntü olarak duruyor. Sebebi, gecenin süreyi değil bağlamı değiştirmesi.",
+        "Gündüz bir saat telefon kullanmak çoğu zaman bir tercih: iş, sohbet, oyalanma. Gece yarısından sonraki bir saat ise sıklıkla \"bırakamama\" ile geçiyor — kişi uyumak istiyor ama ekran devam ediyor.",
+        "Bu yüzden 00.00–06.00 aralığındaki kullanım, toplam süreye ek olarak kendi başına da izleniyor. Amaç seni uyarmak değil; hangi saatlerin senin için zor olduğunu göstermek.",
+        "Uygulamada \"Telefonsuz gece\" görevi tam da bunun için var: gece aralığında 15 dakikadan az kullanım, kendi başına bir kazanım sayılıyor."
+      ]
+    },
+    {
+      "id": "sonsuz-kaydirma",
+      "baslik": "Sonsuz kaydırma neden bitmiyor",
+      "ozet": "Akışın sonu yok, çünkü sonu olması tasarlanmamış.",
+      "kategori": "Tasarım",
+      "okumaDk": 4,
+      "govde": [
+        "Bir kitabın sayfası biter, bir bölüm sona erer, bir gazete kapanır. Bunlar doğal duraklar — okuyan kişiye \"devam edeyim mi\" diye sorma fırsatı verir.",
+        "Sonsuz kaydırma bu durakları kaldırıyor. İçerik aşağı doğru kendiliğinden yükleniyor, karar verilecek bir an oluşmuyor. \"Beş dakika bakayım\" diye başlayan sürenin kırk dakika olması bir irade sorunu değil, tasarımın beklenen sonucu.",
+        "İkinci mekanizma öngörülemezlik. Bir sonraki içeriğin ilgini çekip çekmeyeceği belli değil. Bu belirsizlik, sabit bir ödülden daha fazla devam ettiriyor — kumar makinelerinin de kullandığı mekanizma.",
+        "Bunu bilmek tek başına yetmiyor ama işe yarıyor: durumu kişisel bir başarısızlık gibi görmek yerine, tasarlanmış bir sistemin içinde olduğunu fark etmek, çözümü de doğru yerde aramanı sağlıyor.",
+        "İşe yarayan yaklaşımlar genelde durak yaratmakla ilgili: uygulamayı açmadan önce ne yapacağını söylemek, ana ekrandan kaldırmak, ya da kullanmadan önce bir zamanlayıcı kurmak."
+      ]
+    },
+    {
+      "id": "dopamin",
+      "baslik": "Dopamin döngüsü hakkında doğru bilinen yanlışlar",
+      "ozet": "\"Dopamin detoksu\" popüler bir terim ama anlattığı şey tam olarak bu değil.",
+      "kategori": "Bilim",
+      "okumaDk": 4,
+      "govde": [
+        "Dopamin sık sık \"haz kimyasalı\" diye anlatılıyor. Daha doğru bir anlatım, dopaminin hazdan çok **beklentiyle** ilgili olduğu.",
+        "Bildirim sesini duyduğunda, mesajı okumadan önce hissettiğin o küçük kıpırtı bu. Ödülün kendisi değil, ödülün gelme ihtimali harekete geçiriyor.",
+        "Bu yüzden \"dopamin detoksu\" adıyla anlatılan uygulamaların çoğu yanıltıcı. Beyindeki bir maddeyi boşaltmak gibi bir şey mümkün değil. İşe yarayan şey, beklentiyi tetikleyen ipuçlarını azaltmak: bildirimleri kısmak, uygulamayı görünür yerden kaldırmak, telefonu başka odada bırakmak.",
+        "Fark ince ama önemli. Hedef kendini bir şeyden mahrum bırakmak değil; tetikleyicilerin sayısını azaltmak.",
+        "Kendini suçlamanın burada işlevi yok. Sistem zaten dikkatini çekmek üzere kurulmuş; buna kapılmak beklenen sonuç."
+      ]
+    },
+    {
+      "id": "nomofobi",
+      "baslik": "Telefon yanında yokken hissedilen huzursuzluk",
+      "ozet": "Yaygın, isimlendirilmiş ve zamanla azalabilen bir his.",
+      "kategori": "Duygular",
+      "okumaDk": 3,
+      "govde": [
+        "Telefonun yanında olmadığında hissedilen huzursuzluk için \"nomofobi\" (no-mobile-phone phobia) terimi kullanılıyor. Klinik bir tanı değil, yaygın bir deneyimi tarif eden bir isim.",
+        "Altında genelde birkaç şey birden var: bir şeyi kaçırma endişesi, ulaşılamaz olma kaygısı, ve alışkanlığın kendisi — el otomatik olarak cebe gidiyor.",
+        "Bu hissin şiddeti sabit değil. Telefonsuz geçirilen kısa aralıklar tekrarlandıkça huzursuzluk genelde azalıyor: on dakikalık bir yürüyüş, yemek boyunca telefonu başka odada bırakmak gibi küçük denemeler.",
+        "Önemli olan büyük bir karar almak değil. \"Bir hafta telefonsuz\" gibi hedefler çoğu zaman ikinci günde bırakılıyor ve geriye yalnızca başarısızlık hissi kalıyor.",
+        "Huzursuzluk çok yoğunsa, günlük hayatı belirgin şekilde zorlaştırıyorsa, bunu bir uzmanla konuşmak da bir seçenek. YEDAM'ın 115 hattı bunun için var — ücretsiz ve gizli."
+      ]
+    },
+    {
+      "id": "bildirim-yorgunlugu",
+      "baslik": "Bildirim yorgunluğu",
+      "ozet": "Günde yüzlerce kez bölünmek, dikkatin toparlanmasına zaman bırakmıyor.",
+      "kategori": "Odak",
+      "okumaDk": 3,
+      "govde": [
+        "Bildirimlerin çoğu acil değil. Ama telefon ikisini ayırt etmiyor: bir arkadaşının mesajı da, bir oyunun \"seni özledik\" hatırlatması da aynı sesle geliyor.",
+        "Sorun tek tek bildirimlerde değil, toplamda. Her bildirim bir bölünme; her bölünmeden sonra dikkatin eski yerine dönmesi zaman alıyor. Gün içinde bu yüzlerce kez tekrarlanıyor.",
+        "Pratikte en çok işe yarayan adım, bildirimleri uygulama uygulama gözden geçirmek. Soru basit: \"Bu uygulamanın beni bölmesine gerçekten izin veriyor muyum?\"",
+        "Çoğu kişi için insanlardan gelen bildirimler (mesaj, arama) açık kalıyor; algoritmadan gelenler (öneri, hatırlatma, kampanya) kapanıyor.",
+        "Bu, ekran süresini doğrudan kısaltmayabilir ama telefonu kaç kez elinize aldığınızı belirgin şekilde azaltıyor."
+      ]
+    },
+    {
+      "id": "dijital-detoks",
+      "baslik": "Dijital detoks: ne işe yarıyor, ne yaramıyor",
+      "ozet": "Uzun ve katı molalar genelde geri tepiyor; küçük ve tekrarlı olanlar kalıcı oluyor.",
+      "kategori": "Alışkanlık",
+      "okumaDk": 4,
+      "govde": [
+        "\"Bir hafta telefonsuz\" türü meydan okumalar popüler. Kısa vadede iyi hissettiriyorlar ama biten bir detoksun ardından kullanım çoğu zaman eski düzeyine, bazen üstüne dönüyor.",
+        "Sebebi, sorunun süre değil düzen olması. Telefonu bir hafta bırakmak, telefonu hangi durumlarda elimize aldığımızı değiştirmiyor.",
+        "Daha kalıcı sonuç veren yaklaşım, küçük ve tekrarlanabilir sınırlar: yemekte telefon masada olmasın, ilk yarım saat ekransız geçsin, yatak odasında şarj olmasın.",
+        "Bunlar iddiasız görünüyor ama her gün tekrarlandıkları için birikiyorlar. Bir haftalık kahramanlıktan çok daha fazlasını değiştiriyorlar.",
+        "Yeşilİz'in görev sistemi de bu mantıkla kurulu: küçük, günlük ve tekrarlanabilir. Ceza yok, çünkü kaçırılan bir gün alışkanlığı bitirmiyor."
+      ]
+    },
+    {
+      "id": "gorev-degistirme",
+      "baslik": "Aynı anda birkaç iş yapmanın maliyeti",
+      "ozet": "Beyin paralel çalışmıyor; hızlıca sıra değiştiriyor ve her değişimin bedeli var.",
+      "kategori": "Odak",
+      "okumaDk": 3,
+      "govde": [
+        "Ders çalışırken mesaja bakmak, iki işi aynı anda yapmak gibi hissettiriyor. Gerçekte olan şey hızlı sıra değiştirme.",
+        "Her geçişte zihnin bağlamı yeniden kurması gerekiyor: nerede kalmıştım, ne yapıyordum. Bu toparlanma, geçişin kendisinden daha uzun sürüyor.",
+        "Sonuç, aynı işin daha uzun sürmesi ve daha çok yorması. Süre uzadıkça telefona bakma ihtimali de artıyor — kendini besleyen bir döngü.",
+        "Denemeye değer: çalışırken telefonu görüş alanının dışına koymak. Sessize almak yeterli olmuyor, çünkü görünürde olması bile dikkat payı tüketiyor.",
+        "Uzun bloklar da şart değil. 20-25 dakikalık kesintisiz aralıklar çoğu kişi için sürdürülebilir bir başlangıç."
+      ]
+    },
+    {
+      "id": "sosyal-karsilastirma",
+      "baslik": "Sosyal medyada karşılaştırma",
+      "ozet": "Gördüğün şey başkasının hayatı değil, başkasının seçtiği kareler.",
+      "kategori": "Duygular",
+      "okumaDk": 3,
+      "govde": [
+        "Akışta gördüğün içerik rastgele değil: paylaşan kişi tarafından seçilmiş, çoğu zaman düzenlenmiş, ve algoritma tarafından ilgi çekeceği düşünüldüğü için sana gösterilmiş.",
+        "Buna rağmen karşılaştırma otomatik oluyor. Kendi sıradan gününü, başkalarının en iyi anlarıyla yan yana koyuyorsun.",
+        "Bu his özellikle yorgunken ve gece saatlerinde daha güçlü. Aynı içerik, dinlenmiş bir sabahta çok daha az etkili.",
+        "İşe yarayan bir şey, akışın kendisini düzenlemek: kendini kötü hissettiren hesapları sessize almak suçluluk gerektiren bir şey değil.",
+        "Bir diğeri, süreyi değil bağlamı değiştirmek. Uygulamayı belirli bir amaçla açmak (bir kişiye yazmak, bir şeye bakmak) ile amaçsız açmak çok farklı deneyimler."
+      ]
+    },
+    {
+      "id": "cocuklarda-ekran",
+      "baslik": "Çocuklarda ekran süresi — ebeveynler için",
+      "ozet": "Yasak koymak yerine birlikte kural kurmak daha uzun ömürlü oluyor.",
+      "kategori": "Ebeveyn",
+      "okumaDk": 4,
+      "govde": [
+        "Ekran süresini tek taraflı kısıtlamak kısa vadede işe yarıyor, uzun vadede genelde gizlenmeye yol açıyor. Çocuk kullanmayı bırakmıyor; görünmez hale getiriyor.",
+        "Daha sürdürülebilir olan, kuralı birlikte koymak. Hangi saatlerde, hangi ortamlarda telefonun olmayacağı üzerinde anlaşmak — ve bu kuralın yetişkinler için de geçerli olması.",
+        "Ekran süresinin tamamı aynı değil. Bir arkadaşıyla görüntülü konuşmak ile amaçsız kaydırmak farklı şeyler. Yalnızca dakikaya bakmak bu farkı gizliyor.",
+        "Uyarı işaretleri süreyle değil işlevle ilgili: uykunun bozulması, okul başarısında belirgin düşüş, eskiden sevilen etkinliklerin bırakılması, telefon elinden alındığında yoğun tepki.",
+        "Yeşilİz'in ebeveyn paneli bu yüzden ham veri değil özet gösteriyor: hangi uygulamada ne yazdığı değil, genel eğilim. Amaç denetim değil, konuşmayı başlatacak ortak bir zemin.",
+        "18 yaş altı kullanımda ebeveyn onayı zorunlu ve veri rejimi ayrı."
+      ]
+    },
+    {
+      "id": "fiziksel-belirtiler",
+      "baslik": "Boyun, bilek ve gözler",
+      "ozet": "Uzun kullanımın en somut izleri bedende görünüyor.",
+      "kategori": "Beden",
+      "okumaDk": 2,
+      "govde": [
+        "Telefona bakarken baş öne eğiliyor. Bu duruş boyun ve omuz kaslarında yük oluşturuyor; uzun süre tekrarlandığında ağrı olarak geri dönüyor.",
+        "Bilek tarafında ise tekrarlı hareket var: aynı parmak hareketinin gün içinde binlerce kez tekrarlanması. Ağrı ve karıncalanma bu yüzden ortaya çıkabiliyor.",
+        "Gözlerde en yaygın şikâyet kuruluk. Ekrana bakarken göz kırpma sıklığı belirgin şekilde azalıyor.",
+        "Basit karşılıklar var: telefonu göz hizasına yaklaştırmak, arada uzağa bakmak, ve düzenli kısa molalar vermek.",
+        "SAS-SV ölçeğinde de bilek ve ense ağrısını soran bir madde var — bu belirtiler yaygın olduğu için ölçeğin parçası."
+      ]
+    },
+    {
+      "id": "aliskanlik-kurmak",
+      "baslik": "Yeni bir alışkanlık nasıl yerleşiyor",
+      "ozet": "Küçük başlamak, motivasyon beklemekten daha güvenilir.",
+      "kategori": "Alışkanlık",
+      "okumaDk": 3,
+      "govde": [
+        "Alışkanlıklar genelde motivasyonla değil tekrarla yerleşiyor. Motivasyon dalgalı; tekrar ise kendi başına ilerliyor.",
+        "Bu yüzden başlangıç hedefinin küçük olması bir eksiklik değil, avantaj. Her gün yapılabilen küçük bir şey, ara sıra yapılan büyük bir şeyden daha çok değiştiriyor.",
+        "Yeni alışkanlığı var olan bir şeye bağlamak işe yarıyor: \"kahvemi koyduktan sonra\", \"otobüse bindiğimde\" gibi. Hatırlamak için ayrı bir çaba gerekmiyor.",
+        "Kaçırılan günler alışkanlığı bitirmiyor. Bitiren şey, kaçırıldığında \"nasılsa oldu\" deyip bırakmak. İki gün üst üste kaçırmamak, çoğu kişi için yeterli bir kural.",
+        "Yeşilİz'de seri sayacının haftada bir kaçırmada sıfırlanmayıp donması da bu yüzden — bir günün her şeyi silmesi gerçekçi değil."
+      ]
+    },
+    {
+      "id": "sabah-rutini",
+      "baslik": "Günün ilk yarım saati",
+      "ozet": "Uyanır uyanmaz telefona bakmak, günün tonunu belirliyor.",
+      "kategori": "Alışkanlık",
+      "okumaDk": 2,
+      "govde": [
+        "Uyandıktan hemen sonra telefona bakmak çok yaygın. Alarm zaten telefonda olduğu için elin oraya gitmesi de doğal.",
+        "Ama uyanır uyanmaz akışa girmek, günün ilk kararını sana değil algoritmaya bırakıyor. Daha kendi gününü düşünmeden başkalarının gündemine giriyorsun.",
+        "En pratik değişiklik alarmı telefondan ayırmak: ucuz bir çalar saat, telefonu yatak odasının dışında bırakmayı mümkün kılıyor.",
+        "Mümkün değilse daha küçük bir hedef: telefonu açmadan önce ayağa kalkmak. Sadece bu bile ilk kaydırmayı çoğu zaman engelliyor.",
+        "Amaç sabahı kurallarla doldurmak değil; ilk yarım saatte kimin sıra aldığını değiştirmek."
+      ]
+    },
+    {
+      "id": "yedam-destek",
+      "baslik": "Ne zaman destek almalı",
+      "ozet": "Süre değil, hayatın akışındaki etki belirleyici.",
+      "kategori": "Destek",
+      "okumaDk": 3,
+      "govde": [
+        "Ekran süresinin ne kadarının \"çok\" olduğuna dair sabit bir sayı yok. Aynı süre iki kişide çok farklı anlamlar taşıyabiliyor.",
+        "Daha güvenilir ölçüt, işlev: uyku düzeni bozuluyor mu, iş veya okul etkileniyor mu, eskiden keyif alınan şeyler bırakıldı mı, azaltma denemeleri tekrar tekrar başarısız mı oluyor.",
+        "Bunlardan birkaçı bir arada ve süreklilik gösteriyorsa, bunu bir uzmanla konuşmak makul bir adım. Bu, durumun \"çok kötü\" olduğu anlamına gelmiyor — erken konuşmak daha kolay oluyor.",
+        "YEDAM (Yeşilay Danışmanlık Merkezi) bağımlılık alanında ücretsiz danışmanlık veriyor. 115 hattı 7/24 açık, görüşmeler gizli.",
+        "Yeşilİz bir tanı aracı değil. Ölçtüğü şey davranış; teşhis koymak uzmanların işi."
+      ]
+    }
+  ]
+}

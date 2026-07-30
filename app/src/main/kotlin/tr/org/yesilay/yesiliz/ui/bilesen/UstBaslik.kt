@@ -44,6 +44,8 @@ fun YesilBaslikliEkran(
     modifier: Modifier = Modifier,
     onGeri: (() -> Unit)? = null,
     icerikZemini: androidx.compose.ui.graphics.Color = Yesil50,
+    /** Başlığın sağındaki metin eylemi — tasarım 35'teki "Tümünü oku". */
+    sagEylem: (@Composable () -> Unit)? = null,
     icerik: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -76,6 +78,15 @@ fun YesilBaslikliEkran(
                         contentDescription = "Geri",
                         tint = Beyaz,
                     )
+                }
+            }
+            if (sagEylem != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = Olcu.EkranKenari),
+                ) {
+                    sagEylem()
                 }
             }
         }

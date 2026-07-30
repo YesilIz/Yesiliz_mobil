@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -91,6 +92,11 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 fun AnaEkran(
     onOdul: () -> Unit,
     onNefesBaslat: () -> Unit,
+    onBilgiBankasi: () -> Unit,
+    onKendiniTest: () -> Unit,
+    onBildirimler: () -> Unit,
+    onYuruyusBaslat: () -> Unit,
+    onDegerlendirmeYenile: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AnaViewModel = hiltViewModel(),
 ) {
@@ -104,7 +110,7 @@ fun AnaEkran(
             .background(Beyaz)
             .verticalScroll(rememberScrollState()),
     ) {
-        Basliktan(durum)
+        Basliktan(durum, onBildirimler = onBildirimler)
 
         Yigin(
             modifier = Modifier.padding(
@@ -137,8 +143,20 @@ fun AnaEkran(
                     )
                 }
             }
-            RuhHaliKarti(deger = durum.ruhHali, onDegis = viewModel::ruhHaliDegisti)
-            KesfetIkilisi()
+            if (durum.degerlendirmeYenilensin) {
+                DegerlendirmeKarti(
+                    onYenile = onDegerlendirmeYenile,
+                    onErtele = viewModel::degerlendirmeErtele,
+                )
+            }
+
+            RuhHaliKarti(
+                deger = durum.ruhHali,
+                kaydedildi = durum.ruhHaliKaydedildi,
+                onDegis = viewModel::ruhHaliDegisti,
+                onBirakildi = viewModel::ruhHaliBirakildi,
+            )
+            KesfetIkilisi(onBilgiBankasi = onBilgiBankasi, onKendiniTest = onKendiniTest)
 
             Text(
                 text = "Bugünün görevleri",
@@ -166,6 +184,10 @@ fun AnaEkran(
                     acikGorev = null
                     onNefesBaslat()
                 },
+                onYuruyusBaslat = {
+                    acikGorev = null
+                    onYuruyusBaslat()
+                },
                 onTamamla = {
                     viewModel.gorevTiklandi(gorev.id)
                     acikGorev = null
@@ -178,7 +200,7 @@ fun AnaEkran(
 
 /** Yeşil selamlama şeridi + altında beyaza sönen ağaç. */
 @Composable
-private fun Basliktan(durum: AnaDurum) {
+private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().background(YesilAna)) {
         Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
@@ -212,6 +234,7 @@ private fun Basliktan(durum: AnaDurum) {
                 zemin = Beyaz.copy(alpha = YariSaydam),
                 renk = Beyaz,
             )
+            ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
         }
 
         // Ağaç: yeşilden beyaza sönen zemin üstünde. İllüstrasyon açık zemin
@@ -229,6 +252,42 @@ private fun Basliktan(durum: AnaDurum) {
                 modifier = Modifier.height(AgacBoyu),
             )
             SallananYapraklar(modifier = Modifier.height(AgacBoyu).aspectRatio(1f))
+        }
+    }
+}
+
+/**
+ * Başlıktaki zil — okunmamış varsa üstünde küçük beyaz nokta.
+ *
+ * Teslim edilen 08 tasarımında zil yok; bildirim listesine (35) ulaşacak
+ * bir giriş noktası da yok. Serinin sağına, aynı hizaya konuldu — başlığın
+ * dengesi bozulmuyor ve rozet sayı yerine **nokta**: "3 okunmamış bildirim"
+ * demek uygulamayı açtırmaya çalışan bir dil, uygulamanın amacıyla çelişir.
+ */
+@Composable
+private fun ZilIkonu(okunmamis: Int, onTikla: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(Olcu.IkonRozeti)
+            .clip(RoundedCornerShape(Yaricap.Cip))
+            .background(Beyaz.copy(alpha = YariSaydam))
+            .clickable(onClick = onTikla),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Notifications,
+            contentDescription = "Bildirimler",
+            tint = Beyaz,
+        )
+        if (okunmamis > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(Bosluk.Xs)
+                    .size(NoktaBoyu)
+                    .clip(RoundedCornerShape(NoktaBoyu / 2))
+                    .background(Beyaz),
+            )
         }
     }
 }
@@ -365,16 +424,35 @@ private fun DikeyAyrac() {
  * turuncu uç da kırmızı değil.
  */
 @Composable
-private fun RuhHaliKarti(deger: Float, onDegis: (Float) -> Unit) {
+private fun RuhHaliKarti(
+    deger: Float,
+    kaydedildi: Boolean,
+    onDegis: (Float) -> Unit,
+    onBirakildi: () -> Unit,
+) {
     Kart {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Bugün nasıl hissediyorsun?",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MetinBirincil,
+                modifier = Modifier.weight(1f),
+            )
+            if (kaydedildi) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = "Bugün kaydedildi",
+                    tint = YesilAna,
+                )
+            }
+        }
         Text(
-            text = "Bugün nasıl hissediyorsun?",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MetinBirincil,
-        )
-        Text(
-            text = "Sürükle, cevabın her gün değişsin.",
+            text = if (kaydedildi) {
+                "Kaydedildi. Gün içinde fikrin değişirse tekrar sürükleyebilirsin."
+            } else {
+                "Sürükle, cevabın her gün değişsin."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
@@ -394,6 +472,9 @@ private fun RuhHaliKarti(deger: Float, onDegis: (Float) -> Unit) {
             Slider(
                 value = deger,
                 onValueChange = onDegis,
+                // Parmak kalkınca yazılıyor — sürükleme boyunca her karede
+                // Room'a yazmanın anlamı yok.
+                onValueChangeFinished = onBirakildi,
                 colors = SliderDefaults.colors(
                     // İz gradyanla çizildi, Slider'ın kendi izi saydam.
                     activeTrackColor = Color.Transparent,
@@ -421,18 +502,20 @@ private fun RuhHaliKarti(deger: Float, onDegis: (Float) -> Unit) {
 
 /** Bilgi Bankası · Kendini Test Et — iki eşit kart. */
 @Composable
-private fun KesfetIkilisi() {
+private fun KesfetIkilisi(onBilgiBankasi: () -> Unit, onKendiniTest: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.MenuBook,
             baslik = "Bilgi Bankası",
             aciklama = "Ekran bağımlılığı hakkında doğru bilgiler.",
+            onTikla = onBilgiBankasi,
             modifier = Modifier.weight(1f),
         )
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.FactCheck,
             baslik = "Kendini Test Et",
             aciklama = "Farkındalığını artır.",
+            onTikla = onKendiniTest,
             modifier = Modifier.weight(1f),
         )
     }
@@ -443,9 +526,10 @@ private fun KesfetKarti(
     ikon: ImageVector,
     baslik: String,
     aciklama: String,
+    onTikla: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Kart(modifier = modifier) {
+    Kart(modifier = modifier, onTikla = onTikla) {
         IkonRozeti(ikon = ikon)
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
@@ -508,6 +592,7 @@ private fun GorevDetayi(
     gorev: Gorev,
     ikon: ImageVector,
     onNefesBaslat: () -> Unit,
+    onYuruyusBaslat: () -> Unit,
     onTamamla: () -> Unit,
     onKapat: () -> Unit,
 ) {
@@ -549,10 +634,45 @@ private fun GorevDetayi(
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         when (gorev) {
             Gorev.NEFES -> BirincilButon(metin = "Nefes egzersizine başla", onTikla = onNefesBaslat)
-            // Aktif yürüyüş (canlı sayaç/adım) ekranı henüz yok — CLAUDE.md §11.
-            // Puan o ekran gelince başlangıçta değil, bitişte verilecek.
-            Gorev.YURUYUS -> BirincilButon(metin = "Yakında", onTikla = {}, etkin = false)
+            // Puan başlangıçta değil, yürüyüş bitince veriliyor — o yüzden
+            // buton "tamamla" değil "başlat".
+            Gorev.YURUYUS -> BirincilButon(metin = "Yürüyüşü başlat", onTikla = onYuruyusBaslat)
             else -> BirincilButon(metin = "Tamamlandı olarak işaretle", onTikla = onTamamla)
+        }
+    }
+}
+
+/**
+ * 4 hafta dolduğunda beliren değerlendirme hatırlatması
+ * (`docs/spec-anket.md §6.4`).
+ *
+ * Dil dikkatli: "test olma vaktin geldi" değil, "yenileyebilirsin". Anketin
+ * amacı ölçümü tazelemek; kullanıcıya ödev gibi sunulmuyor.
+ */
+@Composable
+private fun DegerlendirmeKarti(onYenile: () -> Unit, onErtele: () -> Unit) {
+    Kart {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IkonRozeti(ikon = Icons.AutoMirrored.Filled.FactCheck)
+            Spacer(modifier = Modifier.width(Olcu.Aralik))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Değerlendirmeni yenileyebilirsin",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MetinBirincil,
+                )
+                Text(
+                    text = "Son değerlendirmenin üzerinden dört hafta geçti.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MetinIkincil,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
+            Cip(metin = "Şimdi yap", zemin = YesilAna, renk = Beyaz, onTikla = onYenile)
+            Cip(metin = "Sonra", onTikla = onErtele)
         }
     }
 }
@@ -575,6 +695,9 @@ private fun Gorev.suresiDk(): Int? = when (this) {
 private val AgacAlani: Dp = Olcu.AgacAlani
 private val AgacBoyu: Dp = Olcu.AgacBoyu
 private val AyracBoyu: Dp = Olcu.AyracBoyu
+
+/** Zil rozeti — sayı değil nokta. */
+private val NoktaBoyu: Dp = Bosluk.S
 
 /** Yeşil zemin üstündeki beyaz dolguların opaklığı. */
 private const val YariSaydam = 0.2f

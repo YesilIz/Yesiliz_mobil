@@ -112,6 +112,18 @@ class Tercihler @Inject constructor(
     }
 
     /**
+     * Anket yeniden çözüldüğünde tarihi tazeler.
+     *
+     * [onboardingiBitir] ile ayrı: o ilk kurulumda bir kez çalışıyor ve
+     * hedefi de yazıyor. Bu ise 4 haftada bir tekrarlanan değerlendirmede
+     * yalnızca tarihi güncelliyor — `AnketGirdi.kacGunOnce` sıfırlanıyor,
+     * alpha eğrisi tazeleniyor (`docs/spec-risk.md §4.5`).
+     */
+    suspend fun anketTarihiniKaydet(tarih: LocalDate) {
+        depo.edit { it[SON_ANKET] = tarih.toEpochDay() }
+    }
+
+    /**
      * İlk açılışta bir kez yazılır; **var olan değer ezilmez**.
      * Ezilse alpha eğrisi her açılışta `d = 0`'a döner ve anket ağırlığı
      * hiç düşmezdi.

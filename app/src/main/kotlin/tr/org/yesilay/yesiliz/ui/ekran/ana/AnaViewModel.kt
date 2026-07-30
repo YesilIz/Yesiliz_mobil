@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.data.depo.BeyanDeposu
+import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
@@ -32,6 +34,7 @@ import tr.org.yesilay.yesiliz.risk.Bant
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -54,6 +57,8 @@ import kotlin.math.roundToInt
 class AnaViewModel @Inject constructor(
     @ApplicationContext private val baglam: Context,
     private val puanDeposu: PuanDeposu,
+    private val beyanDeposu: BeyanDeposu,
+    bildirimDeposu: BildirimDeposu,
     tercihler: Tercihler,
     ozetDao: GunlukOzetDao,
     riskDao: RiskSonucDao,
@@ -70,8 +75,17 @@ class AnaViewModel @Inject constructor(
      */
     private val bugun: LocalDate = LocalDate.now(saat)
 
-    /** Kullanıcının kendi beyanı — risk skoruna GİRMİYOR, yalnızca gösterim. */
-    private val ruhHali = MutableStateFlow(VARSAYILAN_RUH_HALI)
+    /**
+     * Slider sürüklenirken tutulan **geçici** değer.
+     *
+     * Sürükleme sırasında her kareyi Room'a yazmak anlamsız; parmak
+     * kalkınca [ruhHaliBirakildi] kalıcı kayda geçiyor. `null` iken ekran
+     * Room'daki değeri gösteriyor.
+     */
+    private val suruklenenRuhHali = MutableStateFlow<Float?>(null)
+
+    /** Hatırlatma kartı "Sonra" ile kapatıldıysa o oturum boyunca gizli. */
+    private val degerlendirmeGizlendi = MutableStateFlow(false)
 
     val durum: StateFlow<AnaDurum> = combine(
         ozetDao.gununAkisi(bugun),
@@ -89,40 +103,83 @@ class AnaViewModel @Inject constructor(
         )
     }.combine(tercihler.ebeveynEslesmisMi) { ara, ebeveynAktif ->
         ara.copy(ebeveynAktifMi = ebeveynAktif)
-    }.combine(puanDeposu.gununGorevleri(bugun)) { ara, tamamlananlar ->
-        val tamamlananIdler = tamamlananlar.map { it.gorevId }.toSet()
-        AnaDurum(
-            selamlama = selamlama(),
-            isim = SABIT_ISIM,
-            serideGun = ara.seriGun,
-            agacEvresi = agacEvresi(ara.seriGun),
-            puan = ara.toplamPuan,
-            ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
-            hedefDakika = ara.hedefDk,
-            adim = ara.ozet?.adim?.roundToInt() ?: 0,
-            ruhHali = ruhHali.value,
-            gorevler = Gorev.banttanOner(ara.bant).map { gorev ->
-                GorevOzeti(
-                    id = gorev.id,
-                    baslik = gorev.baslik,
-                    aciklama = gorev.aciklama,
-                    puan = gorev.puan,
-                    ikon = gorev.ikonu(),
-                    tamamlandi = gorev.id in tamamlananIdler,
-                )
+    }.combine(
+        // Ruh hali AKIŞ olarak zincire giriyor. Daha önce `.value` ile anlık
+        // okunuyordu; slider oynatılınca `durum` yeniden yayınlanmadığı için
+        // tutamak eski değere geri sıçrıyordu.
+        combine(
+            beyanDeposu.ruhHaliAkisi(bugun),
+            suruklenenRuhHali,
+        ) { kayitli, suruklenen ->
+            RuhHaliDurumu(
+                deger = suruklenen ?: kayitli?.deger ?: VARSAYILAN_RUH_HALI,
+                kaydedildi = kayitli != null,
+            )
+        },
+    ) { ara, ruhHali -> ara.copy(ruhHali = ruhHali) }
+        .combine(bildirimDeposu.okunmamisSayisi) { ara, okunmamis ->
+            ara.copy(okunmamisBildirim = okunmamis)
+        }
+        .combine(
+            combine(tercihler.sonAnketTarihi, degerlendirmeGizlendi) { sonAnket, gizli ->
+                !gizli && sonAnket != null &&
+                    ChronoUnit.DAYS.between(sonAnket, bugun) >= ANKET_TAZELEME_GUN
             },
-            veriVarMi = ara.ozet != null,
-            izinVarMi = KullanimIzni.verildiMi(baglam),
-            ebeveynAktifMi = ara.ebeveynAktifMi,
+        ) { ara, yenilensin -> ara.copy(degerlendirmeYenilensin = yenilensin) }
+        .combine(puanDeposu.gununGorevleri(bugun)) { ara, tamamlananlar ->
+            val tamamlananIdler = tamamlananlar.map { it.gorevId }.toSet()
+            AnaDurum(
+                selamlama = selamlama(),
+                isim = SABIT_ISIM,
+                serideGun = ara.seriGun,
+                agacEvresi = agacEvresi(ara.seriGun),
+                puan = ara.toplamPuan,
+                ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
+                hedefDakika = ara.hedefDk,
+                adim = ara.ozet?.adim?.roundToInt() ?: 0,
+                ruhHali = ara.ruhHali.deger,
+                ruhHaliKaydedildi = ara.ruhHali.kaydedildi,
+                gorevler = Gorev.banttanOner(ara.bant).map { gorev ->
+                    GorevOzeti(
+                        id = gorev.id,
+                        baslik = gorev.baslik,
+                        aciklama = gorev.aciklama,
+                        puan = gorev.puan,
+                        ikon = gorev.ikonu(),
+                        tamamlandi = gorev.id in tamamlananIdler,
+                    )
+                },
+                veriVarMi = ara.ozet != null,
+                izinVarMi = KullanimIzni.verildiMi(baglam),
+                ebeveynAktifMi = ara.ebeveynAktifMi,
+                okunmamisBildirim = ara.okunmamisBildirim,
+                degerlendirmeYenilensin = ara.degerlendirmeYenilensin,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
+            initialValue = AnaDurum(selamlama = selamlama(), isim = SABIT_ISIM),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
-        initialValue = AnaDurum(selamlama = selamlama(), isim = SABIT_ISIM),
-    )
 
+    /** Sürükleme sürerken — henüz yazılmıyor. */
     fun ruhHaliDegisti(deger: Float) {
-        ruhHali.value = deger
+        suruklenenRuhHali.value = deger
+    }
+
+    /**
+     * Parmak kalktı — değer kalıcı olarak yazılıyor ve o gün ilk kez
+     * kaydediliyorsa "Ruh hali kaydı" görevinin puanı veriliyor.
+     */
+    fun ruhHaliBirakildi() {
+        val deger = suruklenenRuhHali.value ?: return
+        viewModelScope.launch {
+            beyanDeposu.ruhHaliKaydet(bugun, deger)
+            suruklenenRuhHali.value = null
+        }
+    }
+
+    fun degerlendirmeErtele() {
+        degerlendirmeGizlendi.value = true
     }
 
     /**
@@ -164,6 +221,14 @@ class AnaViewModel @Inject constructor(
         val seriGun: Int,
         val hedefDk: Int,
         val ebeveynAktifMi: Boolean = false,
+        val ruhHali: RuhHaliDurumu = RuhHaliDurumu(),
+        val okunmamisBildirim: Int = 0,
+        val degerlendirmeYenilensin: Boolean = false,
+    )
+
+    private data class RuhHaliDurumu(
+        val deger: Float = VARSAYILAN_RUH_HALI,
+        val kaydedildi: Boolean = false,
     )
 
     private companion object {
@@ -172,6 +237,9 @@ class AnaViewModel @Inject constructor(
 
         /** Ekran arka plana gidince akışı hemen kesme. */
         const val AKIS_BEKLEME_MS = 5_000L
+
+        /** `docs/spec-anket.md §6.4`: anket 4 haftada bir tekrarlanır. */
+        const val ANKET_TAZELEME_GUN = 28L
 
         const val SABAH_BAS = 5
         const val OGLE_BAS = 12

@@ -43,6 +43,45 @@ object Rota {
     const val NEFES = "nefes"
     const val EBEVEYN = "ebeveyn"
     const val RISK_DETAY = "riskdetay"
+
+    // --- keşfet (ana ekrandaki iki kart) ---
+    const val BILGI_BANKASI = "bilgi"
+    const val BILGI_YAZI = "bilgi/{yaziId}"
+    const val KENDINI_TEST = "kendinitest"
+
+    /** Argümanlı rotayı kurar — çağıranın string birleştirmesi gerekmesin. */
+    fun bilgiYazisi(id: String): String = "bilgi/$id"
+
+    // --- bildirim ---
+    const val BILDIRIM = "bildirim"
+
+    // --- hedef ve kategori (Profil › Hedeflerim) ---
+    const val GUNLUK_HEDEF = "hedef/gunluk"
+    const val KATEGORI = "kategori"
+    const val KATEGORIZE_ET = "kategori/duzenle"
+
+    /**
+     * SAS-SV'nin yeniden çözülmesi. Onboarding'deki [ANKET] ile **aynı
+     * ekranı** kullanıyor ama farklı rota: o onboarding alt grafiğinin
+     * çocuğu, bu ana grafiğin.
+     */
+    const val ANKET_YENILE = "anket/yenile"
+
+    // --- lig ---
+    const val ARKADAS_EKLE = "lig/arkadas"
+
+    // --- görev ekranları ---
+    const val YURUYUS = "yuruyus"
+
+    // --- sağlık ve destek ---
+    const val SAGLIK_IZIN = "saglik/izin"
+    const val YEDAM_ONAY = "yedam/onay"
+
+    // --- hesap (akış dışı) ---
+    const val HESAP = "hesap"
+    const val GIRIS = "hesap/giris"
+    const val KAYIT = "hesap/kayit"
+    const val SIFRE = "hesap/sifre"
 }
 
 /**

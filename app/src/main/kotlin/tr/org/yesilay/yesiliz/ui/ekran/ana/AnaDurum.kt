@@ -23,11 +23,21 @@ data class AnaDurum(
     val hedefDakika: Int = 0,
     val adim: Int = 0,
     val ruhHali: Float = VARSAYILAN_RUH_HALI,
+    /** Bugün ruh hali kaydedildiyse slider "işaretlendi" görünümüne geçer. */
+    val ruhHaliKaydedildi: Boolean = false,
     val gorevler: List<GorevOzeti> = emptyList(),
     val veriVarMi: Boolean = false,
     val izinVarMi: Boolean = true,
     /** Ebeveyn paneli eşleştirmesi tamamlandıysa 4. istatistik çipi görünür (ekran 08b). */
     val ebeveynAktifMi: Boolean = false,
+    /** Okunmamış bildirim sayısı — başlıktaki zil rozeti (tasarım 35). */
+    val okunmamisBildirim: Int = 0,
+    /**
+     * SAS-SV değerlendirmesinin üzerinden 4 hafta geçtiyse ana ekranda
+     * hatırlatma kartı belirir (`docs/spec-anket.md §6.4`). Kullanıcı
+     * "Sonra" derse o gün için kapanır.
+     */
+    val degerlendirmeYenilensin: Boolean = false,
 )
 
 /** Ruh hali slider'ının başlangıcı — orta nokta, yargısız. */

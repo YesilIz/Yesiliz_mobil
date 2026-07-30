@@ -12,12 +12,17 @@ import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.ArkadasDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.BildirimDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.FarkindalikTestiDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GorevTamamlamaDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KategoriEslemeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.UykuBeyaniDao
 import java.time.Clock
 import java.time.ZoneId
 import javax.inject.Singleton
@@ -77,6 +82,21 @@ object VeriModulu {
 
     @Provides
     fun puanGunlukDao(db: YesilizDb): PuanGunlukDao = db.puanGunlukDao()
+
+    @Provides
+    fun ruhHaliDao(db: YesilizDb): RuhHaliDao = db.ruhHaliDao()
+
+    @Provides
+    fun uykuBeyaniDao(db: YesilizDb): UykuBeyaniDao = db.uykuBeyaniDao()
+
+    @Provides
+    fun farkindalikTestiDao(db: YesilizDb): FarkindalikTestiDao = db.farkindalikTestiDao()
+
+    @Provides
+    fun bildirimDao(db: YesilizDb): BildirimDao = db.bildirimDao()
+
+    @Provides
+    fun arkadasDao(db: YesilizDb): ArkadasDao = db.arkadasDao()
 
     @Provides
     @Singleton

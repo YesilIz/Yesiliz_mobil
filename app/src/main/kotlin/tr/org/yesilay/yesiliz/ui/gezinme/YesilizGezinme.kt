@@ -9,11 +9,18 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import tr.org.yesilay.yesiliz.ui.ekran.ana.AnaEkran
+import tr.org.yesilay.yesiliz.ui.ekran.anket.AnketYenileEkran
+import tr.org.yesilay.yesiliz.ui.ekran.bildirim.BildirimEkran
+import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziEkran
+import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiYaziViewModel
 import tr.org.yesilay.yesiliz.ui.ekran.ebeveyn.EbeveynEkran
 import tr.org.yesilay.yesiliz.ui.ekran.istatistik.IstatistikEkran
 import tr.org.yesilay.yesiliz.ui.ekran.lig.LigEkran
@@ -21,6 +28,8 @@ import tr.org.yesilay.yesiliz.ui.ekran.nefes.NefesEkran
 import tr.org.yesilay.yesiliz.ui.ekran.odul.OdulEkran
 import tr.org.yesilay.yesiliz.ui.ekran.profil.ProfilEkran
 import tr.org.yesilay.yesiliz.ui.ekran.riskdetay.RiskDetayEkran
+import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
+import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 
 /**
@@ -83,7 +92,34 @@ fun YesilizGezinme(
                 AnaEkran(
                     onOdul = { navController.navigate(Rota.ODUL) },
                     onNefesBaslat = { navController.navigate(Rota.NEFES) },
+                    onBilgiBankasi = { navController.navigate(Rota.BILGI_BANKASI) },
+                    onKendiniTest = { navController.navigate(Rota.KENDINI_TEST) },
+                    onBildirimler = { navController.navigate(Rota.BILDIRIM) },
+                    onYuruyusBaslat = { navController.navigate(Rota.YURUYUS) },
+                    onDegerlendirmeYenile = { navController.navigate(Rota.ANKET_YENILE) },
                 )
+            }
+            composable(Rota.BILGI_BANKASI) {
+                BilgiEkran(
+                    onGeri = { navController.popBackStack() },
+                    onYazi = { id -> navController.navigate(Rota.bilgiYazisi(id)) },
+                )
+            }
+            composable(
+                route = Rota.BILGI_YAZI,
+                arguments = listOf(navArgument(BilgiYaziViewModel.YAZI_ID) { type = NavType.StringType }),
+            ) {
+                BilgiYaziEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.KENDINI_TEST) {
+                TestEkran(
+                    onGeri = { navController.popBackStack() },
+                    onBilgiYazisi = { id -> navController.navigate(Rota.bilgiYazisi(id)) },
+                    onNefes = { navController.navigate(Rota.NEFES) },
+                )
+            }
+            composable(Rota.BILDIRIM) {
+                BildirimEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.ISTATISTIK) {
                 IstatistikEkran(onRiskDetay = { navController.navigate(Rota.RISK_DETAY) })
@@ -103,6 +139,12 @@ fun YesilizGezinme(
             }
             composable(Rota.NEFES) {
                 NefesEkran(onKapat = { navController.popBackStack() })
+            }
+            composable(Rota.YURUYUS) {
+                YuruyusEkran(onKapat = { navController.popBackStack() })
+            }
+            composable(Rota.ANKET_YENILE) {
+                AnketYenileEkran(onGeri = { navController.popBackStack() })
             }
         }
     }

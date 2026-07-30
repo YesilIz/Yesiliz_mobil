@@ -169,3 +169,90 @@ data class PuanGunlukEntity(
     val seriGun: Int,
     val carpani: Double,
 )
+
+/**
+ * Günlük ruh hali beyanı — ana ekrandaki slider.
+ *
+ * **Risk skoruna girmez** (`core-risk` bunu bilmiyor); kullanıcının kendi
+ * anlatısı ve "Ruh hali kaydı" görevinin dayanağı. Günde tek satır: aynı gün
+ * tekrar sürüklenince değer güncellenir, yeni satır açılmaz.
+ */
+@Entity(tableName = "ruh_hali")
+data class RuhHaliEntity(
+    @PrimaryKey val tarih: LocalDate,
+    /** 0f (zorlanıyorum) – 1f (harika) */
+    val deger: Float,
+)
+
+/**
+ * Uyku beyanı — "Bugünün sorusu" widget'ından (tasarım 39) veya görev
+ * listesinden gelir.
+ *
+ * Saat değil **aralık** saklanıyor: widget dört seçenek sunuyor ve kullanıcı
+ * zaten tahmin ediyor; sahte hassasiyet üretmenin anlamı yok.
+ */
+@Entity(tableName = "uyku_beyani")
+data class UykuBeyaniEntity(
+    @PrimaryKey val tarih: LocalDate,
+    /** [tr.org.yesilay.yesiliz.domain.gorev.UykuAraligi.anahtar] değeri */
+    val aralik: String,
+)
+
+/**
+ * Kısa farkındalık testi sonucu (5 soru).
+ *
+ * **SAS-SV DEĞİL.** Ölçek dışıdır, kesme puanı yoktur, risk motoruna
+ * girmez — bu yüzden [AnketYanitEntity]'den ayrı tabloda duruyor. İkisini
+ * aynı tabloda tutmak, kalibre edilmemiş bir puanın kalibre edilmiş bir
+ * ölçekle karışması riskini doğururdu (`docs/spec-anket.md §6.1`).
+ */
+@Entity(tableName = "farkindalik_testi")
+data class FarkindalikTestiEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val tarih: LocalDate,
+    /** 5 yanıt, her biri 0–2 */
+    val yanitlar: List<String>,
+    val hamPuan: Int,
+    /** [tr.org.yesilay.yesiliz.domain.test.TestSeviyesi] adı */
+    val seviye: String,
+)
+
+/**
+ * Uygulama içi bildirim geçmişi (tasarım 35).
+ *
+ * Sistem bildirimlerinin kaydı **değil** — uygulamanın kullanıcıya söylediği
+ * şeylerin defteri. Sistem bildirimi gönderilse de gönderilmese de buraya
+ * satır düşer, böylece bildirim izni kapalı kullanıcı da olan biteni görür.
+ */
+@Entity(tableName = "bildirim", indices = [Index("zaman")])
+data class BildirimEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** [tr.org.yesilay.yesiliz.domain.bildirim.BildirimTuru] adı */
+    val tur: String,
+    val baslik: String,
+    val govde: String,
+    val zaman: Instant,
+    val okundu: Boolean = false,
+)
+
+/**
+ * Arkadaş / davet kaydı (tasarım 36, 37).
+ *
+ * MVP'de tamamen yerel: backend yok, gerçek bir sosyal grafik yok. Lig
+ * sekmesinin boş durum ile dolu durum arasında geçmesini sağlıyor ve
+ * Faz 2'de sunucudan gelecek listenin şeklini şimdiden sabitliyor.
+ * **Rehber okunmuyor** (CLAUDE.md §4) — isimler ya davet kodundan ya da
+ * örnek öneri listesinden geliyor.
+ */
+@Entity(tableName = "arkadas")
+data class ArkadasEntity(
+    @PrimaryKey val isim: String,
+    /** `davet_gonderildi` | `eklendi` */
+    val durum: String,
+    val eklenmeTarihi: LocalDate,
+) {
+    companion object {
+        const val DURUM_DAVET = "davet_gonderildi"
+        const val DURUM_EKLENDI = "eklendi"
+    }
+}
