@@ -223,6 +223,10 @@ interface PuanGunlukDao {
     /** Ana Sayfa'daki seri çipi. */
     @Query("SELECT * FROM puan_gunluk WHERE tarih = :tarih")
     fun gununAkisi(tarih: LocalDate): Flow<PuanGunlukEntity?>
+
+    /** Lig sıralamasının girdisi — haftalık toplam (SenkronDeposu). */
+    @Query("SELECT COALESCE(SUM(puanNet), 0) FROM puan_gunluk WHERE tarih BETWEEN :bas AND :bit")
+    suspend fun aralikToplami(bas: LocalDate, bit: LocalDate): Int
 }
 
 @Dao

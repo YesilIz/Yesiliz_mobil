@@ -1,0 +1,134 @@
+package tr.org.yesilay.yesiliz.data.depo
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
+import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
+import tr.org.yesilay.yesiliz.domain.hesap.Oturum
+import tr.org.yesilay.yesiliz.domain.lig.Arkadas
+import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
+import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
+import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * # Offline-first sarmalayıcı
+ *
+ * Sunucuya ulaşılabiliyorsa uzak depo, ulaşılamıyorsa yerel depo.
+ *
+ * **Neden gerekli:** demo günü backend'in ayakta olacağının garantisi yok
+ * (sunum salonunda ağ, laptop, kap — üçü de sorun çıkarabilir). Uygulamanın
+ * lig sekmesinin bir bağlantı hatasıyla boş kalması, bütün özelliğin
+ * yokmuş gibi görünmesi demek. Bu sarmalayıcı o riski sıfırlıyor.
+ *
+ * **Yalnızca ağ hatası** yerele düşürüyor. Sunucunun verdiği iş hataları
+ * (401 yanlış şifre, 409 e-posta kayıtlı) olduğu gibi geçiyor — yanlış
+ * şifre girildiğinde sessizce yerel hesaba düşmek, kullanıcıya "giriş
+ * yaptın" demek olurdu.
+ */
+@Singleton
+class YedekliLigDeposu @Inject constructor(
+    private val uzak: RetrofitLigDeposu,
+    private val yerel: YerelSahteLigDeposu,
+) : LigDeposu {
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun ligAkisi(): Flow<LigOzeti> = flow {
+        // Önce tazelemeyi dene; başarısızsa yerele geç.
+        val kaynak = try {
+            uzak.tazele()
+            uzak.ligAkisi()
+        } catch (_: IOException) {
+            yerel.ligAkisi()
+        } catch (_: retrofit2.HttpException) {
+            // 401: oturum yok/expired → yerel mock. Misafir kullanıcı da
+            // lig sekmesini boş görmemeli.
+            yerel.ligAkisi()
+        }
+        emitAll(kaynak)
+    }
+
+    override fun arkadaslarAkisi(): Flow<List<Arkadas>> = flow {
+        val kaynak = try {
+            uzak.tazele()
+            uzak.arkadaslarAkisi()
+        } catch (_: Exception) {
+            yerel.arkadaslarAkisi()
+        }
+        emitAll(kaynak)
+    }
+
+    override suspend fun davetKodu(): String =
+        agdanAl({ uzak.davetKodu() }, { yerel.davetKodu() })
+
+    override suspend fun ligeKatil() {
+        agdanAl({ uzak.ligeKatil() }, { yerel.ligeKatil() })
+    }
+
+    override suspend fun davetGonder(isim: String) {
+        agdanAl({ uzak.davetGonder(isim) }, { yerel.davetGonder(isim) })
+    }
+
+    override suspend fun onerilenler(): List<OnerilenKisi> =
+        // Öneri listesi sunucuda yok; her hâlükârda yerelden.
+        yerel.onerilenler()
+}
+
+/**
+ * Hesap işlemleri için aynı desen.
+ *
+ * Fark: **iş hataları yerele düşmüyor.** Sunucu "şifre yanlış" diyorsa
+ * yerel depoya sorup kullanıcıyı içeri almak, kimlik doğrulamayı tamamen
+ * anlamsızlaştırırdı. Yalnızca sunucuya *ulaşılamadığında* yerele
+ * geçiliyor ve kullanıcıya bu durum söyleniyor.
+ */
+@Singleton
+class YedekliHesapDeposu @Inject constructor(
+    private val uzak: RetrofitHesapDeposu,
+    private val yerel: YerelSahteHesapDeposu,
+) : HesapDeposu {
+
+    override val oturum: Flow<Oturum> = yerel.oturum
+
+    override suspend fun girisYap(eposta: String, sifre: String): HesapSonuc =
+        cevrimdisiYedek { uzak.girisYap(eposta, sifre) } ?: yerel.girisYap(eposta, sifre)
+
+    override suspend fun kayitOl(ad: String, eposta: String, sifre: String): HesapSonuc =
+        cevrimdisiYedek { uzak.kayitOl(ad, eposta, sifre) } ?: yerel.kayitOl(ad, eposta, sifre)
+
+    override suspend fun sifreSifirla(eposta: String): HesapSonuc =
+        cevrimdisiYedek { uzak.sifreSifirla(eposta) } ?: yerel.sifreSifirla(eposta)
+
+    override suspend fun misafirDevam() = yerel.misafirDevam()
+
+    override suspend fun cikisYap() {
+        // Jetonları da temizlemek için uzak depo çağrılıyor; o da yerel
+        // tercihleri siliyor.
+        runCatching { uzak.cikisYap() }.onFailure { yerel.cikisYap() }
+    }
+
+    /** Ağ hatasında `null` döner (çağıran yerele düşer), iş hatasını geçirir. */
+    private suspend fun cevrimdisiYedek(blok: suspend () -> HesapSonuc): HesapSonuc? = try {
+        blok()
+    } catch (_: IOException) {
+        null
+    }
+}
+
+/** Ağ hatasında yedeği çalıştıran ortak yardımcı. */
+private suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
+    uzak()
+} catch (_: Exception) {
+    yerel()
+}
+
+/** `flow { }` içinde başka bir akışı yayınlamak için. */
+private suspend fun <T> kotlinx.coroutines.flow.FlowCollector<T>.emitAll(kaynak: Flow<T>) {
+    kaynak.collect { emit(it) }
+}

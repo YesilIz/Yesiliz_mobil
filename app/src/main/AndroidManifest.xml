@@ -33,6 +33,13 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
 
     <!--
+      Faz 2 backend'i (backend/). Sunucuya YALNIZCA günlük özet ve skor
+      gidiyor; ham kullanım olayları cihazda kalıyor (§4). Gönderim
+      "Yeşilay ile paylaşım" onayına bağlı ve varsayılan kapalı.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
       Paket görünürlüğü (Android 11+).
 
       QUERY_ALL_PACKAGES KULLANILMIYOR — Play Store gerekçe istiyor ve
@@ -54,6 +61,7 @@
         android:label="@string/uygulama_adi"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="false"
+        android:networkSecurityConfig="@xml/ag_guvenligi"
         android:theme="@style/Theme.Yesiliz">
 
         <!--

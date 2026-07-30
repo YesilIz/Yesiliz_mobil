@@ -1,0 +1,101 @@
+package tr.org.yesilay.yesiliz.data.depo
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.data.uzak.DavetIstek
+import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
+import tr.org.yesilay.yesiliz.domain.lig.Arkadas
+import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
+import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
+import tr.org.yesilay.yesiliz.domain.lig.LigSatiri
+import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Gerçek lig — `backend/app/uclar/lig.py`.
+ *
+ * Sunucu tarafı `Flow` sunmuyor; akışlar bir `MutableStateFlow` üzerinden
+ * yayınlanıyor ve her yazma işleminden sonra tazeleniyor. Uzun soluklu bir
+ * bağlantı (WebSocket/SSE) lig için gereksiz: sıralama saatte bir değişiyor,
+ * ekran her açıldığında zaten yeniden okunuyor.
+ */
+@Singleton
+class RetrofitLigDeposu @Inject constructor(
+    private val api: YesilizApi,
+) : LigDeposu {
+
+    private val ozet = MutableStateFlow<LigOzeti?>(null)
+    private val arkadaslar = MutableStateFlow<List<Arkadas>>(emptyList())
+
+    override fun ligAkisi(): Flow<LigOzeti> = ozet.map { it ?: bos() }
+
+    override fun arkadaslarAkisi(): Flow<List<Arkadas>> = arkadaslar
+
+    /**
+     * Sunucudan tazeler.
+     *
+     * `Yedekli*` sarmalayıcı bunu çağırıp hata alırsa yerele düşüyor;
+     * bu yüzden burada hata yakalanmıyor — yutulursa sarmalayıcı
+     * sunucunun kapalı olduğunu anlayamaz.
+     */
+    suspend fun tazele() {
+        val yanit = api.lig()
+        ozet.value = yanit.cevir()
+        arkadaslar.value = api.arkadaslar().map { Arkadas(it.isim, it.davetBekliyorMu) }
+    }
+
+    override suspend fun davetKodu(): String = api.davetKodu().kod
+
+    override suspend fun ligeKatil() {
+        ozet.value = api.ligeKatil().cevir()
+    }
+
+    /**
+     * Sunucuda davet **koda göre** çalışıyor; arayüzdeki `isim` parametresi
+     * öneri listesindeki kişiyi işaret ediyordu. Gerçek sistemde isim
+     * yeterli bir kimlik değil, o yüzden bu çağrı kodu bekliyor —
+     * `ArkadasEkleEkran`'daki "Ekle" butonu öneri listesinden geldiği için
+     * yalnızca yerel depoda anlamlı; gerçek akış "davet kodu paylaş".
+     */
+    override suspend fun davetGonder(isim: String) {
+        arkadaslar.value = api.davetGonder(DavetIstek(isim))
+            .map { Arkadas(it.isim, it.davetBekliyorMu) }
+    }
+
+    /**
+     * Öneri listesi sunucuda **yok**.
+     *
+     * Kişi önerisi için sosyal grafik ya da rehber gerekiyor; rehber
+     * okunmuyor (CLAUDE.md §4) ve sosyal grafik henüz kurulmadı. Boş liste
+     * dönünce `ArkadasEkleEkran` bölümü hiç göstermiyor.
+     */
+    override suspend fun onerilenler(): List<OnerilenKisi> = emptyList()
+
+    private fun tr.org.yesilay.yesiliz.data.uzak.LigYanit.cevir() = LigOzeti(
+        ligAdi = ligAdi,
+        kalanGun = kalanGun,
+        yukselen = yukselen,
+        dusen = dusen,
+        siralama = siralama.map {
+            LigSatiri(
+                sira = it.sira,
+                isim = it.isim,
+                puan = it.puan,
+                benMiyim = it.benMiyim,
+                arkadasMi = it.arkadasMi,
+            )
+        },
+        katildiMi = katildiMi,
+    )
+
+    private fun bos() = LigOzeti(
+        ligAdi = "",
+        kalanGun = 0,
+        yukselen = 0,
+        dusen = 0,
+        siralama = emptyList(),
+        katildiMi = false,
+    )
+}

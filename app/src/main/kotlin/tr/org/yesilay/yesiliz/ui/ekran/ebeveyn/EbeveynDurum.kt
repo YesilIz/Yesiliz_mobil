@@ -26,6 +26,8 @@ data class EbeveynDurum(
     val adim: EslestirmeAdimi = EslestirmeAdimi.ROL_SECIMI,
     val secilenRol: CihazRolu = CihazRolu.EBEVEYN,
     val uretilenKod: String = "",
+    /** Sunucudan gelen eşleştirme hatası; `null` iken hata yok. */
+    val eslestirmeHatasi: String? = null,
     // --- mock çocuk paneli (ekran 13) ---
     val cocukAdi: String = "Elif",
     val cocukYasi: Int = 14,

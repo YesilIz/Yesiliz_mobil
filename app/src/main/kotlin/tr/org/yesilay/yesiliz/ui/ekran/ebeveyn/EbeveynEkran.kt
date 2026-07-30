@@ -102,6 +102,7 @@ fun EbeveynEkran(
 
                 EslestirmeAdimi.KOD -> KodAdimi(
                     uretilenKod = durum.uretilenKod,
+                    hata = durum.eslestirmeHatasi,
                     onEslestir = viewModel::eslestir,
                 )
 
@@ -165,7 +166,7 @@ private fun RolSecimiAdimi(secilenRol: CihazRolu, onRolSec: (CihazRolu) -> Unit,
 
 /** Ekran 21 — kod üretme + girme. MOCK: girilen kod doğrulanmıyor, 6 hane yeterli. */
 @Composable
-private fun KodAdimi(uretilenKod: String, onEslestir: (String) -> Unit) {
+private fun KodAdimi(uretilenKod: String, hata: String?, onEslestir: (String) -> Unit) {
     var girilenKod by remember { mutableStateOf(TextFieldValue("")) }
 
     SihirbazIskeleti {
@@ -223,6 +224,16 @@ private fun KodAdimi(uretilenKod: String, onEslestir: (String) -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MetinBirincil,
                 modifier = Modifier.padding(start = Bosluk.S),
+            )
+        }
+        // Sunucudan gelen hata (kod yok, süresi dolmuş, aynı rol). Renk
+        // yeşil — kırmızı yalnızca §12 K10'daki iki istisnada.
+        hata?.let { mesaj ->
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            Text(
+                text = mesaj,
+                style = MaterialTheme.typography.bodyMedium,
+                color = tr.org.yesilay.yesiliz.ui.tema.Hata,
             )
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))

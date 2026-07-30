@@ -4,8 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import tr.org.yesilay.yesiliz.data.depo.YerelSahteHesapDeposu
-import tr.org.yesilay.yesiliz.data.depo.YerelSahteLigDeposu
+import tr.org.yesilay.yesiliz.data.depo.YedekliHesapDeposu
+import tr.org.yesilay.yesiliz.data.depo.YedekliLigDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import javax.inject.Singleton
@@ -22,11 +22,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class DepoModulu {
 
+    // Faz 2: artık `Yedekli*` bağlanıyor — sunucu varsa uzak, yoksa yerel.
+    // Ekranlar ve ViewModel'ler değişmedi; §12 K7'nin vaat ettiği tam olarak
+    // buydu.
     @Binds
     @Singleton
-    abstract fun ligDeposu(yerel: YerelSahteLigDeposu): LigDeposu
+    abstract fun ligDeposu(yedekli: YedekliLigDeposu): LigDeposu
 
     @Binds
     @Singleton
-    abstract fun hesapDeposu(yerel: YerelSahteHesapDeposu): HesapDeposu
+    abstract fun hesapDeposu(yedekli: YedekliHesapDeposu): HesapDeposu
 }

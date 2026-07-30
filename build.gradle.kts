@@ -12,4 +12,7 @@ plugins {
     // task class could not be found"). google/dagger#3965.
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
+    // Ağ DTO'ları için (Faz 2 backend). KSP'yle aynı gerekçe: eklenti
+    // kökte de bildirilmezse sürüm çözümlemesi modüle göre değişebiliyor.
+    alias(libs.plugins.kotlin.serialization) apply false
 }

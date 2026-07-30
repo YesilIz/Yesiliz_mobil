@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    // Ağ DTO'ları @Serializable — Retrofit'in kotlinx converter'ı bunu
+    // şart koşuyor. Eklenti AGP 9 ile çakışmıyor (§9'daki tuzak
+    // `kotlin.android` eklentisiyle ilgili, bu ondan bağımsız).
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -107,6 +111,13 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
 
     implementation(libs.datastore.preferences)
+
+    // Faz 2 backend'i (backend/). Sunucu erişilemezse depolar yerel mock'a
+    // düşüyor (`Yedekli*Deposu`) — demo günü backend kapalıyken de çalışır.
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.serialization)
+    implementation(libs.okhttp)
+    debugImplementation(libs.okhttp.logging)
 
     // Adım + egzersiz süresi → aktivite sönümlemesi (%15 tavan, spec-risk §4.4).
     // Cihazda Health Connect yoksa okuyucu sessizce sıfır döndürüyor.

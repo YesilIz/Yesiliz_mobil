@@ -8,6 +8,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
+import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
@@ -51,6 +52,7 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val ozetDao: GunlukOzetDao,
     private val olayDao: KullanimOlayDao,
     private val bildirimDeposu: BildirimDeposu,
+    private val senkronDeposu: SenkronDeposu,
     private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
 ) : CoroutineWorker(baglam, parametreler) {
@@ -93,6 +95,12 @@ class GunlukOzetWorker @AssistedInject constructor(
             // güncellemelerini beklemek, ana ekranda saatlerce eski sayı
             // göstermek demek (updatePeriodMillis zaten 0).
             widgetlariTazele(applicationContext)
+
+            // Sunucuya yükleme EN SON: rıza kapalıysa `senkronEt` hiçbir şey
+            // göndermeden dönüyor, hata da sessizce yutuluyor. Senkron
+            // başarısız diye günlük özet hesabı geri alınmamalı.
+            senkronDeposu.senkronEt()
+            senkronDeposu.heartbeat()
 
             Result.success()
         }.getOrElse { Result.retry() }
