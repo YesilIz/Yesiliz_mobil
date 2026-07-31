@@ -5,12 +5,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import tr.org.yesilay.yesiliz.data.uzak.JetonAuthenticator
 import tr.org.yesilay.yesiliz.data.uzak.JetonDeposu
+import tr.org.yesilay.yesiliz.data.uzak.JetonKaynak
+import tr.org.yesilay.yesiliz.data.uzak.JetonYenileyici
+import tr.org.yesilay.yesiliz.data.uzak.RetrofitJetonYenileyici
+import tr.org.yesilay.yesiliz.data.uzak.VarsayilanJetonKaynak
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -41,9 +47,37 @@ object AgModulu {
         explicitNulls = false
     }
 
+    /**
+     * `JetonKaynak` ağ katmanının iç detayı, bir depo değil — bu yüzden
+     * bağlaması `DepoModulu`'nda değil burada.
+     */
     @Provides
     @Singleton
-    fun istemci(jetonDeposu: JetonDeposu): OkHttpClient {
+    fun jetonKaynak(varsayilan: VarsayilanJetonKaynak): JetonKaynak = varsayilan
+
+    /**
+     * Yenileme istemcisi ana istemciden **ayrı** kuruluyor — gerekçesi
+     * [JetonYenileyici] kdoc'unda (Dagger döngüsü + sonsuz özyineleme).
+     */
+    @Provides
+    @Singleton
+    fun jetonYenileyici(json: Json): JetonYenileyici =
+        RetrofitJetonYenileyici(
+            taban = EMULATOR_TABANI,
+            json = json,
+            zamanAsimiSn = ZAMAN_ASIMI_SN,
+        )
+
+    @Provides
+    @Singleton
+    fun jetonAuthenticator(
+        yenileyici: JetonYenileyici,
+        kaynak: JetonKaynak,
+    ): Authenticator = JetonAuthenticator(yenileyici, kaynak)
+
+    @Provides
+    @Singleton
+    fun istemci(jetonDeposu: JetonDeposu, authenticator: Authenticator): OkHttpClient {
         val kimlik = Interceptor { zincir ->
             val jeton = jetonDeposu.erisimSenkron()
             val istek = if (jeton == null) {
@@ -58,6 +92,10 @@ object AgModulu {
 
         return OkHttpClient.Builder()
             .addInterceptor(kimlik)
+            // 401 gelince erişim jetonunu bir kez yenileyip isteği tekrarlar.
+            // Olmadığında 30 dakikalık jeton süresi dolar dolmaz her kimlikli
+            // çağrı sessizce yedek/sahte veriye düşüyordu.
+            .authenticator(authenticator)
             .connectTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .readTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .build()
