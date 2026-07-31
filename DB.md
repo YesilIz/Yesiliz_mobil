@@ -1,14 +1,14 @@
 # DB.md — Yeşilİz Veritabanı
 
 > **ÜRETİLEN DOSYA — elle düzenleme.**
-> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/2.json`
+> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/3.json`
 > Yeniden üretmek için:
 > ```bash
 > ./gradlew :app:assembleDebug      # Room şemayı yeniden yazar
 > python3 tools/db_dokuman_uret.py  # bu dosyayı günceller
 > ```
 
-**Şema sürümü:** 2 · **Tablo sayısı:** 12 · **Güncelleme:** 2026-07-31
+**Şema sürümü:** 3 · **Tablo sayısı:** 12 · **Güncelleme:** 2026-08-01
 
 ---
 
@@ -32,7 +32,7 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 | `bildirim` | 6 | `id` | 1 |  |
 | `farkindalik_testi` | 5 | `id` | 0 |  |
 | `gorev_tamamlama` | 5 | `id` | 1 | Görev tamamlama geçmişi (spec-puan.md §7). |
-| `gunluk_ozet` | 25 | `tarih` | 0 | Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır. |
+| `gunluk_ozet` | 26 | `tarih` | 0 | Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır. |
 | `kategori_esleme` | 3 | `paketAdi` | 0 | Paket → kategori. `assets/kategori_tablosu.json`'dan seed edilir; kullanıcı override'ı aynı tabloda `kaynak='kullanici'` ile durur. |
 | `kullanim_olay` | 6 | `id` | 2 | Ham kullanım olayları. **Cihazdan çıkmaz** (CLAUDE.md §4). En hacimli tablo; özet çıkarıldıktan sonra eskiler silinir. |
 | `puan_gunluk` | 5 | `tarih` | 0 | Günlük puan ve seri. Ceza yok, sadece kazanç. |
@@ -144,6 +144,7 @@ Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır.
 | `S` | REAL | hayır |  |  |
 | `geceKullanimDk` | REAL | hayır |  |  |
 | `acilisSayisi` | INTEGER | hayır |  | hedef motorda `INTEGER` (aralığı dar, BIGINT gereksiz) |
+| `olayVarMi` | INTEGER | hayır |  |  |
 
 
 ### `kategori_esleme`
@@ -235,7 +236,7 @@ CREATE INDEX IF NOT EXISTS `index_bildirim_zaman` ON `bildirim` (`zaman`)
 CREATE TABLE IF NOT EXISTS `farkindalik_testi` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `yanitlar` TEXT NOT NULL, `hamPuan` INTEGER NOT NULL, `seviye` TEXT NOT NULL)
 CREATE TABLE IF NOT EXISTS `gorev_tamamlama` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `gorevId` TEXT NOT NULL, `puan` INTEGER NOT NULL, `dogrulamaTuru` TEXT NOT NULL)
 CREATE INDEX IF NOT EXISTS `index_gorev_tamamlama_tarih` ON `gorev_tamamlama` (`tarih`)
-CREATE TABLE IF NOT EXISTS `gunluk_ozet` (`tarih` TEXT NOT NULL, `socialDk` REAL NOT NULL, `entertainmentDk` REAL NOT NULL, `gamesDk` REAL NOT NULL, `communicationDk` REAL NOT NULL, `productivityDk` REAL NOT NULL, `educationDk` REAL NOT NULL, `healthDk` REAL NOT NULL, `otherDk` REAL NOT NULL, `gece` REAL NOT NULL, `oturum` REAL NOT NULL, `acilis` REAL NOT NULL, `sabah` REAL NOT NULL, `uykuOncesi` REAL NOT NULL, `yerDegis` REAL NOT NULL, `adim` REAL NOT NULL, `sporDk` REAL NOT NULL, `bTuketim` REAL NOT NULL, `bIslevsel` REAL NOT NULL, `P` REAL NOT NULL, `A` REAL NOT NULL, `D` REAL NOT NULL, `S` REAL NOT NULL, `geceKullanimDk` REAL NOT NULL, `acilisSayisi` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `gunluk_ozet` (`tarih` TEXT NOT NULL, `socialDk` REAL NOT NULL, `entertainmentDk` REAL NOT NULL, `gamesDk` REAL NOT NULL, `communicationDk` REAL NOT NULL, `productivityDk` REAL NOT NULL, `educationDk` REAL NOT NULL, `healthDk` REAL NOT NULL, `otherDk` REAL NOT NULL, `gece` REAL NOT NULL, `oturum` REAL NOT NULL, `acilis` REAL NOT NULL, `sabah` REAL NOT NULL, `uykuOncesi` REAL NOT NULL, `yerDegis` REAL NOT NULL, `adim` REAL NOT NULL, `sporDk` REAL NOT NULL, `bTuketim` REAL NOT NULL, `bIslevsel` REAL NOT NULL, `P` REAL NOT NULL, `A` REAL NOT NULL, `D` REAL NOT NULL, `S` REAL NOT NULL, `geceKullanimDk` REAL NOT NULL, `acilisSayisi` INTEGER NOT NULL, `olayVarMi` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `kategori_esleme` (`paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `kaynak` TEXT NOT NULL, PRIMARY KEY(`paketAdi`))
 CREATE TABLE IF NOT EXISTS `kullanim_olay` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `baslangic` INTEGER NOT NULL, `bitis` INTEGER NOT NULL, `tarih` TEXT NOT NULL)
 CREATE INDEX IF NOT EXISTS `index_kullanim_olay_tarih` ON `kullanim_olay` (`tarih`)
@@ -382,6 +383,7 @@ CREATE TABLE "gunluk_ozet" (
   "S" DOUBLE PRECISION NOT NULL,
   "geceKullanimDk" DOUBLE PRECISION NOT NULL,
   "acilisSayisi" INTEGER NOT NULL,
+  "olayVarMi" BIGINT NOT NULL,
   PRIMARY KEY ("tarih")
 );
 
@@ -528,6 +530,7 @@ CREATE TABLE [gunluk_ozet] (
   [S] FLOAT NOT NULL,
   [geceKullanimDk] FLOAT NOT NULL,
   [acilisSayisi] INT NOT NULL,
+  [olayVarMi] BIGINT NOT NULL,
   PRIMARY KEY ([tarih])
 );
 
