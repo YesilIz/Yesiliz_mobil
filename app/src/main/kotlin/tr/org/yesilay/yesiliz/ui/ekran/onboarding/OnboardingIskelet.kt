@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -52,6 +51,16 @@ fun OnboardingIskelet(
     ikincilMetin: String? = null,
     onIkincil: (() -> Unit)? = null,
     ekButon: (@Composable ColumnScope.() -> Unit)? = null,
+    /**
+     * İçeriği iskelet mi kaydırsın.
+     *
+     * Kendi kaydırmasını yöneten ekranlar (`AnketEkran` gibi) `false`
+     * vermek ZORUNDA: iç içe iki dikey kaydırma, içtekinin sonsuz
+     * yükseklik kısıtıyla ölçülmesi demek ve Compose bunu
+     * `IllegalStateException` ile reddediyor -- ekran açılmıyor, uygulama
+     * çöküyor.
+     */
+    kaydirilabilir: Boolean = true,
     icerik: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -88,7 +97,13 @@ fun OnboardingIskelet(
         Column(
             modifier = Modifier
                 .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
+                .then(
+                    if (kaydirilabilir) {
+                        Modifier.verticalScroll(rememberScrollState())
+                    } else {
+                        Modifier
+                    },
+                )
                 .padding(vertical = Olcu.BolumArasi),
             content = icerik,
         )
@@ -98,12 +113,13 @@ fun OnboardingIskelet(
         // 9 piksele indiriyordu. Ekranda görünüyor ama dokunma hedefi yok;
         // erişilebilirlik ağacında `[0,0][0,0]` çıkıyordu. "Nasıl çalışır?"
         // ve dört ekrandaki "Şimdi değil" bu yüzden tıklanamıyordu.
-        Column(
-            // `unbounded`: alt blok ana eksendeki kalan alana göre DEĞİL
-            // kendi içeriğine göre ölçülüyor. Olmadan ikincil bağlantı
-            // 70px yerine 9px alıyor ve dokunulamaz hâle geliyor.
-            modifier = Modifier.wrapContentHeight(unbounded = true),
-        ) {
+        // `wrapContentHeight(unbounded = true)` DENENDİ VE GERİ ALINDI:
+        // sorunu çözmediği gibi alt ağaçtaki yükseklik kısıtını sonsuza
+        // çeviriyor ve içinde `verticalScroll` olan her onboarding ekranı
+        // "Vertically scrollable component was measured with an infinity
+        // maximum height constraints" ile ÇÖKÜYOR. Anket ekranı bu yüzden
+        // açılmıyordu.
+        Column {
             BirincilButon(metin = ilerleMetni, onTikla = onIlerle, etkin = ilerleEtkin)
 
             // Çerçeveli ikinci eylem birincil butonun ALTINDA — tasarımda

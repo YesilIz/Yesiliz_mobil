@@ -47,6 +47,10 @@ fun AnketEkran(
         ikincilMetin = "Şimdi değil",
         onIkincil = onAtla,
         modifier = modifier,
+        // Anket sayfası kendi kaydırmasını yönetiyor; iskelet bir kez daha
+        // sararsa iç içe iki dikey kaydırma oluşuyor ve Compose bunu
+        // IllegalStateException ile reddediyor -- ekran hiç açılmıyor.
+        kaydirilabilir = false,
     ) {
         Text(
             text = "Aşağıdaki ifadelere\nne kadar katılıyorsun?",
