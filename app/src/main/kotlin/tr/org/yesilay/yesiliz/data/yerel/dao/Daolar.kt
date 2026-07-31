@@ -138,10 +138,22 @@ interface AnketYanitDao {
     @Insert
     suspend fun ekle(yanit: AnketYanitEntity): Long
 
-    @Query("SELECT * FROM anket_yanit ORDER BY tarih DESC LIMIT 1")
+    /**
+     * En son doldurulan anket.
+     *
+     * **`id` eşitlik bozucusu şart.** `tarih` bir `LocalDate`, yani gün
+     * çözünürlüğünde: kullanıcı anketi aynı gün ikinci kez doldurduğunda —
+     * test sırasında tam olarak bu yapılıyor — iki satırın `tarih`'i eşit
+     * oluyor. Yalnızca `ORDER BY tarih DESC` ile SQLite eşitlikte hangi
+     * satırın önce geleceğini garanti etmiyor ve pratikte `rowid` sırasını,
+     * yani **eski** anketi veriyor. `RiskDeposu.anketGirdisi()` buna
+     * dayandığı için sonuç "anketi yeniledim, risk değişmedi" oluyordu.
+     */
+    @Query("SELECT * FROM anket_yanit ORDER BY tarih DESC, id DESC LIMIT 1")
     suspend fun sonuncu(): AnketYanitEntity?
 
-    @Query("SELECT * FROM anket_yanit ORDER BY tarih")
+    /** Aynı belirsizlik geçmiş listesinde de var — orada da `id` ile kırılıyor. */
+    @Query("SELECT * FROM anket_yanit ORDER BY tarih, id")
     suspend fun hepsi(): List<AnketYanitEntity>
 }
 
