@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -102,6 +104,8 @@ fun AnaEkran(
     onBildirimler: () -> Unit,
     onYuruyusBaslat: () -> Unit,
     onDegerlendirmeYenile: () -> Unit,
+    onProfil: () -> Unit,
+    onIstatistik: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AnaViewModel = hiltViewModel(),
 ) {
@@ -114,7 +118,12 @@ fun AnaEkran(
             .background(Beyaz)
             .verticalScroll(rememberScrollState()),
     ) {
-        Basliktan(durum, onBildirimler = onBildirimler)
+        Basliktan(
+            durum,
+            onBildirimler = onBildirimler,
+            onProfil = onProfil,
+            onIstatistik = onIstatistik,
+        )
 
         Yigin(
             modifier = Modifier.padding(
@@ -200,7 +209,12 @@ fun AnaEkran(
 
 /** Yeşil selamlama şeridi + altında beyaza sönen ağaç. */
 @Composable
-private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
+private fun Basliktan(
+    durum: AnaDurum,
+    onBildirimler: () -> Unit,
+    onProfil: () -> Unit,
+    onIstatistik: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth().background(YesilAna)) {
         Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
@@ -214,6 +228,8 @@ private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
             KullaniciAvatari(
                 isim = durum.isim,
                 zemin = Beyaz.copy(alpha = YariSaydam),
+                // Avatar süslemeydi, tıklanmıyordu (`debug.md` O-17).
+                onTikla = onProfil,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -229,6 +245,11 @@ private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
                 )
             }
             Cip(
+                // Çip tıklanabilir GÖRÜNÜYOR ama `onTikla` verilmemişti;
+                // `Cip` bu parametreyi zaten destekliyor (`debug.md` O-15).
+                // İstatistik ekranı serinin nereden geldiğini gösteren
+                // tek yer.
+                onTikla = onIstatistik,
                 metin = "${durum.serideGun} gün",
                 ikon = Icons.Filled.LocalFireDepartment,
                 zemin = Beyaz.copy(alpha = YariSaydam),
@@ -517,20 +538,26 @@ private fun RuhHaliKarti(
 /** Bilgi Bankası · Kendini Test Et — iki eşit kart. */
 @Composable
 private fun KesfetIkilisi(onBilgiBankasi: () -> Unit, onKendiniTest: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
+    // `IntrinsicSize.Min` + `fillMaxHeight`: iki kart farklı yükseklikteydi.
+    // Sağdaki kısa kalıyor, başlığı iki satıra kırılınca alt metniyle
+    // çakışıyordu (`debug.md` O-10).
+    Row(
+        modifier = Modifier.height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik),
+    ) {
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.MenuBook,
             baslik = "Bilgi Bankası",
             aciklama = "Ekran bağımlılığı hakkında doğru bilgiler.",
             onTikla = onBilgiBankasi,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.FactCheck,
             baslik = "Kendini Test Et",
             aciklama = "Farkındalığını artır.",
             onTikla = onKendiniTest,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }

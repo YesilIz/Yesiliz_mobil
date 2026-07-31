@@ -23,6 +23,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HedefOzelEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IlkSonucEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.EbeveynOnayiEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IzinEkran
+import tr.org.yesilay.yesiliz.ui.ekran.onboarding.NasilCalisirEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.KarsilamaEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.OnboardingViewModel
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.ProfilKurulumEkran
@@ -43,7 +44,16 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
         composable(Rota.KARSILAMA) { girdi ->
             KarsilamaEkran(
                 onBasla = { girdi.guvenliGit(navController, Rota.IZIN) },
-                onNasilCalisir = { girdi.guvenliGit(navController, Rota.IZIN) },
+                // İki geri çağrı BİREBİR aynı hedefe gidiyordu; nasıl
+                // çalıştığını anlatan bir ekran hiç yoktu (`debug.md` O-3).
+                onNasilCalisir = { girdi.guvenliGit(navController, Rota.NASIL_CALISIR) },
+            )
+        }
+
+        composable(Rota.NASIL_CALISIR) { girdi ->
+            NasilCalisirEkran(
+                onDevam = { girdi.guvenliGit(navController, Rota.IZIN) },
+                onGeri = { navController.popBackStack() },
             )
         }
 
@@ -125,9 +135,14 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
         }
 
         composable(Rota.ILK_SONUC) { girdi ->
+            val vm = girdi.onboardingViewModel(navController)
+            val durum by vm.durum.collectAsStateWithLifecycle()
             IlkSonucEkran(
                 onPlanimiGor = { girdi.guvenliGit(navController, Rota.HEDEF) },
                 onAtla = { girdi.anaSayfayaGec(navController) },
+                // Anket atlandıysa kullanım hakkında iddia edilmiyor
+                // (`debug.md` O-2).
+                anketDolduruldu = durum.anketTamam,
             )
         }
 

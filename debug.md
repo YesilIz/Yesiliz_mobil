@@ -325,7 +325,7 @@ inset değil, **açılış yüksekliği** ve içeriğin kaydırılamaması.
 
 ---
 
-### Y-2 · Bildirimler başlığında "Tümünü oku" başlığın ve geri okunun üstüne biniyor `[tarama]`
+### ✅ Y-2 · Bildirimler başlığında "Tümünü oku" başlığın ve geri okunun üstüne biniyor `[tarama]`
 
 **`ui/ekran/bildirim/BildirimEkran.kt:62` · `ui/bilesen/YesilizButon.kt:124`**
 
@@ -465,22 +465,22 @@ gereken bir kontrol, ağ gecikmesinin arkasında.
 | # | Bulgu | Kaynak |
 |---|---|---|
 | **✅ O-1** | **Onboarding içerik alanı kaydırılamıyor.** `OnboardingIskelet.kt:59` — `Column(Modifier.weight(1f))`, `verticalScroll` yok. İlk sonuç ekranında sürükleyiciler kartının üçüncü satırı ("Fiziksel hareket") kırpılıyor. Küçük ekran / büyük yazı tipi ölçeğinde diğer adımlar da etkilenir | `[tarama]` |
-| **O-2** | **İlk değerlendirme metni sabit.** `IlkSonucEkran.kt:71` — anket "Şimdi değil" ile tamamen atlansa da *"Telefon kullanımın şu an dikkat edilmesi gereken bir düzeyde."* diyor. Hiç veri yokken kullanıcının kullanımı hakkında iddia | `[tarama]` |
-| **O-3** | **"Nasıl çalışır?" hiçbir şey açıklamıyor.** `OnboardingAkisi.kt:44-45` — `onBasla` ve `onNasilCalisir` **birebir aynı** hedefe (`Rota.IZIN`) gidiyor; nasıl çalıştığını anlatan ekran yok | `[tarama]` |
+| **✅ O-2** | **İlk değerlendirme metni sabit.** `IlkSonucEkran.kt:71` — anket "Şimdi değil" ile tamamen atlansa da *"Telefon kullanımın şu an dikkat edilmesi gereken bir düzeyde."* diyor. Hiç veri yokken kullanıcının kullanımı hakkında iddia | `[tarama]` |
+| **✅ O-3** | **"Nasıl çalışır?" hiçbir şey açıklamıyor.** `OnboardingAkisi.kt:44-45` — `onBasla` ve `onNasilCalisir` **birebir aynı** hedefe (`Rota.IZIN`) gidiyor; nasıl çalıştığını anlatan ekran yok | `[tarama]` |
 | **✅ O-4** | **"Bu bir tanı değildir" tıklanabilir ama hiçbir şey yapmıyor.** `TestEkran.kt:293`, `AnketYenileEkran.kt:180` — `MetinBaglanti(… onTikla = {})`, yani dalga efekti veren ölü `TextButton`. Sorumluluk reddi metni; düz `Text` olmalı | `[tarama]` |
-| **O-5** | **Bildirim saati: 5. çip dikey eziliyor + serbest saat seçilemiyor.** `BildirimSaatleri.kt:24` `SABAH_SECENEKLERI = listOf(7,8,9,10,11)` — beş çip satıra sığmıyor, "11:00" tek karakter genişliğinde dikey sütuna (`1 1: 0 0`) sıkışıyor. Kullanıcı ayrıca istediği saati giremiyor (→ İ-5) | `[ikisi]` |
-| **O-6** | **"Uygulama kategorileri" başlığı "Uygulama" olarak kırpılıyor.** Ortalanmış tek satır; üç nokta da konmuyor. Erişilebilirlik ağacında tam metin var, ekranda yok | `[tarama]` |
-| **O-7** | **Risk detayı öneri kartlarında iki satırlık başlık açıklamaya yapışıyor.** "Hatırlatma saatlerini ayarla", "Günlük hedefini gözden geçir", "İki dakikalık nefes molası" — üçünde de metinler birbirine giriyor | `[tarama]` |
-| **O-8** | **"Hatırlatma saatlerini ayarla → Aç" hedefe götürmüyor.** Profil ekranının tepesine bırakıyor, bildirim saatleri alt sayfasını açmıyor. Diğer iki eylem doğru: "Ayarla" → Günlük hedef, "Başlat" → Nefes | `[tarama]` |
-| **O-9** | **Cinsiyet seçicide üçüncü seçenek iki satıra düşüyor, seçili pil hizasız.** "Belirtmek istemiyorum" kapsayıcıyı yükseltiyor ama seçili pil tek satır yüksekliğinde kalıyor | `[tarama]` |
-| **O-10** | **Ana ekranda yan yana iki kart farklı yükseklikte.** "Bilgi Bankası" / "Kendini Test Et" — sağdaki kısa, başlığı iki satıra kırılınca alt metniyle çakışıyor. `IntrinsicSize` ile eşitlenmeli | `[tarama]` |
+| **✅ O-5** | **Bildirim saati: 5. çip dikey eziliyor + serbest saat seçilemiyor.** `BildirimSaatleri.kt:24` `SABAH_SECENEKLERI = listOf(7,8,9,10,11)` — beş çip satıra sığmıyor, "11:00" tek karakter genişliğinde dikey sütuna (`1 1: 0 0`) sıkışıyor. Kullanıcı ayrıca istediği saati giremiyor (→ İ-5) | `[ikisi]` |
+| **✅ O-6** | **"Uygulama kategorileri" başlığı "Uygulama" olarak kırpılıyor.** Ortalanmış tek satır; üç nokta da konmuyor. Erişilebilirlik ağacında tam metin var, ekranda yok | `[tarama]` |
+| **✅ O-7** | **Risk detayı öneri kartlarında iki satırlık başlık açıklamaya yapışıyor.** "Hatırlatma saatlerini ayarla", "Günlük hedefini gözden geçir", "İki dakikalık nefes molası" — üçünde de metinler birbirine giriyor | `[tarama]` |
+| **✅ O-8** | **"Hatırlatma saatlerini ayarla → Aç" hedefe götürmüyor.** Profil ekranının tepesine bırakıyor, bildirim saatleri alt sayfasını açmıyor. Diğer iki eylem doğru: "Ayarla" → Günlük hedef, "Başlat" → Nefes | `[tarama]` |
+| **✅ O-9** | **Cinsiyet seçicide üçüncü seçenek iki satıra düşüyor, seçili pil hizasız.** "Belirtmek istemiyorum" kapsayıcıyı yükseltiyor ama seçili pil tek satır yüksekliğinde kalıyor | `[tarama]` |
+| **✅ O-10** | **Ana ekranda yan yana iki kart farklı yükseklikte.** "Bilgi Bankası" / "Kendini Test Et" — sağdaki kısa, başlığı iki satıra kırılınca alt metniyle çakışıyor. `IntrinsicSize` ile eşitlenmeli | `[tarama]` |
 | **✅ O-11** | **Giriş ve şifre ekranlarında eskimiş metin.** Backend 31 Tem'de bağlandı ama ekranlar hâlâ *"hesaplar yalnızca bu cihazda tutuluyor"*, *"Hesap sistemi henüz devrede değil"*, *"…hesap sistemi devreye girdiğinde gönderilecek"* diyor | `[tarama]` |
-| **O-12** | **İstatistik "Gün" sekmesinde tek gün için "ORTALAMA" yazıyor.** "TOPLAM" ya da "BUGÜN" olmalı; Hafta/Ay sekmelerinde etiket doğru | `[tarama]` |
-| **O-13** | **Önerilen kişiler sahte ve "3 ortak arkadaş" diyor.** Rehber hiç okunmuyor (§12 K14, ekranda da yazılı) ve sunucuda sosyal grafik yok. Uydurma isim tolere edilebilir ama **"3 ortak arkadaş"** aynı ekranda verilen mahremiyet sözüyle doğrudan çelişiyor | `[tarama]` |
+| **✅ O-12** | **İstatistik "Gün" sekmesinde tek gün için "ORTALAMA" yazıyor.** "TOPLAM" ya da "BUGÜN" olmalı; Hafta/Ay sekmelerinde etiket doğru | `[tarama]` |
+| **✅ O-13** | **Önerilen kişiler sahte ve "3 ortak arkadaş" diyor.** Rehber hiç okunmuyor (§12 K14, ekranda da yazılı) ve sunucuda sosyal grafik yok. Uydurma isim tolere edilebilir ama **"3 ortak arkadaş"** aynı ekranda verilen mahremiyet sözüyle doğrudan çelişiyor | `[tarama]` |
 | **✅ O-14** | **Backend gerçek telefondan erişilemiyor; lig her zaman sahte.** `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` yalnızca emülatör içindir. Gerçek telefonda **her** çağrı 5 sn sonra başarısız olup `YerelSahteLigDeposu`'na düşüyor (§12 K18 gereği doğru davranış) — ama ekranda bunun çevrimdışı yedek olduğunu söyleyen **hiçbir işaret yok**. Gerçek cihazda bu istisna değil, **varsayılan durum**. Ebeveyn ekranındaki `cevrimdisiMi` göstergesinin benzeri lig için de gerekli. K-8'in de kök nedeni | `[tarama]` |
-| **O-15** | **Seri ("8 gün") çipi tıklanmıyor.** `AnaEkran.kt:237` `Cip(...)` — `onTikla` verilmemiş. `Cip` bu parametreyi destekliyor (`Cip.kt:37`) | `[kullanıcı]` |
-| **O-16** | **Ligdeki "İlk 7 yükselir" / "Son 7 düşer" tıklanmıyor.** `LigEkran.kt:170-180`, aynı sebep. İkisi de hap biçimli buton gibi duruyor, biri vurgulu biri soluk — filtre sanılıyor | `[kullanıcı]` |
-| **O-17** | **Sol üstteki avatar profile götürmüyor.** `AnaEkran.kt:220` `KullaniciAvatari` süsleme; tıklama yok. (İ-1'de Profil sekmesi kalkarsa bu bir eksiklik değil, **zorunluluk** olur) | `[kullanıcı]` |
+| **✅ O-15** | **Seri ("8 gün") çipi tıklanmıyor.** `AnaEkran.kt:237` `Cip(...)` — `onTikla` verilmemiş. `Cip` bu parametreyi destekliyor (`Cip.kt:37`) | `[kullanıcı]` |
+| **✅ O-16** | **Ligdeki "İlk 7 yükselir" / "Son 7 düşer" tıklanmıyor.** `LigEkran.kt:170-180`, aynı sebep. İkisi de hap biçimli buton gibi duruyor, biri vurgulu biri soluk — filtre sanılıyor | `[kullanıcı]` |
+| **✅ O-17** | **Sol üstteki avatar profile götürmüyor.** `AnaEkran.kt:220` `KullaniciAvatari` süsleme; tıklama yok. (İ-1'de Profil sekmesi kalkarsa bu bir eksiklik değil, **zorunluluk** olur) | `[kullanıcı]` |
 | **✅ O-18** | **"Yeşilay ile paylaşım" hiçbir geri bildirim vermiyor.** Tercih aslında çalışıyor (`SenkronDeposu.kt:57` ağ çağrısını kapatıyor, §12 K19 doğrulandı), ama O-14 yüzünden açıp kapatmanın **gözlenebilir hiçbir sonucu yok**. Son senkron zamanı / "sunucuya ulaşılamıyor" durumu gösterilmiyor | `[kullanıcı]` |
 
 ---
@@ -538,7 +538,7 @@ K-9 elle işaretlemeyi kaldırdıktan sonraki soru: *"hedefinin %80'ini tutturdu
 (tuttu / tutmadı). `docs/spec-puan.md` değişikliği gerektirir; §4'teki "yalnızca kazanç"
 kuralına aykırı değil çünkü hâlâ ceza yok.
 
-### İ-5 · Bildirim saati serbest seçilsin
+### ✅ İ-5 · Bildirim saati serbest seçilsin
 
 `SABAH_SECENEKLERI` / `AKSAM_SECENEKLERI` sabit listeleri yerine `TimePicker`.
 O-5'teki taşan çip sorununu da kapatır.

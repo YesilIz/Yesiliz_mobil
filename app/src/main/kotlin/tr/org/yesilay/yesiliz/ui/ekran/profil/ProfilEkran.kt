@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -71,6 +73,7 @@ import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
 import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 import tr.org.yesilay.yesiliz.ui.kalinIsle
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
+import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.AyarSatiri
@@ -122,6 +125,7 @@ fun ProfilEkran(
     onSilindi: () -> Unit,
     onHesapOlustur: () -> Unit,
     onSozlesme: (String) -> Unit,
+    acilacakSayfa: String? = null,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
@@ -145,6 +149,11 @@ fun ProfilEkran(
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
     var cikisOnayi by remember { mutableStateOf(false) }
     var sunucuAdresiAcik by remember { mutableStateOf(false) }
+
+    // Dışarıdan istenen alt sayfa açılıyor (`debug.md` O-8).
+    LaunchedEffect(acilacakSayfa) {
+        if (acilacakSayfa == Rota.SAYFA_BILDIRIM_SAATLERI) bildirimSaatleriAcik = true
+    }
     val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -677,6 +686,75 @@ private fun CikisOnayi(eposta: String, onOnayla: () -> Unit, onVazgec: () -> Uni
     }
 }
 
+/**
+ * Saat seçici — − / + ile serbest saat.
+ *
+ * Sabit çip şeridi beş seçeneği satıra sığdıramıyor, "11:00" tek karakter
+ * genişliğinde dikey bir sütuna sıkışıyordu; kullanıcı ayrıca istediği
+ * saati giremiyordu (`debug.md` O-5, İ-5). Günlük hedef ekranındaki
+ * −/+ deseniyle aynı — M3 `TimePicker` bu alan için fazla ağır ve dakika
+ * çözünürlüğü hatırlatma için anlamsız.
+ */
+@Composable
+private fun SaatSecici(
+    baslik: String,
+    saat: Int,
+    aralik: IntRange,
+    onDegis: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(Yesil50)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = baslik,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MetinBirincil,
+            modifier = Modifier.weight(1f),
+        )
+        SaatDugmesi(
+            ikon = Icons.Filled.Remove,
+            aciklama = "Bir saat geri",
+            etkin = saat > aralik.first,
+            onTikla = { onDegis(saat - 1) },
+        )
+        Text(
+            text = "%02d:00".format(saat),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            modifier = Modifier.padding(horizontal = Olcu.Aralik),
+        )
+        SaatDugmesi(
+            ikon = Icons.Filled.Add,
+            aciklama = "Bir saat ileri",
+            etkin = saat < aralik.last,
+            onTikla = { onDegis(saat + 1) },
+        )
+    }
+}
+
+@Composable
+private fun SaatDugmesi(
+    ikon: androidx.compose.ui.graphics.vector.ImageVector,
+    aciklama: String,
+    etkin: Boolean,
+    onTikla: () -> Unit,
+) {
+    androidx.compose.material3.IconButton(onClick = onTikla, enabled = etkin) {
+        Icon(
+            imageVector = ikon,
+            contentDescription = aciklama,
+            tint = if (etkin) YesilAna else MetinUcuncul,
+        )
+    }
+}
+
 /** Alt sayfa 25 — Verilerimi kalıcı sil. CLAUDE.md §12 K10: KirmiziIstisna. */
 @Composable
 private fun VerileriSilIcerik(
@@ -1201,39 +1279,23 @@ private fun BildirimSaatleriIcerik(
         // sunmak, ayarın çalıştığı izlenimini verirdi.
         if (saatler.acik) {
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BolumBasligi("Sabah")
-            Spacer(modifier = Modifier.height(Bosluk.S))
-            SaatSeridi(
-                secenekler = BildirimSaatleri.SABAH_SECENEKLERI,
-                secili = saatler.sabahSaati,
-                onSec = { saatDegeri -> onDegis(saatler.copy(sabahSaati = saatDegeri)) },
+            SaatSecici(
+                baslik = "Sabah",
+                saat = saatler.sabahSaati,
+                aralik = BildirimSaatleri.SABAH_ARALIGI,
+                onDegis = { saatDegeri -> onDegis(saatler.copy(sabahSaati = saatDegeri)) },
             )
-
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BolumBasligi("Akşam")
-            Spacer(modifier = Modifier.height(Bosluk.S))
-            SaatSeridi(
-                secenekler = BildirimSaatleri.AKSAM_SECENEKLERI,
-                secili = saatler.aksamSaati,
-                onSec = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
+            SaatSecici(
+                baslik = "Akşam",
+                saat = saatler.aksamSaati,
+                aralik = BildirimSaatleri.AKSAM_ARALIGI,
+                onDegis = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
             )
         }
     }
 }
 
-@Composable
-private fun SaatSeridi(secenekler: List<Int>, secili: Int, onSec: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
-        secenekler.forEach { saatDegeri ->
-            Cip(
-                metin = "%02d:00".format(saatDegeri),
-                zemin = if (saatDegeri == secili) YesilAna else Yesil50,
-                renk = if (saatDegeri == secili) Beyaz else MetinBirincil,
-                onTikla = { onSec(saatDegeri) },
-            )
-        }
-    }
-}
 
 
 /**

@@ -123,7 +123,17 @@ fun ArkadasEkleEkran(
                     color = MetinUcuncul,
                 )
 
-                BolumBasligi("Önerilen kişiler")
+                // Liste rehberden ya da sosyal grafikten gelmiyor -- ikisi
+                // de yok. Bunu başlıkta söylemek şart: "Önerilen kişiler"
+                // tek başına, hemen üstündeki "rehberine erişmiyoruz"
+                // sözüyle çelişiyordu (`debug.md` O-13).
+                BolumBasligi("Örnek kişiler")
+                Text(
+                    text = "Bu liste örnektir; kişi önerisi için gereken " +
+                        "sosyal bağlantı bilgisini toplamıyoruz.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MetinUcuncul,
+                )
                 durum.onerilenler.forEach { kisi ->
                     OnerilenSatiri(
                         kisi = kisi,

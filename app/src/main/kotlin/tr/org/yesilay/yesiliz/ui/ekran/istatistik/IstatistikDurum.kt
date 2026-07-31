@@ -101,7 +101,18 @@ data class IstatistikDurum(
     val secimVarMi: Boolean get() = seciliIndeks >= 0
 
     /** Kart başlığı: seçim varken tarih, yokken "ORTALAMA". */
-    val ekranKartBasligi: String get() = if (secimVarMi) seciliBaslik else "Ortalama"
+    /**
+     * Ölçüm kartının etiketi.
+     *
+     * "Gün" sekmesinde de "Ortalama" yazıyordu; tek günün ortalaması
+     * olmaz (`debug.md` O-12).
+     */
+    val ekranKartBasligi: String
+        get() = when {
+            secimVarMi -> seciliBaslik
+            aralik == Aralik.GUN -> "Bugün"
+            else -> "Ortalama"
+        }
 
     val ekranGosterilen: Int get() = if (secimVarMi) ekranSecili else ekranOrtalama
 

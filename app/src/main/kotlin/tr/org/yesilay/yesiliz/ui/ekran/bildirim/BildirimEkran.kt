@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
-import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
+import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
@@ -59,7 +59,11 @@ fun BildirimEkran(
             // Okunmamış yoksa eylem de yok — tıklanınca hiçbir şey olmayan
             // bir bağlantı göstermek, düzeltmeye çalıştığımız sorunun aynısı.
             if (durum.okunmamisVarMi) {
-                MetinBaglanti(metin = "Tümünü oku", onTikla = viewModel::tumunuOku)
+                // `MetinBaglanti` `fillMaxWidth` dayatıyor (kendi KDoc'u da
+                // uyarıyor): başlık çubuğunun tamamını kaplıyor, "Bildirimler"
+                // yazısının üstüne biniyor ve geri okuna basınca bütün
+                // bildirimleri okundu işaretliyordu (`debug.md` Y-2).
+                SatirBaglanti(metin = "Tümünü oku", onTikla = viewModel::tumunuOku)
             }
         },
         modifier = modifier,

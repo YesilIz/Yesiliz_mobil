@@ -133,7 +133,15 @@ fun RiskDetayEkran(
                             horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
                         ) {
                             IkonRozeti(ikon = oneri.ikon)
-                            Column(modifier = Modifier.weight(1f)) {
+                            // `spacedBy`: iki satırlık başlıklarda
+                            // ("Hatırlatma saatlerini ayarla", "Günlük
+                            // hedefini gözden geçir", "İki dakikalık nefes
+                            // molası") metinler birbirine giriyordu
+                            // (`debug.md` O-7).
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(Bosluk.Xs),
+                            ) {
                                 Text(
                                     text = oneri.baslik,
                                     style = MaterialTheme.typography.bodyLarge,

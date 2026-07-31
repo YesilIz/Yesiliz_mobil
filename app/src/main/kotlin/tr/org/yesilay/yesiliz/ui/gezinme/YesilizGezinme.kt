@@ -75,7 +75,10 @@ fun YesilizGezinme(
 
     val girdi by navController.currentBackStackEntryAsState()
     val rota = girdi?.destination?.route
-    val sekmede = Sekme.entries.any { it.rota == rota }
+    // Sorgu argümanı rotanın parçası ("profil?acilacakSayfa={...}"); sekme
+    // eşlemesi yalnızca yola bakıyor, yoksa argümanlı rota sekme
+    // sayılmayıp alt çubuk kaybolurdu.
+    val sekmede = Sekme.entries.any { it.rota == rota?.substringBefore("?") }
 
     Scaffold(
         modifier = modifier,
@@ -150,6 +153,8 @@ fun YesilizGezinme(
                     onBildirimler = { navController.navigate(Rota.BILDIRIM) },
                     onYuruyusBaslat = { navController.navigate(Rota.YURUYUS) },
                     onDegerlendirmeYenile = { navController.navigate(Rota.ANKET_YENILE) },
+                    onProfil = { navController.navigate(Rota.PROFIL) },
+                    onIstatistik = { navController.sekmeyeGit(Sekme.ISTATISTIK) },
                 )
             }
             composable(Rota.BILGI_BANKASI) {
@@ -191,8 +196,22 @@ fun YesilizGezinme(
             composable(Rota.ARKADAS_EKLE) {
                 ArkadasEkleEkran(onGeri = { navController.popBackStack() })
             }
-            composable(Rota.PROFIL) {
+            composable(
+                route = Rota.PROFIL_SAYFALI,
+                arguments = listOf(
+                    navArgument(Rota.PROFIL_SAYFA_ARG) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) { girdiP ->
                 ProfilEkran(
+                    // Risk detayından gelen "Hatırlatma saatlerini
+                    // ayarla → Aç" doğrudan ilgili alt sayfayı açıyor
+                    // (`debug.md` O-8).
+                    acilacakSayfa = girdiP.arguments
+                        ?.getString(Rota.PROFIL_SAYFA_ARG),
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
                     onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },
@@ -240,7 +259,10 @@ fun YesilizGezinme(
                     // yerde tanımlamak olurdu.
                     onEylem = { id ->
                         when (id) {
-                            "bildirim_saatleri" -> navController.sekmeyeGit(Sekme.PROFIL)
+                            "bildirim_saatleri" ->
+                        navController.navigate(
+                            Rota.profilSayfasi(Rota.SAYFA_BILDIRIM_SAATLERI),
+                        )
                             "hedef_azalt" -> navController.navigate(Rota.GUNLUK_HEDEF)
                             "nefes" -> navController.navigate(Rota.NEFES)
                             "yedam" -> navController.navigate(Rota.YEDAM_ONAY)

@@ -46,6 +46,15 @@ fun IlkSonucEkran(
     onPlanimiGor: () -> Unit,
     onAtla: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Anket dolduruldu mu.
+     *
+     * Metin sabitti: kullanıcı anketi "Şimdi değil" ile tamamen atlasa
+     * bile ekran "Telefon kullanımın şu an dikkat edilmesi gereken bir
+     * düzeyde." diyordu — hiç veri yokken kullanıcının kullanımı hakkında
+     * iddia (`debug.md` O-2).
+     */
+    anketDolduruldu: Boolean = true,
 ) {
     OnboardingIskelet(
         adim = 0,
@@ -59,7 +68,13 @@ fun IlkSonucEkran(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Cip(metin = "Başlangıç değerlendirmen hazır")
+            Cip(
+                metin = if (anketDolduruldu) {
+                    "Başlangıç değerlendirmen hazır"
+                } else {
+                    "Ölçmeye başlıyoruz"
+                },
+            )
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
             Image(
                 painter = painterResource(R.drawable.agac_evre2_narenciye),
@@ -68,7 +83,11 @@ fun IlkSonucEkran(
             )
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
             Text(
-                text = "Telefon kullanımın şu an dikkat edilmesi gereken bir düzeyde.",
+                text = if (anketDolduruldu) {
+                    "Telefon kullanımın şu an dikkat edilmesi gereken bir düzeyde."
+                } else {
+                    "Kullanımını ölçmeye başlıyoruz."
+                },
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MetinBirincil,
@@ -76,8 +95,14 @@ fun IlkSonucEkran(
             )
             Spacer(modifier = Modifier.height(Bosluk.M))
             Text(
-                text = "Bu bir teşhis değil. Önümüzdeki günlerde gerçek kullanımını " +
-                    "ölçüp sana özel bir plan çıkaracağız.",
+                text = if (anketDolduruldu) {
+                    "Bu bir teşhis değil. Önümüzdeki günlerde gerçek kullanımını " +
+                        "ölçüp sana özel bir plan çıkaracağız."
+                } else {
+                    "Değerlendirmeyi atladın, sorun değil. Önümüzdeki günlerde " +
+                        "gerçek kullanımını ölçüp sana özel bir plan çıkaracağız. " +
+                        "Değerlendirmeyi istediğin zaman Profil'den yapabilirsin."
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MetinIkincil,
                 textAlign = TextAlign.Center,

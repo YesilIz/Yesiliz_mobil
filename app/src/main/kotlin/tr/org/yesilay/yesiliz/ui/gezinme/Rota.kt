@@ -25,6 +25,7 @@ object Rota {
      *  doğrudan `KARSILAMA` verilemez (grafiğin doğrudan çocuğu değil). */
     const val ONBOARDING = "onboarding"
     const val KARSILAMA = "onboarding/karsilama"
+    const val NASIL_CALISIR = "onboarding/nasilcalisir"
     const val IZIN = "onboarding/izin"
     const val PROFIL_KURULUM = "onboarding/profil"
     const val EBEVEYN_ONAYI = "onboarding/ebeveynonayi"
@@ -52,6 +53,22 @@ object Rota {
 
     /** Argümanlı rotayı kurar — çağıranın string birleştirmesi gerekmesin. */
     fun bilgiYazisi(id: String): String = "bilgi/$id"
+
+    /**
+     * Profil açılırken doğrudan bir alt sayfayı açmak için.
+     *
+     * Risk detayındaki "Hatırlatma saatlerini ayarla → Aç" eylemi Profil
+     * ekranının tepesine bırakıyor, bildirim saatleri alt sayfasını
+     * açmıyordu (`debug.md` O-8). Diğer iki eylem ("Ayarla" → Günlük
+     * hedef, "Başlat" → Nefes) doğrudan hedefe gidiyordu.
+     */
+    const val PROFIL_SAYFA_ARG = "acilacakSayfa"
+    const val PROFIL_SAYFALI = "profil?$PROFIL_SAYFA_ARG={$PROFIL_SAYFA_ARG}"
+
+    /** [PROFIL_SAYFALI] için tanınan alt sayfa adları. */
+    const val SAYFA_BILDIRIM_SAATLERI = "bildirim_saatleri"
+
+    fun profilSayfasi(sayfa: String): String = "profil?$PROFIL_SAYFA_ARG=$sayfa"
 
     // --- sözleşmeler (Kayıt onayı ve Profil › Hakkında) ---
     const val SOZLESME = "sozlesme/{sozlesmeId}"
