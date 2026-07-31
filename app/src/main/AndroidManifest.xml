@@ -116,7 +116,41 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Health Connect gerekçe ekranı — Android 13 ve altı.
+
+              HC izin istemeden ÖNCE uygulamanın "bu veriyi niçin istiyorum"
+              ekranını bildirmesini şart koşuyor. Bildirilmezse izin diyaloğu
+              sessizce izinsiz dönüyor; hata da vermiyor. Emülatörde HC kurulu
+              olmadığı için bu hiç görülmemişti.
+
+              Cevabı `ui/ekran/saglik/` zaten veriyor, bu yüzden ayrı bir
+              Activity yok: MainActivity eylemi okuyup Rota.SAGLIK_IZIN'e
+              gidiyor (tek Activity kuralı, CLAUDE.md §5).
+            -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+
+        <!--
+          Aynı gerekçe ekranı — Android 14+ (targetSdk 37 ile geçerli olan yol).
+
+          `START_VIEW_PERMISSION_USAGE` izni, bu takma adı yalnızca sistemin
+          başlatabilmesi için: `exported="true"` olmak zorunda ama herhangi bir
+          uygulamaya açık olmamalı.
+        -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <!--
           Ana ekran widget'ları (docs/tasarim-referans.md §2 / 39, 40).

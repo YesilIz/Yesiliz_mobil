@@ -17,6 +17,7 @@ import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.nudge.NudgeOverlayService
+import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import tr.org.yesilay.yesiliz.ui.gezinme.YesilizGezinme
 import tr.org.yesilay.yesiliz.ui.tema.YesilizTemasi
 import javax.inject.Inject
@@ -76,10 +77,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun hedefRotaOku(intent: Intent): String? = intent.getStringExtra(EXTRA_HEDEF_ROTA)
+    /**
+     * Hangi ekranla açılacağız?
+     *
+     * İki kaynak var:
+     *  - [EXTRA_HEDEF_ROTA] — nudge overlay'in derin bağlantısı
+     *  - Health Connect'in **gerekçe** çağrısı: kullanıcı HC uygulamasından
+     *    "bu uygulama verimi niçin istiyor?" dediğinde sistem bizi bu
+     *    eylemlerle başlatıyor. Cevabı zaten [Rota.SAGLIK_IZIN] veriyor
+     *    ("Yalnızca adım sayısı ve egzersiz süresi okunur. Kalp atışı, uyku,
+     *    kilo ve konum hiç istenmez."), o yüzden ayrı bir ekran yok.
+     */
+    private fun hedefRotaOku(intent: Intent): String? = when (intent.action) {
+        GEREKCE_EYLEMI, Intent.ACTION_VIEW_PERMISSION_USAGE -> Rota.SAGLIK_IZIN
+        else -> intent.getStringExtra(EXTRA_HEDEF_ROTA)
+    }
 
     companion object {
         /** Nudge overlay'in "Nefes egzersizi yapmak ister misin? → Evet" derin bağlantısı. */
         const val EXTRA_HEDEF_ROTA = "hedef_rota"
+
+        /**
+         * Android 13 ve altında Health Connect'in gerekçe eylemi.
+         *
+         * Sabit `androidx.health.connect.client` içinde **açığa çıkarılmamış**;
+         * dize olarak yazmak zorunlu. Android 14+ tarafı
+         * `Intent.ACTION_VIEW_PERMISSION_USAGE` ile geliyor ve manifest'teki
+         * `activity-alias` üzerinden bize ulaşıyor.
+         */
+        const val GEREKCE_EYLEMI = "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
     }
 }
