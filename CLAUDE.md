@@ -154,7 +154,7 @@ kullanıma ve gerçek hayat aktivitelerine yönlendiren Android uygulaması.
 | Widget | Glance | |
 | Grafik | **Custom Compose Canvas** | 3. parti chart lib YOK — hazır kütüphaneler kendi paletiyle gelir |
 | İkon | `material-icons-extended` | özgün illüstrasyonlar Stitch'ten PNG/vektör |
-| Ağ | Retrofit | Faz 2 |
+| Ağ | Retrofit 3 + OkHttp + kotlinx-serialization | `data/uzak/` — yazıldı (31 Tem). Retrofit 3 kendi converter'ını getirmiyor, köprü ayrı bağımlılık |
 | Backend | FastAPI (Python) | ASP.NET DEĞİL — ML aynı dilde |
 | Sunucu DB | PostgreSQL | Redis MVP'de yok |
 | ML (faz 3) | scikit-learn, XGBoost, SHAP | TensorFlow/PyTorch yok |
@@ -192,14 +192,18 @@ core-risk/…/risk/
 
 app/…/yesiliz/
 ├─ MainActivity.kt · YesilizApp.kt
-├─ di/                    Hilt (henüz yok)
+├─ di/                    Hilt — VeriModulu · AgModulu · DepoModulu
 ├─ data/
 │  ├─ kullanim/           UsageStatsManager sarmalayıcı
 │  ├─ saglik/             Health Connect
-│  ├─ yerel/              Room: entity/ dao/ YesilizDb.kt Donusturucu.kt
-│  ├─ uzak/               Retrofit (Faz 2)
+│  ├─ yerel/              Room: entity/ dao/ YesilizDb.kt Donusturucu.kt Gecisler.kt
+│  ├─ uzak/               Retrofit — YesilizApi · Dto · JetonDeposu
 │  ├─ tercih/             DataStore
-│  └─ depo/               Repository — UI buradan okur
+│  └─ depo/               Repository — UI buradan okur.
+│                         Yerel: Kategori · Kullanim · Risk · Puan · Bildirim ·
+│                         Bilgi · Beyan · GecmisVeri · DisaAktar · VeriYonetimi
+│                         Uzak: RetrofitHesap · RetrofitLig · Senkron · Ebeveyn
+│                         Sarmalayıcı: YedekliLigDeposu · YedekliHesapDeposu
 ├─ domain/
 │  ├─ model/              UI'ın gördüğü modeller
 │  ├─ kategori/           Kategori · KategoriEsleyici · KategoriTablosu
@@ -248,12 +252,45 @@ UsageStatsManager / Health Connect
 
 **Kural:** Composable asla `data/`'ya erişmez. ViewModel asla Context tutmaz.
 
-### Mock repository deseni
+### Mock repository deseni — desen tuttu
 
-`domain/`'de `LigDeposu` / `OdulDeposu` **arayüzleri** var. MVP'de
-`YerelSahteLigDeposu` sahte veriyle uyguluyor; Faz 2'de `RetrofitLigDeposu`
-aynı arayüzü backend'e bağlıyor. ViewModel ve Composable **hiç değişmiyor** —
-sadece DI modülü. Backend yetişmese bile 4 nav sekmesi demo günü çalışır.
+`domain/`'de `LigDeposu` / `HesapDeposu` **arayüzleri** var. MVP'de
+`YerelSahteLigDeposu` / `YerelSahteHesapDeposu` sahte veriyle uyguluyordu;
+backend gelince `RetrofitLigDeposu` / `RetrofitHesapDeposu` aynı arayüzü
+sunucuya bağladı. **Vaat edilen tam olarak gerçekleşti:** yalnızca
+`di/DepoModulu.kt` değişti, hiçbir ViewModel veya Composable'a dokunulmadı.
+
+Bugün bağlanan şey ikisinden biri değil, **sarmalayıcı**: `YedekliLigDeposu`
+ve `YedekliHesapDeposu` önce Retrofit'i deniyor, **ağ hatasında** yerel sahteye
+düşüyor (§12 K18). İş hatası (401 yanlış şifre, 409 e-posta kayıtlı) olduğu
+gibi geçiyor — yoksa yanlış şifreyle "giriş yaptın" demiş olurduk.
+
+### Sunucu ile senkron
+
+FastAPI backend (`backend/`) dört alanı karşılıyor — uç listesi
+`data/uzak/YesilizApi.kt`'de:
+
+| Alan | Uçlar |
+|---|---|
+| Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · `auth/sifre-sifirla` |
+| Özet | `POST ozet` · `GET ozet` · `POST heartbeat` |
+| Lig | `GET lig` · `POST lig/katil` · `GET arkadas` · `GET arkadas/kod` · `POST arkadas/davet` |
+| Ebeveyn | `POST ebeveyn/kod` · `POST ebeveyn/eslestir` · `GET ebeveyn/ozet` |
+
+İki kural pazarlık edilemez:
+
+- **Sunucu skor hesaplamıyor** (§12 K17). Cihaz hesaplıyor, sunucu saklıyor ve
+  ebeveyn/lig için okuyor. İkinci bir motor `core-risk`'in referans Python ile
+  birebir doğrulanmışlığını bozardı.
+- **Senkron rıza kapısına bağlı** (§12 K19). "Yeşilay ile paylaşım" kapalıysa
+  ağ çağrısı hiç yapılmıyor; misafir kullanıcı da senkronize edilmiyor.
+
+Ham olay sunucuya **gitmiyor** — giden şey günlük özet + skor (§4).
+
+Kimlik doğrulama: parola `argon2id` ile özetleniyor (`backend/app/guvenlik.py`),
+istemciye JWT erişim + yenileme jetonu dönüyor. Jetonlar `JetonDeposu`'nda,
+`Tercihler`'den **ayrı** bir DataStore'da — "verilerimi sil" akışı jetonları
+tek başına temizleyebilsin diye.
 
 ### Veritabanı
 
@@ -265,9 +302,15 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Faz 2'de eklenecek tablolar:** `LigUyelikEntity` (haftaBaslangic, grupId,
-seviye, haftalikPuan, siraliListe) ve `EbeveynBaglantiEntity` (cocukKullaniciId,
-onayTarihi). MVP'de gerekmiyor — `YerelSahteLigDeposu` sahte veriyle çalışıyor.
+**Şu an 12 entity · 12 DAO, şema sürümü 2.** `GECIS_1_2` (`Gecisler.kt`)
+`bildirim` ve `arkadas` tablolarını ekliyor.
+
+Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
+ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
+durumu — haftalık grup ataması ve eşleştirme kodunun geçerliliği cihazda
+doğrulanamaz. Cihaz tarafında yalnızca `arkadas` tablosu var; gerisi
+`RetrofitLigDeposu` / `EbeveynDeposu` üzerinden sunucudan geliyor, sunucuya
+ulaşılamazsa `YerelSahteLigDeposu` devreye giriyor.
 
 **Room'a girmeyenler → DataStore.** Tekil tercih değerleri tablo istemez:
 
@@ -408,7 +451,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
-| `app/data/yerel/` | 7 entity · 7 DAO · `YesilizDb` | **8 emülatör testi** |
+| `app/data/yerel/` | 12 entity · 12 DAO · `YesilizDb` (sürüm 2) · `Gecisler.kt` — destructive fallback **yok** | **8 + 1 emülatör testi** (`GecisTest` gerçek 1→2 geçişini koşuyor) |
 | `app/data/kullanim/` | `OturumCikar` (saf) · `KullanimOkuyucu` · `KullanimIzni` | **13 birim + 7 emülatör testi** |
 | `app/data/depo/` | `KategoriDeposu` · `KullanimDeposu` (sistem → kategori → Room → özet) | seed + override korunuyor |
 | Dokümantasyon | `DB.md` · `docs/stitch-ekranlar.md` · spike raporu | üreticileri var |
@@ -439,15 +482,25 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
+| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **48 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `app/data/uzak/` | `YesilizApi` (16 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor, 401'de sessiz yenileme) | uçtan uca emülatörde doğrulandı |
+| `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
+| `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
 
 **Toplam 221 test** (147 Android birim + 26 emülatör + 48 backend pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
 
-**Hâlâ bilinçli sahte olanlar:** lig sıralaması ve lig adı (§12 K7, backend
-Faz 2), önerilen kişiler listesi (rehber okunmuyor — §12 K14). Kullanıcı adı
-artık gerçek: hesap ekranından ya da misafir modunda sabitten geliyor.
+**Hâlâ bilinçli sahte olanlar:** önerilen kişiler listesi (rehber okunmuyor —
+§12 K14) ve **backend kapalıyken** lig sıralaması/lig adı (§12 K18 sarmalayıcısı
+`YerelSahteLigDeposu`'na düşüyor). Sunucu ayaktayken lig, hesap, özet senkronu
+ve ebeveyn eşleştirmesi gerçek. Kullanıcı adı da gerçek: hesap ekranından ya da
+misafir modunda sabitten geliyor.
+
+> **Demo günü uyarısı:** lig ekranındaki veri sunucu ayakta mı diye bakmadan
+> yorumlanmamalı — sahte veri sessizce devreye giriyor, bu bilinçli bir tasarım
+> kararı (§12 K18) ama demo sırasında "backend çalışıyor" diye gösterilemez.
 
 **Demo tohumu:** `app/src/debug/` kaynak setinde — release derlemesine
 **giremiyor**. Profil → Geliştirici → "Örnek veri oluştur". Tohum yalnızca
@@ -463,12 +516,21 @@ artık gerçek: hesap ekranından ya da misafir modunda sabitten geliyor.
 | ~~4~~ | ~~Health Connect izin akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/saglik/`, ekran 02'nin yerleşimi uyarlandı; HC kurulu değilse Play Store, izin yoksa `PermissionController` sözleşmesi. Profil › Verilerim'den erişiliyor |
 | ~~5~~ | ~~Kurulumda geçmiş veri~~ | **BİTTİ** (30 Tem) — `GecmisVeriDeposu`, `KullanimOkuyucu.gunlukToplamSureler`, `GecmisGunSayaci`; `IzinEkran` artık gerçekten izin istiyor (`MainActivity.onResume` tetikliyor) |
 | ~~6~~ | ~~Widget~~ | **BİTTİ** (31 Tem) — `app/widget/`, Glance 1.1.1. Tasarım 39 (etkileşimli Bugünün sorusu) ve 40 (ekran süresi). Tasarım 41 (kilit ekranı) **uygulanmadı**, §12 K13 |
-| ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard, mock veri |
+| ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard. Kod artık **sunucuda** doğrulanıyor (`backend/app/uclar/ebeveyn.py`): var mı, 10 dk süresi dolmuş mu, kullanılmış mı, karşı rolde mi. Sunucu yoksa eski 6-hane kontrolüne düşüyor, ekran `cevrimdisiMi` ile bunu söylüyor |
 | ~~7b~~ | ~~YEDAM onayı (köprü/rıza ekranı)~~ | **BİTTİ** (31 Tem) — `ui/ekran/yedam/`, `stitch/yedam_onay/` yerleşimi gerçek tokenlarla. Yalnızca `Bant.COK` + kullanıcı onayı. Ekran 27 "YEDAM hakkında" ayrıca Profil › Destek'e alt sayfa olarak eklendi |
-| ~~8~~ | ~~Hesap ekranları (giriş/kayıt)~~ | **BİTTİ** (31 Tem) — `ui/ekran/hesap/` (14, 15, 38) + `HesapDeposu` arayüzü. Şifre hiçbir yere yazılmıyor, backend Faz 2 |
+| ~~8~~ | ~~Hesap ekranları (giriş/kayıt)~~ | **BİTTİ** (31 Tem) — `ui/ekran/hesap/` (14, 15, 38) + `HesapDeposu` arayüzü. Şifre cihazda saklanmıyor (§12 K16); doğrulama artık sunucuda, JWT `JetonDeposu`'nda |
 | ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında, YEDAM hakkında, Bildirim saatleri |
 | ~~10~~ | ~~Aktif yürüyüş~~ | **BİTTİ** (31 Tem) — `ui/ekran/yuruyus/` + saf `YuruyusHesapla`. Foreground service **yok**, ekran açıkken sayıyor (§12 K15) |
-| — | *Faz 2* | FastAPI backend · gerçek lig · uzman paneli · gerçek kimlik doğrulama |
+| ~~11~~ | ~~FastAPI backend + ağ katmanı~~ | **BİTTİ** (31 Tem) — `backend/` (hesap, özet senkronu, lig, ebeveyn · 48 pytest) + `data/uzak/` Retrofit + `Yedekli*Deposu` offline-first sarmalayıcı. Gerçek Room migration da bu turda geldi |
+
+**Sıradaki gerçek işler:**
+
+| # | İş | Not |
+|---|---|---|
+| 12 | Gerçek telefonda uçtan uca doğrulama | Emülatörde `d_efektif = 0`, `alpha = 1.0`, risk motoru hep `S≈0` üretiyor (§10). Döngünün gerçekten çalıştığı **hiç görülmedi** — rapor öncesi en kritik iş |
+| 13 | Backend dağıtımı | Şu an yalnızca `docker compose` ile yerelde, `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` sabit. Gerçek telefon bu adrese ulaşamaz — dağıtım + HTTPS alan adı gerekiyor. `ag_guvenligi.xml` zaten şifresiz trafiği yalnızca `10.0.2.2` için açıyor, yani gerçek adres HTTPS olmak **zorunda** |
+| 14 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
+| — | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
 **Tasarımı eksik ekran kalmadı.** 30 Tem ikinci ek teslimi (8 ekran +
 3 widget, `docs/tasarim-referans.md §2 / 31–41`) son boşlukları kapattı;
@@ -506,7 +568,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K4 | Font | **Inter** | Averta ticari lisans istiyor; lisans gelirse `Tipografi.kt` tek dosyadan değişir |
 | K5 | Grafik kütüphanesi | Custom Compose Canvas | yalnızca 3 grafik türü var, hepsi tek renk skalasında, pan/zoom istenmiyor. Vico/MPAndroidChart kendi paletiyle gelir — "kırmızı yok" kuralına sürekli karşı durmak gerekirdi. 4 Canvas bileşeni yazmak daha az risk |
 | K6 | İkon seti | Material Symbols + Stitch illüstrasyonları | işlevsel ikonlar hazır setten; ağaç/nefes/YEDAM gibi özgün görseller Stitch'ten |
-| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni | backend §11'de en sonda; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır |
+| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni | backend o sırada §11'de en sondaydı; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır. **Sonuç (31 Tem):** backend gelince yalnızca `di/DepoModulu.kt` değişti, tek bir ViewModel veya Composable'a dokunulmadı — desen vaadini tuttu |
 | K8 | Kategori kaynağı | LMU veri seti + referans tablo + Türkiye | LMU (doi:10.5334/jopd.59) 3.091 uygulama veriyor ama Almanya örneklemi; referans tablo Snapchat/TikTok gibi kritik çakışmaları düzeltiyor |
 | K9 | `sistem` kategorisi | Risk hesabına girmez | LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
 | K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** | Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
@@ -518,13 +580,13 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor | İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
 | K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor |
 | K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor | `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor |
-| K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi ve sunucu Faz 2'de. Giriş ekranı bunu kullanıcıya da söylüyor |
+| K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
 
 ### Açık
 
 | # | Konu | Ne zaman kapanır |
 |---|---|---|
-| A1 | Kategori ağırlıkları ve örüntü katsayıları | Faz 2, çoklu regresyon |
+| A1 | Kategori ağırlıkları ve örüntü katsayıları | Faz 3 (ML), çoklu regresyon — pilot verisi gerekiyor |
 | A2 | `S_REF = 300` kalibrasyonu | pilot verisi |
 | A3 | Örüntü ölçüm tanımları (`oturum` `sabah` `uyku_oncesi` `yer_degis`) | pilot — P'nin %59'unu belirliyorlar, `docs/spec-risk.md §4.2` |
 | A4 | Ödül finansmanı / sponsorluk | teknik değil |
