@@ -68,9 +68,17 @@ class GunlukOzetWorker @AssistedInject constructor(
             .islenmisGunler(bugun.minusDays(TELAFI_GUN), bugun)
             .toSet()
 
+        // Kurulumdan ÖNCEsi telafi edilmiyor. UsageStats kurulumdan önceki
+        // günler için de veri verebiliyor ama uygulama o günlerde kullanıcıyı
+        // izlemiyordu; o günleri işlemek geçmişi geriye doğru uydurmak olurdu.
+        // Telafinin asıl işi, uygulama birkaç gün açılmadığında oluşan
+        // BOŞLUKLARI kapatmak (`debug.md` K-4).
+        val kurulum = tercihler.anlik().ilkKurulumTarihi
+
         return runCatching {
             (TELAFI_GUN downTo 0).forEach { geriGun ->
                 val gun = bugun.minusDays(geriGun)
+                if (kurulum != null && gun < kurulum) return@forEach
                 // Bugün hep yeniden; geçmiş günler yalnızca eksikse.
                 if (gun != bugun && gun in islenmis) return@forEach
 

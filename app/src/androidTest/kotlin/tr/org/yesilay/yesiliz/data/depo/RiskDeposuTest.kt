@@ -59,12 +59,16 @@ class RiskDeposuTest {
         socialDk = sosyalDk,
         gece = 0.3,
         geceKullanimDk = sosyalDk * 0.3,
+        // Ölçülmüş gün: `alpha`'nın `d` girdisi yalnızca bu bayraklı
+        // satırları sayıyor (`debug.md` K-5).
+        olayVarMi = true,
     )
 
     private fun hafifGun(tarih: LocalDate) = GunlukOzetEntity(
         tarih = tarih,
         socialDk = 20.0,
         productivityDk = 30.0,
+        olayVarMi = true,
     )
 
     @Test

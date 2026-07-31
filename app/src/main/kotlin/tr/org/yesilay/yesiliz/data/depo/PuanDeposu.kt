@@ -90,14 +90,24 @@ class PuanDeposu @Inject constructor(
                 it.productivityDk + it.educationDk + it.healthDk + it.otherDk
         } ?: 0.0
 
+        // Ölçüm YOKSA hedef "tutturuldu" sayılmıyor: veri olmadan ödül
+        // vermek, izni vermemiş kullanıcıya avantaj sağlardı.
+        //
+        // Buradaki koşul `ozet != null` idi ve tam da engellemek istediği
+        // şeyi kaçırıyordu: worker'ın telafi ettiği boş günlere de sıfır
+        // dolu bir satır yazılıyor, `0.0 <= hedef` ve `0.0 < gece eşiği`
+        // ikisi de doğru çıkıyordu. Temiz kurulumdan 10 dakika sonra
+        // kullanıcı tek bir görev yapmadan "8 gün seri, 404 puan" görüyordu
+        // (`debug.md` K-4). Doğru ölçüt satırın varlığı değil, o gün
+        // gerçekten kullanım ölçülmüş olması.
+        val olcumVar = ozet != null && ozet.olayVarMi
+
         val puan = PuanHesapla.gunlukPuan(
             gorevPuani = gorevDao.gununPuani(tarih),
             sporDk = ozet?.sporDk ?: 0.0,
             adim = ozet?.adim ?: 0.0,
-            // Özet yoksa hedef "tutturuldu" sayılmıyor: veri olmadan ödül
-            // vermek, izni vermemiş kullanıcıya avantaj sağlardı.
-            hedefTutturuldu = ozet != null && toplamEkranDk <= hedefDk,
-            geceTemiz = ozet != null && ozet.geceKullanimDk < PuanSabitleri.GECE_ESIK_DK,
+            hedefTutturuldu = olcumVar && toplamEkranDk <= hedefDk,
+            geceTemiz = olcumVar && ozet.geceKullanimDk < PuanSabitleri.GECE_ESIK_DK,
             seriGun = seri,
         )
 

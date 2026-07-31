@@ -85,6 +85,51 @@ class GecisTest {
         }
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun gecis2den3eSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+        yardimci.runMigrationsAndValidate(TEST_DB, 3, true, GECIS_1_2, GECIS_2_3)
+    }
+
+    /**
+     * `olayVarMi` geriye dönük doldurma.
+     *
+     * Var olan satırlar `0` ile başlayıp ölçülmüş olanlar `1`'e çekiliyor.
+     * Ölçüt `acilisSayisi > 0`: `sistem` kategorisi risk hesabına girmediği
+     * için (CLAUDE.md §12 K9) gerçekten kullanılmış bir günün kategori
+     * toplamı sıfır olabiliyor, ama açılış sayılıyor.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis2den3eOlculmusGunleriIsaretliyor() {
+        yardimci.createDatabase(TEST_DB, 2).apply {
+            execSQL(satir("2026-07-29", acilis = 45))
+            execSQL(satir("2026-07-30", acilis = 0))
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 3, true, GECIS_1_2, GECIS_2_3)
+
+        db.query("SELECT tarih, olayVarMi FROM gunluk_ozet ORDER BY tarih").use { imlec ->
+            assertTrue(imlec.moveToFirst())
+            assertEquals("2026-07-29", imlec.getString(0))
+            assertEquals("ölçülmüş gün işaretlenmemiş", 1, imlec.getInt(1))
+
+            assertTrue(imlec.moveToNext())
+            assertEquals("2026-07-30", imlec.getString(0))
+            assertEquals("boş telafi günü işaretlenmiş", 0, imlec.getInt(1))
+        }
+    }
+
+    private fun satir(tarih: String, acilis: Int) =
+        "INSERT INTO gunluk_ozet (tarih, socialDk, entertainmentDk, gamesDk, " +
+            "communicationDk, productivityDk, educationDk, healthDk, otherDk, " +
+            "gece, oturum, acilis, sabah, uykuOncesi, yerDegis, adim, sporDk, " +
+            "bTuketim, bIslevsel, P, A, D, S, geceKullanimDk, acilisSayisi) " +
+            "VALUES (\'$tarih\', 0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0,0, " +
+            "0,0,1,0,1,0, 0,$acilis)"
+
     private companion object {
         const val TEST_DB = "gecis_testi.db"
     }

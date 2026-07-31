@@ -55,7 +55,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         BildirimEntity::class,
         ArkadasEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)

@@ -148,7 +148,7 @@ hâlde. Y-1 düzeltilince kendiliğinden çözülür, ama içerik ayrıca kaydı
 
 ---
 
-### K-4 · Yeni kullanıcı hiçbir şey yapmadan 8 günlük seri ve ~400 puan kazanıyor `[tarama]`
+### ✅ K-4 · Yeni kullanıcı hiçbir şey yapmadan 8 günlük seri ve ~400 puan kazanıyor `[tarama]`
 
 **`data/depo/KullanimDeposu.kt` (`gunuIsle`) · `data/depo/PuanDeposu.kt`
 (`gunuYenidenHesapla`) · `arkaplan/GunlukOzetWorker.kt` (`TELAFI_GUN = 7`)**
@@ -180,7 +180,7 @@ sahte `AZ` bandı giriyor.
 
 ---
 
-### K-5 · Sahte geçmiş alpha eğrisini kirletiyor — risk skoru olması gerekenden düşük `[tarama]`
+### ✅ K-5 · Sahte geçmiş alpha eğrisini kirletiyor — risk skoru olması gerekenden düşük `[tarama]`
 
 **`data/depo/RiskDeposu.kt:150` (`dEfektif`)**
 

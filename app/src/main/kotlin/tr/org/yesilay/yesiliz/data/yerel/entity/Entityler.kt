@@ -85,6 +85,21 @@ data class GunlukOzetEntity(
     // --- ham sayaçlar (güvenlik tabanı ve istatistik ekranı için) ---
     val geceKullanimDk: Double = 0.0,
     val acilisSayisi: Int = 0,
+
+    /**
+     * O gün **gerçekten ölçülmüş kullanım olayı** var mıydı.
+     *
+     * Satırın varlığı veri olduğu anlamına gelmiyor: gecelik worker son 7
+     * günü telafi ederken hiç oturum bulamadığı günlere de sıfır dolu bir
+     * satır yazıyor. Bu satırlar "veri var" sayıldığı için yeni kullanıcı
+     * hiçbir şey yapmadan 8 günlük seri ve ~400 puan kazanıyor, üstelik
+     * `alpha` eğrisi 8 günlük geçmiş sanıp anketin ağırlığını yarıya
+     * indiriyordu (`debug.md` K-4, K-5).
+     *
+     * Satır yine yazılıyor — telefonsuz geçen gerçek bir gün de kayıt;
+     * ayıran şey bu bayrak.
+     */
+    val olayVarMi: Boolean = false,
 )
 
 /**

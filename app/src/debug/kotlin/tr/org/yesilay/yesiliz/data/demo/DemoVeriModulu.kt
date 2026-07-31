@@ -114,6 +114,9 @@ private class DebugDemoVeri(
             sporDk = if (rastgele.nextInt(3) == 0) rastgele.nextDouble(15.0, 40.0) else 0.0,
             geceKullanimDk = geceOran * toplam,
             acilisSayisi = rastgele.nextInt(40, 120),
+            // Tohum gerçek ölçümü taklit ediyor; bayrak olmadan puan, seri
+            // ve alpha bu günleri "veri yok" sayardı.
+            olayVarMi = true,
         )
 
         return OrnekGun(
