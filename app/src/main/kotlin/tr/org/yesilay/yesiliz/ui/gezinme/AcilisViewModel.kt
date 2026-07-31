@@ -58,10 +58,7 @@ class AcilisViewModel @Inject constructor(
         )
 
     init {
-        // Gecelik iş + hemen bir tazeleme. İzin yoksa worker kendi içinde
-        // no-op'a düşüyor, burada kontrol etmeye gerek yok.
         isPlanlayici.gecelikPlanla()
-        isPlanlayici.simdiTazele()
 
         viewModelScope.launch {
             kategoriDeposu.seedEt()
@@ -69,6 +66,15 @@ class AcilisViewModel @Inject constructor(
             // `GecmisVeriDeposu.hesaplaGerekirse` tarafından izin onaylandıktan
             // sonra ayrıca yazılıyor (`Tercihler.gecmisGunuKaydet`).
             tercihler.kurulumuIsaretle(LocalDate.now(saat), gecmisGun = 0)
+
+            // Tazeleme kurulum tarihi YAZILDIKTAN SONRA. `simdiTazele`
+            // burada `init`'in başındaydı ve worker `ilkKurulumTarihi`'ni
+            // henüz `null` görüyordu: kurulumdan önceki günleri eleyen
+            // filtre ilk koşuda hiç uygulanmıyor, telefonun eski kullanım
+            // istatistiklerinden 7 günlük satır yazılıyordu. Temiz
+            // kurulumda kullanıcı hâlâ kazanmadığı bir seri ve puan
+            // görüyordu (`debug.md` K-4'ün kalıntısı).
+            isPlanlayici.simdiTazele()
         }
     }
 }
