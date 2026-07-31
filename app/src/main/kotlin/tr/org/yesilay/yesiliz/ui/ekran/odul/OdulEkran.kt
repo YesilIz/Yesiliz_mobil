@@ -29,9 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
@@ -87,7 +86,6 @@ fun OdulEkran(
     var sertifikaOdulu by remember { mutableStateOf<Odul?>(null) }
     var gecmisAcik by remember { mutableStateOf(false) }
     val baglam = androidx.compose.ui.platform.LocalContext.current
-    val sayfaDurumu = rememberModalBottomSheetState()
 
     YesilBaslikliEkran(baslik = "Ödüller", onGeri = onGeri, modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -115,14 +113,7 @@ fun OdulEkran(
     }
 
     acikOdul?.let { odul ->
-        ModalBottomSheet(
-            onDismissRequest = { acikOdul = null },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { acikOdul = null }) {
             OdulDetayi(
                 odul = odul,
                 puan = durum.puan,
@@ -136,14 +127,7 @@ fun OdulEkran(
     }
 
     sertifikaOdulu?.let { odul ->
-        ModalBottomSheet(
-            onDismissRequest = { sertifikaOdulu = null },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { sertifikaOdulu = null }) {
             SertifikaIcerik(
                 odulAdi = odul.ad,
                 kullaniciAdi = durum.isim,
@@ -170,14 +154,7 @@ fun OdulEkran(
     }
 
     if (gecmisAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { gecmisAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { gecmisAcik = false }) {
             PuanGecmisi(kayitlar = durum.gecmis, onKapat = { gecmisAcik = false })
         }
     }

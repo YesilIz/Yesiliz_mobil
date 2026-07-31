@@ -39,11 +39,9 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +61,7 @@ import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
@@ -105,7 +104,6 @@ fun AnaEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikGorev by remember { mutableStateOf<Gorev?>(null) }
-    val sayfaDurumu = rememberModalBottomSheetState()
 
     Column(
         modifier = modifier
@@ -175,14 +173,7 @@ fun AnaEkran(
 
     acikGorev?.let { gorev ->
         val ozet = durum.gorevler.firstOrNull { it.id == gorev.id }
-        ModalBottomSheet(
-            onDismissRequest = { acikGorev = null },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { acikGorev = null }) {
             GorevDetayi(
                 gorev = gorev,
                 ikon = ozet?.ikon ?: Icons.Filled.TrackChanges,

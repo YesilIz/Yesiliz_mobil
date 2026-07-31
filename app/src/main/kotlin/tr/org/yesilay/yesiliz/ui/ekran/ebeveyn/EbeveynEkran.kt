@@ -28,9 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +42,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
@@ -85,7 +84,6 @@ fun EbeveynEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var yedamAcik by remember { mutableStateOf(false) }
-    val sayfaDurumu = rememberModalBottomSheetState()
 
     YesilBaslikliEkran(baslik = "Ebeveyn paneli", onGeri = onGeri, modifier = modifier) {
         if (durum.eslesmisMi) {
@@ -94,12 +92,12 @@ fun EbeveynEkran(
     }
 
     if (!durum.eslesmisMi) {
-        ModalBottomSheet(
-            onDismissRequest = {},
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        // Sihirbaz kapatılınca EKRANDAN çıkılıyor. Boş bir `onKapat` ile
+        // sayfa gizleniyor ama `!eslesmisMi` hâlâ true olduğu için
+        // bileşimde kalıyordu: ekran boşalıyor, görünmez perde dokunuşları
+        // ve geri tuşunu yutuyor, uygulamayı kapatıp açmak kurtarmıyordu.
+        // Yalnızca `force-stop` çıkarıyordu (`debug.md` K-1).
+        AltSayfa(onKapat = onGeri) {
             when (durum.adim) {
                 EslestirmeAdimi.ROL_SECIMI -> RolSecimiAdimi(
                     secilenRol = durum.secilenRol,
@@ -123,14 +121,7 @@ fun EbeveynEkran(
     }
 
     if (yedamAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yedamAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkinda(onKapat = { yedamAcik = false })
         }
     }
