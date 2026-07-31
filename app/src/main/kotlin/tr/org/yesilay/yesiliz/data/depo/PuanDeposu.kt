@@ -7,6 +7,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
+import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.domain.puan.PuanHesapla
 import tr.org.yesilay.yesiliz.domain.puan.PuanSabitleri
@@ -49,9 +50,15 @@ class PuanDeposu @Inject constructor(
      * Günlük limit aşılırsa **sessizce yok sayılır** — hata göstermek
      * "yanlış yaptın" mesajı verir; görev zaten tamamlanmış görünüyor.
      *
+     * [DogrulamaTuru.OTOMATIK] görevler buradan **yazılamaz**: puanlarını
+     * `gunuYenidenHesapla` zaten günlük özetten veriyor. İkinci kez
+     * yazılmaları aynı gün için çift sayım demekti (`debug.md` K-9). UI
+     * artık o butonu göstermiyor; bu kontrol ikinci savunma hattı.
+     *
      * @return kayıt yapıldıysa true
      */
     suspend fun gorevTamamla(gorev: Gorev, tarih: LocalDate): Boolean {
+        if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) return false
         if (gorevDao.gununSayisi(tarih, gorev.id) >= gorev.gunlukLimit) return false
 
         gorevDao.ekle(
@@ -106,8 +113,10 @@ class PuanDeposu @Inject constructor(
             gorevPuani = gorevDao.gununPuani(tarih),
             sporDk = ozet?.sporDk ?: 0.0,
             adim = ozet?.adim ?: 0.0,
-            hedefTutturuldu = olcumVar && toplamEkranDk <= hedefDk,
-            geceTemiz = olcumVar && ozet.geceKullanimDk < PuanSabitleri.GECE_ESIK_DK,
+            // Oransal (`debug.md` İ-4): hedefin altındaysan tam puan,
+            // aştıkça doğrusal iniyor, iki katında sıfırlanıyor.
+            hedefOrani = if (olcumVar) PuanHesapla.hedefeYakinlik(toplamEkranDk, hedefDk) else 0.0,
+            geceOrani = if (olcumVar) PuanHesapla.geceTemizligi(ozet.geceKullanimDk) else 0.0,
             seriGun = seri,
         )
 

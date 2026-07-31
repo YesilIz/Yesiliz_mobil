@@ -57,9 +57,12 @@ object PuanSabitleri {
  * `spec-puan.md §7.5`:
  * ```
  * Π_ham = 3 × spor_dk + min(40, adım/200) + görev puanları
- *       + 25 (hedef tutturulduysa) + 10 (gece temizse)
+ *       + 25 × hedef_oranı + 10 × gece_oranı
  * Π     = min(150, Π_ham × seri_çarpanı)
  * ```
+ *
+ * Hedef ve gece terimleri **oransal** (`debug.md` İ-4): hedefin bir dakika
+ * üstünde kalmak 25 puanın tamamını götürmüyor artık.
  *
  * **Ceza yolu yok.** Hiçbir girdi kombinasyonu negatif puan üretemez
  * (CLAUDE.md §4): tüm terimler toplanıyor, çıkarma yok, tavanlar `min` ile.
@@ -70,22 +73,22 @@ object PuanHesapla {
      * @param gorevPuani o gün tamamlanan görevlerden gelen ham puan
      * @param sporDk doğrulanmış egzersiz dakikası
      * @param adim o günkü adım
-     * @param hedefTutturuldu ekran süresi günlük hedefin altında mı
-     * @param geceTemiz 00–06 arası kullanım [PuanSabitleri.GECE_ESIK_DK] altında mı
+     * @param hedefOrani hedefe ne kadar yaklaşıldı, 0..1 — [hedefeYakinlik]
+     * @param geceOrani gecenin ne kadar temiz olduğu, 0..1 — [geceTemizligi]
      * @param seriGun kaçıncı ardışık aktif gün (çarpan bundan)
      */
     fun gunlukPuan(
         gorevPuani: Int,
         sporDk: Double,
         adim: Double,
-        hedefTutturuldu: Boolean,
-        geceTemiz: Boolean,
+        hedefOrani: Double,
+        geceOrani: Double,
         seriGun: Int,
     ): GunlukPuan {
         val spor = min(PuanSabitleri.SPOR_TAVAN, PuanSabitleri.SPOR_PUANI_DK * sporDk)
         val adimPuani = min(PuanSabitleri.ADIM_TAVAN, adim / PuanSabitleri.ADIM_BOLEN)
-        val hedef = if (hedefTutturuldu) PuanSabitleri.HEDEF_PUANI else 0.0
-        val gece = if (geceTemiz) PuanSabitleri.GECE_PUANI else 0.0
+        val hedef = PuanSabitleri.HEDEF_PUANI * hedefOrani.coerceIn(0.0, 1.0)
+        val gece = PuanSabitleri.GECE_PUANI * geceOrani.coerceIn(0.0, 1.0)
 
         val ham = gorevPuani + spor + adimPuani + hedef + gece
         val carpan = seriCarpani(seriGun)
@@ -96,6 +99,35 @@ object PuanHesapla {
             carpan = carpan,
             seriGun = seriGun,
         )
+    }
+
+    /**
+     * Hedefe yakınlık, 0..1.
+     *
+     * Eskiden ikiliydi: hedefin bir dakika üstünde kalmak 25 puanın
+     * tamamını götürüyordu. Hedefini 300 dakikadan 130'a indiren bir
+     * kullanıcı, hedefi 120 olduğu için hiçbir şey kazanmıyor ve
+     * uygulamanın çabayı görmediğini düşünüyordu.
+     *
+     * Hedefin altında ya da üstünde tam puan; aşıldıkça doğrusal iniyor ve
+     * hedefin **iki katında** sıfırlanıyor. Ceza yok — en kötü ihtimalle
+     * bu terim 0 (CLAUDE.md §4 "yalnızca kazanç").
+     */
+    fun hedefeYakinlik(toplamEkranDk: Double, hedefDk: Int): Double {
+        if (hedefDk <= 0) return 0.0
+        return ((2.0 * hedefDk - toplamEkranDk) / hedefDk).coerceIn(0.0, 1.0)
+    }
+
+    /**
+     * Gecenin temizliği, 0..1.
+     *
+     * [hedefeYakinlik] ile aynı biçim: eşiğin altında tam puan, eşiğin iki
+     * katında sıfır. Keskin bir eşik, 15 dakikayı 16 dakika yapan gecede
+     * puanın tamamını götürüyordu.
+     */
+    fun geceTemizligi(geceKullanimDk: Double): Double {
+        val esik = PuanSabitleri.GECE_ESIK_DK
+        return ((2.0 * esik - geceKullanimDk) / esik).coerceIn(0.0, 1.0)
     }
 
     /** `min(2.0, 1 + 0.1 × seriGun)` — `spec-puan.md §7.4`. */

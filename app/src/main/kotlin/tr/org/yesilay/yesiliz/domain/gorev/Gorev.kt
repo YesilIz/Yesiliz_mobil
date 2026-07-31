@@ -9,9 +9,33 @@ import tr.org.yesilay.yesiliz.risk.Bant
  * istenmiyor. Bu bilinçli: kanıt istemek suçluluk üretir ve `spec-puan.md`
  * "durumu değil çabayı ödüllendir" ilkesine aykırı. Anti-gaming günlük
  * tavanla (`PuanSabitleri.GUNLUK_TAVAN`) sağlanıyor, şüpheyle değil.
+ *
+ * ## Niçin üç değer
+ *
+ * Eskiden yalnızca OTOMATIK ve BEYAN vardı ve ikisi arasına sıkışan
+ * görevler yanlış tarafa düşüyordu. Ana ekranın görev detayı `when`
+ * bloğunda NEFES ve YURUYUS dışındaki her şey `else` dalına, yani
+ * "Tamamlandı olarak işaretle" butonuna gidiyordu — OTOMATIK ilan edilmiş
+ * GECE_TEMIZ ve TUKETIM_HEDEFI dahil. Bu iki görev **zaten** günlük
+ * özetten puanlanıyor, elle işaretlenince aynı gün için ikinci kez
+ * sayılıyordu. Üstelik kayıt `dogrulamaTuru = "otomatik"` olarak
+ * yazıldığı için denetim izi de yanıltıcıydı (`debug.md` K-9).
+ *
+ * Ayrım artık açık: eylemi uygulama içinde yapılan görevler ([AKTIVITE])
+ * ile ölçümden doğrulananlar ([OTOMATIK]) aynı kutuda değil.
  */
 enum class DogrulamaTuru(val anahtar: String) {
+    /**
+     * Günlük özetten doğrulanıyor — kullanıcı **elle işaretleyemez**.
+     * Puanı [tr.org.yesilay.yesiliz.domain.puan.PuanHesapla.gunlukPuan]
+     * veriyor, görev listesinde yalnızca durumu gösteriliyor.
+     */
     OTOMATIK("otomatik"),
+
+    /** Uygulama içindeki bir aktivite tamamlanınca yazılıyor. */
+    AKTIVITE("aktivite"),
+
+    /** Kullanıcının beyanı; kanıt istenmiyor. */
     BEYAN("beyan"),
 }
 
@@ -35,7 +59,7 @@ enum class Gorev(
         aciklama = "2 dakikalık kutu nefesi",
         puan = 5,
         gunlukLimit = 2,
-        dogrulama = DogrulamaTuru.OTOMATIK,
+        dogrulama = DogrulamaTuru.AKTIVITE,
     ),
     DIJITAL_MOLA(
         id = "dijital_mola",
@@ -43,7 +67,11 @@ enum class Gorev(
         aciklama = "15 dakika ekransız",
         puan = 10,
         gunlukLimit = 2,
-        dogrulama = DogrulamaTuru.OTOMATIK,
+        // OTOMATIK ilan edilmişti ama doğrulayan hiçbir şey yoktu: ekran
+        // kapalı süresini ölçen bir akış hiç yazılmamıştı, kullanıcı elle
+        // işaretliyordu. Beyan olduğunu söylemek, olmadığı bir doğrulamayı
+        // iddia etmekten dürüst.
+        dogrulama = DogrulamaTuru.BEYAN,
     ),
     YURUYUS(
         id = "yuruyus",
@@ -51,7 +79,7 @@ enum class Gorev(
         aciklama = "Ekrandan uzaklaşmanın en kolay yolu",
         puan = 45,
         gunlukLimit = 1,
-        dogrulama = DogrulamaTuru.OTOMATIK,
+        dogrulama = DogrulamaTuru.AKTIVITE,
     ),
     RUH_HALI(
         id = "ruh_hali",

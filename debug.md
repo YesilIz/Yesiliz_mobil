@@ -243,7 +243,7 @@ Veri yokluğu maksimum risk olarak sunuluyor — uygulamanın başka her yerinde
 
 ---
 
-### K-8 · Ebeveyn paneli rastgele 6 haneli sayıyla açılıyor `[kullanıcı]`
+### ✅ K-8 · Ebeveyn paneli rastgele 6 haneli sayıyla açılıyor `[kullanıcı]`
 
 **`data/depo/EbeveynDeposu.kt:48-67`**
 
@@ -265,7 +265,7 @@ Kod yorumu bunu demo sürekliliği için bilinçli yaptığını söylüyor, ama
 
 ---
 
-### K-9 · Otomatik görevler elle işaretlenebiliyor ve çift puan veriyor `[kullanıcı]`
+### ✅ K-9 · Otomatik görevler elle işaretlenebiliyor ve çift puan veriyor `[kullanıcı]`
 
 **`ui/ekran/ana/AnaEkran.kt:655-661` · `domain/gorev/Gorev.kt` · `data/depo/PuanDeposu.kt`**
 
@@ -531,7 +531,7 @@ Bugünkü davranış: `viewModelScope` + `EkranAcikTut`; ekran kapanınca ya da 
 kritik yolunda değil"*). Foreground service + bildirim kanalı + `ACTIVITY_RECOGNITION`
 izni demek. Karar kaydı gerekiyor.
 
-### İ-4 · Hedef görevleri oransal puanlansın
+### ✅ İ-4 · Hedef görevleri oransal puanlansın
 
 K-9 elle işaretlemeyi kaldırdıktan sonraki soru: *"hedefinin %80'ini tutturdun, 25 puanın
 20'sini alıyorsun"* gibi oransal ödül. `PuanHesapla.gunlukPuan` bugün ikili

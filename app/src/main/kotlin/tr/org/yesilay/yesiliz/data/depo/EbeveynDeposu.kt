@@ -16,10 +16,18 @@ import javax.inject.Singleton
  * kullanılmamış olması ve karşı rolde üretilmiş olması aranıyor. Cihazdaki
  * eski hâli yalnızca "6 hane mi" diye bakıyordu.
  *
- * Sunucuya ulaşılamazsa **eski davranışa düşüyor** — demo günü backend
- * kapalıyken ebeveyn akışı yine gösterilebilsin (`Yedekli*Deposu` ile aynı
- * gerekçe). Bu durumda `cevrimdisiMi` true dönüyor ve ekran bunu
- * söyleyebiliyor.
+ * ## Eşleştirme çevrimdışı yedeğe DÜŞMÜYOR
+ *
+ * `Yedekli*Deposu` deseninin (CLAUDE.md §12 K18) bilinçli istisnası.
+ * Eşleştirme, ağ hatasında eşleşmeyi yerel olarak işaretleyip "başarılı"
+ * dönüyordu; gerçek telefonda sunucuya hiç ulaşılamadığı için (O-14) bu
+ * istisna değil **tek** davranış hâline gelmişti ve rastgele herhangi bir
+ * 6 haneli sayı ebeveyn panelini açıyordu (`debug.md` K-8).
+ *
+ * Bu, çocuğun ekran verisine erişim veren bir akış: yanlış şifreyle giriş
+ * yaptırmakla aynı sınıfta. Kod üretimi ([kodUret]) çevrimdışı çalışmaya
+ * devam ediyor — orada yanlış kimliğe erişim verilmiyor, yalnızca ekran
+ * gösteriliyor ve `cevrimdisiMi` ile bunun doğrulanamayacağı söyleniyor.
  */
 @Singleton
 class EbeveynDeposu @Inject constructor(
@@ -59,10 +67,9 @@ class EbeveynDeposu @Inject constructor(
                 else -> "Eşleştirme tamamlanamadı."
             }
         } catch (_: Exception) {
-            // Çevrimdışı: eşleşmeyi yerel olarak işaretle. Sunucu gelince
-            // gerçek bağlantı kurulacak; bu, demo akışının kesilmemesi için.
-            tercihler.ebeveynEslesmeyiKaydet(rol)
-            null
+            // Ağ hatası. Eşleşme İŞARETLENMİYOR: kodu doğrulayan tek yer
+            // sunucu, ona ulaşılamıyorsa doğrulanmış bir eşleşme yok.
+            "Sunucuya ulaşılamadı. Eşleştirmeyi bağlantın olduğunda tekrar dene."
         }
     }
 

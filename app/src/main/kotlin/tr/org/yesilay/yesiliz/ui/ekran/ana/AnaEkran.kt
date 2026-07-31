@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.FamilyRestroom
@@ -71,6 +72,8 @@ import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.SallananYapraklar
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.sureMetni
+import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
+import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -638,18 +641,72 @@ private fun GorevDetayi(
         Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
             gorev.suresiDk()?.let { Cip(metin = "$it dk") }
             Cip(
-                metin = if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) "Doğrulanmış" else "Kendi beyanın",
+                metin = when (gorev.dogrulama) {
+                    DogrulamaTuru.OTOMATIK -> "Otomatik"
+                    DogrulamaTuru.AKTIVITE -> "Uygulama içinde"
+                    DogrulamaTuru.BEYAN -> "Kendi beyanın"
+                },
             )
             Cip(metin = "Bugün ${gorev.gunlukLimit} kez")
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        when (gorev) {
-            Gorev.NEFES -> BirincilButon(metin = "Nefes egzersizine başla", onTikla = onNefesBaslat)
+
+        // OTOMATIK görevlerde buton YOK. Bu iki görev puanını zaten günlük
+        // özetten alıyor; "Tamamlandı olarak işaretle" hem aynı gün için
+        // ikinci kez puan yazıyor hem de kaydı "otomatik" olarak
+        // damgalayarak denetim izini bozuyordu (`debug.md` K-9).
+        when {
+            gorev.dogrulama == DogrulamaTuru.OTOMATIK -> OtomatikGorevNotu(gorev)
+            gorev == Gorev.NEFES ->
+                BirincilButon(metin = "Nefes egzersizine başla", onTikla = onNefesBaslat)
             // Puan başlangıçta değil, yürüyüş bitince veriliyor — o yüzden
             // buton "tamamla" değil "başlat".
-            Gorev.YURUYUS -> BirincilButon(metin = "Yürüyüşü başlat", onTikla = onYuruyusBaslat)
+            gorev == Gorev.YURUYUS ->
+                BirincilButon(metin = "Yürüyüşü başlat", onTikla = onYuruyusBaslat)
             else -> BirincilButon(metin = "Tamamlandı olarak işaretle", onTikla = onTamamla)
         }
+    }
+}
+
+/**
+ * Otomatik doğrulanan görevin durum notu — butonun yerine geçiyor.
+ *
+ * "Yapacak bir şey yok" demiyor; ne ölçüldüğünü ve puanın ne zaman
+ * yazılacağını söylüyor. Sessiz bir boşluk bırakmak, kullanıcının görevi
+ * kaydedemediğini sanmasına yol açardı.
+ */
+@Composable
+private fun OtomatikGorevNotu(gorev: Gorev) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Buton))
+            .background(color = Yesil50)
+            .padding(Olcu.Aralik),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AutoAwesome,
+            contentDescription = null,
+            tint = YesilKoyu,
+        )
+        Spacer(modifier = Modifier.width(Olcu.Aralik))
+        Text(
+            text = when (gorev) {
+                Gorev.TUKETIM_HEDEFI ->
+                    "Bu görevi işaretlemene gerek yok. Ekran süren gün " +
+                        "sonunda hedefinle karşılaştırılıyor; hedefine ne " +
+                        "kadar yaklaşırsan o kadar puan yazılıyor."
+
+                Gorev.GECE_TEMIZ ->
+                    "Bu görevi işaretlemene gerek yok. 00–06 arası kullanımın " +
+                        "gün sonunda ölçülüyor ve puanı kendiliğinden yazılıyor."
+
+                else -> "Bu görev kullanımından otomatik doğrulanıyor."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
     }
 }
 
