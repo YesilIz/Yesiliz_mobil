@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
+import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
@@ -32,6 +34,8 @@ import javax.inject.Inject
 class OnboardingViewModel @Inject constructor(
     private val anketDao: AnketYanitDao,
     private val tercihler: Tercihler,
+    private val riskDeposu: RiskDeposu,
+    private val isPlanlayici: IsPlanlayici,
     private val saat: Clock,
 ) : ViewModel() {
 
@@ -103,6 +107,14 @@ class OnboardingViewModel @Inject constructor(
                 hedefDk = durum.hedefDakika,
                 anketTarihi = anketTarihi,
             )
+
+            // Anket doldurulduysa risk hemen hesaplanmalı — yoksa kullanıcı
+            // ilk gün boyunca anketini hiç dikkate almamış bir bant görür.
+            // `AnketYenileViewModel.bitir()` ile aynı ikili; gerekçesi orada.
+            if (anketTarihi != null) {
+                riskDeposu.gunuHesapla(bugun)
+                isPlanlayici.simdiTazele()
+            }
         }
     }
 

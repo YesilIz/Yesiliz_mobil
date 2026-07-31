@@ -205,4 +205,64 @@ class RiskDeposuTest {
         assertEquals(ilk.gosterilenBant, ikinci.gosterilenBant)
         assertEquals(ilk.adayBant, ikinci.adayBant)
     }
+
+    /** Ham puanı verilen bir SAS-SV satırı — maddeler eşit dağıtılıyor. */
+    private fun anket(tarih: LocalDate, hamPuan: Double): AnketYanitEntity {
+        val madde = (hamPuan / 10).toInt()
+        return AnketYanitEntity(
+            tarih = tarih,
+            madde1 = madde, madde2 = madde, madde3 = madde, madde4 = madde,
+            madde5 = madde, madde6 = madde, madde7 = madde, madde8 = madde,
+            madde9 = madde, madde10 = madde,
+            hamPuan = hamPuan,
+            rS = RiskHesapla.anketSkoru(hamPuan),
+        )
+    }
+
+    /**
+     * `tarih` gün çözünürlüğünde; aynı gün iki anket varsa `sonuncu()`
+     * **yeni** olanı vermeli.
+     *
+     * Eşitlik bozucusu (`id DESC`) olmadan SQLite `rowid` sırasını, yani
+     * eskisini veriyordu — kullanıcı anketi yenilediğinde risk motoru eski
+     * puanı okuyor ve skor hiç değişmiyordu.
+     */
+    @Test
+    fun TUZAK_ayniGunIkinciAnketSonuncuSayilir() = runTest {
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = 10.0))
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = 60.0))
+
+        val sonuncu = db.anketYanitDao().sonuncu()!!
+
+        assertEquals("aynı gün doldurulan İKİNCİ anket geçerli olmalı", 60.0, sonuncu.hamPuan, 1e-9)
+        assertEquals(
+            "geçmiş listesi de kronolojik olmalı",
+            listOf(10.0, 60.0),
+            db.anketYanitDao().hepsi().map { it.hamPuan },
+        )
+    }
+
+    /**
+     * Kullanıcının bildirdiği kusur: "anketi tekrar doldurunca risk seviyesi
+     * değişmiyor." Aynı gün, aynı davranış, yalnızca anket puanı farklı.
+     */
+    @Test
+    fun ayniGunAnketYenilenirseRiskDegisir() = runTest {
+        db.gunlukOzetDao().kaydet(agirGun(bugun))
+
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = 10.0))
+        val dusukAnketle = depo.gunuHesapla(bugun)!!
+
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = 60.0))
+        val yuksekAnketle = depo.gunuHesapla(bugun)!!
+
+        assertTrue(
+            "anket skoru yükselmeli: ${dusukAnketle.rS} → ${yuksekAnketle.rS}",
+            yuksekAnketle.rS!! > dusukAnketle.rS!!,
+        )
+        assertTrue(
+            "bileşik skor da yükselmeli: ${dusukAnketle.R} → ${yuksekAnketle.R}",
+            yuksekAnketle.R > dusukAnketle.R,
+        )
+    }
 }
