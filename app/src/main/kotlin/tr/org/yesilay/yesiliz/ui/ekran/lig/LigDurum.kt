@@ -18,6 +18,12 @@ data class LigDurum(
      * ne de arkadaş eklemiş.
      */
     val katildiMi: Boolean = false,
+    /**
+     * Kullanıcı başkalarının sıralamasında görünüyor mu (Profil › "Ligde
+     * görün"). `false` iken ekran bunu söylüyor — sessizce gizlenmek,
+     * tercihin çalışıp çalışmadığını belirsiz bırakırdı (`debug.md` Y-5).
+     */
+    val gorunuyorum: Boolean = true,
     val yukleniyor: Boolean = true,
 )
 

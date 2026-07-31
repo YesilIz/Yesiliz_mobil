@@ -84,10 +84,15 @@ fun EbeveynEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var yedamAcik by remember { mutableStateOf(false) }
+    var kaldirmaOnayi by remember { mutableStateOf(false) }
 
     YesilBaslikliEkran(baslik = "Ebeveyn paneli", onGeri = onGeri, modifier = modifier) {
         if (durum.eslesmisMi) {
-            EbeveynPaneli(durum = durum, onYedam = { yedamAcik = true })
+            EbeveynPaneli(
+                durum = durum,
+                onYedam = { yedamAcik = true },
+                onEslesmeyiKaldir = { kaldirmaOnayi = true },
+            )
         }
     }
 
@@ -124,6 +129,65 @@ fun EbeveynEkran(
         AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkinda(onKapat = { yedamAcik = false })
         }
+    }
+
+    if (kaldirmaOnayi) {
+        AltSayfa(onKapat = { kaldirmaOnayi = false }) {
+            EslesmeKaldirmaOnayi(
+                onOnayla = {
+                    viewModel.eslesmeyiKaldir()
+                    kaldirmaOnayi = false
+                },
+                onVazgec = { kaldirmaOnayi = false },
+            )
+        }
+    }
+}
+
+/**
+ * Eşleştirmeyi kaldırma onayı.
+ *
+ * Tek dokunuşla kaldırılmıyor: iki cihaz arasındaki bağı kesmek, ebeveynin
+ * bildirim almayı bırakması demek ve yanlışlıkla yapılırsa fark edilmesi
+ * güç. Ama yıkıcı bir silme de değil -- veri gitmiyor, o yüzden "SİL"
+ * yazdırma gibi ağır bir kapı yok.
+ */
+@Composable
+private fun EslesmeKaldirmaOnayi(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IkonRozeti(
+            ikon = Icons.Filled.Groups,
+            zemin = YesilNane,
+            renk = YesilKoyu,
+            olcu = Olcu.AvatarBuyuk,
+            sekil = CircleShape,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.M))
+        Text(
+            text = "Eşleştirmeyi kaldır?",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "İki cihaz arasındaki bağ kesilir ve bu panelde özet " +
+                "görünmez. Kimsenin verisi silinmez; istediğin zaman yeni " +
+                "bir kodla tekrar eşleştirebilirsin.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Eşleştirmeyi kaldır", onTikla = onOnayla)
+        MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
@@ -324,7 +388,11 @@ private fun SihirbazIskeleti(icerik: @Composable androidx.compose.foundation.lay
 
 /** Ekran 13 — gerçek eşleşme sonrası panel. Ham veri değil özet (`docs/spec-veri.md`). */
 @Composable
-private fun EbeveynPaneli(durum: EbeveynDurum, onYedam: () -> Unit) {
+private fun EbeveynPaneli(
+    durum: EbeveynDurum,
+    onYedam: () -> Unit,
+    onEslesmeyiKaldir: () -> Unit,
+) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -420,6 +488,12 @@ private fun EbeveynPaneli(durum: EbeveynDurum, onYedam: () -> Unit) {
 
             Spacer(modifier = Modifier.height(Olcu.Aralik))
             MetinBaglanti(metin = "YEDAM hakkında", onTikla = onYedam)
+            // Eşleştirmeyi kaldırma. `EbeveynViewModel.eslesmeyiKaldir()`
+            // yazılmıştı ama hiçbir ekrandan çağrılmıyordu; Yardım
+            // ekranındaki dört sorudan biri tam olarak "Ebeveyn paneli
+            // eşleştirmesini nasıl kaldırırım?" diye soruyordu
+            // (`debug.md` Y-4).
+            MetinBaglanti(metin = "Eşleştirmeyi kaldır", onTikla = onEslesmeyiKaldir)
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
         }
     }

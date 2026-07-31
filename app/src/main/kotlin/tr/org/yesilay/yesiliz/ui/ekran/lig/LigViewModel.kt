@@ -43,6 +43,7 @@ class LigViewModel @Inject constructor(
                     )
                 },
                 katildiMi = ozet.katildiMi,
+                gorunuyorum = ozet.gorunuyorum,
                 yukleniyor = false,
             )
         }

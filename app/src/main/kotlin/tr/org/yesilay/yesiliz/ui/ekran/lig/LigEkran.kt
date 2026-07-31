@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.lig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -39,6 +41,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
+import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
@@ -81,6 +84,12 @@ fun LigEkran(
             ),
         ) {
             item { LigBasligi(durum) }
+            // "Ligde görün" kapalıysa söyleniyor. Kullanıcı kendi satırını
+            // görmeye devam ediyor ama başkaları görmüyor; bunu bilmeden
+            // sıralamanın neden bu kadar kısa olduğunu anlayamazdı.
+            if (!durum.gorunuyorum) {
+                item { GorunmuyorNotu() }
+            }
             items(durum.siralama, key = { it.sira }) { satir ->
                 LigSatiri(satir)
             }
@@ -89,6 +98,38 @@ fun LigEkran(
                 IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
             }
         }
+    }
+}
+
+/**
+ * "Ligde görün" kapalıyken gösterilen not.
+ *
+ * Tercih artık gerçekten çalışıyor: kullanıcı başkalarının sıralamasında
+ * çıkmıyor. Bunu ekranda söylemek şart, yoksa özellik bozuk sanılır.
+ */
+@Composable
+private fun GorunmuyorNotu() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(YesilNane)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.VisibilityOff,
+            contentDescription = null,
+            tint = YesilKoyu,
+        )
+        Spacer(modifier = Modifier.width(Bosluk.S))
+        Text(
+            text = "Ligde görünmüyorsun. Kendi sıranı görüyorsun ama " +
+                "başkaları seni görmüyor. Profil › Gizlilik'ten " +
+                "değiştirebilirsin.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinBirincil,
+        )
     }
 }
 

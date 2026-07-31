@@ -42,6 +42,14 @@ data class LigOzeti(
     val siralama: List<LigSatiri>,
     /** Kullanıcı bir lige katıldı mı — false ise boş durum gösteriliyor. */
     val katildiMi: Boolean,
+    /**
+     * Kullanıcı başkalarının sıralamasında görünüyor mu.
+     *
+     * `false` iken ekran bunu **söylüyor**. Sessizce gizlenmek, tercihin
+     * çalışıp çalışmadığını belirsiz bırakırdı — zaten eski hâlinde tercih
+     * hiçbir şey yapmıyordu (`debug.md` Y-5).
+     */
+    val gorunuyorum: Boolean = true,
 )
 
 data class LigSatiri(

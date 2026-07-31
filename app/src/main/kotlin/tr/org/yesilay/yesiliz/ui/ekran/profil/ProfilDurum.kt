@@ -28,4 +28,7 @@ data class ProfilDurum(
      * hakkı var (`debug.md` K-2).
      */
     val sunucudaKaldiUyarisi: Boolean = false,
+    /** Gerçek bir hesapla giriş yapıldı mı — misafirde "Çıkış yap" yok. */
+    val hesapVarMi: Boolean = false,
+    val eposta: String = "",
 )

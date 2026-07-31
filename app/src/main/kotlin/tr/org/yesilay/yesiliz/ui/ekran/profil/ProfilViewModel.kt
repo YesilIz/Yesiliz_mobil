@@ -15,7 +15,9 @@ import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.demo.DemoVeri
 import tr.org.yesilay.yesiliz.data.depo.DisaAktarDeposu
+import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import javax.inject.Inject
@@ -34,6 +36,8 @@ class ProfilViewModel @Inject constructor(
     private val veriYonetimi: VeriYonetimiDeposu,
     private val isPlanlayici: IsPlanlayici,
     private val disaAktarDeposu: DisaAktarDeposu,
+    private val hesapDeposu: HesapDeposu,
+    private val senkronDeposu: SenkronDeposu,
 ) : ViewModel() {
 
     private val silmeHali = MutableStateFlow(SilmeHali())
@@ -68,7 +72,12 @@ class ProfilViewModel @Inject constructor(
         )
     }.combine(tercihler.oturum) { durum, oturum ->
         // Misafir kullanıcının adı yok; sabit ada düşülüyor.
-        durum.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
+        durum.copy(
+            isim = oturum.ad.ifBlank { SABIT_ISIM },
+            // Misafirin çıkacağı bir hesap yok; satır gösterilmiyor.
+            hesapVarMi = oturum.girisYapildiMi && !oturum.misafirMi,
+            eposta = oturum.eposta,
+        )
     }.combine(silmeHali) { durum, silme ->
         durum.copy(
             siliniyor = silme.calisiyor,
@@ -84,8 +93,19 @@ class ProfilViewModel @Inject constructor(
         viewModelScope.launch { tercihler.yesilayPaylasimiAyarla(acik) }
     }
 
+    /**
+     * "Ligde görün" tercihi.
+     *
+     * Kaydetmenin yanında senkron da tetikleniyor: tercih sunucuda tutulan
+     * lig üyeliğine yazılıyor ve gecelik worker'ı beklemek, kullanıcının
+     * anahtarı kapattıktan sonra saatlerce ligde görünmeye devam etmesi
+     * demekti. Tercih zaten hiç tüketilmiyordu (`debug.md` Y-5).
+     */
     fun ligdeGorun(acik: Boolean) {
-        viewModelScope.launch { tercihler.ligdeGorunAyarla(acik) }
+        viewModelScope.launch {
+            tercihler.ligdeGorunAyarla(acik)
+            senkronDeposu.senkronEt()
+        }
     }
 
     /**
@@ -149,6 +169,23 @@ class ProfilViewModel @Inject constructor(
      */
     fun hesabiSil() {
         sil { veriYonetimi.hesabiSil() }
+    }
+
+    /**
+     * Hesaptan çıkış.
+     *
+     * `HesapDeposu.cikisYap()` üç deponun hepsinde uygulanmıştı ama
+     * hiçbir ekrandan çağrılmıyordu; giriş yapan kullanıcı hesabını
+     * değiştiremiyor, tek yol "Hesabımı sil" oluyordu (`debug.md` Y-3).
+     *
+     * Veri **silinmiyor** — yalnızca oturum kapanıyor. Aynı hesapla geri
+     * girildiğinde cihazdaki geçmiş yerinde.
+     */
+    fun cikisYap() {
+        viewModelScope.launch {
+            hesapDeposu.cikisYap()
+            _silindi.send(Unit)
+        }
     }
 
     /** Uyarı okunduktan sonra kullanıcı yine de çıkmak isterse. */

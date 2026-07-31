@@ -113,7 +113,19 @@ fun YesilizGezinme(
             }
             composable(Rota.KAYIT) {
                 KayitEkran(
-                    onBasarili = { navController.hesaptanCik(Rota.ONBOARDING) },
+                    onBasarili = {
+                        // Profil'den gelen misafir onboarding'i zaten
+                        // bitirmiş; onu baştan geçirmek yerine geri
+                        // dönülüyor. İlk kurulumda akış onboarding'e devam
+                        // ediyor.
+                        if (navController.previousBackStackEntry
+                                ?.destination?.route == Rota.PROFIL
+                        ) {
+                            navController.popBackStack()
+                        } else {
+                            navController.hesaptanCik(Rota.ONBOARDING)
+                        }
+                    },
                     onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
                     onGeri = { navController.popBackStack() },
                 )
@@ -180,6 +192,7 @@ fun YesilizGezinme(
                     // Silinmiş veriye geri tuşuyla dönmek boş ekranlar
                     // gösterirdi.
                     onSilindi = { navController.bastanBasla() },
+                    onHesapOlustur = { navController.navigate(Rota.KAYIT) },
                 )
             }
             composable(Rota.GUNLUK_HEDEF) {

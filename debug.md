@@ -339,7 +339,7 @@ dayatıyor"*. Doğrusu `SatirBaglanti`.
 
 ---
 
-### Y-3 · Hesaptan çıkış yapılamıyor `[ikisi]`
+### ✅ Y-3 · Hesaptan çıkış yapılamıyor `[ikisi]`
 
 `HesapDeposu.cikisYap()` yazılmış ve üç deponun (`Retrofit`, `YerelSahte`, `Yedekli`)
 hepsinde uygulanmış, ama **hiçbir ekrandan çağrılmıyor**. Profil menüsünün tamamı tarandı:
@@ -349,7 +349,7 @@ K-2 yüzünden çöküyor).
 
 ---
 
-### Y-4 · Ebeveyn eşleşmesini kaldırma / ebeveyn hesabından çıkma yok `[kullanıcı]`
+### ✅ Y-4 · Ebeveyn eşleşmesini kaldırma / ebeveyn hesabından çıkma yok `[kullanıcı]`
 
 `EbeveynViewModel.eslesmeyiKaldir()` **yazılmış ama hiçbir ekrandan çağrılmıyor** —
 Y-3'teki `cikisYap()` ile birebir aynı ölü kod deseni. Ebeveyn panelinde bağlantıyı kesme,
@@ -360,7 +360,7 @@ nasıl kaldırırım?"* — hem sorunun cevabı yok (Y-6) hem de özelliğin ken
 
 ---
 
-### Y-5 · "Ligde görün" tamamen ölü bir tercih `[kullanıcı]`
+### ✅ Y-5 · "Ligde görün" tamamen ölü bir tercih `[kullanıcı]`
 
 `Tercihler.ligdeGorun` (`Tercihler.kt:82`) yazılıyor ve **yalnızca kendi anahtarını
 çizmek için** okunuyor (`ProfilViewModel` → `ProfilDurum` → `ProfilEkran`). Lig kodu,

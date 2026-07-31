@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Cancel
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -112,6 +114,7 @@ fun ProfilEkran(
     onAnketYenile: () -> Unit,
     onSaglikIzni: () -> Unit,
     onSilindi: () -> Unit,
+    onHesapOlustur: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
@@ -133,6 +136,7 @@ fun ProfilEkran(
     var hakkindaAcik by remember { mutableStateOf(false) }
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
+    var cikisOnayi by remember { mutableStateOf(false) }
     val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -257,6 +261,37 @@ fun ProfilEkran(
                 AyarSatiri(Icons.Filled.FamilyRestroom, "Ebeveyn paneli", onTikla = onEbeveyn)
             }
 
+            // Hesap bölümü.
+            //
+            // `HesapDeposu.cikisYap()` üç deponun hepsinde uygulanmıştı ama
+            // hiçbir ekrandan çağrılmıyordu: giriş yapan kullanıcı hesabını
+            // değiştiremiyor, tek yol "Hesabımı sil" oluyordu -- ki o da
+            // çöküyordu (`debug.md` Y-3, K-2).
+            //
+            // Misafirin çıkacağı bir hesap yok ama KURACAĞI var: `Oturum`
+            // KDoc'u "misafir de Profil'den hesap oluşturabilir" diyordu ve
+            // öyle bir satır hiç yazılmamıştı.
+            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+            BolumBasligi("Hesap")
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            Kart(icBosluk = Olcu.Aralik) {
+                if (durum.hesapVarMi) {
+                    AyarSatiri(
+                        Icons.AutoMirrored.Filled.Logout,
+                        "Çıkış yap",
+                        altMetin = durum.eposta,
+                        onTikla = { cikisOnayi = true },
+                    )
+                } else {
+                    AyarSatiri(
+                        Icons.Filled.PersonAdd,
+                        "Hesap oluştur",
+                        altMetin = "Misafir olarak kullanıyorsun",
+                        onTikla = onHesapOlustur,
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
 
             BolumBasligi("Destek")
@@ -339,6 +374,19 @@ fun ProfilEkran(
                 onOnayla = viewModel::hesabiSil,
                 onVazgec = { hesabiSilAcik = false },
                 onUyariyiKapat = viewModel::uyariyiKapat,
+            )
+        }
+    }
+
+    if (cikisOnayi) {
+        AltSayfa(onKapat = { cikisOnayi = false }) {
+            CikisOnayi(
+                eposta = durum.eposta,
+                onOnayla = {
+                    viewModel.cikisYap()
+                    cikisOnayi = false
+                },
+                onVazgec = { cikisOnayi = false },
             )
         }
     }
@@ -502,6 +550,51 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Dosyaları oluştur ve paylaş", onTikla = onDisaAktar)
+    }
+}
+
+/**
+ * Çıkış onayı.
+ *
+ * Yıkıcı bir işlem değil -- veri cihazda kalıyor -- o yüzden silme
+ * akışlarındaki kırmızı ve onay kutusu YOK. Ama tek dokunuşla da
+ * yapılmıyor: yanlışlıkla çıkmak, kullanıcıyı şifresini hatırlamak
+ * zorunda bırakır.
+ */
+@Composable
+private fun CikisOnayi(eposta: String, onOnayla: () -> Unit, onVazgec: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IkonRozeti(
+            ikon = Icons.AutoMirrored.Filled.Logout,
+            zemin = YesilNane,
+            renk = YesilKoyu,
+            olcu = Olcu.AvatarBuyuk,
+            sekil = androidx.compose.foundation.shape.CircleShape,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Text(
+            text = "Çıkış yapılsın mı?",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "$eposta hesabından çıkacaksın. Cihazındaki geçmişin " +
+                "silinmiyor; aynı hesapla girdiğinde her şey yerinde olacak.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Çıkış yap", onTikla = onOnayla)
+        MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 

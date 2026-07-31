@@ -66,6 +66,9 @@ class SenkronDeposu @Inject constructor(
                     ozetler = ozetler.map { it.dto() },
                     riskler = riskDao.sonGunler(GUN).map { it.dto() },
                     haftalikPuan = haftalikPuan(),
+                    // "Ligde görün" tercihi burada taşınıyor; ayrı bir uç
+                    // yok (`debug.md` Y-5).
+                    ligdeGorunur = tercihler.ligdeGorun.first(),
                 ),
             )
             true

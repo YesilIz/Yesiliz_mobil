@@ -35,7 +35,7 @@ def senkron(
     for dto in istek.riskler:
         _risk_yaz(db, kullanici.id, dto)
 
-    _haftalik_puan(db, kullanici.id, istek.haftalikPuan)
+    _haftalik_puan(db, kullanici.id, istek.haftalikPuan, istek.ligdeGorunur)
     _heartbeat(db, kullanici.id)
 
     db.commit()
@@ -145,8 +145,15 @@ def _risk_yaz(db: Session, kullanici_id: int, dto: RiskSonucDto) -> None:
     satir.trend = dto.trend
 
 
-def _haftalik_puan(db: Session, kullanici_id: int, puan: int) -> None:
-    """Lig üyeliği varsa haftalık puanı günceller; yoksa sessizce geçer."""
+def _haftalik_puan(
+    db: Session, kullanici_id: int, puan: int, gorunur: bool | None = None
+) -> None:
+    """
+    Lig üyeliği varsa haftalık puanı günceller; yoksa sessizce geçer.
+
+    "Ligde görün" tercihi de burada taşınıyor: ayrı bir uç açmak yerine
+    zaten her gece koşan senkrona bindirildi (debug.md Y-5).
+    """
     hafta = hafta_baslangici()
     uyelik = db.scalar(
         select(LigUyelik).where(
@@ -158,6 +165,8 @@ def _haftalik_puan(db: Session, kullanici_id: int, puan: int) -> None:
         # silinmiş, yeniden kurulmuş) ligdeki puan geri alınmıyor —
         # CLAUDE.md §4 "ceza yok".
         uyelik.haftalik_puan = max(uyelik.haftalik_puan, puan)
+        if gorunur is not None:
+            uyelik.gorunur = gorunur
 
 
 def _heartbeat(db: Session, kullanici_id: int) -> None:
