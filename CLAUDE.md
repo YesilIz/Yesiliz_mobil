@@ -27,10 +27,10 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 221)
+# testler  (toplam 230)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 125 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 26 · emülatör gerektirir
+./gradlew :app:testDebugUnitTest       # 132 · saf JVM
+./gradlew :app:connectedDebugAndroidTest   # 28 · emülatör gerektirir
 
 # backend  (48 pytest)
 cd backend && docker compose up -d && docker compose exec api pytest -q
@@ -413,6 +413,9 @@ Hepsi bir kez yaşandı. Tekrarlama.
 | **MSSQL `NVARCHAR(MAX)` PK** | İndekslenemez, tablo oluşmaz | PK/indeks kolonları `NVARCHAR(450)` |
 | **Hilt kökte, KSP yalnızca `:app`'te** | `KSP plugin was detected to be applied but its task class could not be found` | KSP de kökte `apply false` ile bildirilmeli — ikisi aynı sınıf yükleyicide olmalı (google/dagger#3965) |
 | **Hilt 2.59 + Kotlin 2.4** | `Provided Metadata instance has version 2.4.0, while maximum supported version is 2.3.0` | Hilt **2.60.1**. Kotlin sürümü yükselirse Hilt de yükselmeli — işlemci `kotlin-metadata-jvm` paketliyor |
+| **Gün çözünürlüklü `ORDER BY`, eşitlik bozucusuz** | `LocalDate` kolonuna göre `... DESC LIMIT 1` aynı güne düşen iki satırda **eskisini** veriyor; SQLite eşitlikte sıra garanti etmiyor, pratikte `rowid` sırası geliyor. Anket aynı gün yenilenince risk hiç değişmiyordu | Tarihe göre sıralayan her sorgu `id`'yi de eşitlik bozucu olarak almalı: `ORDER BY tarih DESC, id DESC` |
+| **Health Connect gerekçe bildirimi yok** | İzin diyaloğu **sessizce** izinsiz dönüyor, hata vermiyor. Emülatörde HC kurulu olmadığı için hiç görülmüyor | Manifest'te iki bildirim birden: Android 13 ve altı için `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` intent-filter'ı, 14+ için `VIEW_PERMISSION_USAGE` + `HEALTH_PERMISSIONS` `activity-alias`'ı |
+| **Yenileme jetonu saklanıp hiç kullanılmaması** | Erişim jetonu dolunca (30 dk) her kimlikli çağrı 401 veriyor ve `Yedekli*Deposu` sessizce sahte veriye düşüyor — kullanıcı hâlâ "giriş yapmış" görünüyor | `okhttp3.Authenticator` (`JetonAuthenticator`). Yenileme çağrısı **ayrı** bir istemciden gitmeli, yoksa Dagger döngüsü + sonsuz 401 özyinelemesi |
 
 ---
 
@@ -483,11 +486,11 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
 | `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **48 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
-| `app/data/uzak/` | `YesilizApi` (16 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor, 401'de sessiz yenileme) | uçtan uca emülatörde doğrulandı |
+| `app/data/uzak/` | `YesilizApi` (16 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme** | uçtan uca emülatörde doğrulandı; **7 birim testi** |
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
 
-**Toplam 221 test** (147 Android birim + 26 emülatör + 48 backend pytest). Zincir uçtan uca çalışıyor:
+**Toplam 230 test** (154 Android birim + 28 emülatör + 48 backend pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
