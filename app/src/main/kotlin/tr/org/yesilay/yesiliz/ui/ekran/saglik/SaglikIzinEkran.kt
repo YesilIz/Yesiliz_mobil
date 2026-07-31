@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.data.saglik.SaglikDurumu
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
@@ -146,9 +147,39 @@ fun SaglikIzinEkran(
                         IkincilButon(metin = "Geri dön", onTikla = onGeri)
                     }
 
-                    // Health Connect kurulu değil: izin isteyecek bir muhatap
-                    // yok, Play Store'a yönlendirmek tek anlamlı adım.
-                    !durum.kullanilabilir -> {
+                    // Kurulu ama eski: kurma değil GÜNCELLEME gerekiyor.
+                    // Eskiden bu durum da "kurulu değil" diyordu ve
+                    // kullanıcı zaten kurulu olan uygulamayı kurmaya
+                    // yönlendiriliyordu (`debug.md` K-6).
+                    durum.saglikDurumu == SaglikDurumu.GUNCELLEME_GEREKLI -> {
+                        Kart {
+                            Text(
+                                text = "Health Connect güncellenmeli",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MetinBirincil,
+                            )
+                            Text(
+                                text = "Cihazındaki Health Connect sürümü bu " +
+                                    "özellik için eski kalmış. Güncelledikten " +
+                                    "sonra bu ekrana dönebilirsin.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MetinIkincil,
+                            )
+                        }
+                        BirincilButon(
+                            metin = "Health Connect'i güncelle",
+                            onTikla = {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_URL)),
+                                )
+                            },
+                        )
+                    }
+
+                    // Kurulu değil: izin isteyecek bir muhatap yok,
+                    // Play Store'a yönlendirmek tek anlamlı adım.
+                    durum.saglikDurumu == SaglikDurumu.YOK -> {
                         Kart {
                             Text(
                                 text = "Health Connect kurulu değil",

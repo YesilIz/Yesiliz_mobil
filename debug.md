@@ -198,7 +198,7 @@ satır sayısı değil. Y-7'nin de ana sebeplerinden biri bu.
 
 ---
 
-### K-6 · Health Connect kurulu olduğu hâlde "kurulu değil" deniyor — adım sayacı gerçek cihazda tamamen ölü `[ikisi]`
+### ✅ K-6 · Health Connect kurulu olduğu hâlde "kurulu değil" deniyor — adım sayacı gerçek cihazda tamamen ölü `[ikisi]`
 
 **`app/src/main/AndroidManifest.xml:57` (`<queries>`)**
 
@@ -222,7 +222,7 @@ uygulanmıyor, `docs/spec-risk.md`'deki bu dal gerçek cihazda hiç test edilemi
 
 ---
 
-### K-7 · Veri yokken "Fiziksel hareket: Yüksek" + tam kırmızı çubuk `[tarama]`
+### ✅ K-7 · Veri yokken "Fiziksel hareket: Yüksek" + tam kırmızı çubuk `[tarama]`
 
 **`core-risk/.../EtkileyenFaktorler.kt:41`**
 

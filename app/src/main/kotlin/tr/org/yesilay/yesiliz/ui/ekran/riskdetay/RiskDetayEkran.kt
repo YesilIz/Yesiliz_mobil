@@ -30,6 +30,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.IlerlemeCubugu
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.DaireselGosterge
+import tr.org.yesilay.yesiliz.ui.tema.YuzeyKirik
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.Gradyan
 import tr.org.yesilay.yesiliz.ui.tema.KirmiziIstisna
@@ -183,6 +184,17 @@ private fun FaktorSatiri(faktor: EtkileyenFaktor) {
             oran = faktor.oran.toFloat(),
             renk = faktor.seviye.renk(),
         )
+        // Ölçülmemiş faktörün NİÇİN boş olduğu yazılıyor. Boş bir çubuk tek
+        // başına "iyi durumdasın" gibi okunurdu.
+        if (faktor.seviye == FaktorSeviyesi.BILINMIYOR) {
+            Spacer(modifier = Modifier.height(Bosluk.Xs))
+            Text(
+                text = "Henüz ölçülmedi — Profil › Adım ve hareket iznini " +
+                    "açarsan burada görünecek.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MetinUcuncul,
+            )
+        }
         Spacer(modifier = Modifier.height(Bosluk.M))
     }
 }
@@ -195,10 +207,14 @@ private fun FaktorSeviyesi.renk(): Color = when (this) {
     FaktorSeviyesi.DUSUK -> YesilAna
     FaktorSeviyesi.ORTA -> RuhHaliBas
     FaktorSeviyesi.YUKSEK -> KirmiziIstisna
+    // Ölçüm yokken nötr: yeşil "iyi", kırmızı "kötü" derdi; ikisi de
+    // ölçülmemiş bir şey hakkında iddia olurdu.
+    FaktorSeviyesi.BILINMIYOR -> MetinUcuncul
 }
 
 private fun FaktorSeviyesi.zemin(): Color = when (this) {
     FaktorSeviyesi.DUSUK -> YesilNane
     FaktorSeviyesi.ORTA -> RuhHaliBas.copy(alpha = 0.15f)
     FaktorSeviyesi.YUKSEK -> KirmiziIstisnaZemin
+    FaktorSeviyesi.BILINMIYOR -> YuzeyKirik
 }

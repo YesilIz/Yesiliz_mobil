@@ -59,6 +59,23 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+
+        <!--
+          Health Connect'in KENDİSİ ayrıca bildirilmek zorunda.
+
+          Yukarıdaki MAIN/LAUNCHER sorgusu onu görmüyor: bazı cihazlarda
+          (Samsung SM-A217F / Android 12) Health Connect'in başlatıcı
+          aktivitesi yok, yalnızca SettingsActivity1 var. Paket görünmeyince
+          getSdkStatus() SDK_AVAILABLE dönmüyor ve uygulama, kurulu olan
+          Health Connect için "kurulu değil" deyip Play Store'a
+          yönlendiriyordu; Play Store'da buton "Kaldır" yazarken.
+
+          Sonuç: adım ve spor verisi hiç gelmiyor, D = 1,0 kalıyor, aktivite
+          sönümlemesi gerçek cihazda hiç uygulanmıyordu (`debug.md` K-6).
+          Health Connect istemcisi 1.2.0-alpha01 bu bildirimi kendiliğinden
+          eklemiyor.
+        -->
+        <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
     <application

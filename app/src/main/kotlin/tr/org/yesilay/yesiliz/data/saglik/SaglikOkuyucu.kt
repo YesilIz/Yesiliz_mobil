@@ -47,8 +47,22 @@ class SaglikOkuyucu @Inject constructor(
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
     )
 
-    fun kullanilabilir(): Boolean =
-        HealthConnectClient.getSdkStatus(baglam) == HealthConnectClient.SDK_AVAILABLE
+    /**
+     * Health Connect'in bu cihazdaki durumu.
+     *
+     * Düz `Boolean` yetmiyordu: "kurulu değil" ile "güncellemen gerek"
+     * ayırt edilemediği için ekran ikisinde de Play Store'a yönlendirip
+     * "kurulu değil" diyordu (`debug.md` K-6). İki durumun çözümü farklı.
+     */
+    fun durum(): SaglikDurumu = when (HealthConnectClient.getSdkStatus(baglam)) {
+        HealthConnectClient.SDK_AVAILABLE -> SaglikDurumu.HAZIR
+        HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED ->
+            SaglikDurumu.GUNCELLEME_GEREKLI
+
+        else -> SaglikDurumu.YOK
+    }
+
+    fun kullanilabilir(): Boolean = durum() == SaglikDurumu.HAZIR
 
     suspend fun izinVarMi(): Boolean {
         val istemci = istemci() ?: return false
@@ -94,4 +108,21 @@ class SaglikOkuyucu @Inject constructor(
         } else {
             null
         }
+}
+
+/**
+ * Health Connect'in cihazdaki durumu.
+ *
+ * Üç durumun üç ayrı çözümü var; tek bir `Boolean` ikisini birbirine
+ * karıştırıyordu (`debug.md` K-6).
+ */
+enum class SaglikDurumu {
+    /** Kurulu ve kullanılabilir — izin istenebilir. */
+    HAZIR,
+
+    /** Kurulu ama sürümü eski; kullanıcının güncellemesi gerekiyor. */
+    GUNCELLEME_GEREKLI,
+
+    /** Kurulu değil ya da bu cihazda desteklenmiyor. */
+    YOK,
 }

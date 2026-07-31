@@ -1620,8 +1620,8 @@
         }
       },
       {
-        "ad": "agir_kullanim_hareketsiz",
-        "aciklama": "Yüksek gece/oturum/sosyal, sıfır hareket → 4 faktör de YÜKSEK",
+        "ad": "agir_kullanim_hareket_olculmemis",
+        "aciklama": "Yüksek gece/oturum/sosyal ama adım/spor HİÇ yok → ilk üçü YÜKSEK, hareket BILINMIYOR. Veri yokluğu maksimum risk olarak sunulamaz (debug.md K-7).",
         "girdi": {
           "kategori_dakika": {
             "social": 180.0,
@@ -1653,8 +1653,48 @@
             },
             {
               "ad": "Fiziksel hareket",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            }
+          ]
+        }
+      },
+      {
+        "ad": "agir_kullanim_gercekten_hareketsiz",
+        "aciklama": "Aynı kullanım, ama az da olsa ÖLÇÜLMÜŞ hareket var → hareket faktörü artık YÜKSEK diyebilir.",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 180.0,
+            "entertainment": 20.0
+          },
+          "oruntu": {
+            "gece": 0.8,
+            "oturum": 0.9
+          },
+          "adim": 300.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
               "seviye": "YUKSEK",
-              "oran": 1.0
+              "oran": 0.8
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "YUKSEK",
+              "oran": 0.985
             }
           ]
         }
@@ -1701,7 +1741,7 @@
       },
       {
         "ad": "sifir_ekran",
-        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0",
+        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0, hareket BILINMIYOR. Uygulamayı yeni kuran kullanıcının gördüğü durum.",
         "girdi": {
           "kategori_dakika": {},
           "oruntu": {},
@@ -1727,8 +1767,8 @@
             },
             {
               "ad": "Fiziksel hareket",
-              "seviye": "YUKSEK",
-              "oran": 1.0
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
             }
           ]
         }

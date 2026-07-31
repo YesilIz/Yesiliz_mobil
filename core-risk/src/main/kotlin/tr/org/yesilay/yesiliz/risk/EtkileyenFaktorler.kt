@@ -14,6 +14,23 @@ enum class FaktorSeviyesi(val etiket: String) {
     DUSUK("Düşük risk"),
     ORTA("Orta"),
     YUKSEK("Yüksek"),
+
+    /**
+     * Ölçüm yok — iddia da yok.
+     *
+     * "Fiziksel hareket" faktörü adım verisi hiç gelmediğinde `A = 0`
+     * üretiyor, bu da `1 - A = 1,0`, yani **maksimum risk** demek oluyordu.
+     * Uygulamayı yeni kuran her kullanıcı üstte "Düşük risk düzeyi / son 7
+     * günlük kullanım örüntün sağlıklı görünüyor" yazarken hemen altında
+     * "Fiziksel hareket → Yüksek" ve uçtan uca kırmızı bir çubuk görüyordu
+     * (`debug.md` K-7).
+     *
+     * Veri yokluğunu maksimum risk olarak sunmak, uygulamanın başka her
+     * yerinde uygulanan "veri yoksa boş durum göster, uydurma" ilkesinin
+     * (`ui/bilesen/BosDurum.kt`) tersi. Sorun rengin değil, iddianın
+     * yanlış olmasıydı.
+     */
+    BILINMIYOR("Veri yok"),
 }
 
 /**
@@ -38,13 +55,23 @@ object EtkileyenFaktorler {
         } else {
             0.0
         }
+        // Aktivite verisi hiç yoksa hareket faktörü ÖLÇÜLMEMİŞ sayılıyor.
+        // Hem adım hem spor sıfırsa `A = 0` çıkıyor ve `1 - A` maksimum
+        // riskle aynı değeri veriyor; ikisi ayırt edilemiyordu.
+        val aktiviteOlculdu = gun.adim > 0.0 || gun.sporDk > 0.0
         val hareketOran = 1.0 - RiskHesapla.araUrunler(gun).A
 
         return listOf(
             EtkileyenFaktor("Gece kullanımı", seviyeye(gece), gece),
             EtkileyenFaktor("Kesintisiz kullanım süresi", seviyeye(oturum), oturum),
             EtkileyenFaktor("Sosyal medya oranı", seviyeye(sosyalOran), sosyalOran),
-            EtkileyenFaktor("Fiziksel hareket", seviyeye(hareketOran), hareketOran),
+            EtkileyenFaktor(
+                ad = "Fiziksel hareket",
+                seviye = if (aktiviteOlculdu) seviyeye(hareketOran) else FaktorSeviyesi.BILINMIYOR,
+                // Ölçüm yokken çubuk boş: dolu bir çubuk, olmayan bir
+                // ölçümü varmış gibi gösterirdi.
+                oran = if (aktiviteOlculdu) hareketOran else 0.0,
+            ),
         )
     }
 

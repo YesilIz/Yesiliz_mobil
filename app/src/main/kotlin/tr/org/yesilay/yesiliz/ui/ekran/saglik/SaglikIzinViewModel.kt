@@ -10,14 +10,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.data.saglik.SaglikDurumu
 import tr.org.yesilay.yesiliz.data.saglik.SaglikOkuyucu
 import javax.inject.Inject
 
 data class SaglikIzinDurum(
-    val kullanilabilir: Boolean = false,
+    val saglikDurumu: SaglikDurumu = SaglikDurumu.YOK,
     val izinVarMi: Boolean = false,
     val yukleniyor: Boolean = true,
-)
+) {
+    val kullanilabilir: Boolean get() = saglikDurumu == SaglikDurumu.HAZIR
+}
 
 @HiltViewModel
 class SaglikIzinViewModel @Inject constructor(
@@ -44,7 +47,7 @@ class SaglikIzinViewModel @Inject constructor(
     fun yenile() {
         viewModelScope.launch {
             _durum.value = SaglikIzinDurum(
-                kullanilabilir = okuyucu.kullanilabilir(),
+                saglikDurumu = okuyucu.durum(),
                 izinVarMi = okuyucu.izinVarMi(),
                 yukleniyor = false,
             )

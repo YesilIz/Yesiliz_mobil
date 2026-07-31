@@ -284,13 +284,21 @@ def _etkileyen_faktorler(kategori_dakika, oruntu, adim, spor_dk):
     sosyal_oran = (kategori_dakika.get("social", 0.0) / toplam_dk) if toplam_dk > 0 else 0.0
     A = 0.4 * min(1.0, adim / 8000.0) + 0.6 * min(1.0, spor_dk / 30.0)
     hareket_oran = 1.0 - A
-    oranlar = [
-        ("Gece kullanımı", gece),
-        ("Kesintisiz kullanım süresi", oturum),
-        ("Sosyal medya oranı", sosyal_oran),
-        ("Fiziksel hareket", hareket_oran),
+    # Aktivite hiç ölçülmemişse hareket faktörü BİLİNMİYOR. `A = 0` ile
+    # "hiç hareket etmedi" ayırt edilemiyor ve veri yokluğu maksimum risk
+    # olarak gösteriliyordu (debug.md K-7).
+    aktivite_olculdu = adim > 0.0 or spor_dk > 0.0
+    faktorler = [
+        {"ad": "Gece kullanımı", "seviye": _faktor_seviyesi(gece), "oran": gece},
+        {"ad": "Kesintisiz kullanım süresi", "seviye": _faktor_seviyesi(oturum), "oran": oturum},
+        {"ad": "Sosyal medya oranı", "seviye": _faktor_seviyesi(sosyal_oran), "oran": sosyal_oran},
+        {
+            "ad": "Fiziksel hareket",
+            "seviye": _faktor_seviyesi(hareket_oran) if aktivite_olculdu else "BILINMIYOR",
+            "oran": hareket_oran if aktivite_olculdu else 0.0,
+        },
     ]
-    return [{"ad": ad, "seviye": _faktor_seviyesi(oran), "oran": oran} for ad, oran in oranlar]
+    return faktorler
 
 
 FAKTOR_VEKTORLERI = [
@@ -302,11 +310,25 @@ FAKTOR_VEKTORLERI = [
         "adim": 9000.0, "spor_dk": 40.0,
     },
     {
-        "ad": "agir_kullanim_hareketsiz",
-        "aciklama": "Yüksek gece/oturum/sosyal, sıfır hareket → 4 faktör de YÜKSEK",
+        "ad": "agir_kullanim_hareket_olculmemis",
+        "aciklama": (
+            "Yüksek gece/oturum/sosyal ama adım/spor HİÇ yok → ilk üçü YÜKSEK, "
+            "hareket BILINMIYOR. Veri yokluğu maksimum risk olarak sunulamaz "
+            "(debug.md K-7)."
+        ),
         "kategori_dakika": {"social": 180.0, "entertainment": 20.0},
         "oruntu": {"gece": 0.80, "oturum": 0.90},
         "adim": 0.0, "spor_dk": 0.0,
+    },
+    {
+        "ad": "agir_kullanim_gercekten_hareketsiz",
+        "aciklama": (
+            "Aynı kullanım, ama az da olsa ÖLÇÜLMÜŞ hareket var → hareket "
+            "faktörü artık YÜKSEK diyebilir."
+        ),
+        "kategori_dakika": {"social": 180.0, "entertainment": 20.0},
+        "oruntu": {"gece": 0.80, "oturum": 0.90},
+        "adim": 300.0, "spor_dk": 0.0,
     },
     {
         "ad": "orta_karisik",
@@ -317,7 +339,10 @@ FAKTOR_VEKTORLERI = [
     },
     {
         "ad": "sifir_ekran",
-        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0",
+        "aciklama": (
+            "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0, hareket "
+            "BILINMIYOR. Uygulamayı yeni kuran kullanıcının gördüğü durum."
+        ),
         "kategori_dakika": {},
         "oruntu": {},
         "adim": 0.0, "spor_dk": 0.0,
