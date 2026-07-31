@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -117,6 +119,9 @@ fun OdulEkran(
             onDismissRequest = { acikOdul = null },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             OdulDetayi(
                 odul = odul,
@@ -135,6 +140,9 @@ fun OdulEkran(
             onDismissRequest = { sertifikaOdulu = null },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             SertifikaIcerik(
                 odulAdi = odul.ad,
@@ -166,6 +174,9 @@ fun OdulEkran(
             onDismissRequest = { gecmisAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             PuanGecmisi(kayitlar = durum.gecmis, onKapat = { gecmisAcik = false })
         }

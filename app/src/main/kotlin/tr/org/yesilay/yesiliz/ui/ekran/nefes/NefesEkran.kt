@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -82,6 +83,7 @@ fun NefesEkran(
         modifier = modifier
             .fillMaxSize()
             .background(Yesil50)
+            .navigationBarsPadding()
             .padding(horizontal = Olcu.EkranKenari),
     ) {
         Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
