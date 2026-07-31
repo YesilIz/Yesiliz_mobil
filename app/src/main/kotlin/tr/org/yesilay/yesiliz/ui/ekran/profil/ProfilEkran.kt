@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -296,6 +298,9 @@ fun ProfilEkran(
             onDismissRequest = { toplananVerilerAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             ToplananVerilerIcerik(onKapat = { toplananVerilerAcik = false })
         }
@@ -306,6 +311,9 @@ fun ProfilEkran(
             onDismissRequest = { gecmisiIndirAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             GecmisiIndirIcerik(
                 onKapat = { gecmisiIndirAcik = false },
@@ -326,6 +334,9 @@ fun ProfilEkran(
             onDismissRequest = { verileriSilAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             VerileriSilIcerik(
                 onOnayla = {
@@ -342,6 +353,9 @@ fun ProfilEkran(
             onDismissRequest = { hesabiSilAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             HesabiSilIcerik(
                 onOnayla = {
@@ -358,6 +372,9 @@ fun ProfilEkran(
             onDismissRequest = { yardimAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             YardimIcerik(onKapat = { yardimAcik = false })
         }
@@ -368,6 +385,9 @@ fun ProfilEkran(
             onDismissRequest = { hakkindaAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             HakkindaIcerik(onKapat = { hakkindaAcik = false })
         }
@@ -378,6 +398,9 @@ fun ProfilEkran(
             onDismissRequest = { yedamAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             YedamHakkindaIcerik(onKapat = { yedamAcik = false })
         }
@@ -388,6 +411,9 @@ fun ProfilEkran(
             onDismissRequest = { bildirimSaatleriAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             BildirimSaatleriIcerik(
                 durum = durum,

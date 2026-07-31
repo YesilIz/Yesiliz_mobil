@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.ui.gezinme
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -93,7 +94,14 @@ fun YesilizGezinme(
         NavHost(
             navController = navController,
             startDestination = baslangicRotasi,
-            modifier = Modifier.padding(bosluk),
+            // `consumeWindowInsets` şart: sekme ekranlarında alt çubuk sistem
+            // gezinme payını ZATEN kapsıyor (bkz. `AltGezinme`), o pay burada
+            // tüketilmezse ekranların kendi `navigationBarsPadding()`'i aynı
+            // boşluğu bir kez daha eklerdi. Alt çubuğun olmadığı tam ekran
+            // rotalarda tüketilecek bir şey yok, pay ekranın kendisinden geliyor.
+            modifier = Modifier
+                .padding(bosluk)
+                .consumeWindowInsets(bosluk),
         ) {
             // Hesap akışı — uygulama akışının dışında, yalnızca ilk açılışta.
             composable(Rota.GIRIS) {

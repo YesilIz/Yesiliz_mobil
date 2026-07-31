@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -92,7 +94,12 @@ fun EbeveynEkran(
     }
 
     if (!durum.eslesmisMi) {
-        ModalBottomSheet(onDismissRequest = {}, sheetState = sayfaDurumu, containerColor = Beyaz) {
+        ModalBottomSheet(
+            onDismissRequest = {},
+            sheetState = sayfaDurumu,
+            containerColor = Beyaz,
+            contentWindowInsets = { WindowInsets.navigationBars },
+        ) {
             when (durum.adim) {
                 EslestirmeAdimi.ROL_SECIMI -> RolSecimiAdimi(
                     secilenRol = durum.secilenRol,
@@ -120,6 +127,9 @@ fun EbeveynEkran(
             onDismissRequest = { yedamAcik = false },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             YedamHakkinda(onKapat = { yedamAcik = false })
         }

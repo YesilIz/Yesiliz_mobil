@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
@@ -108,6 +109,11 @@ fun YesilBaslikliEkran(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Pay `Surface`'in İÇİNDE: zemin rengi sistem gezinme
+                    // çubuğunun arkasına kadar uzanmaya devam ediyor, yalnızca
+                    // içerik yukarı çekiliyor. Alt çubuklu sekme ekranlarında
+                    // pay `YesilizGezinme`'de tüketildiği için 0'a düşüyor.
+                    .navigationBarsPadding()
                     .padding(horizontal = Olcu.EkranKenari),
                 content = icerik,
             )
