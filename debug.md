@@ -227,7 +227,7 @@ Dürüstlük gereği: aşağıdakiler denenmedi, "çalışıyor" denemez.
 | Değişen dosya | 125 · yaklaşık +6.800 / −660 satır |
 | Kapatılan kusur | **9 K + 12 Y + 18 O** (1. tarama) · **1 K + 3 Y + 5 O** (2. tarama) |
 | Uygulanan kapsam kararı | 5 (İ-1 … İ-5) |
-| Test | 147 birim (app) + 22 (core-risk) + 34 cihaz + 53 backend = **256** |
+| Test | 147 birim (app) + 22 (core-risk) + 30 cihaz + 53 backend = **252** · hepsi geçiyor |
 | Yeni CLAUDE.md kararı | K20–K26; K15 tersine çevrildi |
 | Yeni bilinen tuzak | 6 (CLAUDE.md §9) |
 | Yeni backend ucu | `DELETE /auth/hesap` · `lig_uyelik.gorunur` (Alembic) |

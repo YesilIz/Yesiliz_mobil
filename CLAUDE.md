@@ -27,10 +27,10 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 278)
+# testler  (toplam 252)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 169 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 34 · GERÇEK CİHAZ ya da emülatör
+./gradlew :app:testDebugUnitTest       # 147 · saf JVM
+./gradlew :app:connectedDebugAndroidTest   # 30 · GERÇEK CİHAZ ya da emülatör
 ./gradlew :app:installDebug            # cihaza kur
 
 # backend  (53 pytest)
@@ -520,7 +520,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
 
-**Toplam 278 test** (169 Android birim + 34 cihaz/emülatör + 22 core-risk + 53 backend
+**Toplam 252 test** (147 Android birim + 30 cihaz/emülatör + 22 core-risk + 53 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
