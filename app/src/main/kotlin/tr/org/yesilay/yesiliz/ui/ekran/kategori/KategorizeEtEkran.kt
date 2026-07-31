@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -125,6 +127,9 @@ fun KategorizeEtEkran(
             onDismissRequest = { viewModel.uygulamaSecildi(null) },
             sheetState = sayfaDurumu,
             containerColor = Beyaz,
+            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
+            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
+            contentWindowInsets = { WindowInsets.navigationBars },
         ) {
             KategoriSecIcerik(
                 satir = uygulama,
