@@ -25,6 +25,22 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
+      Aktif yürüyüş sayacı arka planda da çalışsın (debug.md İ-3).
+
+      Eski karar (CLAUDE.md §12 K15) foreground service kullanmıyordu:
+      ekran açık kaldığı sürece sayıyordu. Gerçek cihazda bu, özelliği tam
+      da kullanılacağı anda çalışmaz kılıyor; yürüyüşe çıkan kullanıcı
+      telefonu cebine koyuyor, ekran kapanıyor, sayaç duruyor. Ekranı 15
+      dakika açık tutarak yürümek uygulamanın kendi mesajıyla da çelişiyor.
+
+      FOREGROUND_SERVICE_HEALTH, egzersiz oturumunun doğru sınıfı ve
+      Android 14+ tiplenmiş servis şartını karşılıyor. Servis yalnızca
+      oturum sürerken yaşıyor, tamamlanınca kendini durduruyor.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!--
       Health Connect — SADECE adım ve egzersiz süresi.
       Kalp atışı, uyku, kilo, konum içeren egzersiz rotası İSTENMİYOR.
       Aktivite sönümlemesinin (%15 tavan) tek girdisi bu ikisi.
@@ -213,6 +229,18 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Kısa mola hatırlatıcı göstermek için ekran kullanımını canlı izler" />
         </service>
+
+        <!--
+          Aktif yürüyüş sayacı (debug.md İ-3).
+
+          `health` tipi egzersiz oturumunun doğru sınıfı. Servis yalnızca
+          kullanıcı yürüyüşü başlattığında çalışıyor ve hedef süre dolunca
+          kendini durduruyor; sürekli açık kalan bir servis değil.
+        -->
+        <service
+            android:name=".arkaplan.YuruyusServisi"
+            android:exported="false"
+            android:foregroundServiceType="health" />
     </application>
 
 </manifest>

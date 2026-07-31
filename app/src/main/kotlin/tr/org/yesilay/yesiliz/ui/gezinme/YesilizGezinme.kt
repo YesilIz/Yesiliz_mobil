@@ -16,7 +16,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import tr.org.yesilay.yesiliz.ui.ekran.aktivite.AktiviteEkran
 import tr.org.yesilay.yesiliz.ui.ekran.ana.AnaEkran
+import tr.org.yesilay.yesiliz.ui.ekran.ekransiz.EkransizEkran
+import tr.org.yesilay.yesiliz.ui.ekran.gecekapanisi.GeceKapanisiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.gozmolasi.GozMolasiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.odak.OdakEkran
 import tr.org.yesilay.yesiliz.ui.ekran.anket.AnketYenileEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bildirim.BildirimEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiEkran
@@ -224,6 +229,22 @@ fun YesilizGezinme(
                     onHesapOlustur = { navController.navigate(Rota.KAYIT) },
                     onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
                 )
+            }
+            // Aktiviteler sekmesi (`debug.md` İ-1) -- Profil'in yerini aldı.
+            composable(Rota.AKTIVITE) {
+                AktiviteEkran(onAktivite = { rota -> navController.navigate(rota) })
+            }
+            composable(Rota.ODAK) {
+                OdakEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.GOZ_MOLASI) {
+                GozMolasiEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.GECE_KAPANISI) {
+                GeceKapanisiEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.EKRANSIZ) {
+                EkransizEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.GUNLUK_HEDEF) {
                 HedefEkran(onGeri = { navController.popBackStack() })

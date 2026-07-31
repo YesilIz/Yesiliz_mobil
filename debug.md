@@ -489,7 +489,7 @@ gereken bir kontrol, ağ gecikmesinin arkasında.
 
 Bunlar kusur değil; ürün kararı gerektiriyor. Karar verilmeden kod yazılmamalı.
 
-### İ-1 · Dördüncü sekme "Aktiviteler" olsun, Profil avatara taşınsın
+### ✅ İ-1 · Dördüncü sekme "Aktiviteler" olsun, Profil avatara taşınsın
 
 Kullanıcının isteği: *"şuanki profil sekmesi yerinde yürüyüş, nefes egzersizi ve birkaç
 şeyin olduğu bir sekme olsun; nefes ve yürüyüş haricinde uygulama konseptine uygun şeyler
@@ -524,7 +524,7 @@ kullanıcı bunu süre sanmış — etiketleme de buna davetiye çıkarıyor. İ
 gerekiyor: tempo (var) + **seans süresi** (1/2/5 dk, yeni). `Gorev.NEFES.aciklama`
 "2 dakikalık kutu nefesi" olduğu için puan tarafı da gözden geçirilmeli.
 
-### İ-3 · Yürüyüş arka planda da saysın
+### ✅ İ-3 · Yürüyüş arka planda da saysın
 
 Bugünkü davranış: `viewModelScope` + `EkranAcikTut`; ekran kapanınca ya da uygulamadan
 çıkınca **sayaç duruyor**. **§12 K15'i tersine çevirir** (*"foreground service MVP'nin

@@ -64,6 +64,7 @@ import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.suresiDk
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
@@ -779,13 +780,6 @@ private fun Gorev.detayAciklamasi(): String = when (this) {
     else -> aciklama
 }
 
-/** Süre çipi için dakika değeri — süresi olmayan görevlerde null (çip gösterilmez). */
-private fun Gorev.suresiDk(): Int? = when (this) {
-    Gorev.NEFES -> 2
-    Gorev.DIJITAL_MOLA -> 15
-    Gorev.YURUYUS -> 15
-    Gorev.RUH_HALI, Gorev.UYKU_BEYANI, Gorev.GECE_TEMIZ, Gorev.TUKETIM_HEDEFI -> null
-}
 
 private val AgacAlani: Dp = Olcu.AgacAlani
 private val AgacBoyu: Dp = Olcu.AgacBoyu
