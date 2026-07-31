@@ -1,5 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.odak
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +69,9 @@ fun OdakEkran(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Büyük yazı tipi ölçeğinde ve küçük ekranda içerik
+                // sığmıyor; kaydırmasız bırakmak O-1 ile aynı hata olurdu.
+                .verticalScroll(rememberScrollState())
                 .padding(vertical = Olcu.EkranKenari),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
