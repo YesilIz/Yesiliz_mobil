@@ -267,6 +267,7 @@ KATEGORI_VEKTORLERI = [
 
 FAKTOR_ESIK_DUSUK = 0.33
 FAKTOR_ESIK_ORTA = 0.66
+FAKTOR_ASGARI_DK = 15.0
 
 
 def _faktor_seviyesi(oran):
@@ -288,10 +289,22 @@ def _etkileyen_faktorler(kategori_dakika, oruntu, adim, spor_dk):
     # "hiç hareket etmedi" ayırt edilemiyor ve veri yokluğu maksimum risk
     # olarak gösteriliyordu (debug.md K-7).
     aktivite_olculdu = adim > 0.0 or spor_dk > 0.0
+    # Örüntüler günün toplamına bölünüyor; toplam birkaç dakikayken bölme
+    # uç değerler üretiyor (34 saniyenin tamamı geceye düşerse gece = 1,0).
+    # K-7 ile aynı ilke: az veriden maksimum iddia edilmiyor.
+    yeterli = toplam_dk >= FAKTOR_ASGARI_DK
+
+    def _kullanim(ad, oran):
+        return {
+            "ad": ad,
+            "seviye": _faktor_seviyesi(oran) if yeterli else "BILINMIYOR",
+            "oran": oran if yeterli else 0.0,
+        }
+
     faktorler = [
-        {"ad": "Gece kullanımı", "seviye": _faktor_seviyesi(gece), "oran": gece},
-        {"ad": "Kesintisiz kullanım süresi", "seviye": _faktor_seviyesi(oturum), "oran": oturum},
-        {"ad": "Sosyal medya oranı", "seviye": _faktor_seviyesi(sosyal_oran), "oran": sosyal_oran},
+        _kullanim("Gece kullanımı", gece),
+        _kullanim("Kesintisiz kullanım süresi", oturum),
+        _kullanim("Sosyal medya oranı", sosyal_oran),
         {
             "ad": "Fiziksel hareket",
             "seviye": _faktor_seviyesi(hareket_oran) if aktivite_olculdu else "BILINMIYOR",
@@ -336,6 +349,17 @@ FAKTOR_VEKTORLERI = [
         "kategori_dakika": {"social": 60.0, "productivity": 60.0},
         "oruntu": {"gece": 0.40, "oturum": 0.50},
         "adim": 4000.0, "spor_dk": 15.0,
+    },
+    {
+        "ad": "cok_az_kullanim",
+        "aciklama": (
+            "Toplam yarım dakika ve tamamı gece penceresinde. Ham oran 1,0 "
+            "ama ölçüm yetersiz: seviye iddia edilmiyor. Uygulamayı yeni "
+            "kuran kullanıcının ilk gecesi."
+        ),
+        "kategori_dakika": {"social": 0.6},
+        "oruntu": {"gece": 1.0, "oturum": 0.0},
+        "adim": 0.0, "spor_dk": 0.0,
     },
     {
         "ad": "sifir_ekran",
@@ -695,6 +719,7 @@ def uret():
             "ORUNTU_KATSAYI": ref.ORUNTU_KATSAYI,
             "FAKTOR_ESIK_DUSUK": FAKTOR_ESIK_DUSUK,
             "FAKTOR_ESIK_ORTA": FAKTOR_ESIK_ORTA,
+        "FAKTOR_ASGARI_DK": FAKTOR_ASGARI_DK,
         },
         "vektorler": vektorler,
     }

@@ -31,6 +31,11 @@ class EtkileyenFaktorlerTest {
         val s = kok["sabitler"]!!.jsonObject
         assertEquals(s["FAKTOR_ESIK_DUSUK"]!!.jsonPrimitive.double, Sabitler.FAKTOR_ESIK_DUSUK, 0.0)
         assertEquals(s["FAKTOR_ESIK_ORTA"]!!.jsonPrimitive.double, Sabitler.FAKTOR_ESIK_ORTA, 0.0)
+        assertEquals(
+            s["FAKTOR_ASGARI_DK"]!!.jsonPrimitive.double,
+            Sabitler.FAKTOR_ASGARI_DK,
+            0.0,
+        )
     }
 
     @Test

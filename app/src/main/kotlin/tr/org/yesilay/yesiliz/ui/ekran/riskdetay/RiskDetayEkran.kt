@@ -197,8 +197,16 @@ private fun FaktorSatiri(faktor: EtkileyenFaktor) {
         if (faktor.seviye == FaktorSeviyesi.BILINMIYOR) {
             Spacer(modifier = Modifier.height(Bosluk.Xs))
             Text(
-                text = "Henüz ölçülmedi — Profil › Adım ve hareket iznini " +
-                    "açarsan burada görünecek.",
+                // Sebep faktöre göre değişiyor: hareket için izin eksik,
+                // kullanım oranları için henüz yeterli ölçüm yok. Tek bir
+                // metin ikisinden birinde yanlış olurdu.
+                text = if (faktor.ad == HAREKET_FAKTORU) {
+                    "Henüz ölçülmedi — Profil › Adım ve hareket iznini " +
+                        "açarsan burada görünecek."
+                } else {
+                    "Bugün için yeterli ölçüm yok. Birkaç saatlik kullanım " +
+                        "biriktiğinde burada görünecek."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MetinUcuncul,
             )
@@ -226,3 +234,6 @@ private fun FaktorSeviyesi.zemin(): Color = when (this) {
     FaktorSeviyesi.YUKSEK -> KirmiziIstisnaZemin
     FaktorSeviyesi.BILINMIYOR -> YuzeyKirik
 }
+
+/** `EtkileyenFaktorler`'deki ad ile birebir. */
+private const val HAREKET_FAKTORU = "Fiziksel hareket"

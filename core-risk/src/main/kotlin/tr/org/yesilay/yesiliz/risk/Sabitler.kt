@@ -125,4 +125,22 @@ object Sabitler {
 
     /** oran < bu → ORTA, üstü YÜKSEK */
     const val FAKTOR_ESIK_ORTA = 0.66
+
+    /**
+     * Örüntü oranlarından seviye çıkarmak için gereken **asgari ölçüm**.
+     *
+     * Örüntüler (gece, oturum, sosyal oran) günün toplamına bölünüyor.
+     * Toplam birkaç dakikayken bölme uç değerler üretiyor: uygulamayı yeni
+     * kuran kullanıcı 34 saniyelik kullanımının tamamı gece penceresine
+     * düştüğü için `gece = 1,0` alıyor ve risk analizi ekranında
+     * "Gece kullanımı → Yüksek" görüyor.
+     *
+     * Bu, `debug.md` K-7'nin aynısı: veri yokluğunu maksimum risk olarak
+     * sunmak. Orada hareket faktörü içindi, burada kullanım oranları için.
+     * Eşiğin altında faktörler [FaktorSeviyesi.BILINMIYOR] dönüyor.
+     *
+     * 15 dakika **geçici** — A3 kalibrasyonuyla birlikte gözden geçirilecek
+     * (CLAUDE.md §12 A3).
+     */
+    const val FAKTOR_ASGARI_DK = 15.0
 }

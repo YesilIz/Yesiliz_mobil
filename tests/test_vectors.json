@@ -37,7 +37,8 @@
       "yer_degis": 0.4
     },
     "FAKTOR_ESIK_DUSUK": 0.33,
-    "FAKTOR_ESIK_ORTA": 0.66
+    "FAKTOR_ESIK_ORTA": 0.66,
+    "FAKTOR_ASGARI_DK": 15.0
   },
   "vektorler": {
     "dogrulama_profilleri": [
@@ -1740,6 +1741,45 @@
         }
       },
       {
+        "ad": "cok_az_kullanim",
+        "aciklama": "Toplam yarım dakika ve tamamı gece penceresinde. Ham oran 1,0 ama ölçüm yetersiz: seviye iddia edilmiyor. Uygulamayı yeni kuran kullanıcının ilk gecesi.",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 0.6
+          },
+          "oruntu": {
+            "gece": 1.0,
+            "oturum": 0.0
+          },
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            }
+          ]
+        }
+      },
+      {
         "ad": "sifir_ekran",
         "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0, hareket BILINMIYOR. Uygulamayı yeni kuran kullanıcının gördüğü durum.",
         "girdi": {
@@ -1752,17 +1792,17 @@
           "faktorler": [
             {
               "ad": "Gece kullanımı",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
               "ad": "Kesintisiz kullanım süresi",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
               "ad": "Sosyal medya oranı",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
