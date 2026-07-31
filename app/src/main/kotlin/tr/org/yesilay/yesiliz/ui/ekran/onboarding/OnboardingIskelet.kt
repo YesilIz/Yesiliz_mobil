@@ -1,6 +1,8 @@
 package tr.org.yesilay.yesiliz.ui.ekran.onboarding
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -56,9 +58,16 @@ fun OnboardingIskelet(
             AdimGostergesi(adim = adim, toplam = ONBOARDING_ADIM)
         }
 
+        // İçerik KAYDIRILABİLİR. Sabit `weight(1f)` ile sığmayan içerik
+        // sessizce kırpılıyordu: ilk sonuç ekranında sürükleyiciler
+        // kartının üçüncü satırı ("Fiziksel hareket") görünmüyor, alttaki
+        // metin bağlantısı erişilebilirlik ağacında `[0,0][0,0]` olarak
+        // çıkıyordu. Küçük ekran ya da büyük yazı tipi ölçeğinde diğer
+        // adımlar da etkileniyordu (`debug.md` O-1).
         Column(
             modifier = Modifier
                 .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(vertical = Olcu.BolumArasi),
             content = icerik,
         )

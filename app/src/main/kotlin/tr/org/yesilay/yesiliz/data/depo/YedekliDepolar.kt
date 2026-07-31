@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.data.depo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,15 +43,21 @@ class YedekliLigDeposu @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun ligAkisi(): Flow<LigOzeti> = flow {
         // Önce tazelemeyi dene; başarısızsa yerele geç.
+        //
+        // Yerele düşüldüğü ARTIK SÖYLENİYOR (`cevrimdisi`). Gerçek
+        // telefonda sunucuya hiç ulaşılamadığı için bu istisna değil
+        // varsayılan durumdu ve ekranda sahte veriye bakıldığını gösteren
+        // hiçbir işaret yoktu (`debug.md` O-14). Demo günü "backend
+        // çalışıyor" diye gösterilemeyecek veriyi ayırt etmenin tek yolu.
         val kaynak = try {
             uzak.tazele()
             uzak.ligAkisi()
         } catch (_: IOException) {
-            yerel.ligAkisi()
+            yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
         } catch (_: retrofit2.HttpException) {
             // 401: oturum yok/expired → yerel mock. Misafir kullanıcı da
             // lig sekmesini boş görmemeli.
-            yerel.ligAkisi()
+            yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
         }
         emitAll(kaynak)
     }

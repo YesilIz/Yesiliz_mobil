@@ -50,6 +50,11 @@ class OnboardingViewModel @Inject constructor(
         _durum.update { it.copy(cinsiyet = cinsiyet) }
     }
 
+    /** 18 yaş altı ebeveyn onayı beyanı (`debug.md` Y-11). */
+    fun ebeveynOnayiDegisti(onayli: Boolean) {
+        _durum.update { it.copy(ebeveynOnayiVerildi = onayli) }
+    }
+
     fun yanitVerildi(madde: Int, deger: Int) {
         _durum.update { durum ->
             durum.copy(

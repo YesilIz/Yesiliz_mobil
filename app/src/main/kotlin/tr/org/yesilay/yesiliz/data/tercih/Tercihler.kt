@@ -250,6 +250,30 @@ class Tercihler @Inject constructor(
      * (`YesilizDb.clearAllTables()`) ayrı, çağıran taraf (`VeriYonetimiDeposu`)
      * ikisini birlikte yürütür.
      */
+    /**
+     * Sunucu adresi — Profil › Geliştirici'den değiştirilebilir.
+     *
+     * Varsayılan `10.0.2.2` **yalnızca emülatörde** anlamlı: gerçek
+     * telefonda her çağrı zaman aşımına uğrayıp `Yedekli*Deposu`
+     * sahte veriye düşüyordu ve ekranda bunun çevrimdışı yedek olduğunu
+     * söyleyen hiçbir işaret yoktu (`debug.md` O-14). Gerçek cihazda
+     * geliştirme yapabilmek için makinenin LAN adresi girilebiliyor.
+     *
+     * Dağıtım yapıldığında varsayılan HTTPS alan adı olacak; alan
+     * yalnızca hata ayıklama için kalacak.
+     */
+    val sunucuTabani: Flow<String> = depo.data.map { p ->
+        p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
+    }
+
+    suspend fun sunucuTabaniniKaydet(adres: String) {
+        depo.edit { p ->
+            // Sondaki eğik çizgi Retrofit ve OkHttp için şart; kullanıcıya
+            // yazdırmak yerine burada tamamlanıyor.
+            p[SUNUCU_TABANI] = adres.trim().let { if (it.endsWith("/")) it else "$it/" }
+        }
+    }
+
     suspend fun sifirla() {
         depo.edit { it.clear() }
     }
@@ -269,24 +293,33 @@ class Tercihler @Inject constructor(
         val gunlukHedefDk: Int,
     )
 
-    private companion object {
-        val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
-        val GUNLUK_HEDEF = intPreferencesKey("gunluk_hedef_dk")
-        val ILK_KURULUM = longPreferencesKey("ilk_kurulum_gunu")
-        val GECMIS_GUN = intPreferencesKey("gecmis_gun_sayisi")
-        val GECMIS_GUN_HESAPLANDI = booleanPreferencesKey("gecmis_gun_hesaplandi")
-        val SON_ANKET = longPreferencesKey("son_anket_gunu")
-        val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
-        val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
-        val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
-        val HESAP_GIRIS = booleanPreferencesKey("hesap_giris")
-        val HESAP_MISAFIR = booleanPreferencesKey("hesap_misafir")
-        val HESAP_AD = stringPreferencesKey("hesap_ad")
-        val HESAP_EPOSTA = stringPreferencesKey("hesap_eposta")
-        val DAVET_KODU = stringPreferencesKey("davet_kodu")
-        val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
-        val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
-        val MOLA_HATIRLATICI = booleanPreferencesKey("mola_hatirlatici_acik")
+    companion object {
+        /**
+         * Varsayılan sunucu adresi — emülatörün makineye baktığı yer
+         * (`backend/docker-compose.yml`). `AgModulu` yer tutucu taban
+         * olarak da bunu kullanıyor.
+         */
+        const val VARSAYILAN_SUNUCU = "http://10.0.2.2:8000/"
+
+        // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
+        private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
+        private val GUNLUK_HEDEF = intPreferencesKey("gunluk_hedef_dk")
+        private val ILK_KURULUM = longPreferencesKey("ilk_kurulum_gunu")
+        private val GECMIS_GUN = intPreferencesKey("gecmis_gun_sayisi")
+        private val GECMIS_GUN_HESAPLANDI = booleanPreferencesKey("gecmis_gun_hesaplandi")
+        private val SON_ANKET = longPreferencesKey("son_anket_gunu")
+        private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
+        private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
+        private val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
+        private val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
+        private val HESAP_GIRIS = booleanPreferencesKey("hesap_giris")
+        private val HESAP_MISAFIR = booleanPreferencesKey("hesap_misafir")
+        private val HESAP_AD = stringPreferencesKey("hesap_ad")
+        private val HESAP_EPOSTA = stringPreferencesKey("hesap_eposta")
+        private val DAVET_KODU = stringPreferencesKey("davet_kodu")
+        private val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
+        private val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
+        private val MOLA_HATIRLATICI = booleanPreferencesKey("mola_hatirlatici_acik")
 
         /**
          * `"acik|sabahSaati|aksamSaati"` — ör. `"true|9|21"`.
@@ -295,7 +328,7 @@ class Tercihler @Inject constructor(
          * okunuyorlar, birlikte yazılıyorlar ve ayrı ayrı hiçbir yerde
          * kullanılmıyorlar.
          */
-        val BILDIRIM_SAATLERI = stringPreferencesKey("bildirim_saatleri")
+        private val BILDIRIM_SAATLERI = stringPreferencesKey("bildirim_saatleri")
 
         /** Hedef henüz belirlenmediyse — onboarding'i atlayan kullanıcı. */
         const val VARSAYILAN_HEDEF = 240

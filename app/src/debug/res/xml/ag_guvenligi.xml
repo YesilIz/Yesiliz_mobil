@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ağ güvenliği — YALNIZCA DEBUG derlemesi.
+
+  Bu dosya `src/main`'deki sıkı yapılandırmayı **override ediyor**;
+  release derlemesi ona bakmaya devam ediyor (şifresiz trafik kapalı,
+  tek istisna emülatörün 10.0.2.2 adresi).
+
+  Debug'da şifresiz trafiğin tamamen açık olmasının sebebi: gerçek telefon
+  emülatörün 10.0.2.2 adresine ulaşamıyor, geliştirme makinesine LAN
+  adresiyle bağlanmak zorunda (`debug.md` O-14, Profil › Geliştirici ›
+  Sunucu adresi). LAN adresi ağdan ağa değişiyor ve
+  `network-security-config` IP aralığı/joker desteklemiyor; tek tek adres
+  yazmak her ağ değişikliğinde yeniden derleme demek olurdu.
+
+  Bu gevşetme yayınlanan APK'ya **giremiyor** — kaynak setinde, bayrakta
+  değil (demo tohumuyla aynı koruma, CLAUDE.md §11).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

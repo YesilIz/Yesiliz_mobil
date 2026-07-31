@@ -50,6 +50,16 @@ data class LigOzeti(
      * hiçbir şey yapmıyordu (`debug.md` Y-5).
      */
     val gorunuyorum: Boolean = true,
+    /**
+     * Bu veri sunucudan değil **yerel yedekten** geliyor.
+     *
+     * `Yedekli*Deposu` ağ hatasında sessizce sahte veriye düşüyordu ve
+     * ekranda bunu söyleyen hiçbir işaret yoktu; gerçek telefonda sunucuya
+     * hiç ulaşılamadığı için bu istisna değil varsayılan durumdu
+     * (`debug.md` O-14). Bilinçli bir tasarım kararı (CLAUDE.md §12 K18)
+     * ama görünmez olması değil.
+     */
+    val cevrimdisi: Boolean = false,
 )
 
 data class LigSatiri(

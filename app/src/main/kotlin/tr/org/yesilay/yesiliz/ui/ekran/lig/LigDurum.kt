@@ -24,6 +24,8 @@ data class LigDurum(
      * tercihin çalışıp çalışmadığını belirsiz bırakırdı (`debug.md` Y-5).
      */
     val gorunuyorum: Boolean = true,
+    /** Sıralama sunucudan değil yerel yedekten geliyor (`debug.md` O-14). */
+    val cevrimdisi: Boolean = false,
     val yukleniyor: Boolean = true,
 )
 

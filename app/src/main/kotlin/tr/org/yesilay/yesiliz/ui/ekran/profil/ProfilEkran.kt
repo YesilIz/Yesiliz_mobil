@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FamilyRestroom
@@ -143,6 +144,7 @@ fun ProfilEkran(
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
     var cikisOnayi by remember { mutableStateOf(false) }
+    var sunucuAdresiAcik by remember { mutableStateOf(false) }
     val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -334,6 +336,13 @@ fun ProfilEkran(
                         "Örnek veri oluştur",
                         onTikla = viewModel::demoTohumla,
                     )
+                    KartAyraci()
+                    AyarSatiri(
+                        Icons.Filled.Dns,
+                        "Sunucu adresi",
+                        altMetin = durum.sunucuTabani,
+                        onTikla = { sunucuAdresiAcik = true },
+                    )
                 }
             }
 
@@ -380,6 +389,19 @@ fun ProfilEkran(
                 onOnayla = viewModel::hesabiSil,
                 onVazgec = { hesabiSilAcik = false },
                 onUyariyiKapat = viewModel::uyariyiKapat,
+            )
+        }
+    }
+
+    if (sunucuAdresiAcik) {
+        AltSayfa(onKapat = { sunucuAdresiAcik = false }) {
+            SunucuAdresiIcerik(
+                mevcut = durum.sunucuTabani,
+                onKaydet = { adres ->
+                    viewModel.sunucuAdresiKaydet(adres)
+                    sunucuAdresiAcik = false
+                },
+                onKapat = { sunucuAdresiAcik = false },
             )
         }
     }
@@ -562,6 +584,51 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Dosyaları oluştur ve paylaş", onTikla = onDisaAktar)
+    }
+}
+
+/**
+ * Sunucu adresi — yalnızca debug derlemesinde görünen geliştirici ayarı.
+ *
+ * `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` yalnızca emülatörden
+ * erişilebiliyordu; gerçek telefonda HER çağrı zaman aşımına uğrayıp
+ * `Yedekli*Deposu` sahte veriye düşüyordu ve bu istisna değil varsayılan
+ * durum hâline gelmişti (`debug.md` O-14).
+ */
+@Composable
+private fun SunucuAdresiIcerik(
+    mevcut: String,
+    onKaydet: (String) -> Unit,
+    onKapat: () -> Unit,
+) {
+    var adres by remember(mevcut) { mutableStateOf(mevcut) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        AltSayfaBasligi("Sunucu adresi", onKapat)
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "10.0.2.2 yalnızca emülatörde çalışır. Gerçek cihazda " +
+                "geliştirme makinenin yerel ağ adresini yaz " +
+                "(örnek: http://192.168.1.20:8000).",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        OutlinedTextField(
+            value = adres,
+            onValueChange = { adres = it },
+            placeholder = { Text("http://192.168.1.20:8000/") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Kaydet ve dene", onTikla = { onKaydet(adres) })
+        MetinBaglanti(metin = "Vazgeç", onTikla = onKapat)
     }
 }
 

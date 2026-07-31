@@ -7,10 +7,14 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
 import okhttp3.Interceptor
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.JetonAuthenticator
 import tr.org.yesilay.yesiliz.data.uzak.JetonDeposu
 import tr.org.yesilay.yesiliz.data.uzak.JetonKaynak
@@ -24,10 +28,12 @@ import javax.inject.Singleton
 /**
  * Ağ katmanı — Faz 2 backend'i (`backend/`).
  *
- * **Sunucu adresi derleme türüne göre.** Emülatörde `localhost` cihazın
- * kendisi demek; makinedeki sunucuya `10.0.2.2` ile ulaşılıyor. Release'de
- * gerçek alan adı gelecek — şimdilik aynı yer tutucu, çünkü henüz bir
- * dağıtım yok ve uydurma bir adres yazmak yanıltıcı olurdu.
+ * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`).
+ * Varsayılan `10.0.2.2` yalnızca emülatörde anlamlı; gerçek telefonda HER
+ * çağrı zaman aşımına uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve
+ * bu istisna değil **varsayılan durum** hâline gelmişti (`debug.md` O-14).
+ * Adres artık Profil › Geliştirici'den değiştirilebiliyor, böylece gerçek
+ * cihaz makinenin LAN adresine bağlanabiliyor.
  *
  * Zaman aşımları **kısa** (5 sn): backend kapalıyken kullanıcı 30 saniye
  * boş ekrana bakmasın, `Yedekli*Deposu` hızlıca yerel veriye düşsün.
@@ -36,8 +42,20 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AgModulu {
 
-    private const val EMULATOR_TABANI = "http://10.0.2.2:8000/"
-    private const val ZAMAN_ASIMI_SN = 5L
+    /**
+     * Retrofit'in derleme anında bir taban adrese ihtiyacı var; gerçek
+     * adres [tabanDegistirici] tarafından her istekte yazılıyor.
+     */
+    private const val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
+
+    /**
+     * Zaman aşımı.
+     *
+     * 5 saniyeydi ve gerçek şebekede kısaydı: yavaş bir bağlantıda
+     * çalışan sunucu bile ulaşılamaz sayılıyordu. 10 saniye hâlâ
+     * `Yedekli*Deposu`'nun makul sürede yerele düşmesine izin veriyor.
+     */
+    private const val ZAMAN_ASIMI_SN = 10L
 
     @Provides
     @Singleton
@@ -61,11 +79,12 @@ object AgModulu {
      */
     @Provides
     @Singleton
-    fun jetonYenileyici(json: Json): JetonYenileyici =
+    fun jetonYenileyici(json: Json, tercihler: Tercihler): JetonYenileyici =
         RetrofitJetonYenileyici(
-            taban = EMULATOR_TABANI,
+            taban = YER_TUTUCU_TABAN,
             json = json,
             zamanAsimiSn = ZAMAN_ASIMI_SN,
+            tabanDegistirici = tabanDegistirici(tercihler),
         )
 
     @Provides
@@ -75,9 +94,35 @@ object AgModulu {
         kaynak: JetonKaynak,
     ): Authenticator = JetonAuthenticator(yenileyici, kaynak)
 
+    /**
+     * Her isteğin adresini `Tercihler`'den okunan tabana çevirir.
+     *
+     * `runBlocking` burada [JetonDeposu.erisimSenkron] ile aynı gerekçeyle
+     * kaçınılmaz: OkHttp interceptor'ı askıya alınabilir değil. DataStore
+     * okuması ilk seferden sonra bellekten geliyor.
+     */
+    private fun tabanDegistirici(tercihler: Tercihler) = Interceptor { zincir ->
+        val istek = zincir.request()
+        val taban = runBlocking { tercihler.sunucuTabani.first() }.toHttpUrlOrNull()
+        if (taban == null) {
+            zincir.proceed(istek)
+        } else {
+            val yeniUrl = istek.url.newBuilder()
+                .scheme(taban.scheme)
+                .host(taban.host)
+                .port(taban.port)
+                .build()
+            zincir.proceed(istek.newBuilder().url(yeniUrl).build())
+        }
+    }
+
     @Provides
     @Singleton
-    fun istemci(jetonDeposu: JetonDeposu, authenticator: Authenticator): OkHttpClient {
+    fun istemci(
+        jetonDeposu: JetonDeposu,
+        authenticator: Authenticator,
+        tercihler: Tercihler,
+    ): OkHttpClient {
         val kimlik = Interceptor { zincir ->
             val jeton = jetonDeposu.erisimSenkron()
             val istek = if (jeton == null) {
@@ -91,6 +136,9 @@ object AgModulu {
         }
 
         return OkHttpClient.Builder()
+            // Adres değiştirici kimlikten ÖNCE: yeniden yazılan URL'ye
+            // Authorization başlığı eklensin.
+            .addInterceptor(tabanDegistirici(tercihler))
             .addInterceptor(kimlik)
             // 401 gelince erişim jetonunu bir kez yenileyip isteği tekrarlar.
             // Olmadığında 30 dakikalık jeton süresi dolar dolmaz her kimlikli
@@ -101,18 +149,10 @@ object AgModulu {
             .build()
     }
 
-    /**
-     * Tek adres var çünkü tek ortam var.
-     *
-     * Bir dağıtım (staging/production) yapıldığında burası derleme türüne
-     * göre ayrılacak — `buildConfigField` ile. Şimdiden iki dal yazıp
-     * ikisine de aynı adresi koymak, var olmayan bir yapılandırmayı varmış
-     * gibi göstermek olurdu.
-     */
     @Provides
     @Singleton
     fun api(istemci: OkHttpClient, json: Json): YesilizApi = Retrofit.Builder()
-        .baseUrl(EMULATOR_TABANI)
+        .baseUrl(YER_TUTUCU_TABAN)
         .client(istemci)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()

@@ -100,14 +100,27 @@ class ProfilViewModel @Inject constructor(
         )
     }.combine(sssAkisi) { durum, sss ->
         durum.copy(sss = sss)
+    }.combine(tercihler.sunucuTabani) { durum, taban ->
+        durum.copy(sunucuTabani = taban)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
         initialValue = ProfilDurum(isim = SABIT_ISIM, ligAdi = SABIT_LIG),
     )
 
+    /**
+     * "Yeşilay ile paylaşım" rıza kapısı (CLAUDE.md §12 K19).
+     *
+     * Açılınca senkron **hemen** deneniyor. Tercih aslında çalışıyordu
+     * ama açıp kapatmanın gözlenebilir hiçbir sonucu yoktu: gecelik
+     * worker'a kadar hiçbir şey olmuyor, kullanıcı anahtarın işe yarayıp
+     * yaramadığını anlayamıyordu (`debug.md` O-18).
+     */
     fun yesilayPaylasimi(acik: Boolean) {
-        viewModelScope.launch { tercihler.yesilayPaylasimiAyarla(acik) }
+        viewModelScope.launch {
+            tercihler.yesilayPaylasimiAyarla(acik)
+            if (acik) senkronDeposu.senkronEt()
+        }
     }
 
     /**
@@ -165,6 +178,21 @@ class ProfilViewModel @Inject constructor(
      * Release derlemesinde [DemoVeri] no-op; bu satır zaten görünmüyor
      * ([ProfilDurum.demoKullanilabilir] false).
      */
+    /**
+     * Sunucu adresi (Profil › Geliştirici).
+     *
+     * Varsayılan `10.0.2.2` yalnızca emülatörde çalışıyor; gerçek cihazda
+     * geliştirme makinesinin LAN adresi giriliyor (`debug.md` O-14).
+     * Kaydettikten sonra senkron hemen deneniyor ki adresin doğru olup
+     * olmadığı anlaşılsın.
+     */
+    fun sunucuAdresiKaydet(adres: String) {
+        viewModelScope.launch {
+            tercihler.sunucuTabaniniKaydet(adres)
+            senkronDeposu.senkronEt()
+        }
+    }
+
     fun demoTohumla() {
         viewModelScope.launch { demoVeri.tohumla() }
     }

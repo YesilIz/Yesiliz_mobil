@@ -27,6 +27,7 @@ object Rota {
     const val KARSILAMA = "onboarding/karsilama"
     const val IZIN = "onboarding/izin"
     const val PROFIL_KURULUM = "onboarding/profil"
+    const val EBEVEYN_ONAYI = "onboarding/ebeveynonayi"
     const val ANKET = "onboarding/anket"
     const val ILK_SONUC = "onboarding/ilksonuc"
     const val HEDEF = "onboarding/hedef"

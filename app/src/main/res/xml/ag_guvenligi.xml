@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Ağ güvenliği.
+  Ağ güvenliği — release.
 
-  Varsayılan olarak **şifresiz trafik kapalı** — üretimde HTTPS zorunlu.
-  Tek istisna emülatörün makineye baktığı `10.0.2.2`: yerel geliştirme
-  sunucusunun (backend/docker-compose.yml) TLS sertifikası yok ve bunun
-  için sahte sertifika üretmek geliştirme akışına gereksiz yük.
+  Şifresiz trafik **kapalı**; üretimde HTTPS zorunlu. Tek istisna
+  emülatörün makineye baktığı `10.0.2.2`: yerel geliştirme sunucusunun
+  (backend/docker-compose.yml) TLS sertifikası yok ve bunun için sahte
+  sertifika üretmek geliştirme akışına gereksiz yük. Bu istisna gerçek bir
+  cihazda hiçbir şeye izin vermiyor; 10.0.2.2 yalnızca emülatörde anlamlı.
 
-  Bu istisna gerçek bir cihazda hiçbir şeye izin vermiyor: 10.0.2.2
-  yalnızca Android emülatöründe anlamlı bir adres.
+  Debug derlemesi `src/debug/res/xml/ag_guvenligi.xml` ile bu dosyayı
+  override ediyor: gerçek cihazda geliştirme sunucusuna LAN adresiyle
+  bağlanabilmek gerekiyor (`debug.md` O-14).
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />

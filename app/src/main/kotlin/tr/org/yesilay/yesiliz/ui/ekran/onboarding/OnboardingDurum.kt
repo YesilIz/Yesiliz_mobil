@@ -22,6 +22,8 @@ data class OnboardingDurum(
     val hedefDakika: Int = 285,
     /** UsageStats izni verildi mi — `IzinEkran`'ın `ON_RESUME` kontrolüyle güncellenir. */
     val izinVerildiMi: Boolean = false,
+    /** 18 yaş altı akışındaki ebeveyn onayı beyanı (`debug.md` Y-11). */
+    val ebeveynOnayiVerildi: Boolean = false,
 ) {
     /** 10 madde zorunlu — eksikle ilerlenemez (`docs/spec-anket.md §6.4`). */
     val anketTamam: Boolean get() = yanitlar.all { it > 0 }
@@ -29,7 +31,13 @@ data class OnboardingDurum(
     /** SAS-SV ham puanı, 10–60. Ters madde yok, düz toplam. */
     val hamPuan: Int get() = yanitlar.sum()
 
-    /** 18 yaş altı → ebeveyn onayı zorunlu (CLAUDE.md §4). */
+    /**
+     * 18 yaş altı → ebeveyn onayı zorunlu (CLAUDE.md §4).
+     *
+     * Bu alan yazılmıştı ama hiçbir yerden okunmuyordu: onboarding 3/4'te
+     * yaş 15 girilse bile "Devam" doğrudan ankete geçiyor, onay
+     * sorulmuyor, akış hiçbir yerde ayrışmıyordu (`debug.md` Y-11).
+     */
     val ebeveynOnayiGerekir: Boolean get() = yas < ERGIN_YAS
 }
 
@@ -61,5 +69,13 @@ object SasSv {
     const val SAYFA_BOYU = 2
 }
 
-private const val VARSAYILAN_YAS = 17
+/**
+ * Varsayılan yaş.
+ *
+ * 17 idi ve bu, **varsayılan kullanıcıyı 18 altı** yapıyordu; üstelik
+ * onboarding bu durumda hiçbir şey sormuyordu (`debug.md` Y-11). 18'e
+ * çekildi: yaş sayacı zaten 10–70 arasında serbest, altına inmek
+ * kullanıcının açık seçimi oluyor.
+ */
+private const val VARSAYILAN_YAS = 18
 private const val ERGIN_YAS = 18

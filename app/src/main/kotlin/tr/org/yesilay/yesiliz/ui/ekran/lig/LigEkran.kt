@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -41,6 +42,9 @@ import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
+import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
+import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
+import tr.org.yesilay.yesiliz.ui.tema.YuzeyKirik
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -84,6 +88,12 @@ fun LigEkran(
             ),
         ) {
             item { LigBasligi(durum) }
+            // Sunucuya ulaşılamadığında sıralama yerel yedekten geliyor.
+            // Bunu söylemeden göstermek, demo günü "backend çalışıyor"
+            // sanılmasına yol açardı (`debug.md` O-14).
+            if (durum.cevrimdisi) {
+                item { CevrimdisiNotu() }
+            }
             // "Ligde görün" kapalıysa söyleniyor. Kullanıcı kendi satırını
             // görmeye devam ediyor ama başkaları görmüyor; bunu bilmeden
             // sıralamanın neden bu kadar kısa olduğunu anlayamazdı.
@@ -107,6 +117,31 @@ fun LigEkran(
  * Tercih artık gerçekten çalışıyor: kullanıcı başkalarının sıralamasında
  * çıkmıyor. Bunu ekranda söylemek şart, yoksa özellik bozuk sanılır.
  */
+@Composable
+private fun CevrimdisiNotu() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(YuzeyKirik)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.CloudOff,
+            contentDescription = null,
+            tint = MetinUcuncul,
+        )
+        Spacer(modifier = Modifier.width(Bosluk.S))
+        Text(
+            text = "Sunucuya ulaşılamıyor. Aşağıdaki sıralama örnek veri; " +
+                "bağlantı kurulunca gerçek lig görünecek.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+    }
+}
+
 @Composable
 private fun GorunmuyorNotu() {
     Row(

@@ -21,6 +21,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.onboarding.AnketEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HedefEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HedefOzelEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IlkSonucEkran
+import tr.org.yesilay.yesiliz.ui.ekran.onboarding.EbeveynOnayiEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IzinEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.KarsilamaEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.OnboardingViewModel
@@ -81,12 +82,34 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
         composable(Rota.PROFIL_KURULUM) { girdi ->
             val vm = girdi.onboardingViewModel(navController)
             val durum by vm.durum.collectAsStateWithLifecycle()
+            // 18 yaş altı ayrı dala giriyor. `ebeveynOnayiGerekir` yazılmış
+            // ama hiç okunmamıştı: yaş 15 girilse bile "Devam" doğrudan
+            // ankete geçiyordu (`debug.md` Y-11).
+            val sonrakiRota = if (durum.ebeveynOnayiGerekir) {
+                Rota.EBEVEYN_ONAYI
+            } else {
+                Rota.ANKET
+            }
+
             ProfilKurulumEkran(
                 durum = durum,
                 onYas = vm::yasDegisti,
                 onCinsiyet = vm::cinsiyetSecildi,
+                onDevam = { girdi.guvenliGit(navController, sonrakiRota) },
+                onAtla = { girdi.guvenliGit(navController, sonrakiRota) },
+            )
+        }
+
+        composable(Rota.EBEVEYN_ONAYI) { girdi ->
+            val vm = girdi.onboardingViewModel(navController)
+            val durum by vm.durum.collectAsStateWithLifecycle()
+            EbeveynOnayiEkran(
+                yas = durum.yas,
+                onayli = durum.ebeveynOnayiVerildi,
+                onOnayDegisti = vm::ebeveynOnayiDegisti,
                 onDevam = { girdi.guvenliGit(navController, Rota.ANKET) },
-                onAtla = { girdi.guvenliGit(navController, Rota.ANKET) },
+                onGeri = { navController.popBackStack() },
+                onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
             )
         }
 

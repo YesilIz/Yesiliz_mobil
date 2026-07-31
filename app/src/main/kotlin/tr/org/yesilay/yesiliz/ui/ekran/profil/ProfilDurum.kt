@@ -34,4 +34,6 @@ data class ProfilDurum(
     val eposta: String = "",
     /** Yardım alt sayfasındaki SSS — `assets/sozlesmeler.json`. */
     val sss: List<SssMaddesi> = emptyList(),
+    /** Geliştirici ayarındaki sunucu adresi (`debug.md` O-14). */
+    val sunucuTabani: String = "",
 )
