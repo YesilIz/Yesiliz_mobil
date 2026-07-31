@@ -1,0 +1,93 @@
+package tr.org.yesilay.yesiliz.data.uzak
+
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import retrofit2.HttpException
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.POST
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+
+/**
+ * Yenileme denemesinin sonucu.
+ *
+ * Ağ hatası ile sunucunun reddi **ayrı** — CLAUDE.md §12 K18'in ayrımı burada
+ * da geçerli. Geçici bir bağlantı kopukluğu yüzünden kullanıcıyı oturumdan
+ * atmak, `Yedekli*Deposu`'nun tam olarak önlemek için yazıldığı hata.
+ */
+sealed interface YenilemeSonuc {
+
+    data class Basarili(val jetonlar: JetonlarDto) : YenilemeSonuc
+
+    /** Sunucu reddetti: yenileme jetonu geçersiz ya da 30 günü dolmuş. */
+    data object Reddedildi : YenilemeSonuc
+
+    /** Sunucuya ulaşılamadı — oturum korunur, sonraki istek yeniden dener. */
+    data object AgHatasi : YenilemeSonuc
+}
+
+/**
+ * Erişim jetonunu tazeleyen taraf.
+ *
+ * Arayüz olması [JetonAuthenticator]'ın emülatörsüz test edilebilmesi için —
+ * `LigDeposu` / `HesapDeposu` ile aynı desen.
+ */
+interface JetonYenileyici {
+    fun yenile(yenilemeJetonu: String): YenilemeSonuc
+}
+
+/**
+ * `POST auth/yenile` — **kendi, yalıtılmış istemcisiyle**.
+ *
+ * ## Niçin ayrı bir Retrofit
+ *
+ * İki sorunu aynı anda çözüyor:
+ *
+ * 1. **Dagger döngüsü.** `YesilizApi` → `OkHttpClient` → `Authenticator` →
+ *    `YesilizApi` bir halka kurardı. Yenileme çağrısı ana istemciden
+ *    geçmeyince halka kopuyor.
+ * 2. **Sonsuz özyineleme.** Yenileme isteğinin kendisi 401 alırsa, ana
+ *    istemcinin authenticator'ı yine yenilemeye kalkardı. Bu istemcide ne
+ *    kimlik interceptor'ı ne authenticator var — 401 olduğu gibi dönüyor.
+ *
+ * Bağlantı havuzu ana istemciyle paylaşılmıyor; yenileme 30 dakikada bir
+ * yapılan tek bir çağrı olduğu için bunun maliyeti ölçülemez düzeyde.
+ */
+class RetrofitJetonYenileyici(
+    taban: String,
+    json: Json,
+    zamanAsimiSn: Long,
+) : JetonYenileyici {
+
+    private interface YenilemeApi {
+        @POST("auth/yenile")
+        suspend fun yenile(@Body istek: YenileIstek): JetonlarDto
+    }
+
+    private val api: YenilemeApi = Retrofit.Builder()
+        .baseUrl(taban)
+        .client(
+            OkHttpClient.Builder()
+                .connectTimeout(zamanAsimiSn, TimeUnit.SECONDS)
+                .readTimeout(zamanAsimiSn, TimeUnit.SECONDS)
+                .build(),
+        )
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(YenilemeApi::class.java)
+
+    override fun yenile(yenilemeJetonu: String): YenilemeSonuc = runBlocking {
+        try {
+            YenilemeSonuc.Basarili(api.yenile(YenileIstek(yenilemeJetonu)))
+        } catch (_: IOException) {
+            YenilemeSonuc.AgHatasi
+        } catch (_: HttpException) {
+            // 401 ya da başka bir sunucu yanıtı: jeton kabul edilmedi.
+            YenilemeSonuc.Reddedildi
+        }
+    }
+}
