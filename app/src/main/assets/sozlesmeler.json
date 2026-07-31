@@ -1,0 +1,139 @@
+{
+  "surum": 1,
+  "not": "Bu metinler uygulamanın GERÇEK davranışından türetildi (CLAUDE.md §4, docs/spec-veri.md, backend/README.md). Kod değişirse buradaki iddialar da değişmek zorunda.",
+  "sozlesmeler": [
+    {
+      "id": "kullanim-kosullari",
+      "baslik": "Kullanım Koşulları",
+      "guncelleme": "1 Ağustos 2026",
+      "uyari": "Bu metin bilgilendirme amaçlıdır ve hukuki incelemeden geçmemiştir. Nihai sözleşme Yeşilay tarafından yayımlanacaktır.",
+      "govde": [
+        "**Yeşilİz nedir**",
+        "Yeşilİz, telefon ve ekran kullanımını ölçüp sana geri bildiren bir farkındalık uygulamasıdır. Yeşilay ile birlikte, TEKNOFEST 2026 kapsamında geliştirilmektedir.",
+        "**Yeşilİz bir sağlık hizmeti değildir**",
+        "Uygulama teşhis koymaz, tanı yerine geçmez ve tedavi önermez. Gördüğün risk düzeyi, kendi kullanım verinden çıkarılan betimleyici bir ölçüdür — \"bağımlısın\" demez, \"son 7 günde gece kullanımın arttı\" der.",
+        "Bir zorlukla karşılaşıyorsan uygulama seni YEDAM'a (Yeşilay Danışmanlık Merkezi) yönlendirebilir. Bu yönlendirme yalnızca senin onayınla yapılır ve ücretsiz danışmanlık hattı 115'e erişimini kolaylaştırmayı amaçlar.",
+        "**Uygulama seni kısıtlamaz**",
+        "Yeşilİz hiçbir uygulamayı kilitlemez, hiçbir şeyi engellemez ve ceza puanı vermez. Yalnızca kısa hatırlatmalar gösterir ve puan kazandırır. Hatırlatmaları istediğin zaman kapatabilirsin.",
+        "**Senin sorumluluğun**",
+        "Hesap açarken doğru bilgi vermen, şifreni paylaşmaman ve 18 yaşından küçüksen ebeveyn onayı alman gerekir.",
+        "Puanlar, rozetler ve lig sıralaması yalnızca uygulama içinde anlam taşır; parasal bir değeri yoktur ve devredilemez. Puanı hile ile yükseltmeye çalışmak (sahte veri, birden çok hesap) hesabın kapatılmasına yol açabilir.",
+        "**Bizim sorumluluğumuz**",
+        "Uygulamayı olabildiğince doğru ve kesintisiz sunmaya çalışırız ama kesintisiz çalışacağını garanti edemeyiz. Ölçüm, işletim sisteminin verdiği kullanım istatistiklerine dayanır; bu veriler cihazdan cihaza farklılık gösterebilir.",
+        "**Değişiklikler**",
+        "Koşullar değişirse uygulama içinde bildirilir. Kabul etmezsen hesabını ve verilerini istediğin zaman kalıcı olarak silebilirsin (Profil › Verilerim)."
+      ]
+    },
+    {
+      "id": "gizlilik-politikasi",
+      "baslik": "Gizlilik Politikası",
+      "guncelleme": "1 Ağustos 2026",
+      "uyari": "Bu metin bilgilendirme amaçlıdır ve hukuki incelemeden geçmemiştir. Nihai KVKK aydınlatma metni Yeşilay tarafından yayımlanacaktır.",
+      "govde": [
+        "**Kısa hâli**",
+        "Ne yaptığını değil, ne kadar süre yaptığını ölçüyoruz. Hesaplama telefonunda yapılıyor. Sunucuya, sen açıkça izin vermedikçe hiçbir şey gitmiyor.",
+        "**Neyi topluyoruz**",
+        "Hangi uygulamayı ne kadar süre kullandığın, günde kaç kez telefonu açtığın ve bu kullanımın günün hangi saatlerine dağıldığı. Uygulamalar kategoriye çevriliyor (sosyal, eğlence, üretkenlik…).",
+        "İzin verirsen adım sayın ve egzersiz süren. Bunlar Health Connect üzerinden okunur.",
+        "Kendi girdiklerin: yaş, cinsiyet, günlük hedefin, ruh hali kaydın, uyku beyanın ve doldurduğun değerlendirme anketlerinin yanıtları.",
+        "**Neyi TOPLAMIYORUZ**",
+        "Mesajlarını, fotoğraflarını, rehberini, arama geçmişini, tarayıcı geçmişini ve uygulamaların içindeki hiçbir içeriği okumuyoruz.",
+        "Konumunu istemiyoruz. Uygulamanın konum izni yok ve olmayacak.",
+        "Kalp atışı, uyku, kilo gibi sağlık verilerini istemiyoruz — Health Connect'ten yalnızca adım sayısı ve egzersiz süresi okunuyor.",
+        "Şifreni cihazında hiçbir yere yazmıyoruz. Doğrulama sunucuda yapılıyor; telefonunda yalnızca oturum jetonu duruyor.",
+        "**Nerede duruyor**",
+        "Ham kullanım kayıtların **telefonundan çıkmıyor**. Risk skorun da telefonunda hesaplanıyor; sunucunun ikinci bir hesaplama motoru yok.",
+        "Ham kayıtlar 30 gün sonra otomatik siliniyor; geriye yalnızca günlük özetler kalıyor.",
+        "**Sunucuya ne gidiyor**",
+        "Yalnızca \"Yeşilay ile paylaşım\" anahtarını açarsan: günlük özetin (toplam süre, kategori dağılımı, açılış sayısı) ve hesaplanmış risk skorun. Anahtar kapalıyken ağ isteği hiç yapılmıyor. Misafir kullanıcının verisi hiçbir koşulda gönderilmiyor.",
+        "Hangi uygulamayı kullandığın sunucuya gitmiyor — yalnızca kategori toplamları gidiyor.",
+        "**Ligde görünme**",
+        "Lig sıralamasında yalnızca adın ve haftalık puanın görünür. \"Ligde görün\" anahtarını kapatırsan başkalarının sıralamasında çıkmazsın; kendi sıranı görmeye devam edersin.",
+        "**Ebeveyn paneli**",
+        "Eşleştirme yaparsan ebeveynine yalnızca **özet** gider: toplam ekran süresi, risk bandı ve eğilim. Hangi uygulamayı kullandığın, mesajların ve konumun ebeveynine de gitmez.",
+        "**Haklarınız**",
+        "Verilerinin tamamını JSON ve CSV olarak indirebilirsin (Profil › Geçmişi indir).",
+        "Verilerini ya da hesabını kalıcı olarak silebilirsin (Profil › Verilerim). Hesap silme, sunucudaki kaydını da siler. Sunucuya ulaşılamıyorsa uygulama bunu sana söyler.",
+        "**18 yaşından küçükseniz**",
+        "Kayıt sırasında ebeveyn onayı beyanı istenir. KVKK gereği çocukların verileri ayrı bir rejime tabidir; toplanan veri kapsamı yetişkinlerle aynıdır ve yukarıdaki sınırların tamamı geçerlidir.",
+        "**İletişim**",
+        "Sorularınız için Yeşilay ile iletişime geçebilirsiniz. YEDAM danışma hattı: 115 (ücretsiz)."
+      ]
+    },
+    {
+      "id": "acik-kaynak",
+      "baslik": "Açık kaynak lisansları",
+      "guncelleme": "1 Ağustos 2026",
+      "govde": [
+        "Yeşilİz aşağıdaki açık kaynaklı bileşenleri kullanıyor. Her birinin lisans metni kendi projesinde yayımlanmıştır.",
+        "**Apache License 2.0**",
+        "Android Jetpack (Compose, Room, WorkManager, DataStore, Navigation, Lifecycle, Glance, Health Connect) — Google LLC",
+        "Material Components ve Material Symbols — Google LLC",
+        "Kotlin ve kotlinx kütüphaneleri (Coroutines, Serialization) — JetBrains s.r.o.",
+        "Dagger Hilt — Google LLC",
+        "OkHttp ve Retrofit — Square, Inc.",
+        "**SIL Open Font License 1.1**",
+        "Inter yazı tipi — Rasmus Andersson",
+        "**Creative Commons Attribution 4.0**",
+        "Uygulama kategorisi eşlemesinin bir bölümü, LMU Münih'in yayımladığı uygulama kategorileri veri setinden türetilmiştir (doi:10.5334/jopd.59).",
+        "**Sunucu tarafı**",
+        "FastAPI (MIT) — Sebastián Ramírez · SQLAlchemy (MIT) · Alembic (MIT) · PostgreSQL (PostgreSQL License) · argon2-cffi (MIT) · PyJWT (MIT)"
+      ]
+    }
+  ],
+  "sss": [
+    {
+      "soru": "Puanlarım nasıl hesaplanıyor?",
+      "cevap": [
+        "Puan üç kaynaktan geliyor: tamamladığın görevler, ölçülen hareketin (adım ve egzersiz) ve günlük hedefine ne kadar yaklaştığın.",
+        "Hedef puanı **oransal**: hedefinin altında kalırsan tam puan alırsın, aştıkça puan doğrusal olarak azalır ve hedefinin iki katında sıfırlanır. Bir dakika aşmak puanın tamamını götürmez.",
+        "Üst üste aktif geçirdiğin her gün bir çarpan kazandırıyor (en fazla 2 kat). Bir gün kaçırmak seriyi sıfırlamaz, dondurur.",
+        "Günlük tavan 150 puan. Tek günde puan patlaması olmasın diye.",
+        "**Ceza yok.** Hiçbir davranış puanını düşürmez, var olan puanını silmez. Ligde düşmek bile puan kaybettirmez, yalnızca grubunu değiştirir."
+      ]
+    },
+    {
+      "soru": "Risk düzeyim neden hemen değişmiyor?",
+      "cevap": [
+        "Gösterilen düzey tek bir güne değil, son günlerin eğilimine bakıyor. Bu bilinçli: tek bir yoğun gün seni \"riskli\" ilan etmemeli, tek bir sakin gün de sorunu çözülmüş göstermemeli.",
+        "Düzey **yükselirken 3 gün**, **inerken 7 gün** üst üste aynı yönde ölçüm arıyor. Asimetri kasıtlı — uyarmakta hızlı, rahatlamakta yavaş olmak daha güvenli.",
+        "Yeni bir değerlendirme anketi doldurduğunda yanıtın hemen kaydedilir ve hesaba girer; ama ekranda gördüğün düzey birkaç gün içinde güncellenir.",
+        "Ayrıca uygulama ne kadar uzun süredir veri topluyorsa anketin ağırlığı o kadar azalır, gerçek kullanımının ağırlığı o kadar artar."
+      ]
+    },
+    {
+      "soru": "Ebeveyn paneli eşleştirmesini nasıl kaldırırım?",
+      "cevap": [
+        "Profil › Ebeveyn paneli ekranını aç, en alttaki **Eşleştirmeyi kaldır** bağlantısına dokun ve onayla.",
+        "İki cihaz arasındaki bağ kesilir, panelde özet görünmez ve ebeveyne bildirim gitmez.",
+        "Kimsenin verisi silinmez. İstediğin zaman yeni bir kodla tekrar eşleştirebilirsin."
+      ]
+    },
+    {
+      "soru": "Hedefimi nasıl değiştiririm?",
+      "cevap": [
+        "Profil › Hedeflerim › Günlük hedef ekranından. Halkanın altındaki − ve + tuşlarıyla ya da hızlı seçim düğmeleriyle ayarlayabilirsin.",
+        "Hedef 2 ile 6 saat arasında sınırlı. Çok düşük bir hedef koymak, ilk günden başarısızlık hissi üretiyor; uygulama bunu istemiyor.",
+        "Uygulama sana bir başlangıç hedefi öneriyor: ilk ölçümlerinden çıkan ortalamanın biraz altı. Her hafta bir miktar daha iniyor."
+      ]
+    },
+    {
+      "soru": "Verilerim kimlerle paylaşılıyor?",
+      "cevap": [
+        "Varsayılan olarak **hiç kimseyle**. Ham kullanım kayıtların telefonundan çıkmıyor ve risk skorun telefonunda hesaplanıyor.",
+        "Profil › Gizlilik › \"Yeşilay ile paylaşım\" anahtarını açarsan yalnızca günlük özetin ve risk skorun sunucuya gider. Hangi uygulamayı kullandığın gitmez, yalnızca kategori toplamları gider.",
+        "Ligde yalnızca adın ve haftalık puanın görünür; \"Ligde görün\" anahtarıyla bunu da kapatabilirsin.",
+        "Ebeveyn eşleştirmesi yaptıysan ebeveynine toplam süre, risk bandı ve eğilim gider — başka hiçbir şey.",
+        "Ayrıntılar için Profil › Hakkında › Gizlilik Politikası."
+      ]
+    },
+    {
+      "soru": "Uygulama neden telefonumu kilitlemiyor?",
+      "cevap": [
+        "Çünkü kilitleme işe yaramıyor. Zorlayıcı engeller kısa vadede kullanımı düşürüyor ama direnç doğuruyor: insanlar engeli aşmanın yolunu buluyor ya da uygulamayı siliyor.",
+        "Yeşilİz bunun yerine kısa hatırlatmalar (3-5 saniye) gösteriyor ve gerçek hayattaki aktiviteleri ödüllendiriyor. Kararı sen veriyorsun.",
+        "Hatırlatmaları Profil › Gizlilik › Mola hatırlatıcı'dan kapatabilirsin."
+      ]
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,6 +29,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.CubukGrafik
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.SasSv
+import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
@@ -174,10 +176,39 @@ private fun Sonuc(durum: AnketYenileDurum, onKapat: () -> Unit) {
             }
         }
 
+        // Y-7'nin asıl UX kusuru: kullanıcı ham puanı 60'tan 10'a
+        // düşürdüğünde bile ekranda "orta" görmeye devam ediyor ve anketi
+        // doldurmanın hiçbir işe yaramadığı sonucuna varıyordu. Yanıt
+        // kaydedildi ve hesaba girdi; hareket etmeyen şey GÖSTERİLEN bant
+        // ve bunun sebebi tasarım gereği (histerezis, `Sabitler.GUN_ASAGI`).
+        // Söylenmediği sürece bu, bozukluk gibi görünüyor.
+        Kart {
+            Text(
+                text = "Yeni değerlendirmen kaydedildi",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MetinBirincil,
+            )
+            Spacer(modifier = Modifier.height(Bosluk.Xs))
+            Text(
+                text = "Ana ekranda gördüğün risk seviyesi tek bir ölçüme değil " +
+                    "son günlerin eğilimine bakıyor, bu yüzden birkaç gün " +
+                    "içinde güncellenecek. Seviye yükselirken daha hızlı, " +
+                    "inerken daha temkinli davranıyor.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MetinIkincil,
+            )
+        }
+
         BirincilButon(metin = "Kapat", onTikla = onKapat)
-        MetinBaglanti(
-            metin = "Bu bir tanı değildir",
-            onTikla = {},
+        // Sorumluluk reddi metni -- tıklanabilir DEĞİL. `MetinBaglanti`
+        // `TextButton` olduğu için dalga efekti veriyor ve dokununca hiçbir
+        // şey yapmıyordu (`debug.md` O-4).
+        Text(
+            text = "Bu bir tanı değildir",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinUcuncul,
+            textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
     }

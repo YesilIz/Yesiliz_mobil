@@ -16,6 +16,8 @@ import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.demo.DemoVeri
 import tr.org.yesilay.yesiliz.data.depo.DisaAktarDeposu
 import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
+import tr.org.yesilay.yesiliz.data.depo.SozlesmeDeposu
+import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
@@ -38,9 +40,22 @@ class ProfilViewModel @Inject constructor(
     private val disaAktarDeposu: DisaAktarDeposu,
     private val hesapDeposu: HesapDeposu,
     private val senkronDeposu: SenkronDeposu,
+    private val sozlesmeDeposu: SozlesmeDeposu,
 ) : ViewModel() {
 
     private val silmeHali = MutableStateFlow(SilmeHali())
+
+    /**
+     * Yardım ekranındaki SSS.
+     *
+     * `assets/sozlesmeler.json`'dan bir kez okunuyor; ekran açılana kadar
+     * boş liste, o da "yükleniyor" olarak çiziliyor.
+     */
+    private val sssAkisi = MutableStateFlow<List<SssMaddesi>>(emptyList())
+
+    init {
+        viewModelScope.launch { sssAkisi.value = sozlesmeDeposu.sss() }
+    }
 
     /**
      * Silme bitti, ekrandan çıkılmalı — tek atımlık olay.
@@ -83,6 +98,8 @@ class ProfilViewModel @Inject constructor(
             siliniyor = silme.calisiyor,
             sunucudaKaldiUyarisi = silme.sunucudaKaldi,
         )
+    }.combine(sssAkisi) { durum, sss ->
+        durum.copy(sss = sss)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),

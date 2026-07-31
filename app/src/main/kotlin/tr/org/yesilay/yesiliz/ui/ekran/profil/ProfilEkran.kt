@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.profil
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Park
@@ -64,6 +66,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
+import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
+import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
+import tr.org.yesilay.yesiliz.ui.kalinIsle
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
@@ -115,6 +120,7 @@ fun ProfilEkran(
     onSaglikIzni: () -> Unit,
     onSilindi: () -> Unit,
     onHesapOlustur: () -> Unit,
+    onSozlesme: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
@@ -393,13 +399,19 @@ fun ProfilEkran(
 
     if (yardimAcik) {
         AltSayfa(onKapat = { yardimAcik = false }) {
-            YardimIcerik(onKapat = { yardimAcik = false })
+            YardimIcerik(onKapat = { yardimAcik = false }, sorular = durum.sss)
         }
     }
 
     if (hakkindaAcik) {
         AltSayfa(onKapat = { hakkindaAcik = false }) {
-            HakkindaIcerik(onKapat = { hakkindaAcik = false })
+            HakkindaIcerik(
+                onKapat = { hakkindaAcik = false },
+                onSozlesme = { id ->
+                    hakkindaAcik = false
+                    onSozlesme(id)
+                },
+            )
         }
     }
 
@@ -800,7 +812,7 @@ private fun HesabiSilIcerik(
 
 /** Alt sayfa 28 — Yardım. Statik SSS, backend gerektirmiyor. */
 @Composable
-private fun YardimIcerik(onKapat: () -> Unit) {
+private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -816,31 +828,55 @@ private fun YardimIcerik(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
-        val sorular = listOf(
-            "Puanlarım nasıl hesaplanıyor?",
-            "Ebeveyn paneli eşleştirmesini nasıl kaldırırım?",
-            "Hedefimi nasıl değiştiririm?",
-            "Verilerim kimlerle paylaşılıyor?",
-        )
-        sorular.forEachIndexed { i, soru ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = Bosluk.M),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = soru,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MetinBirincil,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MetinUcuncul,
-                )
+        // Dört soru chevron'lu ve tıklanabilir görünüyordu ama HİÇBİRİNİN
+        // cevabı yazılmamıştı (`debug.md` Y-6). Cevaplar artık
+        // `assets/sozlesmeler.json`'da; satıra dokununca açılıyor.
+        var acikSoru by remember { mutableStateOf<String?>(null) }
+
+        if (sorular.isEmpty()) {
+            Text(
+                text = "Sorular yükleniyor…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MetinUcuncul,
+            )
+        }
+        sorular.forEachIndexed { i, madde ->
+            val acik = acikSoru == madde.soru
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { acikSoru = if (acik) null else madde.soru }
+                        .padding(vertical = Bosluk.M),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = madde.soru,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MetinBirincil,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (acik) {
+                            Icons.Filled.KeyboardArrowDown
+                        } else {
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                        },
+                        contentDescription = null,
+                        tint = MetinUcuncul,
+                    )
+                }
+                if (acik) {
+                    madde.cevap.forEach { paragraf ->
+                        Text(
+                            text = kalinIsle(paragraf),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MetinIkincil,
+                            modifier = Modifier.padding(bottom = Bosluk.S),
+                        )
+                    }
+                }
             }
             if (i != sorular.lastIndex) KartAyraci()
         }
@@ -849,7 +885,7 @@ private fun YardimIcerik(onKapat: () -> Unit) {
 
 /** Alt sayfa 29 — Hakkında. Sürüm sabit — `BuildConfig.VERSION_NAME` Faz 2. */
 @Composable
-private fun HakkindaIcerik(onKapat: () -> Unit) {
+private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -896,10 +932,18 @@ private fun HakkindaIcerik(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
-        listOf("Kullanım şartları", "Gizlilik politikası", "Açık kaynak lisansları").forEachIndexed { i, satir ->
+        // Üç satır da chevron'lu ve tıklanabilir GÖRÜNÜYORDU ama `onTikla`
+        // almıyordu; metinler hiçbir yerde yoktu (`debug.md` Y-6).
+        val baglantilar = listOf(
+            "Kullanım Koşulları" to Sozlesmeler.KULLANIM_KOSULLARI,
+            "Gizlilik Politikası" to Sozlesmeler.GIZLILIK_POLITIKASI,
+            "Açık kaynak lisansları" to Sozlesmeler.ACIK_KAYNAK,
+        )
+        baglantilar.forEachIndexed { i, (satir, id) ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onSozlesme(id) }
                     .padding(vertical = Bosluk.M),
             ) {
                 Text(
@@ -915,7 +959,7 @@ private fun HakkindaIcerik(onKapat: () -> Unit) {
                     tint = MetinUcuncul,
                 )
             }
-            if (i != 2) KartAyraci()
+            if (i != baglantilar.lastIndex) KartAyraci()
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))

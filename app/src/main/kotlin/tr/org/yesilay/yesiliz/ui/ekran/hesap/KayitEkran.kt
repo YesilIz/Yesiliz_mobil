@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani as Alan
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
+import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
 import tr.org.yesilay.yesiliz.ui.bilesen.OnayKutusu
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
@@ -45,6 +46,7 @@ fun KayitEkran(
     onBasarili: () -> Unit,
     onGiris: () -> Unit,
     onGeri: () -> Unit,
+    onSozlesme: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HesapViewModel = hiltViewModel(),
 ) {
@@ -114,10 +116,17 @@ fun KayitEkran(
                 klavyeTuru = KeyboardType.Password,
             )
 
+            // İki metin artık gerçekten okunabiliyor. Onay ZORUNLU tutulan
+            // bir metnin okunamaması, 18 yaş altı KVKK rejimi düşünülünce
+            // ayrıca riskliydi (`debug.md` Y-6).
             OnayKutusu(
                 metin = "Kullanım Koşulları'nı ve Gizlilik Politikası'nı okudum, kabul ediyorum.",
                 secili = durum.kosullarOnaylandi,
                 onDegis = viewModel::kosullariDegistir,
+                baglantilar = mapOf(
+                    "Kullanım Koşulları" to { onSozlesme(Sozlesmeler.KULLANIM_KOSULLARI) },
+                    "Gizlilik Politikası" to { onSozlesme(Sozlesmeler.GIZLILIK_POLITIKASI) },
+                ),
             )
             listOfNotNull(durum.hata(Alan.KOSULLAR), durum.hata(Alan.GENEL)).forEach { mesaj ->
                 Text(

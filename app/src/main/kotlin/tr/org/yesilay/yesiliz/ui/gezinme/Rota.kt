@@ -52,6 +52,12 @@ object Rota {
     /** Argümanlı rotayı kurar — çağıranın string birleştirmesi gerekmesin. */
     fun bilgiYazisi(id: String): String = "bilgi/$id"
 
+    // --- sözleşmeler (Kayıt onayı ve Profil › Hakkında) ---
+    const val SOZLESME = "sozlesme/{sozlesmeId}"
+    const val SOZLESME_ARG = "sozlesmeId"
+
+    fun sozlesme(id: String): String = "sozlesme/$id"
+
     // --- bildirim ---
     const val BILDIRIM = "bildirim"
 

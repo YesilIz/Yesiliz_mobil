@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.profil
 
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
+import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 
 /**
  * Profil ekranı durumu — `docs/tasarim-referans.md §2 / 12`.
@@ -31,4 +32,6 @@ data class ProfilDurum(
     /** Gerçek bir hesapla giriş yapıldı mı — misafirde "Çıkış yap" yok. */
     val hesapVarMi: Boolean = false,
     val eposta: String = "",
+    /** Yardım alt sayfasındaki SSS — `assets/sozlesmeler.json`. */
+    val sss: List<SssMaddesi> = emptyList(),
 )

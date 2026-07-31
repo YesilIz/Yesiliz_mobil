@@ -149,11 +149,14 @@ fun GirisEkran(
                 onTikla = { viewModel.misafirDevam(onBasarili) },
             )
 
-            // Sunucu yokken hesap yalnızca adı saklıyor; bunu gizlemek
-            // kullanıcıya olmayan bir güvence vermek olurdu.
+            // Backend 31 Tem'de bağlandı; bu metin "hesaplar yalnızca bu
+            // cihazda tutuluyor" diyordu ve artık doğru değildi
+            // (`debug.md` O-11). Ayrım önemli: hesap sunucuda, kullanım
+            // verisi cihazda.
             Text(
-                text = "Şu an hesaplar yalnızca bu cihazda tutuluyor; " +
-                    "verilerin telefonundan çıkmıyor.",
+                text = "Hesabın sunucuda tutuluyor; şifren cihazına hiç " +
+                    "yazılmıyor. Kullanım verilerin telefonunda kalıyor ve " +
+                    "yalnızca sen izin verirsen özet olarak gönderiliyor.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MetinIkincil,
                 textAlign = TextAlign.Center,
