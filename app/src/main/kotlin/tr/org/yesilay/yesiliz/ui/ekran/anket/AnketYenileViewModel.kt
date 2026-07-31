@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
+import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
@@ -24,14 +26,21 @@ import javax.inject.Inject
  * çıkarmak yerine tekrarlandı çünkü onboarding'in yazması hedef ve
  * onboarding bayrağıyla iç içe; ayırmak o akışı da değiştirmeyi gerektirirdi.
  *
- * `AnketYanitDao.sonuncu()` **en yeniyi** döndürüyor, yani `RiskDeposu`
- * bir sonraki hesapta otomatik olarak bu yanıtı kullanıyor — ayrıca bir
- * tetikleme gerekmiyor.
+ * ## Riski yeniden hesaplamak ZORUNLU
+ *
+ * Burası bir zamanlar "`sonuncu()` en yeniyi döndürüyor, ayrıca bir
+ * tetikleme gerekmiyor" diyordu. Doğru ama yanıltıcıydı: o "bir sonraki
+ * hesap" gecelik `GunlukOzetWorker`'dı. Ekranlar `risk_sonuc` tablosunu
+ * okuyor (`AnaViewModel`, `RiskDetayViewModel` — `sonuncuAkisi()`), o
+ * tabloya kimse yazmayınca kullanıcı anketi yeniliyor ve **bant ertesi
+ * geceye kadar değişmiyordu**. [bitir] artık hesabı kendisi tetikliyor.
  */
 @HiltViewModel
 class AnketYenileViewModel @Inject constructor(
     private val dao: AnketYanitDao,
     private val tercihler: Tercihler,
+    private val riskDeposu: RiskDeposu,
+    private val isPlanlayici: IsPlanlayici,
     private val saat: Clock,
 ) : ViewModel() {
 
@@ -99,6 +108,15 @@ class AnketYenileViewModel @Inject constructor(
             _durum.update { durum ->
                 durum.copy(gecmis = durum.gecmis + (bugun to hamPuan.toDouble()))
             }
+
+            // Yeni anket puanı ancak `risk_sonuc`'a yazılınca ekranlara
+            // ulaşıyor. İkisi birlikte gerekiyor:
+            //  - `gunuHesapla` bugünün özeti VARSA anında günceller
+            //  - `simdiTazele` özet henüz yoksa onu da kurar (kullanım
+            //    izni verilmiş cihazda; `AcilisViewModel` açılışta aynısını
+            //    yapıyor). Aynı günü iki kez hesaplamak idempotent.
+            riskDeposu.gunuHesapla(bugun)
+            isPlanlayici.simdiTazele()
         }
     }
 }
