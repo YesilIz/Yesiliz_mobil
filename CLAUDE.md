@@ -89,7 +89,8 @@ fix/y             ●────●───
 | **CLAUDE.md** | Kurallar, mimari, kararlar | her oturum |
 | **DESIGN.md** | Tasarım sistemi, tokenlar, 19 ekran speki | UI yazarken |
 | **DB.md** | Şema, kolonlar, SQLite/PostgreSQL/MSSQL DDL | veritabanına dokunurken |
-| **debug.md** | Açık kusur listesi (gerçek cihaz taraması + kullanım notları) + düzeltme sırası | bug düzeltmeden önce |
+| **debug.md** | Açık kusur listesi — **ikinci** gerçek cihaz taraması (1 Ağu 2026) | bug düzeltmeden önce |
+| `docs/tarama-01.md` | Birinci tarama (31 Tem 2026) — tamamı kapatıldı, **arşiv** | tarihsel |
 | `docs/spec-risk.md` | Risk skoru + bantlama tam speki | core-risk'e dokunurken |
 | `docs/spec-anket.md` | SAS-SV ölçeği, 10 madde, Likert | ankete dokunurken |
 | `docs/spec-puan.md` | Görev · puan · lig · ödül | puan sistemine dokunurken |
