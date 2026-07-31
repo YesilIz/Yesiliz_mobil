@@ -4,6 +4,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.KirmiziIstisna
 import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
+import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
@@ -34,10 +39,18 @@ fun BirincilButon(
     onTikla: () -> Unit,
     modifier: Modifier = Modifier,
     etkin: Boolean = true,
+    /**
+     * Ağ beklenirken butonun içinde dönen gösterge.
+     *
+     * Butonlar `etkin = !durum.islemde` ile pasifleşiyordu ama hiçbir
+     * görsel gösterge yoktu: ekran zaman aşımı boyunca ölü görünüyor,
+     * kullanıcı işe yaramadı sanıp tekrar dokunuyordu (`debug.md` Y-12).
+     */
+    islemde: Boolean = false,
 ) {
     Button(
         onClick = onTikla,
-        enabled = etkin,
+        enabled = etkin && !islemde,
         modifier = modifier
             .fillMaxWidth()
             .height(Olcu.ButonYuksekligi),
@@ -47,6 +60,14 @@ fun BirincilButon(
             contentColor = Beyaz,
         ),
     ) {
+        if (islemde) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Olcu.ButonGostergesi),
+                color = Beyaz,
+                strokeWidth = Olcu.GostergeKalinligi,
+            )
+            Spacer(modifier = Modifier.width(Bosluk.S))
+        }
         Text(
             text = metin,
             style = MaterialTheme.typography.bodyLarge,

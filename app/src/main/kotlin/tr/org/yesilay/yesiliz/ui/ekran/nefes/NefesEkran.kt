@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -41,6 +42,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
+import tr.org.yesilay.yesiliz.ui.bilesen.Cip
+import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
 import tr.org.yesilay.yesiliz.ui.buyukHarf
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.Gradyan
@@ -131,31 +136,70 @@ fun NefesEkran(
             Box(
                 modifier = Modifier
                     .size(Olcu.NefesDairesiIc)
-                    .scale(olcek)
+                    .scale(if (durum.tamamlandi) 1f else olcek)
                     .clip(CircleShape)
                     .background(Gradyan.NefesDairesi),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = faz.etiket,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Beyaz,
-                    textAlign = TextAlign.Center,
-                )
+                if (durum.tamamlandi) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = Beyaz,
+                        modifier = Modifier.size(Olcu.AvatarBuyuk),
+                    )
+                } else {
+                    Text(
+                        text = faz.etiket,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Beyaz,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
-            text = "${durum.fazSaniye} saniye boyunca ${faz.yonerge}",
+            text = if (durum.tamamlandi) {
+                // Süre seçilebilir olduğu için sabit yazılamaz.
+                "Seansı tamamladın. Kendine ${durum.seansSaniye / 60} dakika ayırdın."
+            } else {
+                "${durum.fazSaniye} saniye boyunca ${faz.yonerge}"
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MetinIkincil,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
+        // Puan yazılıp yazılmadığı söyleniyor. Günlük limit dolmuşsa
+        // "+5 puan" demek yalan olurdu (`debug.md` Y-8).
+        if (durum.tamamlandi) {
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            Cip(
+                metin = if (durum.puanYazildi) {
+                    "+${Gorev.NEFES.puan} puan"
+                } else {
+                    "Bugünün nefes puanı zaten alınmış"
+                },
+                zemin = YesilNane,
+            )
+        }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        if (durum.tamamlandi) {
+            // Seans bitince ne yapılacağı söyleniyor. Eskiden sayaç
+            // 0:00'a ulaşıp öylece duruyordu: tebrik yok, puan bildirimi
+            // yok, dönüş yok (`debug.md` Y-8).
+            BirincilButon(metin = "Bitir", onTikla = onKapat)
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            MetinBaglanti(metin = "Bir kez daha", onTikla = viewModel::bastanBaslat)
+            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+            return@Column
+        }
+
         FazGostergesi(fazIndeksi = durum.ilerleme.fazIndeksi)
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
@@ -166,17 +210,27 @@ fun NefesEkran(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Tempo (kaç saniye nefes) ve SÜRE (seans kaç dakika) iki ayrı
+            // kontrol. Tek kontrol varken kullanıcı onu süre sanıyordu
+            // (`debug.md` İ-2).
             NefesKontrolu(
                 olcu = Olcu.NefesKontrolKucuk,
                 zemin = YesilNane,
                 onTikla = viewModel::fazSuresiDegistir,
             ) {
-                Text(
-                    text = "${durum.fazSaniye}s",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = YesilKoyu,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${durum.fazSaniye}s",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = YesilKoyu,
+                    )
+                    Text(
+                        text = "tempo",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = YesilKoyu,
+                    )
+                }
             }
             NefesKontrolu(
                 olcu = Olcu.NefesKontrolBuyuk,
@@ -192,11 +246,28 @@ fun NefesEkran(
             NefesKontrolu(
                 olcu = Olcu.NefesKontrolKucuk,
                 zemin = YesilNane,
-                onTikla = viewModel::bastanBaslat,
+                onTikla = viewModel::seansSuresiDegistir,
             ) {
-                Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Baştan başlat", tint = YesilKoyu)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${durum.seansSaniye / 60} dk",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = YesilKoyu,
+                    )
+                    Text(
+                        text = "süre",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = YesilKoyu,
+                    )
+                }
             }
         }
+
+        // "Baştan başlat" artık ayrı bir satırda: alt sıradaki üç yuvarlak
+        // tempo / oynat / süre oldu.
+        MetinBaglanti(metin = "Baştan başlat", onTikla = viewModel::bastanBaslat)
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
     }
 }
 

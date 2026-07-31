@@ -60,8 +60,14 @@ class NefesViewModel @Inject constructor(
         gecenSaniye = 0
         _durum.update {
             it.copy(
-                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(TOPLAM_SANIYE, gecenSaniye, it.fazSaniye),
+                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(
+                    it.seansSaniye,
+                    gecenSaniye,
+                    it.fazSaniye,
+                ),
                 oynatiliyor = true,
+                tamamlandi = false,
+                puanYazildi = false,
             )
         }
         sayaciBaslat()
@@ -79,21 +85,56 @@ class NefesViewModel @Inject constructor(
         _durum.update {
             it.copy(
                 fazSaniye = yeniFazSaniye,
-                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(TOPLAM_SANIYE, gecenSaniye, yeniFazSaniye),
+                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(it.seansSaniye, gecenSaniye, yeniFazSaniye),
             )
         }
     }
 
+    /**
+     * Seans süresi seçici — [SEANS_SECENEKLERI] arasında döngüler.
+     *
+     * Tempodan farklı olarak sayacı **sıfırlıyor**: 5 dakikalık seansı
+     * 1 dakikaya indirince geçen sürenin korunması, kullanıcıyı doğrudan
+     * bitmiş bir seansa düşürürdü.
+     */
+    fun seansSuresiDegistir() {
+        val guncelDk = _durum.value.seansSaniye / 60
+        val indeks = SEANS_SECENEKLERI.indexOf(guncelDk)
+        val yeniDk = SEANS_SECENEKLERI[(indeks + 1) % SEANS_SECENEKLERI.size]
+
+        sayacIsi?.cancel()
+        gecenSaniye = 0
+        _durum.update {
+            it.copy(
+                seansSaniye = yeniDk * 60,
+                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(yeniDk * 60, 0, it.fazSaniye),
+                oynatiliyor = true,
+                tamamlandi = false,
+                puanYazildi = false,
+            )
+        }
+        sayaciBaslat()
+    }
+
     private fun sayaciBaslat() {
         sayacIsi = viewModelScope.launch {
-            while (gecenSaniye < TOPLAM_SANIYE) {
+            while (gecenSaniye < _durum.value.seansSaniye) {
                 delay(1_000)
                 gecenSaniye++
-                val ilerleme = NefesFazHesapla.ilerlemeyiHesapla(TOPLAM_SANIYE, gecenSaniye, _durum.value.fazSaniye)
+                val ilerleme = NefesFazHesapla.ilerlemeyiHesapla(
+                    _durum.value.seansSaniye,
+                    gecenSaniye,
+                    _durum.value.fazSaniye,
+                )
                 _durum.update { it.copy(ilerleme = ilerleme) }
                 if (ilerleme.tamamlandiMi) {
-                    _durum.update { it.copy(oynatiliyor = false) }
-                    puanDeposu.gorevTamamla(Gorev.NEFES, LocalDate.now(saat))
+                    // Puan yazımının SONUCU duruma giriyor: günlük limit
+                    // dolmuşsa "+5 puan" demek yalan olurdu. Eskiden hiçbir
+                    // şey söylenmiyordu (`debug.md` Y-8).
+                    val yazildi = puanDeposu.gorevTamamla(Gorev.NEFES, LocalDate.now(saat))
+                    _durum.update {
+                        it.copy(oynatiliyor = false, tamamlandi = true, puanYazildi = yazildi)
+                    }
                     break
                 }
             }
@@ -101,9 +142,6 @@ class NefesViewModel @Inject constructor(
     }
 
     private companion object {
-        /** `Gorev.NEFES.aciklama` = "2 dakikalık kutu nefesi" ile birebir. */
-        const val TOPLAM_SANIYE = 120
-
         val FAZ_SECENEKLERI = listOf(4, 5, 6)
     }
 }

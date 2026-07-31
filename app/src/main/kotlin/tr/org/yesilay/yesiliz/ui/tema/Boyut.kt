@@ -32,6 +32,10 @@ object Olcu {
     /** primary/secondary buton yüksekliği */
     val ButonYuksekligi = 56.dp
 
+    /** Buton içindeki yükleniyor göstergesi — metni itmeyecek kadar küçük. */
+    val ButonGostergesi = 18.dp
+    val GostergeKalinligi = 2.dp
+
     /** secondary buton kenarlık kalınlığı */
     val ButonKenarligi = 1.5.dp
 

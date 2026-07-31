@@ -140,6 +140,7 @@ fun KayitEkran(
                 metin = "Hesap oluştur",
                 onTikla = { viewModel.kayitOl(onBasarili) },
                 etkin = !durum.islemde,
+                islemde = durum.islemde,
             )
 
             Row(

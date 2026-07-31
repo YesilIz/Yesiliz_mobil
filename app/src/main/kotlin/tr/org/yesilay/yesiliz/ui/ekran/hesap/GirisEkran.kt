@@ -140,6 +140,7 @@ fun GirisEkran(
                 metin = "Giriş yap",
                 onTikla = { viewModel.girisYap(onBasarili) },
                 etkin = !durum.islemde,
+                islemde = durum.islemde,
             )
 
             VeyaAyraci()

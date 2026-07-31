@@ -127,7 +127,8 @@ fun ArkadasEkleEkran(
                 durum.onerilenler.forEach { kisi ->
                     OnerilenSatiri(
                         kisi = kisi,
-                        onEkle = { viewModel.davetGonder(kisi.isim) },
+                        gonderiliyor = kisi.isim in durum.gonderiliyor,
+                    onEkle = { viewModel.davetGonder(kisi.isim) },
                     )
                 }
             }
@@ -240,7 +241,11 @@ private fun EylemKutusu(
 }
 
 @Composable
-private fun OnerilenSatiri(kisi: OnerilenKisi, onEkle: () -> Unit) {
+private fun OnerilenSatiri(
+    kisi: OnerilenKisi,
+    gonderiliyor: Boolean,
+    onEkle: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Bosluk.S),
         verticalAlignment = Alignment.CenterVertically,
@@ -260,10 +265,14 @@ private fun OnerilenSatiri(kisi: OnerilenKisi, onEkle: () -> Unit) {
                 color = MetinIkincil,
             )
         }
-        if (kisi.davetGonderildiMi) {
-            Cip(metin = "Davet gönderildi", zemin = Yesil50, renk = MetinIkincil)
-        } else {
-            Cip(metin = "Ekle", zemin = Beyaz, renk = YesilAna, onTikla = onEkle)
+        when {
+            kisi.davetGonderildiMi ->
+                Cip(metin = "Davet gönderildi", zemin = Yesil50, renk = MetinIkincil)
+            // Gönderim sunucuya ulaşılamayan bir telefonda beş saniye
+            // sürüyor; o süre boyunca "Ekle" demeye devam etmek kullanıcıyı
+            // tekrar dokunmaya itiyordu (`debug.md` Y-10).
+            gonderiliyor -> Cip(metin = "Gönderiliyor…", zemin = Yesil50, renk = MetinIkincil)
+            else -> Cip(metin = "Ekle", zemin = Beyaz, renk = YesilAna, onTikla = onEkle)
         }
     }
 }

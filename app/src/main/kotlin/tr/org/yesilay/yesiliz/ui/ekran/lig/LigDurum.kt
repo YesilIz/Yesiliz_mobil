@@ -40,5 +40,13 @@ data class ArkadasEkleDurum(
     val davetKodu: String = "",
     val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
+    /**
+     * Daveti gönderilmekte olan isimler.
+     *
+     * Sunucuya ulaşılamayan bir telefonda gönderim beş saniye sürüyor;
+     * o süre boyunca çipin "Ekle" demeye devam etmesi, kullanıcının
+     * tekrar tekrar dokunmasına yol açıyordu (`debug.md` Y-10).
+     */
+    val gonderiliyor: Set<String> = emptySet(),
     val yukleniyor: Boolean = true,
 )

@@ -409,7 +409,7 @@ kullanıcı anketi doldurmanın hiçbir işe yaramadığı sonucuna varıyor.
 
 ---
 
-### Y-8 · Nefes seansı bitince hiçbir şey olmuyor `[tarama]`
+### ✅ Y-8 · Nefes seansı bitince hiçbir şey olmuyor `[tarama]`
 
 2 dakikalık seans `0:00 kaldı`'ya ulaşıp **öylece duruyor**: faz dairesi hâlâ "Tut" yazıyor,
 buton "Oynat"a dönüyor. Tebrik yok, "+5 puan" bildirimi yok, otomatik dönüş yok.
@@ -421,7 +421,7 @@ baştan başlat, kapat.
 
 ---
 
-### Y-9 · "Mola hatırlatıcı" anahtarı açılınca nudge servisi başlamıyor `[tarama]`
+### ✅ Y-9 · "Mola hatırlatıcı" anahtarı açılınca nudge servisi başlamıyor `[tarama]`
 
 **`MainActivity.kt:66` (`onResume`)** — servis yalnızca `onResume` içinde başlatılıyor;
 kullanıcı anahtarı uygulama önplandayken açtığı için `onResume` tekrar çalışmıyor.
@@ -433,7 +433,7 @@ boyunca hiç çalışmıyor.
 
 ---
 
-### Y-10 · Arkadaş "Ekle" dokunuşu kaydediliyor ama ekranda hiçbir iz bırakmıyor `[tarama]`
+### ✅ Y-10 · Arkadaş "Ekle" dokunuşu kaydediliyor ama ekranda hiçbir iz bırakmıyor `[tarama]`
 
 Lig › Arkadaş ekle › Önerilen kişiler › `Ekle`: veritabanına yazılıyor
 (`arkadas: Ece Kılıç | davet_gonderildi`), ama çip hâlâ "Ekle" diyor, kişi listeden
@@ -450,7 +450,7 @@ kullanıcı zaten 18 altı.
 
 ---
 
-### Y-12 · Ağ çağrılarında yükleniyor göstergesi yok — ekran 5 saniye ölü kalıyor `[tarama]`
+### ✅ Y-12 · Ağ çağrılarında yükleniyor göstergesi yok — ekran 5 saniye ölü kalıyor `[tarama]`
 
 `AgModulu.ZAMAN_ASIMI_SN = 5`. Buton `etkin = !durum.islemde` ile pasifleşiyor ama hiçbir
 görsel gösterge yok. En belirgin hâli: kayıt formunda tüm alanlar boşken "Hesap oluştur" →
@@ -517,7 +517,7 @@ yok, ceza yok, içerik okuma yok, serbest metin yok) ve mevcut desenleri yeniden
 Yeni görevler `Gorev` enum'una eklenir, puan/limit `docs/spec-puan.md`'ye işlenir; her
 aktivite `ui/ekran/<ad>/` altında kendi üçlü dosyasını alır (§6 kuralı).
 
-### İ-2 · Nefes seansının süresi seçilebilsin
+### ✅ İ-2 · Nefes seansının süresi seçilebilsin
 
 Bugünkü kontrol seansın uzunluğunu değil **temposunu** (4/5/6 sn nefes) değiştiriyor;
 kullanıcı bunu süre sanmış — etiketleme de buna davetiye çıkarıyor. İki ayrı kontrol

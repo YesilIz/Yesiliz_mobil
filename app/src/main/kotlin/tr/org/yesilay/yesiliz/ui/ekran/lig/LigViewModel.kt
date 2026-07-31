@@ -75,22 +75,46 @@ class ArkadasEkleViewModel @Inject constructor(
         yenile()
     }
 
+    /**
+     * Kod ve öneri listesini tazeler.
+     *
+     * Askıya alan çağrılar `update` bloğunun DIŞINDA: `MutableStateFlow`
+     * lambdayı yarışma durumunda yeniden çalıştırıyor ve içeride ağ
+     * çağrısı olsaydı ikinci kez istek gidebilirdi.
+     */
     private fun yenile() {
         viewModelScope.launch {
+            val kod = depo.davetKodu()
+            val oneriler = depo.onerilenler()
             _durum.update {
-                it.copy(
-                    davetKodu = depo.davetKodu(),
-                    onerilenler = depo.onerilenler(),
-                    yukleniyor = false,
-                )
+                it.copy(davetKodu = kod, onerilenler = oneriler, yukleniyor = false)
             }
         }
     }
 
+    /**
+     * Davet gönderir.
+     *
+     * Dokunuş veritabanına yazılıyordu ama ekranda hiçbir iz bırakmıyordu:
+     * çip hâlâ "Ekle" diyor, kişi listeden çıkmıyor, "Davet gönderildi"
+     * durumu görünmüyordu. Kullanıcı işe yaramadı sanıp tekrar dokunuyordu
+     * (`debug.md` Y-10).
+     *
+     * Asıl sebep gecikmeydi: sunucuya ulaşılamayan bir telefonda hem
+     * `davetGonder` hem `yenile` beşer saniye zaman aşımına giriyor,
+     * yaklaşık on saniye boyunca hiçbir şey değişmiyordu. Artık dokunuş
+     * ANINDA "Gönderiliyor…" olarak görünüyor.
+     */
     fun davetGonder(isim: String) {
+        if (isim in _durum.value.gonderiliyor) return
+        _durum.update { it.copy(gonderiliyor = it.gonderiliyor + isim) }
+
         viewModelScope.launch {
             depo.davetGonder(isim)
-            yenile()
+            val oneriler = depo.onerilenler()
+            _durum.update {
+                it.copy(onerilenler = oneriler, gonderiliyor = it.gonderiliyor - isim)
+            }
         }
     }
 

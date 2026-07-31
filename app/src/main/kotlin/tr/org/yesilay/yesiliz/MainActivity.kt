@@ -9,7 +9,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         hedefRota = intent?.let { hedefRotaOku(it) }
+        nudgeServisiniIzle()
         setContent {
             YesilizTemasi {
                 YesilizGezinme(
@@ -64,15 +67,38 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch {
-            gecmisVeriDeposu.hesaplaGerekirse()
+        lifecycleScope.launch { gecmisVeriDeposu.hesaplaGerekirse() }
+    }
 
-            val servisIntent = Intent(this@MainActivity, NudgeOverlayService::class.java)
-            val kullaniciIstedi = tercihler.molaHatirlaticiAcikMi.first()
-            if (kullaniciIstedi && NudgeIzni.verildiMi(this@MainActivity)) {
-                ContextCompat.startForegroundService(this@MainActivity, servisIntent)
-            } else {
-                stopService(servisIntent)
+    /**
+     * Nudge servisini tercih akışını **dinleyerek** yönetir.
+     *
+     * Eskiden karar yalnızca `onResume` içinde bir kez veriliyordu.
+     * Kullanıcı "Mola hatırlatıcı" anahtarını uygulama önplandayken açtığı
+     * için `onResume` tekrar çalışmıyordu: anahtar açık ve overlay izni
+     * verilmiş olmasına rağmen çalışan servis **sıfırdı**. Ana ekrana
+     * çıkıp dönmeden nudge (§3 çekirdek döngünün "YÖNLENDİR" adımı) o
+     * oturum boyunca hiç çalışmıyordu (`debug.md` Y-9).
+     *
+     * `repeatOnLifecycle(STARTED)`: arka planda dinlemeye gerek yok, üstelik
+     * Android 12+ arka plandan foreground service başlatmayı zaten
+     * reddediyor.
+     */
+    private fun nudgeServisiniIzle() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                tercihler.molaHatirlaticiAcikMi.collect { kullaniciIstedi ->
+                    val servisIntent =
+                        Intent(this@MainActivity, NudgeOverlayService::class.java)
+                    // İzin her toplamada yeniden okunuyor: kullanıcı izni
+                    // sistem ekranından verip dönebiliyor ve tercih o sırada
+                    // değişmediği için akış tek başına haber vermezdi.
+                    if (kullaniciIstedi && NudgeIzni.verildiMi(this@MainActivity)) {
+                        ContextCompat.startForegroundService(this@MainActivity, servisIntent)
+                    } else {
+                        stopService(servisIntent)
+                    }
+                }
             }
         }
     }

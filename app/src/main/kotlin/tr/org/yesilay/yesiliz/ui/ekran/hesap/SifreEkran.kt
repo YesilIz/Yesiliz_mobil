@@ -168,6 +168,7 @@ fun SifreEkran(
                     metin = "Sıfırlama bağlantısı gönder",
                     onTikla = viewModel::sifreSifirla,
                     etkin = !durum.islemde,
+                    islemde = durum.islemde,
                 )
 
                 Row(
