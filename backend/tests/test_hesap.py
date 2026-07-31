@@ -6,7 +6,7 @@ import datetime as dt
 
 from sqlalchemy import select
 
-from app.modeller import Kullanici, SifreSifirlama, YenilemeJetonu
+from app.modeller import GunlukOzet, Kullanici, SifreSifirlama, YenilemeJetonu
 
 
 def test_kayit_jeton_donduruyor(istemci):
@@ -147,3 +147,48 @@ def test_sifre_degisince_oturumlar_kapaniyor(istemci, db):
 
     # Hesabı ele geçiren birinin elindeki yenileme jetonu da geçersizleşmeli.
     assert istemci.post("/auth/yenile", json={"yenileme": kayit["yenileme"]}).status_code == 401
+
+
+def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db):
+    baslik, _ = kullanici_kur()
+    istemci.post(
+        "/ozet",
+        headers=baslik,
+        json={
+            "ozetler": [
+                {
+                    "tarih": "2026-07-30",
+                    "toplamDk": 180.0,
+                    "acilisSayisi": 40,
+                    "geceKullanimDk": 20.0,
+                    "sosyalDk": 60.0,
+                    "eglenceDk": 40.0,
+                }
+            ],
+            "riskler": [],
+            "haftalikPuan": 100,
+        },
+    )
+    assert db.scalar(select(GunlukOzet)) is not None
+
+    yanit = istemci.delete("/auth/hesap", headers=baslik)
+
+    assert yanit.status_code == 200
+    assert db.scalar(select(Kullanici)) is None
+    assert db.scalar(select(GunlukOzet)) is None
+    # Yenileme jetonu da gitmeli: kalsaydı silinen hesaba jeton üretilebilirdi.
+    assert db.scalar(select(YenilemeJetonu)) is None
+
+
+def test_hesap_silme_oturum_istiyor(istemci):
+    istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
+
+    assert istemci.delete("/auth/hesap").status_code == 401
+
+
+def test_silinen_hesabin_jetonu_artik_calismiyor(istemci, kullanici_kur):
+    baslik, _ = kullanici_kur()
+    istemci.delete("/auth/hesap", headers=baslik)
+
+    # Erişim jetonu hâlâ süresi içinde ama kullanıcı yok — 401 dönmeli.
+    assert istemci.get("/ozet", headers=baslik).status_code == 401

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
@@ -111,6 +112,20 @@ class YedekliHesapDeposu @Inject constructor(
         // Jetonları da temizlemek için uzak depo çağrılıyor; o da yerel
         // tercihleri siliyor.
         runCatching { uzak.cikisYap() }.onFailure { yerel.cikisYap() }
+    }
+
+    /**
+     * Misafirin sunucuda kaydı yok; uzak depoyu çağırmak anlamsız 401
+     * üretirdi. Hesaplı kullanıcıda uzak silme sonucu olduğu gibi geçiyor —
+     * ağ yoksa `false` dönüp ekranın uyarı göstermesini sağlıyor.
+     */
+    override suspend fun hesabiSil(): Boolean {
+        val misafir = yerel.oturum.first().misafirMi
+        if (misafir) return yerel.hesabiSil()
+
+        val silindi = runCatching { uzak.hesabiSil() }.getOrDefault(false)
+        yerel.hesabiSil()
+        return silindi
     }
 
     /** Ağ hatasında `null` döner (çağıran yerele düşer), iş hatasını geçirir. */

@@ -83,6 +83,7 @@ fix/y             ●────●───
 | **CLAUDE.md** | Kurallar, mimari, kararlar | her oturum |
 | **DESIGN.md** | Tasarım sistemi, tokenlar, 19 ekran speki | UI yazarken |
 | **DB.md** | Şema, kolonlar, SQLite/PostgreSQL/MSSQL DDL | veritabanına dokunurken |
+| **debug.md** | Açık kusur listesi (gerçek cihaz taraması + kullanım notları) + düzeltme sırası | bug düzeltmeden önce |
 | `docs/spec-risk.md` | Risk skoru + bantlama tam speki | core-risk'e dokunurken |
 | `docs/spec-anket.md` | SAS-SV ölçeği, 10 madde, Likert | ankete dokunurken |
 | `docs/spec-puan.md` | Görev · puan · lig · ödül | puan sistemine dokunurken |
@@ -289,8 +290,13 @@ Ham olay sunucuya **gitmiyor** — giden şey günlük özet + skor (§4).
 
 Kimlik doğrulama: parola `argon2id` ile özetleniyor (`backend/app/guvenlik.py`),
 istemciye JWT erişim + yenileme jetonu dönüyor. Jetonlar `JetonDeposu`'nda,
-`Tercihler`'den **ayrı** bir DataStore'da — "verilerimi sil" akışı jetonları
-tek başına temizleyebilsin diye.
+`Tercihler`'den **ayrı** bir DataStore'da (`name = "jetonlar"`) — "verilerimi sil"
+akışı jetonları tek başına temizleyebilsin diye.
+
+> **Bu temizleme henüz yazılmadı.** `VeriYonetimiDeposu` yalnızca Room'u ve
+> `Tercihler`'i siliyor, `JetonDeposu`'na hiç dokunmuyor; üstelik silme akışının
+> kendisi ana iş parçacığında `clearAllTables()` çağırdığı için çöküyor.
+> Ayrıntı: `debug.md` K-2.
 
 ### Veritabanı
 
@@ -442,6 +448,11 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 > `alpha = 1.0` — alpha eğrisinin hiçbir kolu test edilemez, risk motoru hep
 > `S≈0` üretir. **Döngü doğrulaması gerçek telefon ister.**
 > Ayrıntı: `docs/spike-usagestats-sonuc.md`
+>
+> **Yapıldı (31 Tem 2026):** Samsung SM-A217F / Android 12 üzerinde zincirin
+> tamamı ilk kez gerçek veriyle koştu — `gunluk_ozet` doldu, `risk_sonuc`
+> gerçek skor üretti (`S=10,88 · rS=81,97 · R=41,47`). Emülatörde görünmeyen
+> kusurlar da ilk kez buradan çıktı: `debug.md`.
 
 ---
 
@@ -511,31 +522,22 @@ misafir modunda sabitten geliyor.
 **giremiyor**. Profil → Geliştirici → "Örnek veri oluştur". Tohum yalnızca
 `gunluk_ozet` *girdilerini* yazıyor; skoru ve bandı gerçek motor üretiyor.
 
-### Sıradaki işler
+### Açık işler
 
-| # | İş | Not |
-|---|---|---|
-| ~~1~~ | ~~Nudge tetikleyici + overlay~~ | **BİTTİ** (30 Tem) — `nudge/` (Tetikleyici, NudgeOverlayService, NudgeOverlay, NudgeIzni), Profil'de opt-in anahtarı; nefes derin bağlantısı yer tutucu `Rota.NEFES`'e gidiyor (madde 3 bitince gerçek ekrana bağlanacak) |
-| ~~2~~ | ~~Risk detayı ekranı~~ | **BİTTİ** (31 Tem) — `ui/ekran/riskdetay/`, core-risk 4-faktör bantlama + test vektörleri, İstatistik'e giriş kartı |
-| ~~3~~ | ~~Görev detayı alt sayfası + nefes~~ | **BİTTİ** (30 Tem) — `AnaEkran`'da alt sayfa (`GorevDetayi`, tasarımı yok, `stitch/g_rev_detay` yerleşimi uyarlandı) + `ui/ekran/nefes/` (resmi teslim, ekran 16) |
-| ~~4~~ | ~~Health Connect izin akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/saglik/`, ekran 02'nin yerleşimi uyarlandı; HC kurulu değilse Play Store, izin yoksa `PermissionController` sözleşmesi. Profil › Verilerim'den erişiliyor |
-| ~~5~~ | ~~Kurulumda geçmiş veri~~ | **BİTTİ** (30 Tem) — `GecmisVeriDeposu`, `KullanimOkuyucu.gunlukToplamSureler`, `GecmisGunSayaci`; `IzinEkran` artık gerçekten izin istiyor (`MainActivity.onResume` tetikliyor) |
-| ~~6~~ | ~~Widget~~ | **BİTTİ** (31 Tem) — `app/widget/`, Glance 1.1.1. Tasarım 39 (etkileşimli Bugünün sorusu) ve 40 (ekran süresi). Tasarım 41 (kilit ekranı) **uygulanmadı**, §12 K13 |
-| ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard. Kod artık **sunucuda** doğrulanıyor (`backend/app/uclar/ebeveyn.py`): var mı, 10 dk süresi dolmuş mu, kullanılmış mı, karşı rolde mi. Sunucu yoksa eski 6-hane kontrolüne düşüyor, ekran `cevrimdisiMi` ile bunu söylüyor |
-| ~~7b~~ | ~~YEDAM onayı (köprü/rıza ekranı)~~ | **BİTTİ** (31 Tem) — `ui/ekran/yedam/`, `stitch/yedam_onay/` yerleşimi gerçek tokenlarla. Yalnızca `Bant.COK` + kullanıcı onayı. Ekran 27 "YEDAM hakkında" ayrıca Profil › Destek'e alt sayfa olarak eklendi |
-| ~~8~~ | ~~Hesap ekranları (giriş/kayıt)~~ | **BİTTİ** (31 Tem) — `ui/ekran/hesap/` (14, 15, 38) + `HesapDeposu` arayüzü. Şifre cihazda saklanmıyor (§12 K16); doğrulama artık sunucuda, JWT `JetonDeposu`'nda |
-| ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında, YEDAM hakkında, Bildirim saatleri |
-| ~~10~~ | ~~Aktif yürüyüş~~ | **BİTTİ** (31 Tem) — `ui/ekran/yuruyus/` + saf `YuruyusHesapla`. Foreground service **yok**, ekran açıkken sayıyor (§12 K15) |
-| ~~11~~ | ~~FastAPI backend + ağ katmanı~~ | **BİTTİ** (31 Tem) — `backend/` (hesap, özet senkronu, lig, ebeveyn · 48 pytest) + `data/uzak/` Retrofit + `Yedekli*Deposu` offline-first sarmalayıcı. Gerçek Room migration da bu turda geldi |
+**Bulgular ve düzeltme sırası `debug.md`'de.** 31 Temmuz 2026'da gerçek cihazda
+(Samsung SM-A217F · Android 12) uçtan uca tarama yapıldı ve kullanıcının kendi
+kullanım notlarıyla birleştirildi: zincir çalışıyor, ama **9 kritik + 12 yüksek +
+18 orta** kusur ve 5 kapsam kararı açık. En ağırı, "Verilerimi/Hesabımı sil"in
+uygulamayı çökertip hiçbir şey silmemesi (`debug.md` K-2). Yapılacak iş listesi
+orada tutuluyor — burada tekrarlanmıyor.
 
-**Sıradaki gerçek işler:**
+Taramanın dışında kalan iki iş:
 
-| # | İş | Not |
-|---|---|---|
-| 12 | Gerçek telefonda uçtan uca doğrulama | Emülatörde `d_efektif = 0`, `alpha = 1.0`, risk motoru hep `S≈0` üretiyor (§10). Döngünün gerçekten çalıştığı **hiç görülmedi** — rapor öncesi en kritik iş |
-| 13 | Backend dağıtımı | Şu an yalnızca `docker compose` ile yerelde, `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` sabit. Gerçek telefon bu adrese ulaşamaz — dağıtım + HTTPS alan adı gerekiyor. `ag_guvenligi.xml` zaten şifresiz trafiği yalnızca `10.0.2.2` için açıyor, yani gerçek adres HTTPS olmak **zorunda** |
-| 14 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
-| — | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
+| İş | Not |
+|---|---|
+| Backend dağıtımı | `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` yalnızca emülatörden erişilir; gerçek telefonda **her** çağrı zaman aşımına uğrayıp sahte veriye düşüyor (`debug.md` O-14). Dağıtım + HTTPS alan adı gerekiyor — `ag_guvenligi.xml` şifresiz trafiği yalnızca `10.0.2.2` için açıyor |
+| Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
+| *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
 **Tasarımı eksik ekran kalmadı.** 30 Tem ikinci ek teslimi (8 ekran +
 3 widget, `docs/tasarim-referans.md §2 / 31–41`) son boşlukları kapattı;

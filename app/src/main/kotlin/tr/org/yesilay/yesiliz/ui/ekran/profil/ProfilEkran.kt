@@ -45,11 +45,10 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.AyarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
@@ -111,11 +111,19 @@ fun ProfilEkran(
     onKategoriler: () -> Unit,
     onAnketYenile: () -> Unit,
     onSaglikIzni: () -> Unit,
+    onSilindi: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Silme bitince hesap akışına dönülüyor: `Tercihler.sifirla()` onboarding
+    // bayrağını da sıfırladı, kullanıcıyı silinmiş verinin ekranlarında
+    // bırakmak boş grafikler ve "0 puan" göstermek olurdu.
+    LaunchedEffect(Unit) {
+        viewModel.silindi.collect { onSilindi() }
+    }
 
     var toplananVerilerAcik by remember { mutableStateOf(false) }
     var gecmisiIndirAcik by remember { mutableStateOf(false) }
@@ -125,7 +133,6 @@ fun ProfilEkran(
     var hakkindaAcik by remember { mutableStateOf(false) }
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
-    val sayfaDurumu = rememberModalBottomSheetState()
     val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -294,27 +301,13 @@ fun ProfilEkran(
     }
 
     if (toplananVerilerAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { toplananVerilerAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { toplananVerilerAcik = false }) {
             ToplananVerilerIcerik(onKapat = { toplananVerilerAcik = false })
         }
     }
 
     if (gecmisiIndirAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { gecmisiIndirAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { gecmisiIndirAcik = false }) {
             GecmisiIndirIcerik(
                 onKapat = { gecmisiIndirAcik = false },
                 onDisaAktar = {
@@ -330,91 +323,46 @@ fun ProfilEkran(
     }
 
     if (verileriSilAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { verileriSilAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { verileriSilAcik = false }) {
             VerileriSilIcerik(
-                onOnayla = {
-                    viewModel.verileriSil()
-                    verileriSilAcik = false
-                },
+                durum = durum,
+                onOnayla = viewModel::verileriSil,
                 onVazgec = { verileriSilAcik = false },
             )
         }
     }
 
     if (hesabiSilAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { hesabiSilAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { hesabiSilAcik = false }) {
             HesabiSilIcerik(
-                onOnayla = {
-                    viewModel.verileriSil()
-                    hesabiSilAcik = false
-                },
+                durum = durum,
+                onOnayla = viewModel::hesabiSil,
                 onVazgec = { hesabiSilAcik = false },
+                onUyariyiKapat = viewModel::uyariyiKapat,
             )
         }
     }
 
     if (yardimAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yardimAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { yardimAcik = false }) {
             YardimIcerik(onKapat = { yardimAcik = false })
         }
     }
 
     if (hakkindaAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { hakkindaAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { hakkindaAcik = false }) {
             HakkindaIcerik(onKapat = { hakkindaAcik = false })
         }
     }
 
     if (yedamAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yedamAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkindaIcerik(onKapat = { yedamAcik = false })
         }
     }
 
     if (bildirimSaatleriAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { bildirimSaatleriAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { bildirimSaatleriAcik = false }) {
             BildirimSaatleriIcerik(
                 durum = durum,
                 onDegis = { saatler ->
@@ -559,7 +507,11 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
 
 /** Alt sayfa 25 — Verilerimi kalıcı sil. CLAUDE.md §12 K10: KirmiziIstisna. */
 @Composable
-private fun VerileriSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+private fun VerileriSilIcerik(
+    durum: ProfilDurum,
+    onOnayla: () -> Unit,
+    onVazgec: () -> Unit,
+) {
     var onayli by remember { mutableStateOf(false) }
 
     Column(
@@ -616,17 +568,63 @@ private fun VerileriSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
             tehlikeliMi = true,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Verilerimi kalıcı olarak sil", onTikla = onOnayla, etkin = onayli)
+        TehlikeliButon(
+            metin = if (durum.siliniyor) "Siliniyor…" else "Verilerimi kalıcı olarak sil",
+            onTikla = onOnayla,
+            etkin = onayli && !durum.siliniyor,
+        )
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
 /**
- * Alt sayfa 26 — Hesabımı kalıcı sil. Gerçek hesap sistemi Faz 2'ye kadar
- * "hesabı sil" ile "verileri sil" AYNI işlemi yapıyor ([ProfilViewModel.verileriSil]).
+ * Silme bitti ama sunucudaki kopya duruyor.
+ *
+ * Kullanıcıyı sessizce dışarı atmak yerine bunu söylüyoruz: "kalıcı sil"
+ * dedikten sonra sunucuda veri kalmışsa bilmeye hakkı var (`debug.md` K-2).
  */
 @Composable
-private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Buton))
+            .background(color = KirmiziIstisnaZemin)
+            .padding(Olcu.Aralik),
+    ) {
+        Text(
+            text = "Cihazındaki her şey silindi.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.Xs))
+        Text(
+            text = "Sunucuya şu an ulaşılamadığı için oradaki kaydın " +
+                "silinemedi. Bağlantın olduğunda tekrar giriş yapıp " +
+                "silme işlemini yenileyebilirsin.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        TehlikeliButon(metin = "Anladım", onTikla = onKapat)
+    }
+}
+
+/**
+ * Alt sayfa 26 — Hesabımı kalıcı sil.
+ *
+ * "Verilerimi sil"den farkı: cihazın yanında **sunucudaki hesap da**
+ * siliniyor (`DELETE /auth/hesap`). Eskiden ikisi aynı fonksiyonu çağırıyor,
+ * sunucuya hiç uğramıyordu (`debug.md` K-2).
+ */
+@Composable
+private fun HesabiSilIcerik(
+    durum: ProfilDurum,
+    onOnayla: () -> Unit,
+    onVazgec: () -> Unit,
+    onUyariyiKapat: () -> Unit,
+) {
     var girilenMetin by remember { mutableStateOf("") }
     val onayli = girilenMetin == "SİL"
 
@@ -676,6 +674,12 @@ private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        if (durum.sunucudaKaldiUyarisi) {
+            SunucudaKaldiUyarisi(onKapat = onUyariyiKapat)
+            return@Column
+        }
+
         Text(
             text = "Onaylamak için \"SİL\" yaz",
             style = MaterialTheme.typography.labelLarge,
@@ -689,9 +693,14 @@ private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
             placeholder = { Text("SİL") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = !durum.siliniyor,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Hesabımı kalıcı olarak sil", onTikla = onOnayla, etkin = onayli)
+        TehlikeliButon(
+            metin = if (durum.siliniyor) "Siliniyor…" else "Hesabımı kalıcı olarak sil",
+            onTikla = onOnayla,
+            etkin = onayli && !durum.siliniyor,
+        )
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }

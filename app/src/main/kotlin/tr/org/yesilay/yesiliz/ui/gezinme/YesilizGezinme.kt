@@ -176,6 +176,10 @@ fun YesilizGezinme(
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },
                     onAnketYenile = { navController.navigate(Rota.ANKET_YENILE) },
                     onSaglikIzni = { navController.navigate(Rota.SAGLIK_IZIN) },
+                    // Veri/hesap silindi: geri yığınının tamamı atılıyor.
+                    // Silinmiş veriye geri tuşuyla dönmek boş ekranlar
+                    // gösterirdi.
+                    onSilindi = { navController.bastanBasla() },
                 )
             }
             composable(Rota.GUNLUK_HEDEF) {
@@ -249,6 +253,19 @@ fun YesilizGezinme(
 private fun NavHostController.hesaptanCik(hedef: String) {
     navigate(hedef) {
         popUpTo(Rota.GIRIS) { inclusive = true }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * "Verilerimi/Hesabımı sil" sonrası sıfırdan başlatma.
+ *
+ * `popUpTo(0)` geri yığınının tamamını atıyor: silinmiş veriye ait hiçbir
+ * ekran geride kalmamalı.
+ */
+private fun NavHostController.bastanBasla() {
+    navigate(Rota.GIRIS) {
+        popUpTo(0) { inclusive = true }
         launchSingleTop = true
     }
 }

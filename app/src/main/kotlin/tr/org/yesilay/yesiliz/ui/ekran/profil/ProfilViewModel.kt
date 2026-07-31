@@ -3,9 +3,13 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
@@ -32,6 +36,17 @@ class ProfilViewModel @Inject constructor(
     private val disaAktarDeposu: DisaAktarDeposu,
 ) : ViewModel() {
 
+    private val silmeHali = MutableStateFlow(SilmeHali())
+
+    /**
+     * Silme bitti, ekrandan çıkılmalı — tek atımlık olay.
+     *
+     * `StateFlow` olamaz: yapılandırma değişiminde tekrar tetiklenip
+     * kullanıcıyı ikinci kez dışarı atardı.
+     */
+    private val _silindi = Channel<Unit>(Channel.BUFFERED)
+    val silindi: Flow<Unit> = _silindi.receiveAsFlow()
+
     val durum: StateFlow<ProfilDurum> = combine(
         tercihler.yesilayPaylasimi,
         tercihler.ligdeGorun,
@@ -54,6 +69,11 @@ class ProfilViewModel @Inject constructor(
     }.combine(tercihler.oturum) { durum, oturum ->
         // Misafir kullanıcının adı yok; sabit ada düşülüyor.
         durum.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
+    }.combine(silmeHali) { durum, silme ->
+        durum.copy(
+            siliniyor = silme.calisiyor,
+            sunucudaKaldiUyarisi = silme.sunucudaKaldi,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
@@ -113,12 +133,55 @@ class ProfilViewModel @Inject constructor(
     }
 
     /**
-     * "Verilerimi/Hesabımı kalıcı sil" onayından çağrılır — ikisi de aynı
-     * işlemi yapıyor (bkz. [VeriYonetimiDeposu]).
+     * "Verilerimi kalıcı sil" onayı — cihazdaki her şey gider, sunucudaki
+     * hesap kalır. Bitince [silindi] tetikleniyor.
      */
     fun verileriSil() {
-        viewModelScope.launch { veriYonetimi.tumVerileriSil() }
+        sil { veriYonetimi.tumVerileriSil(); true }
     }
+
+    /**
+     * "Hesabımı kalıcı sil" onayı — verilerin üstüne sunucudaki hesap da
+     * siliniyor ([VeriYonetimiDeposu.hesabiSil]).
+     *
+     * Eskiden bu iki akış **aynı** fonksiyonu çağırıyordu; hesap silme
+     * sunucuya hiç uğramıyordu (`debug.md` K-2).
+     */
+    fun hesabiSil() {
+        sil { veriYonetimi.hesabiSil() }
+    }
+
+    /** Uyarı okunduktan sonra kullanıcı yine de çıkmak isterse. */
+    fun uyariyiKapat() {
+        silmeHali.value = SilmeHali()
+        viewModelScope.launch { _silindi.send(Unit) }
+    }
+
+    /**
+     * Ortak silme sarmalayıcısı.
+     *
+     * Blok `false` dönerse (sunucudaki hesap silinemedi) ekrandan
+     * **çıkılmıyor**: önce uyarı gösteriliyor. Sessizce çıkmak, silinmemiş
+     * bir hesabı silinmiş göstermek olurdu.
+     */
+    private fun sil(blok: suspend () -> Boolean) {
+        if (silmeHali.value.calisiyor) return
+        silmeHali.value = SilmeHali(calisiyor = true)
+        viewModelScope.launch {
+            val tamamSilindi = blok()
+            if (tamamSilindi) {
+                silmeHali.value = SilmeHali()
+                _silindi.send(Unit)
+            } else {
+                silmeHali.value = SilmeHali(sunucudaKaldi = true)
+            }
+        }
+    }
+
+    private data class SilmeHali(
+        val calisiyor: Boolean = false,
+        val sunucudaKaldi: Boolean = false,
+    )
 
     private companion object {
         // Hesap sistemi Faz 2 — o zamana kadar sabit.

@@ -18,4 +18,14 @@ data class ProfilDurum(
     val bildirimSaatleri: BildirimSaatleri = BildirimSaatleri(),
     /** Debug derlemesinde demo tohumu satırı gösterilsin mi. */
     val demoKullanilabilir: Boolean = false,
+    /** Silme sürerken onay butonu pasif ve göstergeli olsun diye. */
+    val siliniyor: Boolean = false,
+    /**
+     * Silme bitti ama sunucudaki hesap duruyor.
+     *
+     * Kullanıcıyı sessizce dışarı atmak yerine bu uyarı gösteriliyor:
+     * "kalıcı sil" dedikten sonra sunucuda kopya kalmışsa bunu bilmeye
+     * hakkı var (`debug.md` K-2).
+     */
+    val sunucudaKaldiUyarisi: Boolean = false,
 )

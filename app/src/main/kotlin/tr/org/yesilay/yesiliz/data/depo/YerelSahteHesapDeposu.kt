@@ -61,4 +61,13 @@ class YerelSahteHesapDeposu @Inject constructor(
     override suspend fun cikisYap() {
         tercihler.oturumuSil()
     }
+
+    /**
+     * Sunucusuz hesabın sunucuda kaydı yok — silinecek uzak bir şey de yok.
+     * `true` dönmesi doğru: kullanıcıya yanlış bir uyarı gösterilmemeli.
+     */
+    override suspend fun hesabiSil(): Boolean {
+        tercihler.oturumuSil()
+        return true
+    }
 }

@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.uzak
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -30,6 +31,15 @@ interface YesilizApi {
 
     @POST("auth/sifre-sifirla")
     suspend fun sifreSifirla(@Body istek: SifreSifirlaIstek): Map<String, String>
+
+    /**
+     * Hesabı ve sunucudaki tüm satırlarını kalıcı siler.
+     *
+     * Cihaz "Hesabımı kalıcı sil" akışında çağırıyor; bu uç olmadan yerel
+     * veri silinip sunucudaki kopya yerinde kalırdı.
+     */
+    @DELETE("auth/hesap")
+    suspend fun hesabiSil(): Map<String, String>
 
     // --- senkron ---
 

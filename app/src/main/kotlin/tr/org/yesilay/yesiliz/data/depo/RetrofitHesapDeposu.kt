@@ -59,6 +59,16 @@ class RetrofitHesapDeposu @Inject constructor(
         tercihler.oturumuSil()
     }
 
+    override suspend fun hesabiSil(): Boolean {
+        // Sunucu çağrısı ÖNCE: jetonu silersek kimliğimizi kaybeder,
+        // hesabı bir daha silemeyiz.
+        // 401 dahil her hata `false`: jeton geçersizse sunucudaki hesap
+        // yerinde duruyor demektir ve kullanıcıya "silindi" denemez.
+        val silindi = runCatching { api.hesabiSil() }.isSuccess
+        cikisYap()
+        return silindi
+    }
+
     private suspend fun cagir(blok: suspend () -> JetonlarDto): HesapSonuc = try {
         val jetonlar = blok()
         jetonDeposu.kaydet(jetonlar.erisim, jetonlar.yenileme)
