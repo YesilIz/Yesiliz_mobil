@@ -475,10 +475,16 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 > kusurlar da ilk kez buradan çıktı: `debug.md`.
 >
 > **Aktivite kolu da koştu (3 Ağu 2026):** aynı cihazda `gunluk_ozet.adim`
-> ilk kez doldu (`1039` → `A=0,05195` → `D=0,99221`). O güne kadar `D` hep
-> `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç ölçülememişti — sebebi
-> iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in bu
-> cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
+> ilk kez sıfırdan farklı bir değerle doldu ve `D < 1` çıktı. O güne kadar
+> `D` hep `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç **koşturulamamıştı**
+> — sebebi iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in
+> bu cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
+>
+> **Ama koşan şey boru hattı, ölçüm değil.** Kullanılan `1039` sayısı
+> veritabanına elle enjekte edilmiş bir tabandan üretildi; o gün telefon
+> çantadaydı ve gerçek adım sıfıra yakındı. **Adım sayısının doğruluğu hâlâ
+> doğrulanmadı** — telefonu bir gün cepte taşıyıp bağımsız bir sayaçla
+> karşılaştırmak gerekiyor (`debug.md` §5).
 
 ---
 
@@ -506,7 +512,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
-| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; gerçek cihazda `gunluk_ozet.adim = 1039` → `D = 0,992` |
+| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; cihazda boru hattı uçtan uca koştu (`D < 1` ilk kez) — sayının kendisi gerçek bir günle **doğrulanmadı**, `debug.md` §5 |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
