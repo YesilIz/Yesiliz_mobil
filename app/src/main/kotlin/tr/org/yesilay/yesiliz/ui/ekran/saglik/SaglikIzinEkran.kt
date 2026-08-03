@@ -66,7 +66,7 @@ fun SaglikIzinEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val izinIstegi = saglikIzinIstegi(viewModel.gerekliIzinler) { viewModel.yenile() }
+    val izinIstegi = saglikIzinIstegi { viewModel.yenile() }
 
     YesilBaslikliEkran(
         baslik = "Adım ve hareket",
@@ -129,6 +129,33 @@ fun SaglikIzinEkran(
                 )
 
                 when {
+                    // Okuma izni var ama arka plan izni yok: uygulama açıkken
+                    // okuyabiliyor, gece koşan özet işi okuyamıyor. Bu ayrımı
+                    // söylemezsek kullanıcı "izin verdim ama adım gelmiyor"
+                    // diyecek ve haklı olacak.
+                    durum.arkaPlanEksik -> {
+                        Kart {
+                            Text(
+                                text = "Bir izin daha gerekiyor",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MetinBirincil,
+                            )
+                            Text(
+                                text = "Adım okuma izni verildi. Ama Health Connect, " +
+                                    "uygulama kapalıyken okumaya ayrıca izin " +
+                                    "istiyor. Bu izin olmadan gece hazırlanan " +
+                                    "günlük özetine adımların girmiyor.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MetinIkincil,
+                            )
+                        }
+                        BirincilButon(
+                            metin = "Arka plan iznini ver",
+                            onTikla = { izinIstegi(durum.istenenIzinler) },
+                        )
+                    }
+
                     durum.izinVarMi -> {
                         Kart {
                             Text(
@@ -207,7 +234,7 @@ fun SaglikIzinEkran(
                     else -> {
                         BirincilButon(
                             metin = "İzin ver",
-                            onTikla = { izinIstegi() },
+                            onTikla = { izinIstegi(durum.istenenIzinler) },
                         )
                     }
                 }

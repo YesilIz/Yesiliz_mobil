@@ -1,7 +1,9 @@
 package tr.org.yesilay.yesiliz.data.saglik
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -41,11 +43,52 @@ class SaglikOkuyucu @Inject constructor(
     private val zon: ZoneId,
 ) {
 
-    /** Uygulamanın istediği izinler — Profil ekranındaki istek bunu kullanıyor. */
+    /**
+     * Okuma izinleri — bunlar olmadan hiçbir şey okunamıyor.
+     * [izinVarMi] yalnızca bunlara bakıyor.
+     */
     val gerekliIzinler: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
     )
+
+    /**
+     * İzin diyaloğunda istenecek küme: okuma izinleri **+** arka planda
+     * okuma.
+     *
+     * Arka plan izni ayrı tutuluyor çünkü kullanıcı okumaya izin verip
+     * buna vermeyebilir; [gerekliIzinler]'e konsaydı o durumda ön plandaki
+     * okuma da kapanırdı. Cihazın Health Connect sürümü bu yeteneği
+     * tanımıyorsa istenmiyor — tanımadığı bir izin isteği diyaloğu
+     * komple başarısız kılıyor.
+     */
+    fun istenenIzinler(): Set<String> =
+        if (arkaPlanDestekli()) gerekliIzinler + ARKA_PLAN_IZNI else gerekliIzinler
+
+    /**
+     * Arka planda okuma izni verildi mi.
+     *
+     * Verilmediğinde `GunlukOzetWorker` ve `YuruyusServisi` okuyamıyor;
+     * izin ekranı bunu kullanıcıya söylüyor. Cihaz yeteneği hiç yoksa
+     * "verilmiş" sayılıyor: istenemeyen bir izni eksik göstermenin
+     * kullanıcıya söyleyeceği bir şey yok.
+     */
+    suspend fun arkaPlanIzniVarMi(): Boolean {
+        if (!arkaPlanDestekli()) return true
+        val istemci = istemci() ?: return false
+        return runCatching {
+            istemci.permissionController.getGrantedPermissions().contains(ARKA_PLAN_IZNI)
+        }.getOrDefault(false)
+    }
+
+    private fun arkaPlanDestekli(): Boolean {
+        val istemci = istemci() ?: return false
+        return runCatching {
+            istemci.features.getFeatureStatus(
+                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
+            ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        }.getOrDefault(false)
+    }
 
     /**
      * Health Connect'in bu cihazdaki durumu.
@@ -99,7 +142,14 @@ class SaglikOkuyucu @Inject constructor(
                 sporDk = (sonuc[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L)
                     .toDouble(),
             )
-        }.getOrDefault(GunlukAktivite())
+        }.getOrElse { hata ->
+            // Sessiz `getOrDefault` bu kusuru aylarca sakladı: arka plan
+            // okuması reddediliyordu, çağıran sıfır alıyordu ve hiçbir yerde
+            // sebebi yazmıyordu. Sıfır dönmeye devam ediyor (güvenli taraf),
+            // ama artık niçin sıfır olduğu logcat'te duruyor.
+            Log.w(ETIKET, "Health Connect okunamadı ($tarih) — aktivite sıfır sayılıyor", hata)
+            GunlukAktivite()
+        }
     }
 
     private fun istemci(): HealthConnectClient? =
@@ -108,6 +158,11 @@ class SaglikOkuyucu @Inject constructor(
         } else {
             null
         }
+
+    private companion object {
+        const val ETIKET = "YesilizSaglik"
+        val ARKA_PLAN_IZNI: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+    }
 }
 
 /**

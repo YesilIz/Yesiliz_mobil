@@ -17,9 +17,18 @@ import javax.inject.Inject
 data class SaglikIzinDurum(
     val saglikDurumu: SaglikDurumu = SaglikDurumu.YOK,
     val izinVarMi: Boolean = false,
+    val arkaPlanIzniVarMi: Boolean = false,
+    val istenenIzinler: Set<String> = emptySet(),
     val yukleniyor: Boolean = true,
 ) {
     val kullanilabilir: Boolean get() = saglikDurumu == SaglikDurumu.HAZIR
+
+    /**
+     * Okuma izni var ama arka plan izni yok — adım verisi yalnızca uygulama
+     * açıkken okunabiliyor, gecelik özet boş kalıyor. Ekran bunu ayrı bir
+     * uyarı olarak gösteriyor.
+     */
+    val arkaPlanEksik: Boolean get() = izinVarMi && !arkaPlanIzniVarMi
 }
 
 @HiltViewModel
@@ -29,9 +38,6 @@ class SaglikIzinViewModel @Inject constructor(
 
     private val _durum = MutableStateFlow(SaglikIzinDurum())
     val durum: StateFlow<SaglikIzinDurum> = _durum.asStateFlow()
-
-    /** İzin sözleşmesi Composable tarafında kuruluyor — ViewModel Context tutmaz. */
-    val gerekliIzinler: Set<String> = okuyucu.gerekliIzinler
 
     init {
         yenile()
@@ -49,6 +55,8 @@ class SaglikIzinViewModel @Inject constructor(
             _durum.value = SaglikIzinDurum(
                 saglikDurumu = okuyucu.durum(),
                 izinVarMi = okuyucu.izinVarMi(),
+                arkaPlanIzniVarMi = okuyucu.arkaPlanIzniVarMi(),
+                istenenIzinler = okuyucu.istenenIzinler(),
                 yukleniyor = false,
             )
         }
@@ -62,11 +70,14 @@ class SaglikIzinViewModel @Inject constructor(
  * ekranını açıyor; sonuç `onSonuc` ile ViewModel'e dönüyor. Sözleşme
  * Composable içinde kuruluyor çünkü `ActivityResultLauncher` bir Activity
  * bağlamı istiyor ve ViewModel Context tutmuyor (CLAUDE.md §6).
+ *
+ * İstenecek küme çağrı anında veriliyor: hangi izinlerin isteneceği cihazın
+ * Health Connect sürümüne bağlı ve durum yüklenene kadar bilinmiyor.
  */
 @Composable
-fun saglikIzinIstegi(izinler: Set<String>, onSonuc: () -> Unit): () -> Unit {
+fun saglikIzinIstegi(onSonuc: () -> Unit): (Set<String>) -> Unit {
     val baslatici = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { onSonuc() }
-    return { baslatici.launch(izinler) }
+    return { izinler -> baslatici.launch(izinler) }
 }

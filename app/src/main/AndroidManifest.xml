@@ -49,6 +49,26 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
 
     <!--
+      Arka planda okuma. Bu bildirim OLMADAN adım verisi pratikte hiç
+      gelmiyordu: Health Connect, uygulama ön planda değilken okumayı
+      reddediyor ve
+
+        RemoteException: … must be in foreground to read the following
+        data types [Steps, StepsCadenceSeries]
+
+      atıyor. Adımı okuyan iki yerin ikisi de ön planda değil —
+      `GunlukOzetWorker` gece koşuyor, `YuruyusServisi` ekran kapalıyken
+      sayıyor (§12 K21). İstisna `SaglikOkuyucu` içinde yutuluyordu, yani
+      izin verilmiş olsa bile `adim = 0`, `sporDk = 0`, `D = 1,0` kalıyordu.
+
+      Ayrı bir izin: kullanıcı okuma izinlerini verip bunu vermeyebilir.
+      O yüzden `gerekliIzinler`'e değil `istenenIzinler`'e giriyor —
+      verilmezse uygulama çalışmaya devam ediyor, yalnızca gecelik özet
+      adım göremiyor ve ekran bunu söylüyor.
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
+    <!--
       Faz 2 backend'i (backend/). Sunucuya YALNIZCA günlük özet ve skor
       gidiyor; ham kullanım olayları cihazda kalıyor (§4). Gönderim
       "Yeşilay ile paylaşım" onayına bağlı ve varsayılan kapalı.

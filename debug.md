@@ -44,6 +44,78 @@ amaçlı; açık iş §4'te.
 
 ## §1 · KRİTİK
 
+### ✅ K-0 · Health Connect adım verisi arka planda hiç okunamıyor `[cihaz]`
+
+> Bu bulgu taramadan **sonra** (3 Ağustos 2026) aynı cihazda çıktı; sıraya
+> başa kondu çünkü K-6'nın (31 Tem) düzelttiği sanılan şeyi düzeltmemiş.
+
+**`AndroidManifest.xml` · `data/saglik/SaglikOkuyucu.kt`**
+
+K-6 paket görünürlüğünü çözdü, `getSdkStatus()` artık `SDK_AVAILABLE` dönüyor
+ve izin ekranı "İzin verildi" diyor. Buna rağmen `gunluk_ozet.adim` yine sıfır
+kalıyordu. Sebep izinde değil, **nerede okunduğunda**:
+
+```
+android.os.RemoteException: tr.org.yesilay.yesiliz must be in foreground
+to read the following data types [Steps, StepsCadenceSeries]
+```
+
+Health Connect, uygulama ön planda değilken okumayı reddediyor ve bunun için
+ayrı bir izin istiyor: `android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND`.
+Manifest'te bildirilmediği için Health Connect'in izin ekranında **"Ek erişim"
+satırı hiç görünmüyordu** — kullanıcının izni vermesi mümkün değildi.
+
+Adımı okuyan iki yerin ikisi de ön planda değil:
+
+| Çağıran | Ne zaman koşuyor |
+|---|---|
+| `GunlukOzetWorker` | gece, WorkManager ile |
+| `YuruyusServisi` | yürüyüş sırasında, ekran kapalıyken (§12 K21) |
+
+Yani **adım verisi hiçbir zaman özete girmiyordu.** `D = 1,0` sabit kalıyor,
+aktivite sönümlemesi (`spec-risk.md`, tavan %15) gerçek cihazda hâlâ hiç
+uygulanmamış oluyordu — K-6'nın kapattığını sandığı kusurun aynısı.
+
+**Niçin bu kadar geç görüldü.** `gununAktivitesi` istisnayı
+`runCatching { … }.getOrDefault(GunlukAktivite())` ile yutuyordu. Çağıran sıfır
+alıyor, sıfır meşru bir sonuç ("bugün hiç yürümemiş") olduğu için hiçbir yerde
+alarm çalmıyordu. Logcat'te de tek satır yoktu.
+
+**Düzeltme.**
+- Manifest arka plan iznini bildiriyor; Health Connect'te "Ek erişim → Verilere
+  arka planda erişim" satırı böylece beliriyor.
+- İzin **ayrı** tutuluyor: `gerekliIzinler` (okuma) ve `istenenIzinler`
+  (okuma + arka plan). `izinVarMi()` yalnızca okumaya bakıyor — kullanıcı arka
+  plan iznini reddederse ön plandaki okuma çalışmaya devam etsin.
+- Cihazın Health Connect sürümü yeteneği tanımıyorsa
+  (`HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND`) izin hiç
+  istenmiyor; tanınmayan bir izin isteği diyaloğu komple başarısız kılıyor.
+- Okuma izni var ama arka plan izni yoksa **izin ekranı bunu söylüyor**
+  ("Bir izin daha gerekiyor") ve doğrudan isteyen bir buton veriyor.
+- `getOrDefault` → `getOrElse` + `Log.w`. Sıfır dönmeye devam ediyor (güvenli
+  taraf), ama sebebi artık logcat'te.
+
+**Doğrulama (SM-A217F).** `app/src/debug/…/SaglikTaniAlicisi.kt` — yalnızca
+debug APK'da bulunan, gerçek uygulama UID'siyle okuma yapan tanı alıcısı:
+
+```
+# arka plan, arka plan izni YOK
+verilen=[READ_EXERCISE, READ_STEPS]
+kayitHata=RemoteException: … must be in foreground …
+
+# arka plan, arka plan izni VAR
+verilen=[READ_EXERCISE, READ_STEPS, READ_HEALTH_DATA_IN_BACKGROUND]
+kayitHata=null toplamHata=null
+```
+
+**Ayrıca bulundu — kod değil ortam.** Bu telefonda Health Connect **boş**:
+"Health Connect'te hiç veriniz yok". Samsung Health kurulu değil (yalnızca
+`GRT_SHealthStub` stub'ı var), Google Fit kurulu ama Health Connect'e bağlı
+değil. Health Connect bir **depo**, adım saymıyor. Yani düzeltmeden sonra da
+okuma `0` dönüyor — okunacak veri yok. Kalıcı çözüm §4'te.
+
+---
+
 ### ✅ K-1 · Anket ekranı çöküyor — iç içe iki dikey kaydırma `[cihaz]`
 
 **`ui/ekran/onboarding/OnboardingIskelet.kt` · `AnketEkran.kt`**
@@ -186,6 +258,7 @@ Kusur değil; kapsam ya da altyapı.
 |---|---|
 | **Backend dağıtımı** | Sunucu adresi çalışma zamanında okunuyor (CLAUDE.md §12 K24) ve gerçek cihaz USB üzerinden `adb reverse` ile yerel sunucuya bağlanıyor. **Kalıcı dağıtım + HTTPS alan adı hâlâ yok.** Release `ag_guvenligi.xml` şifresiz trafiği yalnızca `10.0.2.2` için açıyor; debug kaynak seti kendi gevşek yapılandırmasını getiriyor ve yayınlanan APK'ya giremiyor |
 | **Uzman/Yeşilay paneli** | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
+| **Adım verisinin kaynağı** | K-0'ın ortam tarafı. Health Connect adım **saymıyor**, saklıyor; yazan bir uygulama (Samsung Health / Google Fit) yoksa okuma sonsuza kadar `0` döner. Test telefonunda ikisi de bağlı değil. Üç seçenek: (a) demo öncesi Samsung Health kurulup Health Connect'e bağlanır — kod değişmez ama her kullanıcıdan aynısı beklenir; (b) `Sensor.TYPE_STEP_COUNTER` yedeği yazılır — `ACTIVITY_RECOGNITION` izni zaten bildirilmiş, cihazda donanım sayacı var (`dumpsys sensorservice` doğruladı), üçüncü parti uygulama gerekmez; (c) adım tamamen bırakılıp sönümleme yalnızca egzersize bağlanır. **Karar verilmedi** |
 | **`FAKTOR_ASGARI_DK = 15`** | Y-3'ün eşiği geçici. A3 kalibrasyonuyla birlikte gözden geçirilecek |
 | **Ebeveyn onayının doğrulanabilirliği** | Beyan usulü; uygulama onayı doğrulayamıyor ve bunu ekranda söylüyor. Gerçek doğrulama §12 A5'e bağlı |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
