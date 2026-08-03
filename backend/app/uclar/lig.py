@@ -71,8 +71,13 @@ def lig(
         .order_by(LigUyelik.haftalik_puan.desc(), LigUyelik.kullanici_id)
     ).all()
 
+    # "Ligde görün" kapalı olanlar listeden çıkıyor; kullanıcının KENDİSİ
+    # her hâlükârda kendi satırını görüyor, yoksa sıralamada nerede
+    # olduğunu hiç öğrenemezdi (debug.md Y-5).
+    gorunenler = [u for u in uyelikler if u.gorunur or u.kullanici_id == kullanici.id]
+
     siralama = []
-    for indeks, u in enumerate(uyelikler, start=1):
+    for indeks, u in enumerate(gorunenler, start=1):
         k = db.get(Kullanici, u.kullanici_id)
         if k is None:
             continue
@@ -93,6 +98,7 @@ def lig(
         dusen=a.lig_dusen,
         siralama=siralama,
         katildiMi=True,
+        gorunuyorMuyum=uyelik.gorunur,
     )
 
 

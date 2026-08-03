@@ -3,7 +3,9 @@ package tr.org.yesilay.yesiliz.data.depo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
@@ -41,15 +43,21 @@ class YedekliLigDeposu @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun ligAkisi(): Flow<LigOzeti> = flow {
         // Önce tazelemeyi dene; başarısızsa yerele geç.
+        //
+        // Yerele düşüldüğü ARTIK SÖYLENİYOR (`cevrimdisi`). Gerçek
+        // telefonda sunucuya hiç ulaşılamadığı için bu istisna değil
+        // varsayılan durumdu ve ekranda sahte veriye bakıldığını gösteren
+        // hiçbir işaret yoktu (`debug.md` O-14). Demo günü "backend
+        // çalışıyor" diye gösterilemeyecek veriyi ayırt etmenin tek yolu.
         val kaynak = try {
             uzak.tazele()
             uzak.ligAkisi()
         } catch (_: IOException) {
-            yerel.ligAkisi()
+            yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
         } catch (_: retrofit2.HttpException) {
             // 401: oturum yok/expired → yerel mock. Misafir kullanıcı da
             // lig sekmesini boş görmemeli.
-            yerel.ligAkisi()
+            yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
         }
         emitAll(kaynak)
     }
@@ -111,6 +119,20 @@ class YedekliHesapDeposu @Inject constructor(
         // Jetonları da temizlemek için uzak depo çağrılıyor; o da yerel
         // tercihleri siliyor.
         runCatching { uzak.cikisYap() }.onFailure { yerel.cikisYap() }
+    }
+
+    /**
+     * Misafirin sunucuda kaydı yok; uzak depoyu çağırmak anlamsız 401
+     * üretirdi. Hesaplı kullanıcıda uzak silme sonucu olduğu gibi geçiyor —
+     * ağ yoksa `false` dönüp ekranın uyarı göstermesini sağlıyor.
+     */
+    override suspend fun hesabiSil(): Boolean {
+        val misafir = yerel.oturum.first().misafirMi
+        if (misafir) return yerel.hesabiSil()
+
+        val silindi = runCatching { uzak.hesabiSil() }.getOrDefault(false)
+        yerel.hesabiSil()
+        return silindi
     }
 
     /** Ağ hatasında `null` döner (çağıran yerele düşer), iş hatasını geçirir. */

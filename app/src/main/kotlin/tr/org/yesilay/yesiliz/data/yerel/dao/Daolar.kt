@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -84,8 +85,17 @@ interface GunlukOzetDao {
     )
     suspend fun buGuneKadar(tarih: LocalDate, gun: Int): List<GunlukOzetEntity>
 
-    /** Alpha'nın `canliGun` girdisi — geleceğe ait satır sayılmasın. */
-    @Query("SELECT COUNT(*) FROM gunluk_ozet WHERE tarih <= :tarih")
+    /**
+     * Alpha'nın `canliGun` girdisi — kaç gün **gerçek veri** birikmiş.
+     *
+     * `olayVarMi` filtresi şart. Satır saymak, worker'ın telafi ettiği boş
+     * günleri de geçmiş sayıp uygulamanın ilk gününde `d = 8` sanmasına yol
+     * açıyordu: `alpha` 1,0 yerine 0,49 çıkıyor, anketin ağırlığı yarıya
+     * iniyor ve gösterilen risk olduğundan düşük görünüyordu
+     * (`debug.md` K-5). `docs/spec-risk.md §4.5`'e göre `d` "kaç gün gerçek
+     * veri biriktiği", satır sayısı değil.
+     */
+    @Query("SELECT COUNT(*) FROM gunluk_ozet WHERE tarih <= :tarih AND olayVarMi = 1")
     suspend fun gunSayisiEKadar(tarih: LocalDate): Int
 
     /** İstatistik ekranının takvim hizalı penceresi — eskiden yeniye. */
@@ -323,4 +333,17 @@ interface ArkadasDao {
 
     @Query("DELETE FROM arkadas WHERE isim = :isim")
     suspend fun sil(isim: String)
+}
+
+@Dao
+interface AdimSayacDao {
+    @Upsert
+    suspend fun kaydet(kayit: AdimSayacEntity)
+
+    @Query("SELECT * FROM adim_sayac WHERE tarih = :tarih")
+    suspend fun gunun(tarih: LocalDate): AdimSayacEntity?
+
+    /** Sayaç birikimi geçmişe dönük anlam taşımıyor; eskiler temizlenir. */
+    @Query("DELETE FROM adim_sayac WHERE tarih < :tarih")
+    suspend fun eskileriSil(tarih: LocalDate): Int
 }

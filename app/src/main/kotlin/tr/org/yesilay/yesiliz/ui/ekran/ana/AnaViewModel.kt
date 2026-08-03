@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.BeyanDeposu
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
@@ -263,13 +264,3 @@ private fun GunlukOzetEntity.toplamEkranDk(): Double =
     socialDk + entertainmentDk + gamesDk + communicationDk +
         productivityDk + educationDk + healthDk + otherDk
 
-/** Görev → ikon. Katalog `domain/`de, ikon `ui/`de — katmanlar karışmasın. */
-private fun Gorev.ikonu(): ImageVector = when (this) {
-    Gorev.NEFES -> Icons.Filled.SelfImprovement
-    Gorev.DIJITAL_MOLA -> Icons.Filled.Timer
-    Gorev.YURUYUS -> Icons.AutoMirrored.Filled.DirectionsWalk
-    Gorev.RUH_HALI -> Icons.Filled.MoodBad
-    Gorev.UYKU_BEYANI -> Icons.Filled.Bedtime
-    Gorev.GECE_TEMIZ -> Icons.Filled.NightsStay
-    Gorev.TUKETIM_HEDEFI -> Icons.Filled.TrackChanges
-}

@@ -3,15 +3,23 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.demo.DemoVeri
 import tr.org.yesilay.yesiliz.data.depo.DisaAktarDeposu
+import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
+import tr.org.yesilay.yesiliz.data.depo.SozlesmeDeposu
+import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import javax.inject.Inject
@@ -30,7 +38,33 @@ class ProfilViewModel @Inject constructor(
     private val veriYonetimi: VeriYonetimiDeposu,
     private val isPlanlayici: IsPlanlayici,
     private val disaAktarDeposu: DisaAktarDeposu,
+    private val hesapDeposu: HesapDeposu,
+    private val senkronDeposu: SenkronDeposu,
+    private val sozlesmeDeposu: SozlesmeDeposu,
 ) : ViewModel() {
+
+    private val silmeHali = MutableStateFlow(SilmeHali())
+
+    /**
+     * Yardım ekranındaki SSS.
+     *
+     * `assets/sozlesmeler.json`'dan bir kez okunuyor; ekran açılana kadar
+     * boş liste, o da "yükleniyor" olarak çiziliyor.
+     */
+    private val sssAkisi = MutableStateFlow<List<SssMaddesi>>(emptyList())
+
+    init {
+        viewModelScope.launch { sssAkisi.value = sozlesmeDeposu.sss() }
+    }
+
+    /**
+     * Silme bitti, ekrandan çıkılmalı — tek atımlık olay.
+     *
+     * `StateFlow` olamaz: yapılandırma değişiminde tekrar tetiklenip
+     * kullanıcıyı ikinci kez dışarı atardı.
+     */
+    private val _silindi = Channel<Unit>(Channel.BUFFERED)
+    val silindi: Flow<Unit> = _silindi.receiveAsFlow()
 
     val durum: StateFlow<ProfilDurum> = combine(
         tercihler.yesilayPaylasimi,
@@ -53,19 +87,55 @@ class ProfilViewModel @Inject constructor(
         )
     }.combine(tercihler.oturum) { durum, oturum ->
         // Misafir kullanıcının adı yok; sabit ada düşülüyor.
-        durum.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
+        durum.copy(
+            isim = oturum.ad.ifBlank { SABIT_ISIM },
+            // Misafirin çıkacağı bir hesap yok; satır gösterilmiyor.
+            hesapVarMi = oturum.girisYapildiMi && !oturum.misafirMi,
+            eposta = oturum.eposta,
+        )
+    }.combine(silmeHali) { durum, silme ->
+        durum.copy(
+            siliniyor = silme.calisiyor,
+            sunucudaKaldiUyarisi = silme.sunucudaKaldi,
+        )
+    }.combine(sssAkisi) { durum, sss ->
+        durum.copy(sss = sss)
+    }.combine(tercihler.sunucuTabani) { durum, taban ->
+        durum.copy(sunucuTabani = taban)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
         initialValue = ProfilDurum(isim = SABIT_ISIM, ligAdi = SABIT_LIG),
     )
 
+    /**
+     * "Yeşilay ile paylaşım" rıza kapısı (CLAUDE.md §12 K19).
+     *
+     * Açılınca senkron **hemen** deneniyor. Tercih aslında çalışıyordu
+     * ama açıp kapatmanın gözlenebilir hiçbir sonucu yoktu: gecelik
+     * worker'a kadar hiçbir şey olmuyor, kullanıcı anahtarın işe yarayıp
+     * yaramadığını anlayamıyordu (`debug.md` O-18).
+     */
     fun yesilayPaylasimi(acik: Boolean) {
-        viewModelScope.launch { tercihler.yesilayPaylasimiAyarla(acik) }
+        viewModelScope.launch {
+            tercihler.yesilayPaylasimiAyarla(acik)
+            if (acik) senkronDeposu.senkronEt()
+        }
     }
 
+    /**
+     * "Ligde görün" tercihi.
+     *
+     * Kaydetmenin yanında senkron da tetikleniyor: tercih sunucuda tutulan
+     * lig üyeliğine yazılıyor ve gecelik worker'ı beklemek, kullanıcının
+     * anahtarı kapattıktan sonra saatlerce ligde görünmeye devam etmesi
+     * demekti. Tercih zaten hiç tüketilmiyordu (`debug.md` Y-5).
+     */
     fun ligdeGorun(acik: Boolean) {
-        viewModelScope.launch { tercihler.ligdeGorunAyarla(acik) }
+        viewModelScope.launch {
+            tercihler.ligdeGorunAyarla(acik)
+            senkronDeposu.senkronEt()
+        }
     }
 
     /**
@@ -108,17 +178,92 @@ class ProfilViewModel @Inject constructor(
      * Release derlemesinde [DemoVeri] no-op; bu satır zaten görünmüyor
      * ([ProfilDurum.demoKullanilabilir] false).
      */
+    /**
+     * Sunucu adresi (Profil › Geliştirici).
+     *
+     * Varsayılan `10.0.2.2` yalnızca emülatörde çalışıyor; gerçek cihazda
+     * geliştirme makinesinin LAN adresi giriliyor (`debug.md` O-14).
+     * Kaydettikten sonra senkron hemen deneniyor ki adresin doğru olup
+     * olmadığı anlaşılsın.
+     */
+    fun sunucuAdresiKaydet(adres: String) {
+        viewModelScope.launch {
+            tercihler.sunucuTabaniniKaydet(adres)
+            senkronDeposu.senkronEt()
+        }
+    }
+
     fun demoTohumla() {
         viewModelScope.launch { demoVeri.tohumla() }
     }
 
     /**
-     * "Verilerimi/Hesabımı kalıcı sil" onayından çağrılır — ikisi de aynı
-     * işlemi yapıyor (bkz. [VeriYonetimiDeposu]).
+     * "Verilerimi kalıcı sil" onayı — cihazdaki her şey gider, sunucudaki
+     * hesap kalır. Bitince [silindi] tetikleniyor.
      */
     fun verileriSil() {
-        viewModelScope.launch { veriYonetimi.tumVerileriSil() }
+        sil { veriYonetimi.tumVerileriSil(); true }
     }
+
+    /**
+     * "Hesabımı kalıcı sil" onayı — verilerin üstüne sunucudaki hesap da
+     * siliniyor ([VeriYonetimiDeposu.hesabiSil]).
+     *
+     * Eskiden bu iki akış **aynı** fonksiyonu çağırıyordu; hesap silme
+     * sunucuya hiç uğramıyordu (`debug.md` K-2).
+     */
+    fun hesabiSil() {
+        sil { veriYonetimi.hesabiSil() }
+    }
+
+    /**
+     * Hesaptan çıkış.
+     *
+     * `HesapDeposu.cikisYap()` üç deponun hepsinde uygulanmıştı ama
+     * hiçbir ekrandan çağrılmıyordu; giriş yapan kullanıcı hesabını
+     * değiştiremiyor, tek yol "Hesabımı sil" oluyordu (`debug.md` Y-3).
+     *
+     * Veri **silinmiyor** — yalnızca oturum kapanıyor. Aynı hesapla geri
+     * girildiğinde cihazdaki geçmiş yerinde.
+     */
+    fun cikisYap() {
+        viewModelScope.launch {
+            hesapDeposu.cikisYap()
+            _silindi.send(Unit)
+        }
+    }
+
+    /** Uyarı okunduktan sonra kullanıcı yine de çıkmak isterse. */
+    fun uyariyiKapat() {
+        silmeHali.value = SilmeHali()
+        viewModelScope.launch { _silindi.send(Unit) }
+    }
+
+    /**
+     * Ortak silme sarmalayıcısı.
+     *
+     * Blok `false` dönerse (sunucudaki hesap silinemedi) ekrandan
+     * **çıkılmıyor**: önce uyarı gösteriliyor. Sessizce çıkmak, silinmemiş
+     * bir hesabı silinmiş göstermek olurdu.
+     */
+    private fun sil(blok: suspend () -> Boolean) {
+        if (silmeHali.value.calisiyor) return
+        silmeHali.value = SilmeHali(calisiyor = true)
+        viewModelScope.launch {
+            val tamamSilindi = blok()
+            if (tamamSilindi) {
+                silmeHali.value = SilmeHali()
+                _silindi.send(Unit)
+            } else {
+                silmeHali.value = SilmeHali(sunucudaKaldi = true)
+            }
+        }
+    }
+
+    private data class SilmeHali(
+        val calisiyor: Boolean = false,
+        val sunucudaKaldi: Boolean = false,
+    )
 
     private companion object {
         // Hesap sistemi Faz 2 — o zamana kadar sabit.

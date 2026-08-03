@@ -21,6 +21,7 @@ from __future__ import annotations
 import datetime as dt
 
 from sqlalchemy import (
+    text,
     Boolean,
     Date,
     DateTime,
@@ -184,6 +185,15 @@ class LigUyelik(Taban):
     grup_id: Mapped[int] = mapped_column(ForeignKey("lig_grup.id"))
     hafta_baslangic: Mapped[dt.date] = mapped_column(Date, index=True)
     haftalik_puan: Mapped[int] = mapped_column(Integer, default=0)
+
+    # "Ligde görün" tercihi (cihazda `Tercihler.ligdeGorun`).
+    #
+    # Tercih yazılıyor ve yalnızca kendi anahtarını çizmek için okunuyordu;
+    # lig kodu, senkron ve sunucu hiçbiri tüketmiyordu. Kullanıcı anahtarı
+    # kapatsa da ligde görünmeye devam ediyordu -- gizlilik tercihi olarak
+    # sunulduğu için "çalışmayan buton" değil, tutulmayan bir sözdü
+    # (debug.md Y-5).
+    gorunur: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
 
 class DavetKodu(Taban):

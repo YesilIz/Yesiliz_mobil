@@ -24,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
@@ -70,10 +72,19 @@ fun YesilBaslikliEkran(
                 color = Beyaz,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                // Başlık ortada duruyor ama genişliği sınırsız olsaydı geri
-                // okunun ve sağ eylemin ("Tümünü oku") üstüne binerdi.
-                // Kenar payı ikisine de yer bırakıyor.
-                modifier = Modifier.padding(horizontal = BaslikKenarPayi),
+                // Sığmayan başlık üç noktayla kesiliyor. Verilmediğinde
+                // "Uygulama kategorileri" ekranda "Uygulama" olarak
+                // kırpılıyor ve kırpıldığına dair hiçbir işaret olmuyordu
+                // (`debug.md` O-6).
+                overflow = TextOverflow.Ellipsis,
+                // Pay yalnızca DOLU tarafa veriliyor. İki tarafa birden
+                // 96dp koymak, 720px/280dpi bir ekranda başlığa ~65dp
+                // bırakıyordu; sağ eylemi olmayan ekranlarda o payın
+                // yarısı boşuna harcanıyordu.
+                modifier = Modifier.padding(
+                    start = if (onGeri != null) BaslikKenarPayi else Olcu.EkranKenari,
+                    end = if (sagEylem != null) BaslikKenarPayi else Olcu.EkranKenari,
+                ),
             )
             if (onGeri != null) {
                 IconButton(
@@ -91,7 +102,14 @@ fun YesilBaslikliEkran(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = Olcu.EkranKenari),
+                        .padding(end = Olcu.EkranKenari)
+                        // Genişlik SINIRLI. `fillMaxWidth` dayatan bir
+                        // içerik (`MetinBaglanti`) verildiğinde eylem
+                        // çubuğun tamamını kaplıyor, başlığın üstüne
+                        // biniyor ve geri okuna basınca kendi eylemini
+                        // çalıştırıyordu (`debug.md` Y-2).
+                        .widthIn(max = SagEylemEnFazla),
+                    contentAlignment = Alignment.CenterEnd,
                 ) {
                     sagEylem()
                 }
@@ -123,3 +141,10 @@ fun YesilBaslikliEkran(
 
 /** Geri oku ve sağ eylem için ayrılan yatay pay. */
 private val BaslikKenarPayi = 96.dp
+
+/**
+ * Sağ eylemin alabileceği en fazla genişlik.
+ *
+ * [BaslikKenarPayi] ile aynı: eylem başlığa ayrılan alana taşmıyor.
+ */
+private val SagEylemEnFazla = 96.dp

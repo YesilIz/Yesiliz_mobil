@@ -7,6 +7,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
+import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.domain.puan.PuanHesapla
 import tr.org.yesilay.yesiliz.domain.puan.PuanSabitleri
@@ -49,9 +50,15 @@ class PuanDeposu @Inject constructor(
      * Günlük limit aşılırsa **sessizce yok sayılır** — hata göstermek
      * "yanlış yaptın" mesajı verir; görev zaten tamamlanmış görünüyor.
      *
+     * [DogrulamaTuru.OTOMATIK] görevler buradan **yazılamaz**: puanlarını
+     * `gunuYenidenHesapla` zaten günlük özetten veriyor. İkinci kez
+     * yazılmaları aynı gün için çift sayım demekti (`debug.md` K-9). UI
+     * artık o butonu göstermiyor; bu kontrol ikinci savunma hattı.
+     *
      * @return kayıt yapıldıysa true
      */
     suspend fun gorevTamamla(gorev: Gorev, tarih: LocalDate): Boolean {
+        if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) return false
         if (gorevDao.gununSayisi(tarih, gorev.id) >= gorev.gunlukLimit) return false
 
         gorevDao.ekle(
@@ -90,14 +97,26 @@ class PuanDeposu @Inject constructor(
                 it.productivityDk + it.educationDk + it.healthDk + it.otherDk
         } ?: 0.0
 
+        // Ölçüm YOKSA hedef "tutturuldu" sayılmıyor: veri olmadan ödül
+        // vermek, izni vermemiş kullanıcıya avantaj sağlardı.
+        //
+        // Buradaki koşul `ozet != null` idi ve tam da engellemek istediği
+        // şeyi kaçırıyordu: worker'ın telafi ettiği boş günlere de sıfır
+        // dolu bir satır yazılıyor, `0.0 <= hedef` ve `0.0 < gece eşiği`
+        // ikisi de doğru çıkıyordu. Temiz kurulumdan 10 dakika sonra
+        // kullanıcı tek bir görev yapmadan "8 gün seri, 404 puan" görüyordu
+        // (`debug.md` K-4). Doğru ölçüt satırın varlığı değil, o gün
+        // gerçekten kullanım ölçülmüş olması.
+        val olcumVar = ozet != null && ozet.olayVarMi
+
         val puan = PuanHesapla.gunlukPuan(
             gorevPuani = gorevDao.gununPuani(tarih),
             sporDk = ozet?.sporDk ?: 0.0,
             adim = ozet?.adim ?: 0.0,
-            // Özet yoksa hedef "tutturuldu" sayılmıyor: veri olmadan ödül
-            // vermek, izni vermemiş kullanıcıya avantaj sağlardı.
-            hedefTutturuldu = ozet != null && toplamEkranDk <= hedefDk,
-            geceTemiz = ozet != null && ozet.geceKullanimDk < PuanSabitleri.GECE_ESIK_DK,
+            // Oransal (`debug.md` İ-4): hedefin altındaysan tam puan,
+            // aştıkça doğrusal iniyor, iki katında sıfırlanıyor.
+            hedefOrani = if (olcumVar) PuanHesapla.hedefeYakinlik(toplamEkranDk, hedefDk) else 0.0,
+            geceOrani = if (olcumVar) PuanHesapla.geceTemizligi(ozet.geceKullanimDk) else 0.0,
             seriGun = seri,
         )
 

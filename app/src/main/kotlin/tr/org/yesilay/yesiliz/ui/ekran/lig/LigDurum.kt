@@ -18,6 +18,14 @@ data class LigDurum(
      * ne de arkadaş eklemiş.
      */
     val katildiMi: Boolean = false,
+    /**
+     * Kullanıcı başkalarının sıralamasında görünüyor mu (Profil › "Ligde
+     * görün"). `false` iken ekran bunu söylüyor — sessizce gizlenmek,
+     * tercihin çalışıp çalışmadığını belirsiz bırakırdı (`debug.md` Y-5).
+     */
+    val gorunuyorum: Boolean = true,
+    /** Sıralama sunucudan değil yerel yedekten geliyor (`debug.md` O-14). */
+    val cevrimdisi: Boolean = false,
     val yukleniyor: Boolean = true,
 )
 
@@ -34,5 +42,13 @@ data class ArkadasEkleDurum(
     val davetKodu: String = "",
     val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
+    /**
+     * Daveti gönderilmekte olan isimler.
+     *
+     * Sunucuya ulaşılamayan bir telefonda gönderim beş saniye sürüyor;
+     * o süre boyunca çipin "Ekle" demeye devam etmesi, kullanıcının
+     * tekrar tekrar dokunmasına yol açıyordu (`debug.md` Y-10).
+     */
+    val gonderiliyor: Set<String> = emptySet(),
     val yukleniyor: Boolean = true,
 )

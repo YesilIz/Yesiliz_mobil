@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.bilesen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -35,6 +37,7 @@ fun AyarSatiri(
     ikon: ImageVector,
     etiket: String,
     modifier: Modifier = Modifier,
+    altMetin: String? = null,
     onTikla: () -> Unit,
 ) {
     Row(
@@ -46,13 +49,24 @@ fun AyarSatiri(
         horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik),
     ) {
         Icon(imageVector = ikon, contentDescription = null, tint = YesilAna)
-        Text(
-            text = etiket,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MetinBirincil,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = etiket,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MetinBirincil,
+            )
+            // İkincil satır — hangi hesaptan çıkılacağı gibi bağlam bilgisi.
+            altMetin?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MetinUcuncul,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.data.uzak
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
 import retrofit2.Retrofit
@@ -61,6 +62,15 @@ class RetrofitJetonYenileyici(
     taban: String,
     json: Json,
     zamanAsimiSn: Long,
+    /**
+     * Sunucu adresini çalışma zamanında yazan interceptor.
+     *
+     * Yenileme istemcisi ana istemciden ayrı kurulduğu için (Dagger
+     * döngüsü) aynı adres değiştiriciyi ayrıca alması gerekiyor; yoksa
+     * kullanıcı sunucu adresini değiştirdiğinde jeton yenileme eski
+     * adrese gitmeye devam ederdi (`debug.md` O-14).
+     */
+    tabanDegistirici: Interceptor? = null,
 ) : JetonYenileyici {
 
     private interface YenilemeApi {
@@ -72,6 +82,7 @@ class RetrofitJetonYenileyici(
         .baseUrl(taban)
         .client(
             OkHttpClient.Builder()
+                .apply { tabanDegistirici?.let { addInterceptor(it) } }
                 .connectTimeout(zamanAsimiSn, TimeUnit.SECONDS)
                 .readTimeout(zamanAsimiSn, TimeUnit.SECONDS)
                 .build(),

@@ -13,14 +13,29 @@
 
 | Görev | Puan | Doğrulama | Günlük limit |
 |---|---|---|---|
-| Nefes egzersizi (2 dk) | 5 | Uygulama içi tamamlama | 2 kez |
-| Dijital mola (15 dk ekransız) | 10 | Ekran kapalı doğrulaması | 2 kez |
-| Doğrulanmış spor/yürüyüş | 3 / dk | Spor başlat + ivmeölçer | 30 dk (90 puan) |
+| Nefes egzersizi (2 dk) | 5 | `AKTIVITE` — uygulama içi tamamlama | 2 kez |
+| Dijital mola (15 dk ekransız) | 10 | `BEYAN` | 2 kez |
+| Doğrulanmış spor/yürüyüş | 3 / dk | `AKTIVITE` — spor başlat + ivmeölçer | 30 dk (90 puan) |
 | Adım hedefi | adım / 200 | Sağlık platformu | tavan 40 |
-| Günlük tüketim hedefi | 25 | Otomatik | 1 kez |
-| Gece temiz (00–06 < 15 dk) | 10 | Otomatik | 1 kez |
-| Ruh hali kaydı | 3 | Tek dokunuş | 1 kez |
-| Uyku beyanı | 3 | Tek dokunuş | 1 kez |
+| Günlük tüketim hedefi | 25 × oran | `OTOMATIK` | 1 kez |
+| Gece temiz (00–06) | 10 × oran | `OTOMATIK` | 1 kez |
+| Ruh hali kaydı | 3 | `BEYAN` — tek dokunuş | 1 kez |
+| Uyku beyanı | 3 | `BEYAN` — tek dokunuş | 1 kez |
+
+#### Doğrulama türleri
+
+`DogrulamaTuru` üç değer taşıyor ve ayrım **davranışsal**:
+
+| Tür | Anlamı | Kullanıcı elle işaretleyebilir mi |
+|---|---|---|
+| `OTOMATIK` | Günlük özetten hesaplanıyor | **Hayır.** `PuanDeposu.gorevTamamla` reddediyor |
+| `AKTIVITE` | Uygulama içindeki bir ekran tamamlanınca yazılıyor | Hayır, ekranı bitirmek gerekiyor |
+| `BEYAN` | Kullanıcı "yaptım" diyor, kanıt istenmiyor | Evet |
+
+`OTOMATIK` görevlerin ayrıca elle işaretlenebilmesi aynı gün için **çift
+sayım** üretiyordu (`debug.md` K-9). Dijital mola `OTOMATIK` ilan edilmişti
+ama ekran kapalı süresini ölçen hiçbir kod yoktu; olmayan bir doğrulamayı
+iddia etmektense `BEYAN` olduğu yazıldı.
 
 **Teorik max:** 201 · **Uygulanan tavan:** **150**
 
@@ -34,7 +49,8 @@ val hedef = maxOf(120.0, baslangicTuketim * (1 - 0.05 * hafta))
 - İlk hafta yalnızca ölçüm, hedef yok. (Android'de geçmiş veriden kurulabilir → 1 hafta kazanç. iOS'te beklemek zorunlu → o hafta hacimden bağımsız görevler sun.)
 - **Emniyet valfi:** 3 hafta üst üste kaçırma varsa hafta sayacı ilerlemez.
 
-Ağır kullanıcı 285'i tutturunca da, hafif kullanıcı 171'i tutturunca da **aynı 25 puan**.
+Ağır kullanıcı 285'i tutturunca da, hafif kullanıcı 171'i tutturunca da **aynı 25 puan** —
+hedef kişiselleştirilmiş olduğu için mutlak dakika değil, kendi hedefine yakınlık ödüllendiriliyor.
 
 ### 7.3 Risk bandına göre görev ataması
 
@@ -60,10 +76,29 @@ val carpan = minOf(2.0, 1 + 0.1 * seriGun)
 
 ```
 Π_ham = 3 × spor_dk + min(40, adım/200) + görev puanları
-      + 25 (hedef tutturulduysa) + 10 (gece temizse)
+      + 25 × hedef_oranı + 10 × gece_oranı
 
 Π = min(150, Π_ham × seri_çarpanı)
 ```
+
+#### Hedef ve gece terimleri oransal
+
+```
+hedef_oranı = clamp((2 × hedef_dk − toplam_ekran_dk) / hedef_dk, 0, 1)
+gece_oranı  = clamp((2 × 15      − gece_kullanım_dk) / 15,       0, 1)
+```
+
+Hedefin **altında ya da tam üstünde** tam puan; aşıldıkça doğrusal iniyor ve
+hedefin **iki katında** sıfırlanıyor.
+
+İkili eşik, hedefinin bir dakika üstünde kalan kullanıcıya 25 puanın
+tamamını kaybettiriyordu. Ekran süresini 300 dakikadan 130'a indiren biri,
+hedefi 120 olduğu için hiçbir şey kazanmıyor ve uygulamanın çabayı
+görmediğini düşünüyordu.
+
+**Ceza değil.** En kötü ihtimalle bu iki terim 0 katkı veriyor; hiçbir girdi
+kombinasyonu negatif puan üretemiyor (CLAUDE.md §4). `PuanHesaplaTest` bunu
+0..1 dışındaki oranlarla da doğruluyor.
 
 ---
 

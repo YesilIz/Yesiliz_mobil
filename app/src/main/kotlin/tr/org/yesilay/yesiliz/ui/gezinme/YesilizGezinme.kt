@@ -16,7 +16,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import tr.org.yesilay.yesiliz.ui.ekran.aktivite.AktiviteEkran
 import tr.org.yesilay.yesiliz.ui.ekran.ana.AnaEkran
+import tr.org.yesilay.yesiliz.ui.ekran.ekransiz.EkransizEkran
+import tr.org.yesilay.yesiliz.ui.ekran.gecekapanisi.GeceKapanisiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.gozmolasi.GozMolasiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.odak.OdakEkran
 import tr.org.yesilay.yesiliz.ui.ekran.anket.AnketYenileEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bildirim.BildirimEkran
 import tr.org.yesilay.yesiliz.ui.ekran.bilgi.BilgiEkran
@@ -37,6 +42,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.odul.OdulEkran
 import tr.org.yesilay.yesiliz.ui.ekran.profil.ProfilEkran
 import tr.org.yesilay.yesiliz.ui.ekran.riskdetay.RiskDetayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.saglik.SaglikIzinEkran
+import tr.org.yesilay.yesiliz.ui.ekran.sozlesme.SozlesmeEkran
 import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamOnayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
@@ -74,7 +80,10 @@ fun YesilizGezinme(
 
     val girdi by navController.currentBackStackEntryAsState()
     val rota = girdi?.destination?.route
-    val sekmede = Sekme.entries.any { it.rota == rota }
+    // Sorgu argümanı rotanın parçası ("profil?acilacakSayfa={...}"); sekme
+    // eşlemesi yalnızca yola bakıyor, yoksa argümanlı rota sekme
+    // sayılmayıp alt çubuk kaybolurdu.
+    val sekmede = Sekme.entries.any { it.rota == rota?.substringBefore("?") }
 
     Scaffold(
         modifier = modifier,
@@ -113,9 +122,22 @@ fun YesilizGezinme(
             }
             composable(Rota.KAYIT) {
                 KayitEkran(
-                    onBasarili = { navController.hesaptanCik(Rota.ONBOARDING) },
+                    onBasarili = {
+                        // Profil'den gelen misafir onboarding'i zaten
+                        // bitirmiş; onu baştan geçirmek yerine geri
+                        // dönülüyor. İlk kurulumda akış onboarding'e devam
+                        // ediyor.
+                        if (navController.previousBackStackEntry
+                                ?.destination?.route == Rota.PROFIL
+                        ) {
+                            navController.popBackStack()
+                        } else {
+                            navController.hesaptanCik(Rota.ONBOARDING)
+                        }
+                    },
                     onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
                     onGeri = { navController.popBackStack() },
+                    onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
                 )
             }
             composable(Rota.SIFRE) {
@@ -136,6 +158,8 @@ fun YesilizGezinme(
                     onBildirimler = { navController.navigate(Rota.BILDIRIM) },
                     onYuruyusBaslat = { navController.navigate(Rota.YURUYUS) },
                     onDegerlendirmeYenile = { navController.navigate(Rota.ANKET_YENILE) },
+                    onProfil = { navController.navigate(Rota.PROFIL) },
+                    onIstatistik = { navController.sekmeyeGit(Sekme.ISTATISTIK) },
                 )
             }
             composable(Rota.BILGI_BANKASI) {
@@ -149,6 +173,14 @@ fun YesilizGezinme(
                 arguments = listOf(navArgument(BilgiYaziViewModel.YAZI_ID) { type = NavType.StringType }),
             ) {
                 BilgiYaziEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(
+                route = Rota.SOZLESME,
+                arguments = listOf(
+                    navArgument(Rota.SOZLESME_ARG) { type = NavType.StringType },
+                ),
+            ) {
+                SozlesmeEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.KENDINI_TEST) {
                 TestEkran(
@@ -169,14 +201,50 @@ fun YesilizGezinme(
             composable(Rota.ARKADAS_EKLE) {
                 ArkadasEkleEkran(onGeri = { navController.popBackStack() })
             }
-            composable(Rota.PROFIL) {
+            composable(
+                route = Rota.PROFIL_SAYFALI,
+                arguments = listOf(
+                    navArgument(Rota.PROFIL_SAYFA_ARG) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) { girdiP ->
                 ProfilEkran(
+                    // Risk detayından gelen "Hatırlatma saatlerini
+                    // ayarla → Aç" doğrudan ilgili alt sayfayı açıyor
+                    // (`debug.md` O-8).
+                    acilacakSayfa = girdiP.arguments
+                        ?.getString(Rota.PROFIL_SAYFA_ARG),
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
                     onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },
                     onAnketYenile = { navController.navigate(Rota.ANKET_YENILE) },
                     onSaglikIzni = { navController.navigate(Rota.SAGLIK_IZIN) },
+                    // Veri/hesap silindi: geri yığınının tamamı atılıyor.
+                    // Silinmiş veriye geri tuşuyla dönmek boş ekranlar
+                    // gösterirdi.
+                    onSilindi = { navController.bastanBasla() },
+                    onHesapOlustur = { navController.navigate(Rota.KAYIT) },
+                    onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
                 )
+            }
+            // Aktiviteler sekmesi (`debug.md` İ-1) -- Profil'in yerini aldı.
+            composable(Rota.AKTIVITE) {
+                AktiviteEkran(onAktivite = { rota -> navController.navigate(rota) })
+            }
+            composable(Rota.ODAK) {
+                OdakEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.GOZ_MOLASI) {
+                GozMolasiEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.GECE_KAPANISI) {
+                GeceKapanisiEkran(onGeri = { navController.popBackStack() })
+            }
+            composable(Rota.EKRANSIZ) {
+                EkransizEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.GUNLUK_HEDEF) {
                 HedefEkran(onGeri = { navController.popBackStack() })
@@ -212,7 +280,10 @@ fun YesilizGezinme(
                     // yerde tanımlamak olurdu.
                     onEylem = { id ->
                         when (id) {
-                            "bildirim_saatleri" -> navController.sekmeyeGit(Sekme.PROFIL)
+                            "bildirim_saatleri" ->
+                        navController.navigate(
+                            Rota.profilSayfasi(Rota.SAYFA_BILDIRIM_SAATLERI),
+                        )
                             "hedef_azalt" -> navController.navigate(Rota.GUNLUK_HEDEF)
                             "nefes" -> navController.navigate(Rota.NEFES)
                             "yedam" -> navController.navigate(Rota.YEDAM_ONAY)
@@ -249,6 +320,19 @@ fun YesilizGezinme(
 private fun NavHostController.hesaptanCik(hedef: String) {
     navigate(hedef) {
         popUpTo(Rota.GIRIS) { inclusive = true }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * "Verilerimi/Hesabımı sil" sonrası sıfırdan başlatma.
+ *
+ * `popUpTo(0)` geri yığınının tamamını atıyor: silinmiş veriye ait hiçbir
+ * ekran geride kalmamalı.
+ */
+private fun NavHostController.bastanBasla() {
+    navigate(Rota.GIRIS) {
+        popUpTo(0) { inclusive = true }
         launchSingleTop = true
     }
 }

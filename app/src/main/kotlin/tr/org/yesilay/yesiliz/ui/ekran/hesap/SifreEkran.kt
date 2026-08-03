@@ -127,9 +127,12 @@ fun SifreEkran(
 
             if (durum.sifirlamaGonderildi) {
                 Text(
-                    text = "Şifre sıfırlama e-postası, hesap sistemi devreye " +
-                        "girdiğinde gönderilecek. Şimdilik misafir olarak " +
-                        "devam edebilirsin; verilerin telefonunda duruyor.",
+                    // O-11: backend bağlandı, eski metin artık yanlıştı.
+                    // Adresin kayıtlı olup olmadığının söylenmemesi
+                    // bilinçli -- sunucu da 202 dönüyor (backend §hesap).
+                    text = "Bu adres kayıtlıysa sıfırlama bağlantısı " +
+                        "gönderildi. Güvenlik gereği adresin kayıtlı olup " +
+                        "olmadığını söylemiyoruz.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MetinIkincil,
                     textAlign = TextAlign.Center,
@@ -165,6 +168,7 @@ fun SifreEkran(
                     metin = "Sıfırlama bağlantısı gönder",
                     onTikla = viewModel::sifreSifirla,
                     etkin = !durum.islemde,
+                    islemde = durum.islemde,
                 )
 
                 Row(
@@ -181,8 +185,8 @@ fun SifreEkran(
                 }
 
                 Text(
-                    text = "Hesap sistemi henüz devrede değil; e-posta gönderimi " +
-                        "sunucu bağlantısıyla birlikte gelecek.",
+                    text = "Bağlantı kısa süre geçerli olur. Gelmezse spam " +
+                        "klasörünü kontrol edip tekrar deneyebilirsin.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MetinUcuncul,
                     textAlign = TextAlign.Center,

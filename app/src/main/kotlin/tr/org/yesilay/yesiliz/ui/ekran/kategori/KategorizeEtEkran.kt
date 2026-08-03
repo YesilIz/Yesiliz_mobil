@@ -24,9 +24,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.SecenekKarti
@@ -67,7 +66,6 @@ fun KategorizeEtEkran(
     viewModel: KategoriViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
-    val sayfaDurumu = rememberModalBottomSheetState()
 
     YesilBaslikliEkran(
         baslik = "Kategorize et",
@@ -123,14 +121,7 @@ fun KategorizeEtEkran(
     }
 
     durum.secilenUygulama?.let { uygulama ->
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.uygulamaSecildi(null) },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { viewModel.uygulamaSecildi(null) })        {
             KategoriSecIcerik(
                 satir = uygulama,
                 onKaydet = { kategori -> viewModel.kategoriKaydet(uygulama.paketAdi, kategori) },

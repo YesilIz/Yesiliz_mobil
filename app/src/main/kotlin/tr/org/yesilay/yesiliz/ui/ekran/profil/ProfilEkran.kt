@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.profil
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Cancel
@@ -27,15 +29,20 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -45,11 +52,10 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,7 +69,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
+import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
+import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
+import tr.org.yesilay.yesiliz.ui.kalinIsle
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
+import tr.org.yesilay.yesiliz.ui.gezinme.Rota
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.AyarSatiri
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
@@ -111,11 +122,22 @@ fun ProfilEkran(
     onKategoriler: () -> Unit,
     onAnketYenile: () -> Unit,
     onSaglikIzni: () -> Unit,
+    onSilindi: () -> Unit,
+    onHesapOlustur: () -> Unit,
+    onSozlesme: (String) -> Unit,
+    acilacakSayfa: String? = null,
     modifier: Modifier = Modifier,
     viewModel: ProfilViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Silme bitince hesap akışına dönülüyor: `Tercihler.sifirla()` onboarding
+    // bayrağını da sıfırladı, kullanıcıyı silinmiş verinin ekranlarında
+    // bırakmak boş grafikler ve "0 puan" göstermek olurdu.
+    LaunchedEffect(Unit) {
+        viewModel.silindi.collect { onSilindi() }
+    }
 
     var toplananVerilerAcik by remember { mutableStateOf(false) }
     var gecmisiIndirAcik by remember { mutableStateOf(false) }
@@ -125,7 +147,13 @@ fun ProfilEkran(
     var hakkindaAcik by remember { mutableStateOf(false) }
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
-    val sayfaDurumu = rememberModalBottomSheetState()
+    var cikisOnayi by remember { mutableStateOf(false) }
+    var sunucuAdresiAcik by remember { mutableStateOf(false) }
+
+    // Dışarıdan istenen alt sayfa açılıyor (`debug.md` O-8).
+    LaunchedEffect(acilacakSayfa) {
+        if (acilacakSayfa == Rota.SAYFA_BILDIRIM_SAATLERI) bildirimSaatleriAcik = true
+    }
     val bildirimIzni = bildirimIzniIstegi()
 
     YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
@@ -250,6 +278,37 @@ fun ProfilEkran(
                 AyarSatiri(Icons.Filled.FamilyRestroom, "Ebeveyn paneli", onTikla = onEbeveyn)
             }
 
+            // Hesap bölümü.
+            //
+            // `HesapDeposu.cikisYap()` üç deponun hepsinde uygulanmıştı ama
+            // hiçbir ekrandan çağrılmıyordu: giriş yapan kullanıcı hesabını
+            // değiştiremiyor, tek yol "Hesabımı sil" oluyordu -- ki o da
+            // çöküyordu (`debug.md` Y-3, K-2).
+            //
+            // Misafirin çıkacağı bir hesap yok ama KURACAĞI var: `Oturum`
+            // KDoc'u "misafir de Profil'den hesap oluşturabilir" diyordu ve
+            // öyle bir satır hiç yazılmamıştı.
+            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+            BolumBasligi("Hesap")
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            Kart(icBosluk = Olcu.Aralik) {
+                if (durum.hesapVarMi) {
+                    AyarSatiri(
+                        Icons.AutoMirrored.Filled.Logout,
+                        "Çıkış yap",
+                        altMetin = durum.eposta,
+                        onTikla = { cikisOnayi = true },
+                    )
+                } else {
+                    AyarSatiri(
+                        Icons.Filled.PersonAdd,
+                        "Hesap oluştur",
+                        altMetin = "Misafir olarak kullanıyorsun",
+                        onTikla = onHesapOlustur,
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
 
             BolumBasligi("Destek")
@@ -286,6 +345,13 @@ fun ProfilEkran(
                         "Örnek veri oluştur",
                         onTikla = viewModel::demoTohumla,
                     )
+                    KartAyraci()
+                    AyarSatiri(
+                        Icons.Filled.Dns,
+                        "Sunucu adresi",
+                        altMetin = durum.sunucuTabani,
+                        onTikla = { sunucuAdresiAcik = true },
+                    )
                 }
             }
 
@@ -294,27 +360,13 @@ fun ProfilEkran(
     }
 
     if (toplananVerilerAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { toplananVerilerAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { toplananVerilerAcik = false }) {
             ToplananVerilerIcerik(onKapat = { toplananVerilerAcik = false })
         }
     }
 
     if (gecmisiIndirAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { gecmisiIndirAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { gecmisiIndirAcik = false }) {
             GecmisiIndirIcerik(
                 onKapat = { gecmisiIndirAcik = false },
                 onDisaAktar = {
@@ -330,91 +382,78 @@ fun ProfilEkran(
     }
 
     if (verileriSilAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { verileriSilAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { verileriSilAcik = false }) {
             VerileriSilIcerik(
-                onOnayla = {
-                    viewModel.verileriSil()
-                    verileriSilAcik = false
-                },
+                durum = durum,
+                onOnayla = viewModel::verileriSil,
                 onVazgec = { verileriSilAcik = false },
             )
         }
     }
 
     if (hesabiSilAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { hesabiSilAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { hesabiSilAcik = false }) {
             HesabiSilIcerik(
-                onOnayla = {
-                    viewModel.verileriSil()
-                    hesabiSilAcik = false
-                },
+                durum = durum,
+                onOnayla = viewModel::hesabiSil,
                 onVazgec = { hesabiSilAcik = false },
+                onUyariyiKapat = viewModel::uyariyiKapat,
+            )
+        }
+    }
+
+    if (sunucuAdresiAcik) {
+        AltSayfa(onKapat = { sunucuAdresiAcik = false }) {
+            SunucuAdresiIcerik(
+                mevcut = durum.sunucuTabani,
+                onKaydet = { adres ->
+                    viewModel.sunucuAdresiKaydet(adres)
+                    sunucuAdresiAcik = false
+                },
+                onKapat = { sunucuAdresiAcik = false },
+            )
+        }
+    }
+
+    if (cikisOnayi) {
+        AltSayfa(onKapat = { cikisOnayi = false }) {
+            CikisOnayi(
+                eposta = durum.eposta,
+                onOnayla = {
+                    viewModel.cikisYap()
+                    cikisOnayi = false
+                },
+                onVazgec = { cikisOnayi = false },
             )
         }
     }
 
     if (yardimAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yardimAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
-            YardimIcerik(onKapat = { yardimAcik = false })
+        AltSayfa(onKapat = { yardimAcik = false }) {
+            YardimIcerik(onKapat = { yardimAcik = false }, sorular = durum.sss)
         }
     }
 
     if (hakkindaAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { hakkindaAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
-            HakkindaIcerik(onKapat = { hakkindaAcik = false })
+        AltSayfa(onKapat = { hakkindaAcik = false }) {
+            HakkindaIcerik(
+                onKapat = { hakkindaAcik = false },
+                onSozlesme = { id ->
+                    hakkindaAcik = false
+                    onSozlesme(id)
+                },
+            )
         }
     }
 
     if (yedamAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yedamAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkindaIcerik(onKapat = { yedamAcik = false })
         }
     }
 
     if (bildirimSaatleriAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { bildirimSaatleriAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { bildirimSaatleriAcik = false }) {
             BildirimSaatleriIcerik(
                 durum = durum,
                 onDegis = { saatler ->
@@ -557,9 +596,172 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
     }
 }
 
+/**
+ * Sunucu adresi — yalnızca debug derlemesinde görünen geliştirici ayarı.
+ *
+ * `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` yalnızca emülatörden
+ * erişilebiliyordu; gerçek telefonda HER çağrı zaman aşımına uğrayıp
+ * `Yedekli*Deposu` sahte veriye düşüyordu ve bu istisna değil varsayılan
+ * durum hâline gelmişti (`debug.md` O-14).
+ */
+@Composable
+private fun SunucuAdresiIcerik(
+    mevcut: String,
+    onKaydet: (String) -> Unit,
+    onKapat: () -> Unit,
+) {
+    var adres by remember(mevcut) { mutableStateOf(mevcut) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        AltSayfaBasligi("Sunucu adresi", onKapat)
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "10.0.2.2 yalnızca emülatörde çalışır. Gerçek cihazda " +
+                "geliştirme makinenin yerel ağ adresini yaz " +
+                "(örnek: http://192.168.1.20:8000).",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        OutlinedTextField(
+            value = adres,
+            onValueChange = { adres = it },
+            placeholder = { Text("http://192.168.1.20:8000/") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Kaydet ve dene", onTikla = { onKaydet(adres) })
+        MetinBaglanti(metin = "Vazgeç", onTikla = onKapat)
+    }
+}
+
+/**
+ * Çıkış onayı.
+ *
+ * Yıkıcı bir işlem değil -- veri cihazda kalıyor -- o yüzden silme
+ * akışlarındaki kırmızı ve onay kutusu YOK. Ama tek dokunuşla da
+ * yapılmıyor: yanlışlıkla çıkmak, kullanıcıyı şifresini hatırlamak
+ * zorunda bırakır.
+ */
+@Composable
+private fun CikisOnayi(eposta: String, onOnayla: () -> Unit, onVazgec: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IkonRozeti(
+            ikon = Icons.AutoMirrored.Filled.Logout,
+            zemin = YesilNane,
+            renk = YesilKoyu,
+            olcu = Olcu.AvatarBuyuk,
+            sekil = androidx.compose.foundation.shape.CircleShape,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        Text(
+            text = "Çıkış yapılsın mı?",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "$eposta hesabından çıkacaksın. Cihazındaki geçmişin " +
+                "silinmiyor; aynı hesapla girdiğinde her şey yerinde olacak.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Çıkış yap", onTikla = onOnayla)
+        MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
+    }
+}
+
+/**
+ * Saat seçici — − / + ile serbest saat.
+ *
+ * Sabit çip şeridi beş seçeneği satıra sığdıramıyor, "11:00" tek karakter
+ * genişliğinde dikey bir sütuna sıkışıyordu; kullanıcı ayrıca istediği
+ * saati giremiyordu (`debug.md` O-5, İ-5). Günlük hedef ekranındaki
+ * −/+ deseniyle aynı — M3 `TimePicker` bu alan için fazla ağır ve dakika
+ * çözünürlüğü hatırlatma için anlamsız.
+ */
+@Composable
+private fun SaatSecici(
+    baslik: String,
+    saat: Int,
+    aralik: IntRange,
+    onDegis: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(Yesil50)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = baslik,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MetinBirincil,
+            modifier = Modifier.weight(1f),
+        )
+        SaatDugmesi(
+            ikon = Icons.Filled.Remove,
+            aciklama = "Bir saat geri",
+            etkin = saat > aralik.first,
+            onTikla = { onDegis(saat - 1) },
+        )
+        Text(
+            text = "%02d:00".format(saat),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            modifier = Modifier.padding(horizontal = Olcu.Aralik),
+        )
+        SaatDugmesi(
+            ikon = Icons.Filled.Add,
+            aciklama = "Bir saat ileri",
+            etkin = saat < aralik.last,
+            onTikla = { onDegis(saat + 1) },
+        )
+    }
+}
+
+@Composable
+private fun SaatDugmesi(
+    ikon: androidx.compose.ui.graphics.vector.ImageVector,
+    aciklama: String,
+    etkin: Boolean,
+    onTikla: () -> Unit,
+) {
+    androidx.compose.material3.IconButton(onClick = onTikla, enabled = etkin) {
+        Icon(
+            imageVector = ikon,
+            contentDescription = aciklama,
+            tint = if (etkin) YesilAna else MetinUcuncul,
+        )
+    }
+}
+
 /** Alt sayfa 25 — Verilerimi kalıcı sil. CLAUDE.md §12 K10: KirmiziIstisna. */
 @Composable
-private fun VerileriSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+private fun VerileriSilIcerik(
+    durum: ProfilDurum,
+    onOnayla: () -> Unit,
+    onVazgec: () -> Unit,
+) {
     var onayli by remember { mutableStateOf(false) }
 
     Column(
@@ -616,17 +818,63 @@ private fun VerileriSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
             tehlikeliMi = true,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Verilerimi kalıcı olarak sil", onTikla = onOnayla, etkin = onayli)
+        TehlikeliButon(
+            metin = if (durum.siliniyor) "Siliniyor…" else "Verilerimi kalıcı olarak sil",
+            onTikla = onOnayla,
+            etkin = onayli && !durum.siliniyor,
+        )
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
 /**
- * Alt sayfa 26 — Hesabımı kalıcı sil. Gerçek hesap sistemi Faz 2'ye kadar
- * "hesabı sil" ile "verileri sil" AYNI işlemi yapıyor ([ProfilViewModel.verileriSil]).
+ * Silme bitti ama sunucudaki kopya duruyor.
+ *
+ * Kullanıcıyı sessizce dışarı atmak yerine bunu söylüyoruz: "kalıcı sil"
+ * dedikten sonra sunucuda veri kalmışsa bilmeye hakkı var (`debug.md` K-2).
  */
 @Composable
-private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Buton))
+            .background(color = KirmiziIstisnaZemin)
+            .padding(Olcu.Aralik),
+    ) {
+        Text(
+            text = "Cihazındaki her şey silindi.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.Xs))
+        Text(
+            text = "Sunucuya şu an ulaşılamadığı için oradaki kaydın " +
+                "silinemedi. Bağlantın olduğunda tekrar giriş yapıp " +
+                "silme işlemini yenileyebilirsin.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        TehlikeliButon(metin = "Anladım", onTikla = onKapat)
+    }
+}
+
+/**
+ * Alt sayfa 26 — Hesabımı kalıcı sil.
+ *
+ * "Verilerimi sil"den farkı: cihazın yanında **sunucudaki hesap da**
+ * siliniyor (`DELETE /auth/hesap`). Eskiden ikisi aynı fonksiyonu çağırıyor,
+ * sunucuya hiç uğramıyordu (`debug.md` K-2).
+ */
+@Composable
+private fun HesabiSilIcerik(
+    durum: ProfilDurum,
+    onOnayla: () -> Unit,
+    onVazgec: () -> Unit,
+    onUyariyiKapat: () -> Unit,
+) {
     var girilenMetin by remember { mutableStateOf("") }
     val onayli = girilenMetin == "SİL"
 
@@ -676,6 +924,12 @@ private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        if (durum.sunucudaKaldiUyarisi) {
+            SunucudaKaldiUyarisi(onKapat = onUyariyiKapat)
+            return@Column
+        }
+
         Text(
             text = "Onaylamak için \"SİL\" yaz",
             style = MaterialTheme.typography.labelLarge,
@@ -689,16 +943,21 @@ private fun HesabiSilIcerik(onOnayla: () -> Unit, onVazgec: () -> Unit) {
             placeholder = { Text("SİL") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = !durum.siliniyor,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Hesabımı kalıcı olarak sil", onTikla = onOnayla, etkin = onayli)
+        TehlikeliButon(
+            metin = if (durum.siliniyor) "Siliniyor…" else "Hesabımı kalıcı olarak sil",
+            onTikla = onOnayla,
+            etkin = onayli && !durum.siliniyor,
+        )
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
 /** Alt sayfa 28 — Yardım. Statik SSS, backend gerektirmiyor. */
 @Composable
-private fun YardimIcerik(onKapat: () -> Unit) {
+private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -714,31 +973,55 @@ private fun YardimIcerik(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
-        val sorular = listOf(
-            "Puanlarım nasıl hesaplanıyor?",
-            "Ebeveyn paneli eşleştirmesini nasıl kaldırırım?",
-            "Hedefimi nasıl değiştiririm?",
-            "Verilerim kimlerle paylaşılıyor?",
-        )
-        sorular.forEachIndexed { i, soru ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = Bosluk.M),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = soru,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MetinBirincil,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MetinUcuncul,
-                )
+        // Dört soru chevron'lu ve tıklanabilir görünüyordu ama HİÇBİRİNİN
+        // cevabı yazılmamıştı (`debug.md` Y-6). Cevaplar artık
+        // `assets/sozlesmeler.json`'da; satıra dokununca açılıyor.
+        var acikSoru by remember { mutableStateOf<String?>(null) }
+
+        if (sorular.isEmpty()) {
+            Text(
+                text = "Sorular yükleniyor…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MetinUcuncul,
+            )
+        }
+        sorular.forEachIndexed { i, madde ->
+            val acik = acikSoru == madde.soru
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { acikSoru = if (acik) null else madde.soru }
+                        .padding(vertical = Bosluk.M),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = madde.soru,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MetinBirincil,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (acik) {
+                            Icons.Filled.KeyboardArrowDown
+                        } else {
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                        },
+                        contentDescription = null,
+                        tint = MetinUcuncul,
+                    )
+                }
+                if (acik) {
+                    madde.cevap.forEach { paragraf ->
+                        Text(
+                            text = kalinIsle(paragraf),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MetinIkincil,
+                            modifier = Modifier.padding(bottom = Bosluk.S),
+                        )
+                    }
+                }
             }
             if (i != sorular.lastIndex) KartAyraci()
         }
@@ -747,7 +1030,7 @@ private fun YardimIcerik(onKapat: () -> Unit) {
 
 /** Alt sayfa 29 — Hakkında. Sürüm sabit — `BuildConfig.VERSION_NAME` Faz 2. */
 @Composable
-private fun HakkindaIcerik(onKapat: () -> Unit) {
+private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -794,10 +1077,18 @@ private fun HakkindaIcerik(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
-        listOf("Kullanım şartları", "Gizlilik politikası", "Açık kaynak lisansları").forEachIndexed { i, satir ->
+        // Üç satır da chevron'lu ve tıklanabilir GÖRÜNÜYORDU ama `onTikla`
+        // almıyordu; metinler hiçbir yerde yoktu (`debug.md` Y-6).
+        val baglantilar = listOf(
+            "Kullanım Koşulları" to Sozlesmeler.KULLANIM_KOSULLARI,
+            "Gizlilik Politikası" to Sozlesmeler.GIZLILIK_POLITIKASI,
+            "Açık kaynak lisansları" to Sozlesmeler.ACIK_KAYNAK,
+        )
+        baglantilar.forEachIndexed { i, (satir, id) ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onSozlesme(id) }
                     .padding(vertical = Bosluk.M),
             ) {
                 Text(
@@ -813,7 +1104,7 @@ private fun HakkindaIcerik(onKapat: () -> Unit) {
                     tint = MetinUcuncul,
                 )
             }
-            if (i != 2) KartAyraci()
+            if (i != baglantilar.lastIndex) KartAyraci()
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
@@ -988,39 +1279,23 @@ private fun BildirimSaatleriIcerik(
         // sunmak, ayarın çalıştığı izlenimini verirdi.
         if (saatler.acik) {
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BolumBasligi("Sabah")
-            Spacer(modifier = Modifier.height(Bosluk.S))
-            SaatSeridi(
-                secenekler = BildirimSaatleri.SABAH_SECENEKLERI,
-                secili = saatler.sabahSaati,
-                onSec = { saatDegeri -> onDegis(saatler.copy(sabahSaati = saatDegeri)) },
+            SaatSecici(
+                baslik = "Sabah",
+                saat = saatler.sabahSaati,
+                aralik = BildirimSaatleri.SABAH_ARALIGI,
+                onDegis = { saatDegeri -> onDegis(saatler.copy(sabahSaati = saatDegeri)) },
             )
-
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BolumBasligi("Akşam")
-            Spacer(modifier = Modifier.height(Bosluk.S))
-            SaatSeridi(
-                secenekler = BildirimSaatleri.AKSAM_SECENEKLERI,
-                secili = saatler.aksamSaati,
-                onSec = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
+            SaatSecici(
+                baslik = "Akşam",
+                saat = saatler.aksamSaati,
+                aralik = BildirimSaatleri.AKSAM_ARALIGI,
+                onDegis = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
             )
         }
     }
 }
 
-@Composable
-private fun SaatSeridi(secenekler: List<Int>, secili: Int, onSec: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
-        secenekler.forEach { saatDegeri ->
-            Cip(
-                metin = "%02d:00".format(saatDegeri),
-                zemin = if (saatDegeri == secili) YesilAna else Yesil50,
-                renk = if (saatDegeri == secili) Beyaz else MetinBirincil,
-                onTikla = { onSec(saatDegeri) },
-            )
-        }
-    }
-}
 
 
 /**

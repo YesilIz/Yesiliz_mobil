@@ -82,6 +82,8 @@ class SenkronIstek(BaseModel):
     riskler: list[RiskSonucDto] = []
     # Cihazın o günkü toplam puanı — lig sıralaması bunun üzerinden.
     haftalikPuan: int = 0
+    # "Ligde görün" tercihi. None = değiştirme (eski istemciler).
+    ligdeGorunur: bool | None = None
 
 
 class SenkronYanit(BaseModel):
@@ -106,6 +108,10 @@ class LigYanit(BaseModel):
     dusen: int
     siralama: list[LigSatiriDto]
     katildiMi: bool
+    # Kullanıcı başkalarının sıralamasında görünüyor mu. False ise ekran
+    # bunu söylüyor; sessizce gizlenmek, tercihin çalışıp çalışmadığını
+    # belirsiz bırakırdı.
+    gorunuyorMuyum: bool = True
 
 
 class ArkadasDto(BaseModel):

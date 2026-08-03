@@ -10,12 +10,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.ui.kalinIsle
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -74,28 +72,3 @@ fun BilgiYaziEkran(
         }
     }
 }
-
-/**
- * Tek vurgu biçimi: `**kalın**`.
- *
- * Markdown kütüphanesi eklemek yerine tek kural elle işleniyor — içerik
- * bizim yazdığımız 13 dosyadan ibaret, keyfi markdown gelmiyor.
- */
-private fun kalinIsle(metin: String) = buildAnnotatedString {
-    var kalan = metin
-    while (true) {
-        val bas = kalan.indexOf(AYRAC)
-        if (bas < 0) break
-        val son = kalan.indexOf(AYRAC, bas + AYRAC.length)
-        if (son < 0) break
-
-        append(kalan.substring(0, bas))
-        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
-            append(kalan.substring(bas + AYRAC.length, son))
-        }
-        kalan = kalan.substring(son + AYRAC.length)
-    }
-    append(kalan)
-}
-
-private const val AYRAC = "**"

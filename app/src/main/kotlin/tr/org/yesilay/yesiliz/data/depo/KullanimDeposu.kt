@@ -74,7 +74,11 @@ class KullanimDeposu @Inject constructor(
         )
 
         val cikarim = OruntuCikar.cikar(olaylar, tarih, zon)
-        ozetDao.kaydet(ozetKur(tarih, cikarim, aktivite))
+        // Satır boş günde de yazılıyor (telefonsuz geçen gerçek bir gün de
+        // kayıt), ama `olayVarMi` ile işaretleniyor: satırın varlığı veri
+        // olduğu anlamına gelmiyordu ve puan/seri/alpha bunu "veri var"
+        // sanıyordu (`debug.md` K-4, K-5).
+        ozetDao.kaydet(ozetKur(tarih, cikarim, aktivite, olayVarMi = olaylar.isNotEmpty()))
         return cikarim
     }
 
@@ -110,6 +114,7 @@ class KullanimDeposu @Inject constructor(
         tarih: LocalDate,
         c: GunlukCikarim,
         aktivite: GunlukAktivite,
+        olayVarMi: Boolean,
     ): GunlukOzetEntity {
         val girdi = GunlukGirdi(
             kategoriDakika = c.kategoriDakika,
@@ -147,6 +152,7 @@ class KullanimDeposu @Inject constructor(
             S = araUrun.S,
             geceKullanimDk = c.geceKullanimDk,
             acilisSayisi = c.acilisSayisi,
+            olayVarMi = olayVarMi,
         )
     }
 }

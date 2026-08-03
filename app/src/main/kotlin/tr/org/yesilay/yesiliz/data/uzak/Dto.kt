@@ -74,6 +74,13 @@ data class SenkronIstek(
     val ozetler: List<GunlukOzetDto> = emptyList(),
     val riskler: List<RiskSonucDto> = emptyList(),
     val haftalikPuan: Int = 0,
+    /**
+     * "Ligde görün" tercihi.
+     *
+     * Ayrı bir uç yerine senkrona bindirildi: tercih zaten her gece koşan
+     * bu çağrıyla taşınabiliyor (`debug.md` Y-5).
+     */
+    val ligdeGorunur: Boolean? = null,
 )
 
 @Serializable
@@ -98,6 +105,8 @@ data class LigYanit(
     val dusen: Int,
     val siralama: List<LigSatiriDto>,
     val katildiMi: Boolean,
+    /** Kullanıcı başkalarının sıralamasında görünüyor mu. */
+    val gorunuyorMuyum: Boolean = true,
 )
 
 @Serializable

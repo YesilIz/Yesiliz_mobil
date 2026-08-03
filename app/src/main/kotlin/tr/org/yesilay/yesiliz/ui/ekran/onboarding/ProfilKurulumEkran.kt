@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -96,9 +98,14 @@ fun ProfilKurulumEkran(
 
         BolumBasligi("Cinsiyetin")
         Spacer(modifier = Modifier.height(Bosluk.S))
+        // `IntrinsicSize.Min` + `fillMaxHeight`: "Belirtmek istemiyorum"
+        // iki satıra düşünce kapsayıcı yükseliyor ama seçili pil tek satır
+        // yüksekliğinde kalıyordu; seçim hizasız görünüyordu
+        // (`debug.md` O-9).
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .clip(RoundedCornerShape(Yaricap.Buton))
                 .background(Yesil50)
                 .padding(Bosluk.Xs),
@@ -108,6 +115,7 @@ fun ProfilKurulumEkran(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(Yaricap.Cip))
                         .background(if (aktif) YesilAna else Color.Transparent)
                         .clickable { onCinsiyet(secenek) }

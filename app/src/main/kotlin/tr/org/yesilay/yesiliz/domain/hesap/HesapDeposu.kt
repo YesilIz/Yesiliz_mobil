@@ -5,14 +5,15 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Hesap işlemleri — **arayüz**.
  *
- * `LigDeposu` ile aynı desen (CLAUDE.md §12 K7): MVP'de
- * [tr.org.yesilay.yesiliz.data.depo.YerelSahteHesapDeposu] uyguluyor,
- * Faz 2'de `RetrofitHesapDeposu` bağlanıyor. Ekranlar değişmiyor.
+ * `LigDeposu` ile aynı desen (CLAUDE.md §12 K7): sunucusuz çalışırken
+ * [tr.org.yesilay.yesiliz.data.depo.YerelSahteHesapDeposu], sunucu ayaktayken
+ * `RetrofitHesapDeposu` uyguluyor; ikisini `YedekliHesapDeposu` sarıyor.
+ * Ekranlar hiçbirini bilmiyor.
  *
- * **MVP'de gerçek kimlik doğrulama yok.** Şifre hiçbir yere yazılmıyor —
- * ne DataStore'a ne Room'a. Yerel uygulama yalnızca kullanıcının **adını**
- * saklıyor; parola sunucu işi ve sunucu Faz 2'de. Yarım bir kimlik
- * doğrulama yazmak, güvenli olduğu izlenimi verirdi.
+ * **Şifre hiçbir yere yazılmıyor** — ne DataStore'a ne Room'a. Doğrulama
+ * sunucuda (`backend/app/guvenlik.py`, argon2id); cihazda yalnızca JWT var
+ * ([tr.org.yesilay.yesiliz.data.uzak.JetonDeposu]). Yerel sahte depo
+ * sunucuya ulaşılamadığında devreye giriyor (CLAUDE.md §12 K16, K18).
  */
 interface HesapDeposu {
 
@@ -27,6 +28,16 @@ interface HesapDeposu {
     suspend fun misafirDevam()
 
     suspend fun cikisYap()
+
+    /**
+     * Hesabı sunucudan da kalıcı siler ve oturumu kapatır.
+     *
+     * @return sunucudaki kaydın gerçekten silinip silinmediği. `false`
+     *   dönerse cihaz temizlendi ama sunucuda kopya kaldı — ekran bunu
+     *   kullanıcıya söylemek zorunda, yoksa "kalıcı sil" yalan olur.
+     *   Misafir kullanıcıda sunucuda kayıt hiç yok, `true` dönüyor.
+     */
+    suspend fun hesabiSil(): Boolean
 }
 
 /**

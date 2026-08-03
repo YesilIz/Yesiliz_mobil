@@ -27,13 +27,19 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 230)
+# testler  (toplam 260)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 132 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 28 · emülatör gerektirir
+./gradlew :app:testDebugUnitTest       # 153 · saf JVM
+./gradlew :app:connectedDebugAndroidTest   # 32 · GERÇEK CİHAZ ya da emülatör
+./gradlew :app:installDebug            # cihaza kur
 
-# backend  (48 pytest)
+# backend  (53 pytest)
 cd backend && docker compose up -d && docker compose exec api pytest -q
+
+# Gerçek cihazdan yerel backend'e: telefon Wi-Fi'da değilse LAN adresi
+# çalışmaz. USB üzerinden tünel kur, sonra Profil › Geliştirici ›
+# Sunucu adresi'ne http://127.0.0.1:8000/ yaz.
+adb reverse tcp:8000 tcp:8000
 
 # UsageStats izni — Ayarlar'dan verilir, adb ile de verilebilir.
 # Verilmezse ilgili emülatör testleri Assume ile ATLANIR (kırmızıya dönmez).
@@ -83,6 +89,8 @@ fix/y             ●────●───
 | **CLAUDE.md** | Kurallar, mimari, kararlar | her oturum |
 | **DESIGN.md** | Tasarım sistemi, tokenlar, 19 ekran speki | UI yazarken |
 | **DB.md** | Şema, kolonlar, SQLite/PostgreSQL/MSSQL DDL | veritabanına dokunurken |
+| **debug.md** | Açık kusur listesi — **ikinci** gerçek cihaz taraması (1 Ağu 2026) | bug düzeltmeden önce |
+| `docs/tarama-01.md` | Birinci tarama (31 Tem 2026) — tamamı kapatıldı, **arşiv** | tarihsel |
 | `docs/spec-risk.md` | Risk skoru + bantlama tam speki | core-risk'e dokunurken |
 | `docs/spec-anket.md` | SAS-SV ölçeği, 10 madde, Likert | ankete dokunurken |
 | `docs/spec-puan.md` | Görev · puan · lig · ödül | puan sistemine dokunurken |
@@ -154,7 +162,7 @@ kullanıma ve gerçek hayat aktivitelerine yönlendiren Android uygulaması.
 | Widget | Glance | |
 | Grafik | **Custom Compose Canvas** | 3. parti chart lib YOK — hazır kütüphaneler kendi paletiyle gelir |
 | İkon | `material-icons-extended` | özgün illüstrasyonlar Stitch'ten PNG/vektör |
-| Ağ | Retrofit 3 + OkHttp + kotlinx-serialization | `data/uzak/` — yazıldı (31 Tem). Retrofit 3 kendi converter'ını getirmiyor, köprü ayrı bağımlılık |
+| Ağ | Retrofit 3 + OkHttp + kotlinx-serialization | `data/uzak/` — yazıldı (31 Tem). Retrofit 3 kendi converter'ını getirmiyor, köprü ayrı bağımlılık. **Sunucu adresi çalışma zamanında** okunuyor (`Tercihler.sunucuTabani`), Profil › Geliştirici'den değiştirilebiliyor |
 | Backend | FastAPI (Python) | ASP.NET DEĞİL — ML aynı dilde |
 | Sunucu DB | PostgreSQL | Redis MVP'de yok |
 | ML (faz 3) | scikit-learn, XGBoost, SHAP | TensorFlow/PyTorch yok |
@@ -195,7 +203,7 @@ app/…/yesiliz/
 ├─ di/                    Hilt — VeriModulu · AgModulu · DepoModulu
 ├─ data/
 │  ├─ kullanim/           UsageStatsManager sarmalayıcı
-│  ├─ saglik/             Health Connect
+│  ├─ saglik/             Health Connect + donanım adım sayacı (K27)
 │  ├─ yerel/              Room: entity/ dao/ YesilizDb.kt Donusturucu.kt Gecisler.kt
 │  ├─ uzak/               Retrofit — YesilizApi · Dto · JetonDeposu
 │  ├─ tercih/             DataStore
@@ -221,9 +229,12 @@ app/…/yesiliz/
 │  └─ ekran/              onboarding ana istatistik nefes riskdetay
 │                         lig odul ebeveyn profil hesap hedef kategori
 │                         bilgi test bildirim anket yuruyus saglik yedam
+│                         sozlesme aktivite odak gozmolasi gecekapanisi
+│                         ekransiz
 ├─ nudge/                 Tetikleyici.kt · NudgeSabitleri.kt · NudgeDurum.kt ·
 │                         NudgeOverlay.kt · NudgeOverlayService.kt · NudgeIzni.kt
-├─ arkaplan/              GunlukOzetWorker · HatirlatmaWorker · IsPlanlayici
+├─ arkaplan/              GunlukOzetWorker · HatirlatmaWorker ·
+│                         YuruyusServisi (İ-3) · IsPlanlayici
 └─ widget/                Glance — EkranSuresiWidget · GununSorusuWidget ·
                           WidgetVerisi (@EntryPoint) · WidgetEylemleri
 ```
@@ -272,7 +283,7 @@ FastAPI backend (`backend/`) dört alanı karşılıyor — uç listesi
 
 | Alan | Uçlar |
 |---|---|
-| Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · `auth/sifre-sifirla` |
+| Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · `auth/sifre-sifirla` · `auth/sifre-yenile` · **`DELETE auth/hesap`** |
 | Özet | `POST ozet` · `GET ozet` · `POST heartbeat` |
 | Lig | `GET lig` · `POST lig/katil` · `GET arkadas` · `GET arkadas/kod` · `POST arkadas/davet` |
 | Ebeveyn | `POST ebeveyn/kod` · `POST ebeveyn/eslestir` · `GET ebeveyn/ozet` |
@@ -289,8 +300,13 @@ Ham olay sunucuya **gitmiyor** — giden şey günlük özet + skor (§4).
 
 Kimlik doğrulama: parola `argon2id` ile özetleniyor (`backend/app/guvenlik.py`),
 istemciye JWT erişim + yenileme jetonu dönüyor. Jetonlar `JetonDeposu`'nda,
-`Tercihler`'den **ayrı** bir DataStore'da — "verilerimi sil" akışı jetonları
-tek başına temizleyebilsin diye.
+`Tercihler`'den **ayrı** bir DataStore'da (`name = "jetonlar"`) — "verilerimi sil"
+akışı jetonları tek başına temizleyebilsin diye.
+
+> **Yazıldı (1 Ağu 2026).** `VeriYonetimiDeposu` artık `Dispatchers.IO`'da
+> koşuyor, jetonları temizliyor ve kategori tablosunu yeniden tohumluyor.
+> "Hesabımı sil" ayrıca sunucuya gidiyor (`DELETE /auth/hesap`); sunucuya
+> ulaşılamazsa kullanıcı sessizce dışarı atılmıyor, uyarı gösteriliyor.
 
 ### Veritabanı
 
@@ -302,8 +318,11 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 12 entity · 12 DAO, şema sürümü 2.** `GECIS_1_2` (`Gecisler.kt`)
-`bildirim` ve `arkadas` tablolarını ekliyor.
+**Şu an 13 entity · 13 DAO, şema sürümü 4.** `GECIS_1_2` (`Gecisler.kt`)
+`bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
+tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
+`olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
+geriye dönük dolduruyor (§9 "satır var ≠ veri var").
 
 Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
 ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
@@ -417,6 +436,13 @@ Hepsi bir kez yaşandı. Tekrarlama.
 | **Health Connect gerekçe bildirimi yok** | İzin diyaloğu **sessizce** izinsiz dönüyor, hata vermiyor. Emülatörde HC kurulu olmadığı için hiç görülmüyor | Manifest'te iki bildirim birden: Android 13 ve altı için `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` intent-filter'ı, 14+ için `VIEW_PERMISSION_USAGE` + `HEALTH_PERMISSIONS` `activity-alias`'ı |
 | **`enableEdgeToEdge` + sabit yükseklikli alt çubuk** | `NavigationBar`'a çıplak `height(72.dp)` verilince kendi sistem çubuğu payı bu 72dp'nin **içinden** düşülüyor. 3 tuşlu gezinmede (`navigation_mode=0`, 48dp pay) sekmelere 24dp kalıyor: ikon+etiket eziliyor, dokunma hedefi tıklanamayacak kadar küçülüyor. Emülatörde jest gezinmesi varsayılan olduğu için (24dp) fark edilmiyor | Yükseklik = tasarım yüksekliği **+** `WindowInsets.navigationBars` alt payı (`AltGezinme.kt`) |
 | **Alt sistem çubuğu payının hiç verilmemesi** | Ekranların dibindeki buton/satır sistem gezinme çubuğunun altında kalıyor. Üst tarafta pay vardı (`statusBarsPadding`, `windowInsetsTopHeight`), alt taraf hiçbir ekranda yoktu | Pay ekranın **kendi zemininin içine** konur (`background(...).navigationBarsPadding()`) — zemin rengi çubuğun arkasına uzanmaya devam etsin. Ortak iskelet `YesilBaslikliEkran` bunu 17 ekran için tek yerden veriyor; `YesilizGezinme` `consumeWindowInsets(bosluk)` ile alt çubuklu sekme ekranlarında payı tüketiyor ki iki kez eklenmesin. `ModalBottomSheet` M3 1.3'ten beri kenardan kenara — `contentWindowInsets` açıkça verilmezse alt sayfanın son butonu çubuğun altında kalıyor |
+| **XML yorumunda çift tire** | `processDebugMainManifest` `MergeFailureException: Error parsing AndroidManifest.xml` ile düşüyor, satır/sütun veriyor ama sebebi söylemiyor. Türkçe yorumlarda tire-tire ayraç olarak yazmak refleks; XML'de `--` yorum içinde **yasak** | Yorumda ayraç olarak `--` değil `;` ya da uzun tire. `python3 -c "import xml.dom.minidom;xml.dom.minidom.parse('app/src/main/AndroidManifest.xml')"` saniyede söylüyor |
+| **Satır var ≠ veri var** | Gecelik worker telafi ederken boş güne de sıfır dolu `gunluk_ozet` satırı yazıyor. `ozet != null` diye bakan her kontrol o satırı "veri var" sanıyor: yeni kullanıcı hiçbir şey yapmadan 8 günlük seri + 400 puan kazanıyor, `alpha` 8 günlük geçmiş sanıp anketin ağırlığını yarıya indiriyor | `gunluk_ozet.olayVarMi`. Satır yazılmaya devam ediyor (telefonsuz gerçek gün de kayıt), ayıran şey bayrak. `ozet != null` yazan her yeni kod bunu sormalı |
+| **Paket görünürlüğü: `<intent>` her paketi görmüyor** | `<queries>` içindeki MAIN/LAUNCHER filtresi **launcher aktivitesi olmayan** paketleri görmüyor. Health Connect bazı cihazlarda (Samsung/Android 12) yalnızca `SettingsActivity1` taşıyor; `getSdkStatus()` `SDK_AVAILABLE` dönmüyor ve uygulama kurulu olan HC için "kurulu değil" diyor | Bilinen paket ayrıca `<package android:name="…" />` ile bildirilmeli. `adb shell dumpsys package <paket> \| grep -A2 "queries via package name"` doğruluyor |
+| **Health Connect ön plan şartı** | Okuma izni verilmiş, `getSdkStatus()` `SDK_AVAILABLE`, ekran "İzin verildi" diyor — ama okuma yine `0`. HC, uygulama ön planda değilken reddediyor: `RemoteException: … must be in foreground to read the following data types [Steps, StepsCadenceSeries]`. Adımı okuyan iki yer de ön planda değil (`GunlukOzetWorker` gece, `YuruyusServisi` ekran kapalıyken), yani adım **hiç** özete girmiyordu (`debug.md` K-0) | Manifest'te `android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND` — bildirilmezse HC'nin izin ekranında "Ek erişim" satırı bile çıkmıyor. **Ayrı** izin: `gerekliIzinler` (okuma) ile `istenenIzinler` (okuma + arka plan) ayrılmalı, yoksa arka planı reddeden kullanıcı ön plandaki okumayı da kaybeder. Cihaz desteği `HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND` ile sorulmalı |
+| **`runCatching { … }.getOrDefault(bosDeger)`** | Hatayı yutup **meşru görünen** bir değer döndürmek kusuru sınırsız süre saklıyor. HC okuması reddediliyordu, çağıran `adim = 0` alıyordu, sıfır da geçerli bir gün ("hiç yürümemiş") olduğu için ne kullanıcı ne logcat bir şey söylüyordu | Boş değer dönmek doğru olabilir ama **sessiz** olmamalı: `getOrElse { Log.w(…, it); bosDeger }`. Kural: yutulan istisnanın en az bir izi kalsın |
+| **Tek `sheetState` birden çok `ModalBottomSheet`'te** | Ekran tek bir `rememberModalBottomSheetState()` örneğini bütün alt sayfalarında paylaşıyor; biri kapanıp durum `Hidden`'a düştüğünde sıradaki sayfa aynı durumla açılıp **hiç çizilmiyor**. Boş `onDismissRequest` de aynı sınıf: sayfa gizleniyor ama bileşimde kalıp perde dokunuşlarını ve geri tuşunu yutuyor | `ui/bilesen/AltSayfa.kt` — her çağrı kendi durumunu alıyor, `skipPartiallyExpanded` ve iç `verticalScroll` tek yerden |
+| **Askıya alan çağrı `MutableStateFlow.update` bloğunun içinde** | `update` lambdayı yarışma durumunda **yeniden çalıştırıyor**; içeride ağ çağrısı varsa ikinci kez istek gidiyor | Askıya alan işi `update`'ten önce yap, sonuca göre `update` çağır |
 | **Yenileme jetonu saklanıp hiç kullanılmaması** | Erişim jetonu dolunca (30 dk) her kimlikli çağrı 401 veriyor ve `Yedekli*Deposu` sessizce sahte veriye düşüyor — kullanıcı hâlâ "giriş yapmış" görünüyor | `okhttp3.Authenticator` (`JetonAuthenticator`). Yenileme çağrısı **ayrı** bir istemciden gitmeli, yoksa Dagger döngüsü + sonsuz 401 özyinelemesi |
 
 ---
@@ -442,6 +468,17 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 > `alpha = 1.0` — alpha eğrisinin hiçbir kolu test edilemez, risk motoru hep
 > `S≈0` üretir. **Döngü doğrulaması gerçek telefon ister.**
 > Ayrıntı: `docs/spike-usagestats-sonuc.md`
+>
+> **Yapıldı (31 Tem 2026):** Samsung SM-A217F / Android 12 üzerinde zincirin
+> tamamı ilk kez gerçek veriyle koştu — `gunluk_ozet` doldu, `risk_sonuc`
+> gerçek skor üretti (`S=10,88 · rS=81,97 · R=41,47`). Emülatörde görünmeyen
+> kusurlar da ilk kez buradan çıktı: `debug.md`.
+>
+> **Aktivite kolu da koştu (3 Ağu 2026):** aynı cihazda `gunluk_ozet.adim`
+> ilk kez doldu (`1039` → `A=0,05195` → `D=0,99221`). O güne kadar `D` hep
+> `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç ölçülememişti — sebebi
+> iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in bu
+> cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
 
 ---
 
@@ -456,7 +493,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
-| `app/data/yerel/` | 12 entity · 12 DAO · `YesilizDb` (sürüm 2) · `Gecisler.kt` — destructive fallback **yok** | **8 + 1 emülatör testi** (`GecisTest` gerçek 1→2 geçişini koşuyor) |
+| `app/data/yerel/` | 13 entity · 13 DAO · `YesilizDb` (sürüm 4) · `Gecisler.kt` — destructive fallback **yok** | **8 + 7 cihaz testi** (`GecisTest` 1→2, 2→3, 3→4 geçişlerini gerçek cihazda koşuyor) |
 | `app/data/kullanim/` | `OturumCikar` (saf) · `KullanimOkuyucu` · `KullanimIzni` | **13 birim + 7 emülatör testi** |
 | `app/data/depo/` | `KategoriDeposu` · `KullanimDeposu` (sistem → kategori → Room → özet) | seed + override korunuyor |
 | Dokümantasyon | `DB.md` · `docs/stitch-ekranlar.md` · spike raporu | üreticileri var |
@@ -469,7 +506,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
-| `app/data/saglik/` | Health Connect — adım + egzersiz; yoksa `D = 1.0` | HC'siz cihazda sessiz |
+| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; gerçek cihazda `gunluk_ozet.adim = 1039` → `D = 0,992` |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
@@ -492,7 +529,8 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
 
-**Toplam 230 test** (154 Android birim + 28 emülatör + 48 backend pytest). Zincir uçtan uca çalışıyor:
+**Toplam 260 test** (153 Android birim + 32 cihaz/emülatör + 22 core-risk + 53 backend
+pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
@@ -511,31 +549,18 @@ misafir modunda sabitten geliyor.
 **giremiyor**. Profil → Geliştirici → "Örnek veri oluştur". Tohum yalnızca
 `gunluk_ozet` *girdilerini* yazıyor; skoru ve bandı gerçek motor üretiyor.
 
-### Sıradaki işler
+### Açık işler
 
-| # | İş | Not |
-|---|---|---|
-| ~~1~~ | ~~Nudge tetikleyici + overlay~~ | **BİTTİ** (30 Tem) — `nudge/` (Tetikleyici, NudgeOverlayService, NudgeOverlay, NudgeIzni), Profil'de opt-in anahtarı; nefes derin bağlantısı yer tutucu `Rota.NEFES`'e gidiyor (madde 3 bitince gerçek ekrana bağlanacak) |
-| ~~2~~ | ~~Risk detayı ekranı~~ | **BİTTİ** (31 Tem) — `ui/ekran/riskdetay/`, core-risk 4-faktör bantlama + test vektörleri, İstatistik'e giriş kartı |
-| ~~3~~ | ~~Görev detayı alt sayfası + nefes~~ | **BİTTİ** (30 Tem) — `AnaEkran`'da alt sayfa (`GorevDetayi`, tasarımı yok, `stitch/g_rev_detay` yerleşimi uyarlandı) + `ui/ekran/nefes/` (resmi teslim, ekran 16) |
-| ~~4~~ | ~~Health Connect izin akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/saglik/`, ekran 02'nin yerleşimi uyarlandı; HC kurulu değilse Play Store, izin yoksa `PermissionController` sözleşmesi. Profil › Verilerim'den erişiliyor |
-| ~~5~~ | ~~Kurulumda geçmiş veri~~ | **BİTTİ** (30 Tem) — `GecmisVeriDeposu`, `KullanimOkuyucu.gunlukToplamSureler`, `GecmisGunSayaci`; `IzinEkran` artık gerçekten izin istiyor (`MainActivity.onResume` tetikliyor) |
-| ~~6~~ | ~~Widget~~ | **BİTTİ** (31 Tem) — `app/widget/`, Glance 1.1.1. Tasarım 39 (etkileşimli Bugünün sorusu) ve 40 (ekran süresi). Tasarım 41 (kilit ekranı) **uygulanmadı**, §12 K13 |
-| ~~7a~~ | ~~Ebeveyn paneli eşleştirme akışı~~ | **BİTTİ** (31 Tem) — `ui/ekran/ebeveyn/`, rol seçimi→kod→dashboard. Kod artık **sunucuda** doğrulanıyor (`backend/app/uclar/ebeveyn.py`): var mı, 10 dk süresi dolmuş mu, kullanılmış mı, karşı rolde mi. Sunucu yoksa eski 6-hane kontrolüne düşüyor, ekran `cevrimdisiMi` ile bunu söylüyor |
-| ~~7b~~ | ~~YEDAM onayı (köprü/rıza ekranı)~~ | **BİTTİ** (31 Tem) — `ui/ekran/yedam/`, `stitch/yedam_onay/` yerleşimi gerçek tokenlarla. Yalnızca `Bant.COK` + kullanıcı onayı. Ekran 27 "YEDAM hakkında" ayrıca Profil › Destek'e alt sayfa olarak eklendi |
-| ~~8~~ | ~~Hesap ekranları (giriş/kayıt)~~ | **BİTTİ** (31 Tem) — `ui/ekran/hesap/` (14, 15, 38) + `HesapDeposu` arayüzü. Şifre cihazda saklanmıyor (§12 K16); doğrulama artık sunucuda, JWT `JetonDeposu`'nda |
-| ~~9~~ | ~~Profil alt sayfaları~~ | **BİTTİ** (31 Tem) — Toplanan veriler, Geçmişi indir, Verilerimi/Hesabı sil (`VeriYonetimiDeposu`), Yardım, Hakkında, YEDAM hakkında, Bildirim saatleri |
-| ~~10~~ | ~~Aktif yürüyüş~~ | **BİTTİ** (31 Tem) — `ui/ekran/yuruyus/` + saf `YuruyusHesapla`. Foreground service **yok**, ekran açıkken sayıyor (§12 K15) |
-| ~~11~~ | ~~FastAPI backend + ağ katmanı~~ | **BİTTİ** (31 Tem) — `backend/` (hesap, özet senkronu, lig, ebeveyn · 48 pytest) + `data/uzak/` Retrofit + `Yedekli*Deposu` offline-first sarmalayıcı. Gerçek Room migration da bu turda geldi |
+**31 Temmuz 2026 taramasının tamamı kapatıldı** (1 Ağustos 2026). Gerçek cihazda
+(Samsung SM-A217F · Android 12) bulunan **9 kritik + 12 yüksek + 18 orta** kusurun
+hepsi düzeltildi ve 5 kapsam kararının hepsi uygulandı; her biri aynı cihazda
+doğrulandı. `debug.md` bu taramanın kaydı olarak duruyor, ✅ işaretli.
 
-**Sıradaki gerçek işler:**
-
-| # | İş | Not |
-|---|---|---|
-| 12 | Gerçek telefonda uçtan uca doğrulama | Emülatörde `d_efektif = 0`, `alpha = 1.0`, risk motoru hep `S≈0` üretiyor (§10). Döngünün gerçekten çalıştığı **hiç görülmedi** — rapor öncesi en kritik iş |
-| 13 | Backend dağıtımı | Şu an yalnızca `docker compose` ile yerelde, `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` sabit. Gerçek telefon bu adrese ulaşamaz — dağıtım + HTTPS alan adı gerekiyor. `ag_guvenligi.xml` zaten şifresiz trafiği yalnızca `10.0.2.2` için açıyor, yani gerçek adres HTTPS olmak **zorunda** |
-| 14 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
-| — | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
+| İş | Not |
+|---|---|
+| Backend dağıtımı | Adres artık çalışma zamanında okunuyor (§12 K24) ve gerçek cihaz USB üzerinden `adb reverse` ile yerel sunucuya bağlanabiliyor. **Kalıcı dağıtım + HTTPS alan adı hâlâ yok**; release `ag_guvenligi.xml` şifresiz trafiği yalnızca `10.0.2.2` için açıyor, debug kaynak seti kendi gevşek yapılandırmasını getiriyor |
+| Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
+| *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
 **Tasarımı eksik ekran kalmadı.** 30 Tem ikinci ek teslimi (8 ekran +
 3 widget, `docs/tasarim-referans.md §2 / 31–41`) son boşlukları kapattı;
@@ -581,10 +606,18 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K12 | "Kendini Test Et" kısa farkındalık testi, **SAS-SV değil** | 5 soru, 3'lü seçim, kesme puanı yok, risk motoruna girmiyor. `domain/test/` + ayrı `farkindalik_testi` tablosu | SAS-SV'nin 29,5 kesme puanı yayınlanmış bir çalışmaya dayanıyor ve ölçeğin **birebir** korunmasına bağlı (`docs/spec-anket.md §6.1`). Kısaltmak geçersizleştirirdi; ayrı bir araç yazmak tek doğru yol. İkisini aynı tabloda tutmak da kalibre edilmemiş bir puanın kalibre edilmişle karışması riskini doğururdu — bu yüzden `anket_yanit` ve `farkindalik_testi` ayrı |
 | K13 | Kilit ekranı widget'ı (tasarım 41) **uygulanmadı** | Aynı bilgi tasarım 40'taki ana ekran widget'ıyla veriliyor | iOS'un kilit ekranı widget'ının Android'de karşılığı yok; platformda genel kullanıma açık bir yetenek değil. Tasarım arşivde referans olarak duruyor |
 | K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı | CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
-| K15 | Aktif yürüyüş **foreground service'siz** | Ekran açık kaldığı sürece sayıyor (`EkranAcikTut`), ekranda tek satırla belirtiliyor | Arka planda adım takibi ayrı izin, ayrı bildirim kanalı ve ayrı pil bütçesi demek; MVP'nin kritik yolunda değil. Kullanıcının telefonu cebine koyup sayacın durduğunu sonradan öğrenmemesi için davranış açıkça yazılı |
+| ~~K15~~ | ~~Aktif yürüyüş **foreground service'siz**~~ | **1 Ağu 2026'da TERSİNE ÇEVRİLDİ → K21.** Eski karar: ekran açık kaldığı sürece sayıyor, gerekçesi "arka planda takip ayrı izin/bildirim/pil bütçesi ister, MVP'nin kritik yolunda değil". Gerçek cihazda bu, özelliği tam da kullanılacağı anda çalışmaz kılıyordu (`debug.md` İ-3) |
 | K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor | İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
 | K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor |
 | K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor | `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor |
+| K20 | Görev doğrulaması **üç türlü**: `OTOMATIK` · `AKTIVITE` · `BEYAN` | İki değer varken aralarına sıkışan görevler yanlış tarafa düşüyordu. Ana ekranın `when` bloğu NEFES ve YURUYUS dışındaki her şeyi "Tamamlandı olarak işaretle" butonuna gönderiyordu — OTOMATIK ilan edilmiş `GECE_TEMIZ` ve `TUKETIM_HEDEFI` dahil. O iki görev **zaten** özetten puanlanıyor; elle işaretlenince aynı gün için çift sayılıyordu ve kayıt `dogrulamaTuru = "otomatik"` olarak yazıldığı için denetim izi de yanıltıcıydı (`debug.md` K-9). `OTOMATIK` görevler `PuanDeposu.gorevTamamla`'dan da yazılamıyor |
+| K21 | Aktif yürüyüş **foreground service ile** (K15 tersine) | `arkaplan/YuruyusServisi`, `foregroundServiceType="health"`. Servis yalnızca oturum sürerken yaşıyor, hedef süre dolunca kendini durduruyor; bildirimi sessiz ve düşük öncelikli. Ekranı 15 dakika açık tutarak yürümek ne makul bir istek ne de uygulamanın kendi mesajıyla ("ekrandan uzaklaş") tutarlıydı. `EkranAcikTut` kaldırıldı |
+| K22 | Dördüncü sekme **Aktiviteler**, Profil avatara taşındı | Profil bir ayar ekranı: nadiren ve belirli bir şey aramaya gidiliyor. Kalıcı bir sekmeyi işgal etmesi, en sık kullanılacak dördüncü alanı harcıyordu. Altı aktivite: nefes · yürüyüş · odak seansı · 20-20-20 göz molası · gece kapanışı · "ekransız ne yaptın?" (`debug.md` İ-1) |
+| K23 | Hedef ve gece puanları **oransal** | İkili eşik, hedefinin bir dakika üstünde kalana 25 puanın tamamını kaybettiriyordu; 300 dakikadan 130'a inen biri hedefi 120 olduğu için hiçbir şey kazanmıyordu. Hedefin altında tam puan, aşıldıkça doğrusal iniş, iki katında sıfır. Ceza değil: en kötü ihtimalle terim 0 (`debug.md` İ-4) |
+| K24 | Sunucu adresi **çalışma zamanında** okunuyor | `10.0.2.2` yalnızca emülatörde anlamlı; gerçek cihazda her çağrı zaman aşımına uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve bu istisna değil **varsayılan** durumdu. Adres `Tercihler.sunucuTabani`'nden geliyor, Profil › Geliştirici'den değişiyor. Yerele düşüldüğü ekranda **söyleniyor** — K18 hâlâ geçerli ama artık görünür (`debug.md` O-14) |
+| K25 | Eşleştirme **çevrimdışı yedeğe düşmüyor** (K18 istisnası) | `EbeveynDeposu.eslestir` ağ hatasında eşleşmeyi yerel olarak kaydedip başarı dönüyordu; gerçek telefonda sunucuya hiç ulaşılamadığı için bu **tek** davranıştı ve rastgele herhangi bir 6 haneli sayı ebeveyn panelini açıyordu. Çocuğun ekran verisine erişim veren bir akış, yanlış şifreyle giriş yaptırmakla aynı sınıfta (`debug.md` K-8) |
+| K26 | 18 yaş altı **beyan usulü ebeveyn onayı** | Varsayılan yaş 17'ydi: varsayılan kullanıcı 18 altıydı ve hiçbir şey sorulmuyordu. Varsayılan 18 oldu; yaş < 18 ise onay ekranı geliyor ve onaylanmadan devam edilemiyor. Bunun **doğrulanabilir olmadığı** ekranda yazılı; gerçek doğrulama ebeveyn panelinin işi ve A5 hâlâ açık. Özellik kısıtı yok (`debug.md` Y-11) |
+| K27 | Adım verisi **iki kaynaklı**: Health Connect + donanım sayacı | Health Connect adım **saymıyor**, saklıyor. Yazan bir uygulama yoksa okuma sonsuza kadar sıfır dönüyor — test telefonunda tam olarak bu oldu ("Health Connect'te hiç veriniz yok"; Samsung Health kurulu değil, Google Fit bağlı değil). Yani düzgün çalışan bir entegrasyon, kullanıcının **başka bir uygulama kurmasına** bağlıydı. `Sensor.TYPE_STEP_COUNTER` hiçbir şeye bağlı değil. `AktiviteSaglayici` ikisini birleştiriyor: **Health Connect önce** (saatten/bileklikten gelen veri telefonun cebe girmesinden bağımsız), sıfırsa sensör. **Toplama yok** — ikisi aynı ayakları ölçüyor, şişirilen her adım riski haksız yere aşağı çeker. Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor; hesap saf (`AdimBirikim.kt`, 6 test). Egzersiz süresi yalnızca Health Connect'ten — adımdan egzersiz uydurmak ölçüm değil tahmin olurdu (`debug.md` K-0) |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
 
 ### Açık

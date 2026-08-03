@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
@@ -162,13 +163,3 @@ private fun zamanMetni(tarih: LocalDate, bugun: LocalDate): String =
         else -> "$gun gün önce"
     }
 
-private fun Gorev?.ikonu(): ImageVector = when (this) {
-    Gorev.NEFES -> Icons.Filled.SelfImprovement
-    Gorev.DIJITAL_MOLA -> Icons.Filled.Timer
-    Gorev.YURUYUS -> Icons.AutoMirrored.Filled.DirectionsWalk
-    Gorev.RUH_HALI -> Icons.Filled.MoodBad
-    Gorev.UYKU_BEYANI -> Icons.Filled.Bedtime
-    Gorev.GECE_TEMIZ -> Icons.Filled.NightsStay
-    Gorev.TUKETIM_HEDEFI -> Icons.Filled.TrackChanges
-    null -> Icons.Filled.Park
-}

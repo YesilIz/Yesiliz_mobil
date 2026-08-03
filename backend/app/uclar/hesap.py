@@ -6,17 +6,30 @@ import datetime as dt
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
 from app.guvenlik import (
     erisim_jetonu,
+    mevcut_kullanici,
     rastgele_jeton,
     sifre_dogrula,
     sifre_ozetle,
 )
-from app.modeller import Kullanici, SifreSifirlama, YenilemeJetonu
+from app.modeller import (
+    Arkadaslik,
+    DavetKodu,
+    EbeveynBaglanti,
+    EslestirmeKodu,
+    GunlukOzet,
+    Heartbeat,
+    Kullanici,
+    LigUyelik,
+    RiskSonuc,
+    SifreSifirlama,
+    YenilemeJetonu,
+)
 from app.semalar import (
     GirisIstek,
     Jetonlar,
@@ -150,6 +163,57 @@ def sifre_yenile(istek: SifreYenileIstek, db: Session = Depends(oturum)) -> dict
 
     db.commit()
     return {"durum": "tamam"}
+
+
+@yonlendirici.delete("/hesap")
+def hesabi_sil(
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """
+    Hesabı ve ona bağlı **her satırı** kalıcı olarak siler.
+
+    Cihaz "Hesabımı kalıcı sil" dediğinde yereli zaten temizliyor; bu uç
+    olmadan sunucudaki kopya yerinde kalırdı — KVKK'nın silme hakkı
+    karşılanmamış olurdu ve ekrandaki "kalıcı" sözü yalan olurdu.
+
+    Yumuşak silme (`silindi` bayrağı) **bilinçli olarak tercih edilmedi**:
+    kullanıcı verisinin sunucuda kalmaya devam etmesi, silme talebinin
+    karşılanmaması demek. Aynı e-posta ile yeniden kayıt olmak serbest.
+
+    ORM `cascade` tanımlı olmadığı için bağlı tablolar elle siliniyor;
+    yabancı anahtar sırası önemli (önce çocuklar, sonra kullanıcı).
+
+    204 yerine gövdeli 200 dönüyor: API'nin geri kalanı da `{"durum": …}`
+    veriyor ve boş gövde istemci tarafında ayrı bir dönüştürücü istiyor.
+    """
+    kid = kullanici.id
+
+    db.execute(delete(Heartbeat).where(Heartbeat.kullanici_id == kid))
+    db.execute(delete(RiskSonuc).where(RiskSonuc.kullanici_id == kid))
+    db.execute(delete(GunlukOzet).where(GunlukOzet.kullanici_id == kid))
+    db.execute(delete(LigUyelik).where(LigUyelik.kullanici_id == kid))
+    db.execute(delete(DavetKodu).where(DavetKodu.kullanici_id == kid))
+    db.execute(delete(EslestirmeKodu).where(EslestirmeKodu.ureten_id == kid))
+    db.execute(delete(SifreSifirlama).where(SifreSifirlama.kullanici_id == kid))
+    db.execute(delete(YenilemeJetonu).where(YenilemeJetonu.kullanici_id == kid))
+
+    # Karşılıklı bağlar: iki uçtan da silinmeli, yoksa öksüz satır kalır.
+    db.execute(
+        delete(Arkadaslik).where(
+            or_(Arkadaslik.kullanici_id == kid, Arkadaslik.arkadas_id == kid)
+        )
+    )
+    db.execute(
+        delete(EbeveynBaglanti).where(
+            or_(EbeveynBaglanti.ebeveyn_id == kid, EbeveynBaglanti.cocuk_id == kid)
+        )
+    )
+
+    db.delete(kullanici)
+    db.commit()
+    gunluk.info("Hesap silindi: kullanici=%s", kid)
+    return {"durum": "silindi"}
 
 
 def _gecmis(son: dt.datetime, simdi: dt.datetime) -> bool:

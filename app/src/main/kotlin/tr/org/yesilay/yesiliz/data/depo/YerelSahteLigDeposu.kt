@@ -143,12 +143,18 @@ class YerelSahteLigDeposu @Inject constructor(
 
         /**
          * Önerilen kişiler — **rehberden okunmuyor** (CLAUDE.md §4).
-         * Sabit örnek liste; Faz 2'de sunucudan gelecek.
+         *
+         * Alt metinler "3 ortak arkadaş" / "1 ortak arkadaş" idi ve bu,
+         * aynı ekranda verilen "rehberine erişmiyoruz" sözüyle doğrudan
+         * çelişiyordu: ortak arkadaş sayısını bilmek ya rehbere ya da
+         * sosyal grafiğe erişmeyi gerektirir, ikisi de yok
+         * (`debug.md` O-13). Uydurma isim tolere edilebilir; uydurma
+         * ilişki bilgisi mahremiyet sözünü yalanlıyor.
          */
         val ORNEK_ONERILER = listOf(
-            OnerilenKisi("Ece Kılıç", "3 ortak arkadaş"),
-            OnerilenKisi("Mert Aydın", "1 ortak arkadaş"),
-            OnerilenKisi("Selin Öz", "Yeşilİz kullanıyor"),
+            OnerilenKisi("Ece Kılıç", "Örnek kişi"),
+            OnerilenKisi("Mert Aydın", "Örnek kişi"),
+            OnerilenKisi("Selin Öz", "Örnek kişi"),
         )
     }
 }

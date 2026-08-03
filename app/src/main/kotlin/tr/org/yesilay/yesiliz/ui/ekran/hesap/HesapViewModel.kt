@@ -42,6 +42,15 @@ class HesapViewModel @Inject constructor(
 
     fun girisYap(onBasarili: () -> Unit) {
         val d = _durum.value
+
+        // Alan doğrulaması AĞDAN ÖNCE. Eskiden bu kontroller yalnızca depo
+        // katmanındaydı ve `YedekliHesapDeposu` önce ağı deniyordu: boş bir
+        // formda "Hesap oluştur"a basınca "Adını yazman gerekiyor." hatası
+        // 5+ saniye sonra çıkıyordu (`debug.md` Y-12). Tamamen istemci
+        // tarafı olması gereken bir kontrol, ağ gecikmesinin arkasındaydı.
+        HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
+        HesapDogrula.sifre(d.sifre)?.let { return hataYaz(HesapAlani.SIFRE, it) }
+
         viewModelScope.launch {
             _durum.update { it.copy(islemde = true) }
             sonucuIsle(depo.girisYap(d.eposta, d.sifre), onBasarili)
@@ -51,8 +60,12 @@ class HesapViewModel @Inject constructor(
     fun kayitOl(onBasarili: () -> Unit) {
         val d = _durum.value
 
-        // Şifre tekrarı ve koşullar sunucunun değil formun işi; depoya
-        // gitmeden burada kontrol ediliyor.
+        // Alan doğrulamalarının tamamı depoya gitmeden burada (`debug.md`
+        // Y-12): hiçbiri sunucu bilgisi istemiyor ve ağ zaman aşımının
+        // arkasında beklemeleri için sebep yok.
+        HesapDogrula.ad(d.ad)?.let { return hataYaz(HesapAlani.AD, it) }
+        HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
+        HesapDogrula.sifre(d.sifre)?.let { return hataYaz(HesapAlani.SIFRE, it) }
         HesapDogrula.sifreTekrar(d.sifre, d.sifreTekrar)?.let {
             return hataYaz(HesapAlani.SIFRE_TEKRAR, it)
         }
@@ -68,6 +81,8 @@ class HesapViewModel @Inject constructor(
 
     fun sifreSifirla() {
         val d = _durum.value
+        HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
+
         viewModelScope.launch {
             _durum.update { it.copy(islemde = true) }
             when (val sonuc = depo.sifreSifirla(d.eposta)) {

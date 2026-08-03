@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.bilesen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -35,9 +36,18 @@ fun KullaniciAvatari(
     olcu: Dp = Olcu.AvatarKucuk,
     zemin: Color? = null,
     metinRengi: Color = Beyaz,
+    /**
+     * Verilirse avatar tıklanabilir olur.
+     *
+     * Ana ekranın sol üstündeki avatar süslemeydi; Profil'e götürmüyordu
+     * (`debug.md` O-17). Lig satırlarındaki avatarlar tıklanabilir
+     * olmamaya devam ediyor.
+     */
+    onTikla: (() -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
+            .then(if (onTikla != null) Modifier.clickable(onClick = onTikla) else Modifier)
             .size(olcu)
             .clip(CircleShape)
             .background(zemin ?: avatarRengi(isim)),

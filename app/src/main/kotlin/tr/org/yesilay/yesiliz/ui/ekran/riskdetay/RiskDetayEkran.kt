@@ -30,6 +30,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.IlerlemeCubugu
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.DaireselGosterge
+import tr.org.yesilay.yesiliz.ui.tema.YuzeyKirik
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.Gradyan
 import tr.org.yesilay.yesiliz.ui.tema.KirmiziIstisna
@@ -132,7 +133,15 @@ fun RiskDetayEkran(
                             horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
                         ) {
                             IkonRozeti(ikon = oneri.ikon)
-                            Column(modifier = Modifier.weight(1f)) {
+                            // `spacedBy`: iki satırlık başlıklarda
+                            // ("Hatırlatma saatlerini ayarla", "Günlük
+                            // hedefini gözden geçir", "İki dakikalık nefes
+                            // molası") metinler birbirine giriyordu
+                            // (`debug.md` O-7).
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(Bosluk.Xs),
+                            ) {
                                 Text(
                                     text = oneri.baslik,
                                     style = MaterialTheme.typography.bodyLarge,
@@ -183,6 +192,25 @@ private fun FaktorSatiri(faktor: EtkileyenFaktor) {
             oran = faktor.oran.toFloat(),
             renk = faktor.seviye.renk(),
         )
+        // Ölçülmemiş faktörün NİÇİN boş olduğu yazılıyor. Boş bir çubuk tek
+        // başına "iyi durumdasın" gibi okunurdu.
+        if (faktor.seviye == FaktorSeviyesi.BILINMIYOR) {
+            Spacer(modifier = Modifier.height(Bosluk.Xs))
+            Text(
+                // Sebep faktöre göre değişiyor: hareket için izin eksik,
+                // kullanım oranları için henüz yeterli ölçüm yok. Tek bir
+                // metin ikisinden birinde yanlış olurdu.
+                text = if (faktor.ad == HAREKET_FAKTORU) {
+                    "Henüz ölçülmedi — Profil › Adım ve hareket iznini " +
+                        "açarsan burada görünecek."
+                } else {
+                    "Bugün için yeterli ölçüm yok. Birkaç saatlik kullanım " +
+                        "biriktiğinde burada görünecek."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MetinUcuncul,
+            )
+        }
         Spacer(modifier = Modifier.height(Bosluk.M))
     }
 }
@@ -195,10 +223,17 @@ private fun FaktorSeviyesi.renk(): Color = when (this) {
     FaktorSeviyesi.DUSUK -> YesilAna
     FaktorSeviyesi.ORTA -> RuhHaliBas
     FaktorSeviyesi.YUKSEK -> KirmiziIstisna
+    // Ölçüm yokken nötr: yeşil "iyi", kırmızı "kötü" derdi; ikisi de
+    // ölçülmemiş bir şey hakkında iddia olurdu.
+    FaktorSeviyesi.BILINMIYOR -> MetinUcuncul
 }
 
 private fun FaktorSeviyesi.zemin(): Color = when (this) {
     FaktorSeviyesi.DUSUK -> YesilNane
     FaktorSeviyesi.ORTA -> RuhHaliBas.copy(alpha = 0.15f)
     FaktorSeviyesi.YUKSEK -> KirmiziIstisnaZemin
+    FaktorSeviyesi.BILINMIYOR -> YuzeyKirik
 }
+
+/** `EtkileyenFaktorler`'deki ad ile birebir. */
+private const val HAREKET_FAKTORU = "Fiziksel hareket"

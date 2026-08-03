@@ -25,12 +25,48 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
+      Aktif yürüyüş sayacı arka planda da çalışsın (debug.md İ-3).
+
+      Eski karar (CLAUDE.md §12 K15) foreground service kullanmıyordu:
+      ekran açık kaldığı sürece sayıyordu. Gerçek cihazda bu, özelliği tam
+      da kullanılacağı anda çalışmaz kılıyor; yürüyüşe çıkan kullanıcı
+      telefonu cebine koyuyor, ekran kapanıyor, sayaç duruyor. Ekranı 15
+      dakika açık tutarak yürümek uygulamanın kendi mesajıyla da çelişiyor.
+
+      FOREGROUND_SERVICE_HEALTH, egzersiz oturumunun doğru sınıfı ve
+      Android 14+ tiplenmiş servis şartını karşılıyor. Servis yalnızca
+      oturum sürerken yaşıyor, tamamlanınca kendini durduruyor.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!--
       Health Connect — SADECE adım ve egzersiz süresi.
       Kalp atışı, uyku, kilo, konum içeren egzersiz rotası İSTENMİYOR.
       Aktivite sönümlemesinin (%15 tavan) tek girdisi bu ikisi.
     -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
+    <!--
+      Arka planda okuma. Bu bildirim OLMADAN adım verisi pratikte hiç
+      gelmiyordu: Health Connect, uygulama ön planda değilken okumayı
+      reddediyor ve
+
+        RemoteException: … must be in foreground to read the following
+        data types [Steps, StepsCadenceSeries]
+
+      atıyor. Adımı okuyan iki yerin ikisi de ön planda değil —
+      `GunlukOzetWorker` gece koşuyor, `YuruyusServisi` ekran kapalıyken
+      sayıyor (§12 K21). İstisna `SaglikOkuyucu` içinde yutuluyordu, yani
+      izin verilmiş olsa bile `adim = 0`, `sporDk = 0`, `D = 1,0` kalıyordu.
+
+      Ayrı bir izin: kullanıcı okuma izinlerini verip bunu vermeyebilir.
+      O yüzden `gerekliIzinler`'e değil `istenenIzinler`'e giriyor —
+      verilmezse uygulama çalışmaya devam ediyor, yalnızca gecelik özet
+      adım göremiyor ve ekran bunu söylüyor.
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
     <!--
       Faz 2 backend'i (backend/). Sunucuya YALNIZCA günlük özet ve skor
@@ -59,6 +95,23 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+
+        <!--
+          Health Connect'in KENDİSİ ayrıca bildirilmek zorunda.
+
+          Yukarıdaki MAIN/LAUNCHER sorgusu onu görmüyor: bazı cihazlarda
+          (Samsung SM-A217F / Android 12) Health Connect'in başlatıcı
+          aktivitesi yok, yalnızca SettingsActivity1 var. Paket görünmeyince
+          getSdkStatus() SDK_AVAILABLE dönmüyor ve uygulama, kurulu olan
+          Health Connect için "kurulu değil" deyip Play Store'a
+          yönlendiriyordu; Play Store'da buton "Kaldır" yazarken.
+
+          Sonuç: adım ve spor verisi hiç gelmiyor, D = 1,0 kalıyor, aktivite
+          sönümlemesi gerçek cihazda hiç uygulanmıyordu (`debug.md` K-6).
+          Health Connect istemcisi 1.2.0-alpha01 bu bildirimi kendiliğinden
+          eklemiyor.
+        -->
+        <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
     <application
@@ -196,6 +249,18 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Kısa mola hatırlatıcı göstermek için ekran kullanımını canlı izler" />
         </service>
+
+        <!--
+          Aktif yürüyüş sayacı (debug.md İ-3).
+
+          `health` tipi egzersiz oturumunun doğru sınıfı. Servis yalnızca
+          kullanıcı yürüyüşü başlattığında çalışıyor ve hedef süre dolunca
+          kendini durduruyor; sürekli açık kalan bir servis değil.
+        -->
+        <service
+            android:name=".arkaplan.YuruyusServisi"
+            android:exported="false"
+            android:foregroundServiceType="health" />
     </application>
 
 </manifest>

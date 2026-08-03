@@ -62,4 +62,39 @@ LLM dar rolde kullanılabilir: rapor metni üretimi, nudge varyasyonu (önceden 
 
 - Kurulum ebeveyn onayıyla
 - **Çocuk uygulamayı silerse ebeveyne bildirim** → **sunucu heartbeat** (X saat sinyal yoksa tetiklenir). Doğrudan silme tespiti iki platformda da güvenilir değil.
-- Ebeveyne gösterilecek veri kapsamı **karar bekliyor** (§15)
+
+### 13.1 Uygulanan hâli (1 Ağustos 2026)
+
+Onboarding'de yaş **18'in altındaysa** ayrı bir dala giriliyor
+(`Rota.EBEVEYN_ONAYI`). Bu dal yazılmıştı ama hiç bağlanmamıştı: yaş 15
+girilse bile "Devam" doğrudan ankete geçiyor, onay sorulmuyordu. Üstelik
+varsayılan yaş **17**'ydi — varsayılan kullanıcı zaten 18 altıydı
+(`debug.md` Y-11). Varsayılan 18'e çekildi.
+
+Onay ekranı üç şey yapıyor:
+
+1. Neyin toplandığını ve neyin toplanmadığını ebeveyne gösterilecek
+   biçimde özetliyor
+2. Gizlilik Politikası'na bağlanıyor (`assets/sozlesmeler.json`)
+3. Onay kutusu işaretlenmeden devam ettirmiyor
+
+**Bu beyan usulü bir onaydır ve ekranda böyle yazıyor.** Uygulama onayı
+doğrulayamıyor; doğrulanabilir onay (ebeveyn e-postasına bağlantı, kimlik
+eşleştirme) ebeveyn panelinin kapsamına giriyor ve CLAUDE.md §12 A5 hâlâ
+açık bir karar. Beyan yine de anlamlı: rejimin varlığını bildiriyor ve
+devam etmeyi bilinçli bir adım hâline getiriyor.
+
+**Özellik kısıtı yok** (ürün kararı): 18 altı kullanıcı uygulamanın
+tamamını kullanabiliyor. Toplanan veri kapsamı zaten herkes için aynı ve
+dar; kısıtlanacak bir veri toplama farkı yok.
+
+### 13.2 Ebeveyne giden veri
+
+Ebeveyne gösterilecek kapsam **karar verildi ve uygulandı**: yalnızca
+`GET /ebeveyn/ozet` — toplam ekran süresi, risk bandı ve eğilim. Hangi
+uygulamanın kullanıldığı, mesajlar ve konum ebeveyne de gitmiyor.
+Eşleştirme yalnızca **sunucuda** doğrulanıyor; çevrimdışı yedeğe
+düşmüyor (CLAUDE.md §12 K25).
+
+Eşleştirmeyi kaldırma çocuk ve ebeveyn cihazının ikisinde de mümkün
+(Ebeveyn paneli › "Eşleştirmeyi kaldır").

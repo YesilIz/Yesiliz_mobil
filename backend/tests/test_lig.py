@@ -144,3 +144,40 @@ def test_arkadas_ligde_isaretleniyor(istemci, kullanici_kur):
     siralama = istemci.get("/lig", headers=a_basliklar).json()["siralama"]
     veli = next(s for s in siralama if s["isim"] == "Veli")
     assert veli["arkadasMi"] is True
+
+
+def test_ligde_gorunmeyen_kullanici_siralamada_cikmiyor(istemci, kullanici_kur):
+    ben, _ = kullanici_kur(eposta="ben@b.com")
+    oteki, _ = kullanici_kur(ad="Öteki", eposta="oteki@b.com")
+    istemci.post("/lig/katil", headers=ben)
+    istemci.post("/lig/katil", headers=oteki)
+
+    # Öteki kullanıcı "ligde görün"ü kapatıyor.
+    istemci.post(
+        "/ozet",
+        headers=oteki,
+        json={"ozetler": [], "riskler": [], "haftalikPuan": 50, "ligdeGorunur": False},
+    )
+
+    benim = istemci.get("/lig", headers=ben).json()
+    isimler = [s["isim"] for s in benim["siralama"]]
+
+    assert "Öteki" not in isimler
+    assert benim["gorunuyorMuyum"] is True
+
+
+def test_gorunmeyen_kullanici_kendi_satirini_goruyor(istemci, kullanici_kur):
+    ben, _ = kullanici_kur(eposta="ben@b.com")
+    istemci.post("/lig/katil", headers=ben)
+    istemci.post(
+        "/ozet",
+        headers=ben,
+        json={"ozetler": [], "riskler": [], "haftalikPuan": 50, "ligdeGorunur": False},
+    )
+
+    yanit = istemci.get("/lig", headers=ben).json()
+
+    # Kendini görmeye devam ediyor -- yoksa sıralamada nerede olduğunu
+    # hiç öğrenemezdi.
+    assert [s["isim"] for s in yanit["siralama"]] == ["Turan"]
+    assert yanit["gorunuyorMuyum"] is False

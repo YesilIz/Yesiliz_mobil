@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.lig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -23,6 +26,9 @@ import androidx.compose.material.icons.filled.Park
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,11 +40,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
+import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
+import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
+import tr.org.yesilay.yesiliz.ui.tema.YuzeyKirik
+import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
@@ -62,6 +73,7 @@ fun LigEkran(
     viewModel: LigViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
+    var kuralAcik by remember { mutableStateOf(false) }
 
     // İçerik zemini beyaz: sıralama satırları `Yesil50` dolgulu, zemin de
     // `Yesil50` olsaydı satırlar kaybolurdu.
@@ -80,7 +92,19 @@ fun LigEkran(
                 bottom = Olcu.BolumArasi,
             ),
         ) {
-            item { LigBasligi(durum) }
+            item { LigBasligi(durum, onKuralAcikla = { kuralAcik = true }) }
+            // Sunucuya ulaşılamadığında sıralama yerel yedekten geliyor.
+            // Bunu söylemeden göstermek, demo günü "backend çalışıyor"
+            // sanılmasına yol açardı (`debug.md` O-14).
+            if (durum.cevrimdisi) {
+                item { CevrimdisiNotu() }
+            }
+            // "Ligde görün" kapalıysa söyleniyor. Kullanıcı kendi satırını
+            // görmeye devam ediyor ama başkaları görmüyor; bunu bilmeden
+            // sıralamanın neden bu kadar kısa olduğunu anlayamazdı.
+            if (!durum.gorunuyorum) {
+                item { GorunmuyorNotu() }
+            }
             items(durum.siralama, key = { it.sira }) { satir ->
                 LigSatiri(satir)
             }
@@ -89,6 +113,114 @@ fun LigEkran(
                 IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
             }
         }
+    }
+
+    if (kuralAcik) {
+        AltSayfa(onKapat = { kuralAcik = false }) {
+            LigKurallari(durum = durum, onKapat = { kuralAcik = false })
+        }
+    }
+}
+
+/**
+ * Lig kuralları — yükselme/düşme çiplerine dokununca açılıyor.
+ *
+ * `docs/spec-puan.md §8` ile birebir. Ceza yolu olmadığı ayrıca yazılı:
+ * düşmek puan kaybettirmiyor.
+ */
+@Composable
+private fun LigKurallari(durum: LigDurum, onKapat: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        Text(
+            text = "Lig nasıl işliyor?",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        listOf(
+            "Her hafta pazartesi yeni bir tur başlıyor; sıralama haftalık " +
+                "puanına göre kuruluyor.",
+            "Hafta sonunda ilk ${durum.yukselen} kişi bir üst lige geçiyor, " +
+                "son ${durum.dusen} kişi bir alt lige iniyor.",
+            "Ligler: Fidan → Filiz → Ağaç → Koru → Orman.",
+            "Düşmek puan kaybettirmiyor. Kazandığın hiçbir puan geri " +
+                "alınmıyor; yalnızca haftaya hangi grupta yarışacağın " +
+                "değişiyor.",
+            "Ligde görünmek istemiyorsan Profil › Gizlilik'ten " +
+                "kapatabilirsin; kendi sıranı görmeye devam edersin.",
+        ).forEach { madde ->
+            Text(
+                text = "• $madde",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MetinIkincil,
+                modifier = Modifier.padding(bottom = Bosluk.S),
+            )
+        }
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        BirincilButon(metin = "Anladım", onTikla = onKapat)
+    }
+}
+
+/**
+ * "Ligde görün" kapalıyken gösterilen not.
+ *
+ * Tercih artık gerçekten çalışıyor: kullanıcı başkalarının sıralamasında
+ * çıkmıyor. Bunu ekranda söylemek şart, yoksa özellik bozuk sanılır.
+ */
+@Composable
+private fun CevrimdisiNotu() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(YuzeyKirik)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.CloudOff,
+            contentDescription = null,
+            tint = MetinUcuncul,
+        )
+        Spacer(modifier = Modifier.width(Bosluk.S))
+        Text(
+            text = "Sunucuya ulaşılamıyor. Aşağıdaki sıralama örnek veri; " +
+                "bağlantı kurulunca gerçek lig görünecek.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+    }
+}
+
+@Composable
+private fun GorunmuyorNotu() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(YesilNane)
+            .padding(Olcu.KartIci),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.VisibilityOff,
+            contentDescription = null,
+            tint = YesilKoyu,
+        )
+        Spacer(modifier = Modifier.width(Bosluk.S))
+        Text(
+            text = "Ligde görünmüyorsun. Kendi sıranı görüyorsun ama " +
+                "başkaları seni görmüyor. Profil › Gizlilik'ten " +
+                "değiştirebilirsin.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinBirincil,
+        )
     }
 }
 
@@ -131,7 +263,7 @@ private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
 }
 
 @Composable
-private fun LigBasligi(durum: LigDurum) {
+private fun LigBasligi(durum: LigDurum, onKuralAcikla: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,17 +298,23 @@ private fun LigBasligi(durum: LigDurum) {
             color = MetinUcuncul,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
+        // İki çip hap biçimli buton gibi duruyor -- biri vurgulu biri soluk
+        // -- ve filtre sanılıyordu; hiçbiri tıklanmıyordu (`debug.md` O-16).
+        // Aslında bilgi etiketi olduklarına göre yapacakları en doğru şey
+        // ne anlama geldiklerini anlatmak.
         Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
             Cip(
                 metin = "İlk ${durum.yukselen} yükselir",
                 ikon = Icons.Filled.ArrowUpward,
                 zemin = YesilNane,
+                onTikla = onKuralAcikla,
             )
             Cip(
                 metin = "Son ${durum.dusen} düşer",
                 ikon = Icons.Filled.ArrowDownward,
                 zemin = Yesil50,
                 renk = MetinUcuncul,
+                onTikla = onKuralAcikla,
             )
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))

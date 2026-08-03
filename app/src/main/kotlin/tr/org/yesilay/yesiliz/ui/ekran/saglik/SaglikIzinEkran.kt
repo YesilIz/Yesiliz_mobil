@@ -1,7 +1,11 @@
 package tr.org.yesilay.yesiliz.ui.ekran.saglik
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.data.saglik.SaglikDurumu
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
@@ -65,7 +70,19 @@ fun SaglikIzinEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val izinIstegi = saglikIzinIstegi(viewModel.gerekliIzinler) { viewModel.yenile() }
+    val izinIstegi = saglikIzinIstegi { viewModel.yenile() }
+
+    // `ACTIVITY_RECOGNITION` Health Connect'in değil Android'in izni; ayrı
+    // sözleşme istiyor. API 29 altında böyle bir izin yok, o yüzden istek
+    // hiç kurulmuyor — `AdimSayacOkuyucu.izinVarMi()` orada zaten `true`.
+    val sayacIzinBaslatici = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { viewModel.yenile() }
+    val sayacIzniIstegi = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            sayacIzinBaslatici.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+    }
 
     YesilBaslikliEkran(
         baslik = "Adım ve hareket",
@@ -128,6 +145,33 @@ fun SaglikIzinEkran(
                 )
 
                 when {
+                    // Okuma izni var ama arka plan izni yok: uygulama açıkken
+                    // okuyabiliyor, gece koşan özet işi okuyamıyor. Bu ayrımı
+                    // söylemezsek kullanıcı "izin verdim ama adım gelmiyor"
+                    // diyecek ve haklı olacak.
+                    durum.arkaPlanEksik -> {
+                        Kart {
+                            Text(
+                                text = "Bir izin daha gerekiyor",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MetinBirincil,
+                            )
+                            Text(
+                                text = "Adım okuma izni verildi. Ama Health Connect, " +
+                                    "uygulama kapalıyken okumaya ayrıca izin " +
+                                    "istiyor. Bu izin olmadan gece hazırlanan " +
+                                    "günlük özetine adımların girmiyor.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MetinIkincil,
+                            )
+                        }
+                        BirincilButon(
+                            metin = "Arka plan iznini ver",
+                            onTikla = { izinIstegi(durum.istenenIzinler) },
+                        )
+                    }
+
                     durum.izinVarMi -> {
                         Kart {
                             Text(
@@ -146,9 +190,39 @@ fun SaglikIzinEkran(
                         IkincilButon(metin = "Geri dön", onTikla = onGeri)
                     }
 
-                    // Health Connect kurulu değil: izin isteyecek bir muhatap
-                    // yok, Play Store'a yönlendirmek tek anlamlı adım.
-                    !durum.kullanilabilir -> {
+                    // Kurulu ama eski: kurma değil GÜNCELLEME gerekiyor.
+                    // Eskiden bu durum da "kurulu değil" diyordu ve
+                    // kullanıcı zaten kurulu olan uygulamayı kurmaya
+                    // yönlendiriliyordu (`debug.md` K-6).
+                    durum.saglikDurumu == SaglikDurumu.GUNCELLEME_GEREKLI -> {
+                        Kart {
+                            Text(
+                                text = "Health Connect güncellenmeli",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MetinBirincil,
+                            )
+                            Text(
+                                text = "Cihazındaki Health Connect sürümü bu " +
+                                    "özellik için eski kalmış. Güncelledikten " +
+                                    "sonra bu ekrana dönebilirsin.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MetinIkincil,
+                            )
+                        }
+                        BirincilButon(
+                            metin = "Health Connect'i güncelle",
+                            onTikla = {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_URL)),
+                                )
+                            },
+                        )
+                    }
+
+                    // Kurulu değil: izin isteyecek bir muhatap yok,
+                    // Play Store'a yönlendirmek tek anlamlı adım.
+                    durum.saglikDurumu == SaglikDurumu.YOK -> {
                         Kart {
                             Text(
                                 text = "Health Connect kurulu değil",
@@ -176,9 +250,37 @@ fun SaglikIzinEkran(
                     else -> {
                         BirincilButon(
                             metin = "İzin ver",
-                            onTikla = { izinIstegi() },
+                            onTikla = { izinIstegi(durum.istenenIzinler) },
                         )
                     }
+                }
+
+                // Donanım sayacı Health Connect'ten bağımsız: Health Connect
+                // hiç kurulu olmasa bile bu izinle adım sayılıyor. Test
+                // telefonunda Health Connect'in içi boştu (yazan uygulama
+                // yok) ve tek çalışan kaynak buydu (`debug.md` K-0).
+                if (durum.sayacIzniEksik) {
+                    Kart {
+                        Text(
+                            text = "Telefonun kendi adım sayacı",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MetinBirincil,
+                        )
+                        Text(
+                            text = "Health Connect adım saymıyor, yalnızca " +
+                                "başka uygulamaların yazdığını saklıyor. " +
+                                "Telefonunun kendi sayacı ise hiçbir " +
+                                "uygulamaya bağlı değil — izin verirsen " +
+                                "adımların oradan da gelebilir.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MetinIkincil,
+                        )
+                    }
+                    BirincilButon(
+                        metin = "Adım sayacına izin ver",
+                        onTikla = { sayacIzniIstegi() },
+                    )
                 }
 
                 Text(

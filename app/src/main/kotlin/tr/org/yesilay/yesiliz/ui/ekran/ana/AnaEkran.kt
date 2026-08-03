@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.FamilyRestroom
@@ -39,11 +42,9 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,8 @@ import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.suresiDk
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
@@ -72,6 +75,8 @@ import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.SallananYapraklar
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.sureMetni
+import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
+import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -100,12 +105,13 @@ fun AnaEkran(
     onBildirimler: () -> Unit,
     onYuruyusBaslat: () -> Unit,
     onDegerlendirmeYenile: () -> Unit,
+    onProfil: () -> Unit,
+    onIstatistik: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AnaViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikGorev by remember { mutableStateOf<Gorev?>(null) }
-    val sayfaDurumu = rememberModalBottomSheetState()
 
     Column(
         modifier = modifier
@@ -113,7 +119,12 @@ fun AnaEkran(
             .background(Beyaz)
             .verticalScroll(rememberScrollState()),
     ) {
-        Basliktan(durum, onBildirimler = onBildirimler)
+        Basliktan(
+            durum,
+            onBildirimler = onBildirimler,
+            onProfil = onProfil,
+            onIstatistik = onIstatistik,
+        )
 
         Yigin(
             modifier = Modifier.padding(
@@ -175,14 +186,7 @@ fun AnaEkran(
 
     acikGorev?.let { gorev ->
         val ozet = durum.gorevler.firstOrNull { it.id == gorev.id }
-        ModalBottomSheet(
-            onDismissRequest = { acikGorev = null },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { acikGorev = null }) {
             GorevDetayi(
                 gorev = gorev,
                 ikon = ozet?.ikon ?: Icons.Filled.TrackChanges,
@@ -206,7 +210,12 @@ fun AnaEkran(
 
 /** Yeşil selamlama şeridi + altında beyaza sönen ağaç. */
 @Composable
-private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
+private fun Basliktan(
+    durum: AnaDurum,
+    onBildirimler: () -> Unit,
+    onProfil: () -> Unit,
+    onIstatistik: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth().background(YesilAna)) {
         Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
@@ -220,6 +229,8 @@ private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
             KullaniciAvatari(
                 isim = durum.isim,
                 zemin = Beyaz.copy(alpha = YariSaydam),
+                // Avatar süslemeydi, tıklanmıyordu (`debug.md` O-17).
+                onTikla = onProfil,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -235,6 +246,11 @@ private fun Basliktan(durum: AnaDurum, onBildirimler: () -> Unit) {
                 )
             }
             Cip(
+                // Çip tıklanabilir GÖRÜNÜYOR ama `onTikla` verilmemişti;
+                // `Cip` bu parametreyi zaten destekliyor (`debug.md` O-15).
+                // İstatistik ekranı serinin nereden geldiğini gösteren
+                // tek yer.
+                onTikla = onIstatistik,
                 metin = "${durum.serideGun} gün",
                 ikon = Icons.Filled.LocalFireDepartment,
                 zemin = Beyaz.copy(alpha = YariSaydam),
@@ -523,20 +539,26 @@ private fun RuhHaliKarti(
 /** Bilgi Bankası · Kendini Test Et — iki eşit kart. */
 @Composable
 private fun KesfetIkilisi(onBilgiBankasi: () -> Unit, onKendiniTest: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
+    // `IntrinsicSize.Min` + `fillMaxHeight`: iki kart farklı yükseklikteydi.
+    // Sağdaki kısa kalıyor, başlığı iki satıra kırılınca alt metniyle
+    // çakışıyordu (`debug.md` O-10).
+    Row(
+        modifier = Modifier.height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik),
+    ) {
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.MenuBook,
             baslik = "Bilgi Bankası",
             aciklama = "Ekran bağımlılığı hakkında doğru bilgiler.",
             onTikla = onBilgiBankasi,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         KesfetKarti(
             ikon = Icons.AutoMirrored.Filled.FactCheck,
             baslik = "Kendini Test Et",
             aciklama = "Farkındalığını artır.",
             onTikla = onKendiniTest,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }
@@ -647,18 +669,72 @@ private fun GorevDetayi(
         Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
             gorev.suresiDk()?.let { Cip(metin = "$it dk") }
             Cip(
-                metin = if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) "Doğrulanmış" else "Kendi beyanın",
+                metin = when (gorev.dogrulama) {
+                    DogrulamaTuru.OTOMATIK -> "Otomatik"
+                    DogrulamaTuru.AKTIVITE -> "Uygulama içinde"
+                    DogrulamaTuru.BEYAN -> "Kendi beyanın"
+                },
             )
             Cip(metin = "Bugün ${gorev.gunlukLimit} kez")
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        when (gorev) {
-            Gorev.NEFES -> BirincilButon(metin = "Nefes egzersizine başla", onTikla = onNefesBaslat)
+
+        // OTOMATIK görevlerde buton YOK. Bu iki görev puanını zaten günlük
+        // özetten alıyor; "Tamamlandı olarak işaretle" hem aynı gün için
+        // ikinci kez puan yazıyor hem de kaydı "otomatik" olarak
+        // damgalayarak denetim izini bozuyordu (`debug.md` K-9).
+        when {
+            gorev.dogrulama == DogrulamaTuru.OTOMATIK -> OtomatikGorevNotu(gorev)
+            gorev == Gorev.NEFES ->
+                BirincilButon(metin = "Nefes egzersizine başla", onTikla = onNefesBaslat)
             // Puan başlangıçta değil, yürüyüş bitince veriliyor — o yüzden
             // buton "tamamla" değil "başlat".
-            Gorev.YURUYUS -> BirincilButon(metin = "Yürüyüşü başlat", onTikla = onYuruyusBaslat)
+            gorev == Gorev.YURUYUS ->
+                BirincilButon(metin = "Yürüyüşü başlat", onTikla = onYuruyusBaslat)
             else -> BirincilButon(metin = "Tamamlandı olarak işaretle", onTikla = onTamamla)
         }
+    }
+}
+
+/**
+ * Otomatik doğrulanan görevin durum notu — butonun yerine geçiyor.
+ *
+ * "Yapacak bir şey yok" demiyor; ne ölçüldüğünü ve puanın ne zaman
+ * yazılacağını söylüyor. Sessiz bir boşluk bırakmak, kullanıcının görevi
+ * kaydedemediğini sanmasına yol açardı.
+ */
+@Composable
+private fun OtomatikGorevNotu(gorev: Gorev) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Buton))
+            .background(color = Yesil50)
+            .padding(Olcu.Aralik),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AutoAwesome,
+            contentDescription = null,
+            tint = YesilKoyu,
+        )
+        Spacer(modifier = Modifier.width(Olcu.Aralik))
+        Text(
+            text = when (gorev) {
+                Gorev.TUKETIM_HEDEFI ->
+                    "Bu görevi işaretlemene gerek yok. Ekran süren gün " +
+                        "sonunda hedefinle karşılaştırılıyor; hedefine ne " +
+                        "kadar yaklaşırsan o kadar puan yazılıyor."
+
+                Gorev.GECE_TEMIZ ->
+                    "Bu görevi işaretlemene gerek yok. 00–06 arası kullanımın " +
+                        "gün sonunda ölçülüyor ve puanı kendiliğinden yazılıyor."
+
+                else -> "Bu görev kullanımından otomatik doğrulanıyor."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
     }
 }
 
@@ -704,13 +780,6 @@ private fun Gorev.detayAciklamasi(): String = when (this) {
     else -> aciklama
 }
 
-/** Süre çipi için dakika değeri — süresi olmayan görevlerde null (çip gösterilmez). */
-private fun Gorev.suresiDk(): Int? = when (this) {
-    Gorev.NEFES -> 2
-    Gorev.DIJITAL_MOLA -> 15
-    Gorev.YURUYUS -> 15
-    Gorev.RUH_HALI, Gorev.UYKU_BEYANI, Gorev.GECE_TEMIZ, Gorev.TUKETIM_HEDEFI -> null
-}
 
 private val AgacAlani: Dp = Olcu.AgacAlani
 private val AgacBoyu: Dp = Olcu.AgacBoyu

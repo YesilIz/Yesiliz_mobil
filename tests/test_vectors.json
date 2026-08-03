@@ -37,7 +37,8 @@
       "yer_degis": 0.4
     },
     "FAKTOR_ESIK_DUSUK": 0.33,
-    "FAKTOR_ESIK_ORTA": 0.66
+    "FAKTOR_ESIK_ORTA": 0.66,
+    "FAKTOR_ASGARI_DK": 15.0
   },
   "vektorler": {
     "dogrulama_profilleri": [
@@ -1620,8 +1621,8 @@
         }
       },
       {
-        "ad": "agir_kullanim_hareketsiz",
-        "aciklama": "Yüksek gece/oturum/sosyal, sıfır hareket → 4 faktör de YÜKSEK",
+        "ad": "agir_kullanim_hareket_olculmemis",
+        "aciklama": "Yüksek gece/oturum/sosyal ama adım/spor HİÇ yok → ilk üçü YÜKSEK, hareket BILINMIYOR. Veri yokluğu maksimum risk olarak sunulamaz (debug.md K-7).",
         "girdi": {
           "kategori_dakika": {
             "social": 180.0,
@@ -1653,8 +1654,48 @@
             },
             {
               "ad": "Fiziksel hareket",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            }
+          ]
+        }
+      },
+      {
+        "ad": "agir_kullanim_gercekten_hareketsiz",
+        "aciklama": "Aynı kullanım, ama az da olsa ÖLÇÜLMÜŞ hareket var → hareket faktörü artık YÜKSEK diyebilir.",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 180.0,
+            "entertainment": 20.0
+          },
+          "oruntu": {
+            "gece": 0.8,
+            "oturum": 0.9
+          },
+          "adim": 300.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
               "seviye": "YUKSEK",
-              "oran": 1.0
+              "oran": 0.8
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "YUKSEK",
+              "oran": 0.9
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "YUKSEK",
+              "oran": 0.985
             }
           ]
         }
@@ -1700,8 +1741,47 @@
         }
       },
       {
+        "ad": "cok_az_kullanim",
+        "aciklama": "Toplam yarım dakika ve tamamı gece penceresinde. Ham oran 1,0 ama ölçüm yetersiz: seviye iddia edilmiyor. Uygulamayı yeni kuran kullanıcının ilk gecesi.",
+        "girdi": {
+          "kategori_dakika": {
+            "social": 0.6
+          },
+          "oruntu": {
+            "gece": 1.0,
+            "oturum": 0.0
+          },
+          "adim": 0.0,
+          "spor_dk": 0.0
+        },
+        "beklenen": {
+          "faktorler": [
+            {
+              "ad": "Gece kullanımı",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Kesintisiz kullanım süresi",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Sosyal medya oranı",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            },
+            {
+              "ad": "Fiziksel hareket",
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
+            }
+          ]
+        }
+      },
+      {
         "ad": "sifir_ekran",
-        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0",
+        "aciklama": "Kullanım yok → sosyal oran 0/0 güvenli şekilde 0.0, hareket BILINMIYOR. Uygulamayı yeni kuran kullanıcının gördüğü durum.",
         "girdi": {
           "kategori_dakika": {},
           "oruntu": {},
@@ -1712,23 +1792,23 @@
           "faktorler": [
             {
               "ad": "Gece kullanımı",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
               "ad": "Kesintisiz kullanım süresi",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
               "ad": "Sosyal medya oranı",
-              "seviye": "DUSUK",
+              "seviye": "BILINMIYOR",
               "oran": 0.0
             },
             {
               "ad": "Fiziksel hareket",
-              "seviye": "YUKSEK",
-              "oran": 1.0
+              "seviye": "BILINMIYOR",
+              "oran": 0.0
             }
           ]
         }

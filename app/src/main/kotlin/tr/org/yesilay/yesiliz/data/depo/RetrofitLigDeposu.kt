@@ -88,6 +88,7 @@ class RetrofitLigDeposu @Inject constructor(
             )
         },
         katildiMi = katildiMi,
+        gorunuyorum = gorunuyorMuyum,
     )
 
     private fun bos() = LigOzeti(

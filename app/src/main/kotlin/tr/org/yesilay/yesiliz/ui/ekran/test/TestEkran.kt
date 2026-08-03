@@ -39,6 +39,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.Kart
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
+import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
@@ -288,9 +289,12 @@ private fun Sonuc(
 
         BirincilButon(metin = "Bitir", onTikla = onKapat)
         IkincilButon(metin = "Tekrar çöz", onTikla = onTekrar)
-        MetinBaglanti(
-            metin = "Bu bir tanı değildir",
-            onTikla = {},
+        // Sorumluluk reddi metni -- tıklanabilir DEĞİL (`debug.md` O-4).
+        Text(
+            text = "Bu bir tanı değildir",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinUcuncul,
+            textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
     }

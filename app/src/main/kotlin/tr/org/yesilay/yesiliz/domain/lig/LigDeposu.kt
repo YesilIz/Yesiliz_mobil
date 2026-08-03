@@ -42,6 +42,24 @@ data class LigOzeti(
     val siralama: List<LigSatiri>,
     /** Kullanıcı bir lige katıldı mı — false ise boş durum gösteriliyor. */
     val katildiMi: Boolean,
+    /**
+     * Kullanıcı başkalarının sıralamasında görünüyor mu.
+     *
+     * `false` iken ekran bunu **söylüyor**. Sessizce gizlenmek, tercihin
+     * çalışıp çalışmadığını belirsiz bırakırdı — zaten eski hâlinde tercih
+     * hiçbir şey yapmıyordu (`debug.md` Y-5).
+     */
+    val gorunuyorum: Boolean = true,
+    /**
+     * Bu veri sunucudan değil **yerel yedekten** geliyor.
+     *
+     * `Yedekli*Deposu` ağ hatasında sessizce sahte veriye düşüyordu ve
+     * ekranda bunu söyleyen hiçbir işaret yoktu; gerçek telefonda sunucuya
+     * hiç ulaşılamadığı için bu istisna değil varsayılan durumdu
+     * (`debug.md` O-14). Bilinçli bir tasarım kararı (CLAUDE.md §12 K18)
+     * ama görünmez olması değil.
+     */
+    val cevrimdisi: Boolean = false,
 )
 
 data class LigSatiri(

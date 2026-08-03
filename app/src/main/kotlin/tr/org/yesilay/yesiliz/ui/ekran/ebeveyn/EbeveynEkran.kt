@@ -28,9 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +42,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
@@ -85,21 +84,25 @@ fun EbeveynEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var yedamAcik by remember { mutableStateOf(false) }
-    val sayfaDurumu = rememberModalBottomSheetState()
+    var kaldirmaOnayi by remember { mutableStateOf(false) }
 
     YesilBaslikliEkran(baslik = "Ebeveyn paneli", onGeri = onGeri, modifier = modifier) {
         if (durum.eslesmisMi) {
-            EbeveynPaneli(durum = durum, onYedam = { yedamAcik = true })
+            EbeveynPaneli(
+                durum = durum,
+                onYedam = { yedamAcik = true },
+                onEslesmeyiKaldir = { kaldirmaOnayi = true },
+            )
         }
     }
 
     if (!durum.eslesmisMi) {
-        ModalBottomSheet(
-            onDismissRequest = {},
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        // Sihirbaz kapatılınca EKRANDAN çıkılıyor. Boş bir `onKapat` ile
+        // sayfa gizleniyor ama `!eslesmisMi` hâlâ true olduğu için
+        // bileşimde kalıyordu: ekran boşalıyor, görünmez perde dokunuşları
+        // ve geri tuşunu yutuyor, uygulamayı kapatıp açmak kurtarmıyordu.
+        // Yalnızca `force-stop` çıkarıyordu (`debug.md` K-1).
+        AltSayfa(onKapat = onGeri) {
             when (durum.adim) {
                 EslestirmeAdimi.ROL_SECIMI -> RolSecimiAdimi(
                     secilenRol = durum.secilenRol,
@@ -123,16 +126,68 @@ fun EbeveynEkran(
     }
 
     if (yedamAcik) {
-        ModalBottomSheet(
-            onDismissRequest = { yedamAcik = false },
-            sheetState = sayfaDurumu,
-            containerColor = Beyaz,
-            // Alt sayfa içeriği sistem gezinme çubuğunun üstünde bitsin —
-            // M3 varsayılanı kenardan kenara, son buton çubuğun altında kalıyor.
-            contentWindowInsets = { WindowInsets.navigationBars },
-        ) {
+        AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkinda(onKapat = { yedamAcik = false })
         }
+    }
+
+    if (kaldirmaOnayi) {
+        AltSayfa(onKapat = { kaldirmaOnayi = false }) {
+            EslesmeKaldirmaOnayi(
+                onOnayla = {
+                    viewModel.eslesmeyiKaldir()
+                    kaldirmaOnayi = false
+                },
+                onVazgec = { kaldirmaOnayi = false },
+            )
+        }
+    }
+}
+
+/**
+ * Eşleştirmeyi kaldırma onayı.
+ *
+ * Tek dokunuşla kaldırılmıyor: iki cihaz arasındaki bağı kesmek, ebeveynin
+ * bildirim almayı bırakması demek ve yanlışlıkla yapılırsa fark edilmesi
+ * güç. Ama yıkıcı bir silme de değil -- veri gitmiyor, o yüzden "SİL"
+ * yazdırma gibi ağır bir kapı yok.
+ */
+@Composable
+private fun EslesmeKaldirmaOnayi(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IkonRozeti(
+            ikon = Icons.Filled.Groups,
+            zemin = YesilNane,
+            renk = YesilKoyu,
+            olcu = Olcu.AvatarBuyuk,
+            sekil = CircleShape,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.M))
+        Text(
+            text = "Eşleştirmeyi kaldır?",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "İki cihaz arasındaki bağ kesilir ve bu panelde özet " +
+                "görünmez. Kimsenin verisi silinmez; istediğin zaman yeni " +
+                "bir kodla tekrar eşleştirebilirsin.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Eşleştirmeyi kaldır", onTikla = onOnayla)
+        MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
@@ -333,7 +388,11 @@ private fun SihirbazIskeleti(icerik: @Composable androidx.compose.foundation.lay
 
 /** Ekran 13 — gerçek eşleşme sonrası panel. Ham veri değil özet (`docs/spec-veri.md`). */
 @Composable
-private fun EbeveynPaneli(durum: EbeveynDurum, onYedam: () -> Unit) {
+private fun EbeveynPaneli(
+    durum: EbeveynDurum,
+    onYedam: () -> Unit,
+    onEslesmeyiKaldir: () -> Unit,
+) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -429,6 +488,12 @@ private fun EbeveynPaneli(durum: EbeveynDurum, onYedam: () -> Unit) {
 
             Spacer(modifier = Modifier.height(Olcu.Aralik))
             MetinBaglanti(metin = "YEDAM hakkında", onTikla = onYedam)
+            // Eşleştirmeyi kaldırma. `EbeveynViewModel.eslesmeyiKaldir()`
+            // yazılmıştı ama hiçbir ekrandan çağrılmıyordu; Yardım
+            // ekranındaki dört sorudan biri tam olarak "Ebeveyn paneli
+            // eşleştirmesini nasıl kaldırırım?" diye soruyordu
+            // (`debug.md` Y-4).
+            MetinBaglanti(metin = "Eşleştirmeyi kaldır", onTikla = onEslesmeyiKaldir)
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
         }
     }

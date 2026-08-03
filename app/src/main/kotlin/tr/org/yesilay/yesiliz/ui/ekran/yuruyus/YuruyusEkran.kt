@@ -26,12 +26,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.ui.EkranAcikTut
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.arkaplan.YuruyusServisi
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
@@ -58,9 +60,24 @@ fun YuruyusEkran(
     viewModel: YuruyusViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
+    val baglam = LocalContext.current
 
-    // Sayaç yalnızca ekran açıkken ilerliyor; ekran kapanırsa duruyor.
-    EkranAcikTut(aktif = durum.calisiyorMu)
+    // `EkranAcikTut` KALDIRILDI: sayaç artık foreground service'te ve ekran
+    // kapalıyken de ilerliyor (`debug.md` İ-3). Ekranı 15 dakika açık
+    // tutmak hem pil yakıyor hem de uygulamanın kendi mesajıyla
+    // ("ekrandan uzaklaş") çelişiyordu.
+
+    val onBaslatDuraklat = {
+        if (durum.calisiyorMu) {
+            YuruyusServisi.komut(baglam, YuruyusServisi.EYLEM_DURAKLAT)
+        } else {
+            YuruyusServisi.baslat(baglam)
+        }
+    }
+    val onBastanBaslat = {
+        YuruyusServisi.durdur(baglam)
+        viewModel.sifirla()
+    }
 
     Column(
         modifier = modifier
@@ -152,8 +169,8 @@ fun YuruyusEkran(
             BirincilButon(metin = "Bitir", onTikla = onKapat)
         } else {
             Text(
-                text = "Sayaç ekran açıkken ilerliyor. Telefonu cebine koyarsan " +
-                    "duruyor — bu ekranı açık tutabilirsin.",
+                text = "Sayaç arka planda da ilerliyor. Telefonu cebine koyup " +
+                    "yürüyebilirsin; süre dolunca bildirim göndereceğiz.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MetinUcuncul,
                 textAlign = TextAlign.Center,
@@ -165,7 +182,7 @@ fun YuruyusEkran(
                 horizontalArrangement = Arrangement.spacedBy(Bosluk.M, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = viewModel::bastanBaslat) {
+                IconButton(onClick = onBastanBaslat) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
                         contentDescription = "Baştan başla",
@@ -174,7 +191,7 @@ fun YuruyusEkran(
                 }
                 BirincilButon(
                     metin = if (durum.calisiyorMu) "Duraklat" else "Başlat",
-                    onTikla = viewModel::baslatDuraklat,
+                    onTikla = onBaslatDuraklat,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(

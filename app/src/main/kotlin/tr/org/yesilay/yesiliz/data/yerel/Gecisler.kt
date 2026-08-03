@@ -62,5 +62,44 @@ val GECIS_1_2 = object : Migration(1, 2) {
     }
 }
 
+/**
+ * Sürüm 2 → 3 (31 Tem 2026).
+ *
+ * `gunluk_ozet.olayVarMi` eklendi — "satır var" ile "veri var" ayrımı
+ * (`debug.md` K-4, K-5).
+ *
+ * Varsayılan `0` (veri yok) ve ardından geriye dönük düzeltme: ölçülmüş
+ * kullanımı olan satırlar `1`'e çekiliyor. `acilisSayisi > 0` ölçüt olarak
+ * kategori dakikalarından daha güvenilir — `sistem` kategorisi risk
+ * hesabına girmediği için (CLAUDE.md §12 K9) gerçekten kullanılmış bir
+ * günün kategori toplamı sıfır olabiliyor, ama açılış sayılıyor.
+ */
+val GECIS_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `gunluk_ozet` ADD COLUMN `olayVarMi` INTEGER NOT NULL DEFAULT 0",
+        )
+        db.execSQL(
+            "UPDATE `gunluk_ozet` SET `olayVarMi` = 1 WHERE `acilisSayisi` > 0",
+        )
+    }
+}
+
+/**
+ * Sürüm 3 → 4 (3 Ağu 2026).
+ *
+ * `adim_sayac` eklendi — donanım adım sayacının günlük birikimi
+ * (`debug.md` K-0). Var olan hiçbir tablo değişmedi, veri taşıma adımı yok.
+ */
+val GECIS_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `adim_sayac` " +
+                "(`tarih` TEXT NOT NULL, `toplam` INTEGER NOT NULL, " +
+                "`sonSayac` INTEGER NOT NULL, PRIMARY KEY(`tarih`))",
+        )
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
-val TUM_GECISLER = arrayOf(GECIS_1_2)
+val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4)
