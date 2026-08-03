@@ -12,7 +12,8 @@ import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
-import tr.org.yesilay.yesiliz.data.saglik.SaglikOkuyucu
+import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
+import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.widget.widgetlariTazele
@@ -48,7 +49,8 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val kullanimDeposu: KullanimDeposu,
     private val riskDeposu: RiskDeposu,
     private val puanDeposu: PuanDeposu,
-    private val saglikOkuyucu: SaglikOkuyucu,
+    private val aktiviteSaglayici: AktiviteSaglayici,
+    private val adimDeposu: AdimDeposu,
     private val ozetDao: GunlukOzetDao,
     private val olayDao: KullanimOlayDao,
     private val bildirimDeposu: BildirimDeposu,
@@ -75,6 +77,11 @@ class GunlukOzetWorker @AssistedInject constructor(
         // BOŞLUKLARI kapatmak (`debug.md` K-4).
         val kurulum = tercihler.anlik().ilkKurulumTarihi
 
+        // Donanım sayacı özet hesaplanmadan HEMEN ÖNCE örnekleniyor. Sensör
+        // yalnızca açılıştan beri biriken kümülatif sayıyı veriyor; son örnek
+        // ile gece yarısı arasındaki adımlar örneklenmezse kaybolur.
+        adimDeposu.ornekle()
+
         return runCatching {
             (TELAFI_GUN downTo 0).forEach { geriGun ->
                 val gun = bugun.minusDays(geriGun)
@@ -82,7 +89,7 @@ class GunlukOzetWorker @AssistedInject constructor(
                 // Bugün hep yeniden; geçmiş günler yalnızca eksikse.
                 if (gun != bugun && gun in islenmis) return@forEach
 
-                kullanimDeposu.gunuIsle(gun, saglikOkuyucu.gununAktivitesi(gun))
+                kullanimDeposu.gunuIsle(gun, aktiviteSaglayici.gununAktivitesi(gun))
                 riskDeposu.gunuHesapla(gun)
                 // Adım/spor/gece değerleri değişti; günün puanı da değişir.
                 puanDeposu.gunuYenidenHesapla(gun)
@@ -95,6 +102,7 @@ class GunlukOzetWorker @AssistedInject constructor(
             // Ham olaylar sonsuza kadar tutulmuyor (veri minimizasyonu,
             // CLAUDE.md §4). Özet zaten çıkarıldı.
             olayDao.eskileriSil(bugun.minusDays(HAM_OLAY_SAKLAMA_GUN))
+            adimDeposu.eskileriSil(bugun.minusDays(HAM_OLAY_SAKLAMA_GUN))
 
             // Bildirim defteri de sınırsız büyümüyor.
             bildirimDeposu.eskileriTemizle()

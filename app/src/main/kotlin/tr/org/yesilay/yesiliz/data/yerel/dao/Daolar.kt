@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -332,4 +333,17 @@ interface ArkadasDao {
 
     @Query("DELETE FROM arkadas WHERE isim = :isim")
     suspend fun sil(isim: String)
+}
+
+@Dao
+interface AdimSayacDao {
+    @Upsert
+    suspend fun kaydet(kayit: AdimSayacEntity)
+
+    @Query("SELECT * FROM adim_sayac WHERE tarih = :tarih")
+    suspend fun gunun(tarih: LocalDate): AdimSayacEntity?
+
+    /** Sayaç birikimi geçmişe dönük anlam taşımıyor; eskiler temizlenir. */
+    @Query("DELETE FROM adim_sayac WHERE tarih < :tarih")
+    suspend fun eskileriSil(tarih: LocalDate): Int
 }

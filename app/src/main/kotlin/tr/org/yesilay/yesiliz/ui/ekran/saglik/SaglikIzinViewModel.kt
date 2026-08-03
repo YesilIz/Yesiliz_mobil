@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.data.saglik.AdimSayacOkuyucu
 import tr.org.yesilay.yesiliz.data.saglik.SaglikDurumu
 import tr.org.yesilay.yesiliz.data.saglik.SaglikOkuyucu
 import javax.inject.Inject
@@ -19,9 +20,20 @@ data class SaglikIzinDurum(
     val izinVarMi: Boolean = false,
     val arkaPlanIzniVarMi: Boolean = false,
     val istenenIzinler: Set<String> = emptySet(),
+    val sayacCihazdaVarMi: Boolean = false,
+    val sayacIzniVarMi: Boolean = false,
     val yukleniyor: Boolean = true,
 ) {
     val kullanilabilir: Boolean get() = saglikDurumu == SaglikDurumu.HAZIR
+
+    /**
+     * Donanım sayacı var ama izni yok.
+     *
+     * Health Connect'ten bağımsız bir eksiklik: Health Connect hiç kurulu
+     * olmasa bile bu izin verilirse adım sayılıyor. O yüzden ekranda ayrı
+     * bir satır olarak duruyor, Health Connect dallarının içine gömülmüyor.
+     */
+    val sayacIzniEksik: Boolean get() = sayacCihazdaVarMi && !sayacIzniVarMi
 
     /**
      * Okuma izni var ama arka plan izni yok — adım verisi yalnızca uygulama
@@ -34,6 +46,7 @@ data class SaglikIzinDurum(
 @HiltViewModel
 class SaglikIzinViewModel @Inject constructor(
     private val okuyucu: SaglikOkuyucu,
+    private val sayacOkuyucu: AdimSayacOkuyucu,
 ) : ViewModel() {
 
     private val _durum = MutableStateFlow(SaglikIzinDurum())
@@ -57,6 +70,8 @@ class SaglikIzinViewModel @Inject constructor(
                 izinVarMi = okuyucu.izinVarMi(),
                 arkaPlanIzniVarMi = okuyucu.arkaPlanIzniVarMi(),
                 istenenIzinler = okuyucu.istenenIzinler(),
+                sayacCihazdaVarMi = sayacOkuyucu.cihazDestekliyor(),
+                sayacIzniVarMi = sayacOkuyucu.izinVarMi(),
                 yukleniyor = false,
             )
         }

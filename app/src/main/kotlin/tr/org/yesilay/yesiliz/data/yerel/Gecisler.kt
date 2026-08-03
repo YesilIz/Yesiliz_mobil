@@ -85,5 +85,21 @@ val GECIS_2_3 = object : Migration(2, 3) {
     }
 }
 
+/**
+ * Sürüm 3 → 4 (3 Ağu 2026).
+ *
+ * `adim_sayac` eklendi — donanım adım sayacının günlük birikimi
+ * (`debug.md` K-0). Var olan hiçbir tablo değişmedi, veri taşıma adımı yok.
+ */
+val GECIS_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `adim_sayac` " +
+                "(`tarih` TEXT NOT NULL, `toplam` INTEGER NOT NULL, " +
+                "`sonSayac` INTEGER NOT NULL, PRIMARY KEY(`tarih`))",
+        )
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
-val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3)
+val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4)

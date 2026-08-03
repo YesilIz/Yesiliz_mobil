@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
+import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.ArkadasDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.BildirimDao
@@ -91,6 +92,9 @@ object VeriModulu {
 
     @Provides
     fun farkindalikTestiDao(db: YesilizDb): FarkindalikTestiDao = db.farkindalikTestiDao()
+
+    @Provides
+    fun adimSayacDao(db: YesilizDb): AdimSayacDao = db.adimSayacDao()
 
     @Provides
     fun bildirimDao(db: YesilizDb): BildirimDao = db.bildirimDao()

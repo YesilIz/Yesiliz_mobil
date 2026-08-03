@@ -22,7 +22,8 @@ import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.YuruyusOturumDeposu
-import tr.org.yesilay.yesiliz.data.saglik.SaglikOkuyucu
+import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
+import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusHesapla
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
@@ -67,7 +68,9 @@ class YuruyusServisi : Service() {
 
     @Inject lateinit var bildirimDeposu: BildirimDeposu
 
-    @Inject lateinit var saglikOkuyucu: SaglikOkuyucu
+    @Inject lateinit var aktiviteSaglayici: AktiviteSaglayici
+
+    @Inject lateinit var adimDeposu: AdimDeposu
 
     @Inject lateinit var saat: Clock
 
@@ -148,10 +151,18 @@ class YuruyusServisi : Service() {
         return (simdiki - bas).coerceAtLeast(0)
     }
 
-    /** Health Connect yoksa ya da izin verilmediyse `null` — ekran adımı gizler. */
+    /**
+     * Günün toplam adımı; hiçbir kaynak veremiyorsa `null` — ekran adımı gizler.
+     *
+     * Her tikte önce donanım sayacı örnekleniyor: [AktiviteSaglayici] Room'da
+     * biriktirilmiş değeri okuyor, örneklenmezse yürüyüş boyunca aynı sayı
+     * kalırdı. Health Connect verisi varsa zaten o kazanıyor ve örnekleme
+     * boşa gitmiyor — sonraki günlerin birikimi yine de ilerliyor.
+     */
     private suspend fun adimOku(): Int? {
-        if (!saglikOkuyucu.kullanilabilir() || !saglikOkuyucu.izinVarMi()) return null
-        return saglikOkuyucu.gununAktivitesi(LocalDate.now(saat)).adim.roundToInt()
+        adimDeposu.ornekle()
+        val adim = aktiviteSaglayici.gununAktivitesi(LocalDate.now(saat)).adim
+        return if (adim > 0.0) adim.roundToInt() else null
     }
 
     private fun bildirimiTazele() {

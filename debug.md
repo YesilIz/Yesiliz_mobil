@@ -111,8 +111,35 @@ kayitHata=null toplamHata=null
 **Ayrıca bulundu — kod değil ortam.** Bu telefonda Health Connect **boş**:
 "Health Connect'te hiç veriniz yok". Samsung Health kurulu değil (yalnızca
 `GRT_SHealthStub` stub'ı var), Google Fit kurulu ama Health Connect'e bağlı
-değil. Health Connect bir **depo**, adım saymıyor. Yani düzeltmeden sonra da
-okuma `0` dönüyor — okunacak veri yok. Kalıcı çözüm §4'te.
+değil. Health Connect bir **depo**, adım saymıyor. Yani yukarıdaki düzeltmeden
+sonra da okuma `0` dönüyordu — okunacak veri yoktu.
+
+**Çözüm: donanım adım sayacı yedeği** (§12 K27). `Sensor.TYPE_STEP_COUNTER`
+telefonun kendi çipinde; üçüncü parti hiçbir uygulamaya bağlı değil.
+Health Connect'in yerine değil **yedeğine** kondu — orada veri varsa o
+kazanıyor, çünkü saatten/bileklikten gelen veri telefonun cebe girip
+girmediğinden bağımsız. Toplama yok: ikisi aynı ayakları ölçüyor.
+
+Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada
+sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor
+(`GECIS_3_4`, şema sürümü 4). Örnekleme üç yerde: uygulamanın her açılışı,
+gecelik özet öncesi, yürüyüş sayacının her tiki. Hesabın kendisi saf —
+`AdimBirikim.kt`, **6 birim testi** (yeniden başlatma tuzağı dahil).
+
+`ACTIVITY_RECOGNITION` Android 10'dan beri çalışma zamanı izni; manifest'te
+bildirilmişti ama **hiç istenmiyordu**. İzin ekranı artık ayrı bir kartla
+istiyor.
+
+**Zincirin tamamı cihazda koştu.** Sensör `1789` okudu, önceki örnek `1000`
+idi, birikim `250 → 1039` oldu ve özet tablosuna girdi:
+
+```
+adim_sayac:  2026-08-03 | toplam=1039 | sonSayac=1789
+gunluk_ozet: 2026-08-03 | adim=1039,0 | A=0,05195 | D=0,99221
+```
+
+`D < 1` — **aktivite sönümlemesi gerçek cihazda ilk kez uygulandı**
+(`docs/spec-risk.md`; CLAUDE.md §10 bu dalın hiç test edilemediğini yazıyordu).
 
 ---
 
@@ -258,7 +285,7 @@ Kusur değil; kapsam ya da altyapı.
 |---|---|
 | **Backend dağıtımı** | Sunucu adresi çalışma zamanında okunuyor (CLAUDE.md §12 K24) ve gerçek cihaz USB üzerinden `adb reverse` ile yerel sunucuya bağlanıyor. **Kalıcı dağıtım + HTTPS alan adı hâlâ yok.** Release `ag_guvenligi.xml` şifresiz trafiği yalnızca `10.0.2.2` için açıyor; debug kaynak seti kendi gevşek yapılandırmasını getiriyor ve yayınlanan APK'ya giremiyor |
 | **Uzman/Yeşilay paneli** | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
-| **Adım verisinin kaynağı** | K-0'ın ortam tarafı. Health Connect adım **saymıyor**, saklıyor; yazan bir uygulama (Samsung Health / Google Fit) yoksa okuma sonsuza kadar `0` döner. Test telefonunda ikisi de bağlı değil. Üç seçenek: (a) demo öncesi Samsung Health kurulup Health Connect'e bağlanır — kod değişmez ama her kullanıcıdan aynısı beklenir; (b) `Sensor.TYPE_STEP_COUNTER` yedeği yazılır — `ACTIVITY_RECOGNITION` izni zaten bildirilmiş, cihazda donanım sayacı var (`dumpsys sensorservice` doğruladı), üçüncü parti uygulama gerekmez; (c) adım tamamen bırakılıp sönümleme yalnızca egzersize bağlanır. **Karar verilmedi** |
+| **Egzersiz süresi hâlâ tek kaynaklı** | K-0'ın adım tarafı donanım sayacı yedeğiyle kapandı (§12 K27), ama `sporDk` yalnızca Health Connect'ten geliyor. Donanım sayacında egzersiz oturumu diye bir kavram yok ve adımdan egzersiz uydurmak ölçüm değil tahmin olurdu. Health Connect'e yazan bir uygulama yoksa `sporDk = 0` kalmaya devam ediyor — bilinçli |
 | **`FAKTOR_ASGARI_DK = 15`** | Y-3'ün eşiği geçici. A3 kalibrasyonuyla birlikte gözden geçirilecek |
 | **Ebeveyn onayının doğrulanabilirliği** | Beyan usulü; uygulama onayı doğrulayamıyor ve bunu ekranda söylüyor. Gerçek doğrulama §12 A5'e bağlı |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |

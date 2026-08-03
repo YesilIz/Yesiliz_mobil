@@ -271,3 +271,27 @@ data class ArkadasEntity(
         const val DURUM_EKLENDI = "eklendi"
     }
 }
+
+/**
+ * Donanım adım sayacının günlük birikimi (`debug.md` K-0 ortam tarafı).
+ *
+ * Health Connect bir **depo**; adım saymıyor, saklıyor. Yazan bir uygulama
+ * (Samsung Health, Google Fit) yoksa okuma sonsuza kadar sıfır dönüyor —
+ * test telefonunda tam olarak bu oldu. `Sensor.TYPE_STEP_COUNTER` üçüncü
+ * parti hiçbir şeye bağlı değil, ama gün başına adım da vermiyor: açılıştan
+ * beri biriken tek bir sayı veriyor. Bu tablo o sayının **farkını** güne
+ * yazıyor; hesabın kendisi saf ve test edilebilir ([AdimDurumu]).
+ *
+ * Ham konum ya da hareket izi tutulmuyor — yalnızca iki tam sayı
+ * (CLAUDE.md §4).
+ */
+@Entity(tableName = "adim_sayac")
+data class AdimSayacEntity(
+    @PrimaryKey val tarih: LocalDate,
+
+    /** O gün biriktirilen adım. */
+    val toplam: Long = 0,
+
+    /** Sayacın son örnekteki ham değeri — bir sonraki farkın tabanı. */
+    val sonSayac: Long = 0,
+)

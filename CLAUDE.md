@@ -27,10 +27,10 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 252)
+# testler  (toplam 260)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
-./gradlew :app:testDebugUnitTest       # 147 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 30 · GERÇEK CİHAZ ya da emülatör
+./gradlew :app:testDebugUnitTest       # 153 · saf JVM
+./gradlew :app:connectedDebugAndroidTest   # 32 · GERÇEK CİHAZ ya da emülatör
 ./gradlew :app:installDebug            # cihaza kur
 
 # backend  (53 pytest)
@@ -203,7 +203,7 @@ app/…/yesiliz/
 ├─ di/                    Hilt — VeriModulu · AgModulu · DepoModulu
 ├─ data/
 │  ├─ kullanim/           UsageStatsManager sarmalayıcı
-│  ├─ saglik/             Health Connect
+│  ├─ saglik/             Health Connect + donanım adım sayacı (K27)
 │  ├─ yerel/              Room: entity/ dao/ YesilizDb.kt Donusturucu.kt Gecisler.kt
 │  ├─ uzak/               Retrofit — YesilizApi · Dto · JetonDeposu
 │  ├─ tercih/             DataStore
@@ -318,8 +318,9 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 12 entity · 12 DAO, şema sürümü 3.** `GECIS_1_2` (`Gecisler.kt`)
-`bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_2_3` `gunluk_ozet`'e
+**Şu an 13 entity · 13 DAO, şema sürümü 4.** `GECIS_1_2` (`Gecisler.kt`)
+`bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
+tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
 `olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
 geriye dönük dolduruyor (§9 "satır var ≠ veri var").
 
@@ -472,6 +473,12 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 > tamamı ilk kez gerçek veriyle koştu — `gunluk_ozet` doldu, `risk_sonuc`
 > gerçek skor üretti (`S=10,88 · rS=81,97 · R=41,47`). Emülatörde görünmeyen
 > kusurlar da ilk kez buradan çıktı: `debug.md`.
+>
+> **Aktivite kolu da koştu (3 Ağu 2026):** aynı cihazda `gunluk_ozet.adim`
+> ilk kez doldu (`1039` → `A=0,05195` → `D=0,99221`). O güne kadar `D` hep
+> `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç ölçülememişti — sebebi
+> iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in bu
+> cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
 
 ---
 
@@ -486,7 +493,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
-| `app/data/yerel/` | 12 entity · 12 DAO · `YesilizDb` (sürüm 2) · `Gecisler.kt` — destructive fallback **yok** | **8 + 1 emülatör testi** (`GecisTest` gerçek 1→2 geçişini koşuyor) |
+| `app/data/yerel/` | 13 entity · 13 DAO · `YesilizDb` (sürüm 4) · `Gecisler.kt` — destructive fallback **yok** | **8 + 7 cihaz testi** (`GecisTest` 1→2, 2→3, 3→4 geçişlerini gerçek cihazda koşuyor) |
 | `app/data/kullanim/` | `OturumCikar` (saf) · `KullanimOkuyucu` · `KullanimIzni` | **13 birim + 7 emülatör testi** |
 | `app/data/depo/` | `KategoriDeposu` · `KullanimDeposu` (sistem → kategori → Room → özet) | seed + override korunuyor |
 | Dokümantasyon | `DB.md` · `docs/stitch-ekranlar.md` · spike raporu | üreticileri var |
@@ -499,7 +506,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
-| `app/data/saglik/` | Health Connect — adım + egzersiz; yoksa `D = 1.0` | HC'siz cihazda sessiz |
+| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; gerçek cihazda `gunluk_ozet.adim = 1039` → `D = 0,992` |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
@@ -522,7 +529,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
 
-**Toplam 252 test** (147 Android birim + 30 cihaz/emülatör + 22 core-risk + 53 backend
+**Toplam 260 test** (153 Android birim + 32 cihaz/emülatör + 22 core-risk + 53 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
@@ -610,6 +617,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K24 | Sunucu adresi **çalışma zamanında** okunuyor | `10.0.2.2` yalnızca emülatörde anlamlı; gerçek cihazda her çağrı zaman aşımına uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve bu istisna değil **varsayılan** durumdu. Adres `Tercihler.sunucuTabani`'nden geliyor, Profil › Geliştirici'den değişiyor. Yerele düşüldüğü ekranda **söyleniyor** — K18 hâlâ geçerli ama artık görünür (`debug.md` O-14) |
 | K25 | Eşleştirme **çevrimdışı yedeğe düşmüyor** (K18 istisnası) | `EbeveynDeposu.eslestir` ağ hatasında eşleşmeyi yerel olarak kaydedip başarı dönüyordu; gerçek telefonda sunucuya hiç ulaşılamadığı için bu **tek** davranıştı ve rastgele herhangi bir 6 haneli sayı ebeveyn panelini açıyordu. Çocuğun ekran verisine erişim veren bir akış, yanlış şifreyle giriş yaptırmakla aynı sınıfta (`debug.md` K-8) |
 | K26 | 18 yaş altı **beyan usulü ebeveyn onayı** | Varsayılan yaş 17'ydi: varsayılan kullanıcı 18 altıydı ve hiçbir şey sorulmuyordu. Varsayılan 18 oldu; yaş < 18 ise onay ekranı geliyor ve onaylanmadan devam edilemiyor. Bunun **doğrulanabilir olmadığı** ekranda yazılı; gerçek doğrulama ebeveyn panelinin işi ve A5 hâlâ açık. Özellik kısıtı yok (`debug.md` Y-11) |
+| K27 | Adım verisi **iki kaynaklı**: Health Connect + donanım sayacı | Health Connect adım **saymıyor**, saklıyor. Yazan bir uygulama yoksa okuma sonsuza kadar sıfır dönüyor — test telefonunda tam olarak bu oldu ("Health Connect'te hiç veriniz yok"; Samsung Health kurulu değil, Google Fit bağlı değil). Yani düzgün çalışan bir entegrasyon, kullanıcının **başka bir uygulama kurmasına** bağlıydı. `Sensor.TYPE_STEP_COUNTER` hiçbir şeye bağlı değil. `AktiviteSaglayici` ikisini birleştiriyor: **Health Connect önce** (saatten/bileklikten gelen veri telefonun cebe girmesinden bağımsız), sıfırsa sensör. **Toplama yok** — ikisi aynı ayakları ölçüyor, şişirilen her adım riski haksız yere aşağı çeker. Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor; hesap saf (`AdimBirikim.kt`, 6 test). Egzersiz süresi yalnızca Health Connect'ten — adımdan egzersiz uydurmak ölçüm değil tahmin olurdu (`debug.md` K-0) |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
 
 ### Açık

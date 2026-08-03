@@ -15,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
@@ -34,11 +35,14 @@ import javax.inject.Inject
  * hesaplaması ([GecmisVeriDeposu]) ve nudge servisinin açık/kapalı durumu.
  * İkisi de izin sistem Ayarları'ndan verildiği için buraya geri dönüşün
  * kendisi tek geri bildirim kaynağı (`manifest`'te `singleTop` bu yüzden).
+ * Aynı yerde donanım adım sayacı da örnekleniyor ([AdimDeposu]).
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var gecmisVeriDeposu: GecmisVeriDeposu
+
+    @Inject lateinit var adimDeposu: AdimDeposu
 
     @Inject lateinit var tercihler: Tercihler
 
@@ -67,7 +71,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch { gecmisVeriDeposu.hesaplaGerekirse() }
+        lifecycleScope.launch {
+            gecmisVeriDeposu.hesaplaGerekirse()
+            // Donanım adım sayacı yalnızca açılıştan beri biriken kümülatif
+            // sayıyı veriyor; güne düşen payı çıkarmak için örneklemek şart
+            // ve iki örnek arasında kalan adımlar kayboluyor. Uygulamanın
+            // her açılışı bedava bir örnekleme noktası.
+            adimDeposu.ornekle()
+        }
     }
 
     /**

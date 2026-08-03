@@ -1,14 +1,14 @@
 # DB.md — Yeşilİz Veritabanı
 
 > **ÜRETİLEN DOSYA — elle düzenleme.**
-> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/3.json`
+> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/4.json`
 > Yeniden üretmek için:
 > ```bash
 > ./gradlew :app:assembleDebug      # Room şemayı yeniden yazar
 > python3 tools/db_dokuman_uret.py  # bu dosyayı günceller
 > ```
 
-**Şema sürümü:** 3 · **Tablo sayısı:** 12 · **Güncelleme:** 2026-08-01
+**Şema sürümü:** 4 · **Tablo sayısı:** 13 · **Güncelleme:** 2026-08-03
 
 ---
 
@@ -27,6 +27,7 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 
 | Tablo | Kolon | Birincil anahtar | İndeks | Amaç |
 |---|---|---|---|---|
+| `adim_sayac` | 3 | `tarih` | 0 |  |
 | `anket_yanit` | 14 | `id` | 0 | SAS-SV yanıtları. Ham puan saklanır, bant değil (spec-anket.md §6.4). |
 | `arkadas` | 3 | `isim` | 0 |  |
 | `bildirim` | 6 | `id` | 1 |  |
@@ -43,6 +44,15 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 ---
 
 ## 2. Kolon dökümü
+
+### `adim_sayac`
+
+| Kolon | SQLite | Null? | PK | Not |
+|---|---|---|---|---|
+| `tarih` | TEXT | hayır | ✔ | ISO tarih metni (`2026-07-28`) — hedef motorda `DATE` yapılabilir |
+| `toplam` | INTEGER | hayır |  |  |
+| `sonSayac` | INTEGER | hayır |  |  |
+
 
 ### `anket_yanit`
 
@@ -229,6 +239,7 @@ Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı.
 Bu bölüm Room tarafından üretildi, elle yazılmadı.
 
 ```sql
+CREATE TABLE IF NOT EXISTS `adim_sayac` (`tarih` TEXT NOT NULL, `toplam` INTEGER NOT NULL, `sonSayac` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `anket_yanit` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `madde1` INTEGER NOT NULL, `madde2` INTEGER NOT NULL, `madde3` INTEGER NOT NULL, `madde4` INTEGER NOT NULL, `madde5` INTEGER NOT NULL, `madde6` INTEGER NOT NULL, `madde7` INTEGER NOT NULL, `madde8` INTEGER NOT NULL, `madde9` INTEGER NOT NULL, `madde10` INTEGER NOT NULL, `hamPuan` REAL NOT NULL, `rS` REAL NOT NULL)
 CREATE TABLE IF NOT EXISTS `arkadas` (`isim` TEXT NOT NULL, `durum` TEXT NOT NULL, `eklenmeTarihi` TEXT NOT NULL, PRIMARY KEY(`isim`))
 CREATE TABLE IF NOT EXISTS `bildirim` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tur` TEXT NOT NULL, `baslik` TEXT NOT NULL, `govde` TEXT NOT NULL, `zaman` INTEGER NOT NULL, `okundu` INTEGER NOT NULL)
@@ -302,6 +313,13 @@ Aralığı Kotlin tarafından bilinen kolonlar üreticide elle daraltıldı
 CLAUDE.md §5'teki backend hedefi. Faz 2'de bu şema kullanılacak.
 
 ```sql
+CREATE TABLE "adim_sayac" (
+  "tarih" TEXT NOT NULL,
+  "toplam" BIGINT NOT NULL,
+  "sonSayac" BIGINT NOT NULL,
+  PRIMARY KEY ("tarih")
+);
+
 CREATE TABLE "anket_yanit" (
   "id" BIGSERIAL NOT NULL,
   "tarih" TEXT NOT NULL,
@@ -449,6 +467,13 @@ CREATE TABLE "uyku_beyani" (
 Taşıma ihtimaline karşı. Türkçe karakterler için `NVARCHAR` kullanıldı.
 
 ```sql
+CREATE TABLE [adim_sayac] (
+  [tarih] NVARCHAR(450) NOT NULL,
+  [toplam] BIGINT NOT NULL,
+  [sonSayac] BIGINT NOT NULL,
+  PRIMARY KEY ([tarih])
+);
+
 CREATE TABLE [anket_yanit] (
   [id] BIGINT IDENTITY(1,1) NOT NULL,
   [tarih] NVARCHAR(MAX) NOT NULL,

@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.ArkadasDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.BildirimDao
@@ -17,6 +18,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.UykuBeyaniDao
+import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -39,6 +41,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  *
  * **Sürüm 2** (30 Tem 2026): ruh_hali · uyku_beyani · farkindalik_testi ·
  * bildirim · arkadas tabloları eklendi.
+ *
+ * **Sürüm 4** (3 Ağu 2026): adim_sayac — donanım adım sayacının günlük
+ * birikimi (`debug.md` K-0). Sürüm 3 `gunluk_ozet.olayVarMi` kolonuydu.
  */
 @Database(
     entities = [
@@ -54,8 +59,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         FarkindalikTestiEntity::class,
         BildirimEntity::class,
         ArkadasEntity::class,
+        AdimSayacEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)
@@ -73,6 +79,7 @@ abstract class YesilizDb : RoomDatabase() {
     abstract fun farkindalikTestiDao(): FarkindalikTestiDao
     abstract fun bildirimDao(): BildirimDao
     abstract fun arkadasDao(): ArkadasDao
+    abstract fun adimSayacDao(): AdimSayacDao
 
     companion object {
         private const val AD = "yesiliz.db"
