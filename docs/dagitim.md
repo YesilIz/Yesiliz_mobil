@@ -176,6 +176,40 @@ değer öne geçiyor — o ekran yalnızca debug'da görünüyor.
 - `.github/workflows/android-ag-guvenligi.yml` ikisinin de geri
   alınmadığını her PR'da denetliyor.
 
+### İmzalama
+
+**İmzasız APK telefona kurulamıyor.** Debug'da Android Studio her makinede
+kendi anahtarını üretiyor; release'de üretmiyor. `signingConfigs` bloğu
+olmadan çıktı `app-release-unsigned.apk` oluyor ve gerçek cihaz
+doğrulaması hiç yapılamıyor.
+
+Keystore ve parolalar **depoda değil** — `*.jks` gitignore'da, değerler
+`local.properties`ten (ya da ortam değişkeninden) okunuyor:
+
+| `local.properties` anahtarı | Ortam değişkeni |
+|---|---|
+| `yesiliz.imza.deposu` | `YESILIZ_IMZA_DEPOSU` |
+| `yesiliz.imza.parolasi` | `YESILIZ_IMZA_PAROLASI` |
+| `yesiliz.imza.takmaAdi` | `YESILIZ_IMZA_TAKMA_ADI` |
+
+Yol **depo köküne** göre çözülüyor (`app/yesiliz-release.jks`).
+Üçünden biri eksikse derleme düşmüyor — imzasız APK üretip **uyarı**
+basıyor, çünkü keystore'u olmayan ekip üyesi de derleyebilmeli.
+
+Yeni keystore üretmek gerekirse:
+
+```bash
+keytool -genkeypair -keystore app/yesiliz-release.jks -alias yesiliz \
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Yesiliz, OU=TEKNOFEST 2026, O=Yesilay, L=Istanbul, C=TR"
+```
+
+> **Anahtar kaybolursa uygulama bir daha güncellenemez.** Google Play ve
+> Android'in paket doğrulaması aynı imzayı şart koşuyor; farklı anahtarla
+> imzalanmış APK "başka bir uygulama" sayılıyor ve kurulu sürümün üstüne
+> gitmiyor (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Keystore dosyasının ve
+> parolasının depo dışında bir yedeği olmalı.
+
 ### Release APK doğrulaması
 
 Sürüm çıkarken bir kez:

@@ -8,6 +8,11 @@ local.properties
 *.aab
 *.iml
 
+# Release imzalama anahtarı — ASLA depoya girmez.
+# Kaybolursa uygulama bir daha güncellenemez; yedeği depo dışında tutulur.
+*.jks
+*.keystore
+
 # Android Studio / IntelliJ
 .idea/
 captures/

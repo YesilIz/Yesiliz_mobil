@@ -1,3 +1,7 @@
+// `java.util.Properties` açıkça import ediliyor: Kotlin DSL'de `java`
+// Gradle'ın kendi uzantısına bağlanıyor ve paket adını gölgeliyor.
+import java.util.Properties
+
 // AGP 9'da Kotlin desteği eklentinin İÇİNDE — `org.jetbrains.kotlin.android`
 // artık uygulanmıyor, uygulanırsa çakışıyor. Kotlin ayarları `android { }`
 // bloğundaki `kotlin { }` alt bloğundan yapılır.
@@ -27,6 +31,34 @@ val canliSunucu: String = (
         ?: "https://yesilizmobil-production.up.railway.app"
     ).trim().let { if (it.endsWith("/")) it else "$it/" }
 
+/**
+ * İmza bilgileri — depoya **girmiyor**.
+ *
+ * Öncelik: ortam değişkeni › `local.properties`. İkisi de yoksa `null`
+ * dönüyor ve release imzasız üretiliyor (aşağıda). Bu bilerek böyle:
+ * keystore'u olmayan bir ekip arkadaşının `assembleRelease`'i "dosya
+ * bulunamadı" ile düşmesin, sadece kurulamayan bir APK üretsin.
+ */
+fun imzaDegeri(ortamAdi: String, ozellikAdi: String): String? =
+    System.getenv(ortamAdi)
+        ?: rootProject.file("local.properties")
+            .takeIf { it.exists() }
+            ?.let { dosya ->
+                Properties()
+                    .apply { dosya.inputStream().use { load(it) } }
+                    .getProperty(ozellikAdi)
+            }
+
+// Yol **depo köküne** göre çözülüyor. `file()` modül dizinine (`app/`)
+// göre çözerdi ve `app/app/…` arayıp sessizce imzasız APK üretirdi.
+val imzaDeposu: File? =
+    imzaDegeri("YESILIZ_IMZA_DEPOSU", "yesiliz.imza.deposu")
+        ?.let { rootProject.file(it) }
+        ?.takeIf { it.exists() }
+
+val imzaParolasi: String? = imzaDegeri("YESILIZ_IMZA_PAROLASI", "yesiliz.imza.parolasi")
+val imzaTakmaAdi: String? = imzaDegeri("YESILIZ_IMZA_TAKMA_ADI", "yesiliz.imza.takmaAdi")
+
 android {
     namespace = "tr.org.yesilay.yesiliz"
     // compileSdk 37: AndroidX 2026 sürümleri (core-ktx 1.19, lifecycle 2.11)
@@ -43,6 +75,25 @@ android {
         versionName = "0.1.0"
     }
 
+    // İmzasız APK telefona KURULAMIYOR — Android her paketten kriptografik
+    // imza şart koşuyor. Debug'da Android Studio kendi anahtarını üretiyor,
+    // release'de üretmiyor; bu blok olmadan `assembleRelease` çıktısı
+    // `app-release-unsigned.apk` oluyor ve gerçek cihaz doğrulaması
+    // (`gorev1.md` son iki kriter) hiç yapılamıyor.
+    //
+    // Keystore ve parolalar depoda değil: `local.properties` (gitignore'da)
+    // ya da ortam değişkeni. Değerler yoksa blok hiç tanımlanmıyor.
+    signingConfigs {
+        if (imzaDeposu != null && imzaParolasi != null && imzaTakmaAdi != null) {
+            create("release") {
+                storeFile = imzaDeposu
+                storePassword = imzaParolasi
+                keyAlias = imzaTakmaAdi
+                keyPassword = imzaParolasi
+            }
+        }
+    }
+
     // Sunucu adresi build türüne göre: debug yerel/test sunucusu, release
     // gerçek HTTPS adresi. Tek yapılandırma noktası — `Tercihler` ve
     // `AgModulu` buradan okuyor, koda ikinci bir adres yazılmıyor.
@@ -55,6 +106,9 @@ android {
         }
         release {
             buildConfigField("String", "API_TABANI", "\"$canliSunucu\"")
+            // Bulunamazsa imzasız kalıyor; aşağıdaki `assembleRelease`
+            // kontrolü bunu derleme sonunda söylüyor.
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -106,11 +160,23 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
         // yapılandırma önbelleği bunu serileştiremiyor
         // ("cannot serialize Gradle script object references").
         val adres = canliSunucu
+        val imzali = imzaDeposu != null && imzaParolasi != null && imzaTakmaAdi != null
         doFirst {
             require(adres.startsWith("https://")) {
                 "Release derlemesi HTTPS adresi istiyor, gelen: $adres\n" +
                     "Adresi -Pyesiliz.sunucu=https://… ile ya da YESILIZ_SUNUCU " +
                     "ortam değişkeniyle verin (docs/dagitim.md)."
+            }
+            // Uyarı, hata değil: keystore'u olmayan biri de derleyebilsin.
+            // Ama sessiz kalmıyor — imzasız APK telefona kurulmuyor ve
+            // sebebi çıktı adından ("-unsigned") anlaşılmıyor.
+            if (!imzali) {
+                logger.warn(
+                    "UYARI: imza bilgisi bulunamadı, release APK İMZASIZ " +
+                        "üretiliyor ve telefona KURULAMAZ. Keystore ve " +
+                        "parolalar local.properties'ten okunuyor " +
+                        "(docs/dagitim.md §10).",
+                )
             }
         }
     }
