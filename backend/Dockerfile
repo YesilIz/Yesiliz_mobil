@@ -12,7 +12,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:uygulama", "--host", "0.0.0.0", "--port", "8000"]
+# Migration önce, backend sonra — entrypoint.sh migration başarısız olursa
+# uvicorn'u hiç başlatmıyor (görev tanımı §4). docker-compose.yml kendi
+# `command`'ıyla bunu eziyor (canlı yeniden yükleme için); bu CMD yalnızca
+# Render gibi doğrudan imajı çalıştıran ortamlarda devreye giriyor.
+CMD ["./entrypoint.sh"]

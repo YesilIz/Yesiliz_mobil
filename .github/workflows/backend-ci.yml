@@ -1,0 +1,83 @@
+name: Backend CI/CD
+
+# Görev tanımı §5: test → yapılandırma/güvenlik kontrolü → Docker imajı →
+# (yalnızca main'e push'ta) dağıtım → health check.
+#
+# main'e doğrudan push yasak (CLAUDE.md §1) — dağıtım adımı yalnızca
+# tchkechagia0'ın onayladığı bir PR main'e gerçekten merge edildiğinde
+# tetikleniyor, her feature/fix dalı push'unda değil.
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**"]
+  pull_request:
+    paths: ["backend/**"]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bağımlılıkları kur
+        run: pip install --no-cache-dir -r requirements.txt
+
+      - name: Yapılandırma/güvenlik kontrolü — production varsayılan güvensiz değerle başlamamalı
+        run: |
+          python -c "
+          import os
+          os.environ['YESILIZ_ORTAM'] = 'production'
+          from app.ayarlar import Ayarlar
+          try:
+              Ayarlar(_env_file=None)
+              raise SystemExit('BEKLENMEDIK: production varsayılan JWT/SQLite ile başladı')
+          except ValueError:
+              print('OK: production varsayılan değerle reddediliyor')
+          "
+
+      - name: Testler
+        run: pytest -q
+
+      - name: Docker imajını oluştur (yalnızca doğrulama — push edilmiyor)
+        run: docker build -t yesiliz-backend:${{ github.sha }} .
+
+  dagit:
+    name: Canlı ortama dağıt
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Render deploy hook'unu tetikle
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "RENDER_DEPLOY_HOOK secret'ı tanımlı değil — dağıtım atlandı." >&2
+            exit 1
+          fi
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Health check — dağıtım gerçekten sağlıklı mı
+        run: |
+          if [ -z "${{ secrets.CANLI_SUNUCU_ADRESI }}" ]; then
+            echo "CANLI_SUNUCU_ADRESI secret'ı tanımlı değil — health check atlandı." >&2
+            exit 0
+          fi
+          # Render'ın yeni sürümü ayağa kaldırması birkaç dakika sürebilir.
+          for deneme in $(seq 1 20); do
+            durum=$(curl -fsS "${{ secrets.CANLI_SUNUCU_ADRESI }}/saglik" | grep -o '"status":"healthy"' || true)
+            if [ -n "$durum" ]; then
+              echo "OK: canlı ortam sağlıklı"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Canlı ortam 5 dakika içinde sağlıklı duruma geçmedi" >&2
+          exit 1
