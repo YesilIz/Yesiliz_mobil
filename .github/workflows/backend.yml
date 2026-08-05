@@ -9,8 +9,9 @@
 # sağlık kontrolü de düşüyor, sürüm devreye alınmıyor.
 #
 # Gerekli depo ayarları (Settings › Secrets and variables › Actions):
-#   secret  RAILWAY_TOKEN   — Railway workspace jetonu (Account › Tokens)
-#   var     RAILWAY_PROJE   — Railway proje kimliği, proje URL'inden
+#   secret  RAILWAY_TOKEN   — Railway PROJE jetonu (Project Settings ›
+#                             Tokens, ortam `production`). Account ›
+#                             Tokens'taki workspace jetonu değil.
 #   var     RAILWAY_SERVICE — Railway'deki servis adı
 #   var     CANLI_TABAN     — https://<alan-adi>, smoke testleri buna koşuyor
 
@@ -94,23 +95,16 @@ jobs:
 
       - run: npm install -g @railway/cli
 
-      # Railway proje token'ını 2025'te kaldırdı; geriye workspace token'ı
-      # kaldı ve CLI ikisini FARKLI değişkenlerden okuyor:
-      #   RAILWAY_TOKEN      → proje token'ı (artık üretilemiyor)
-      #   RAILWAY_API_TOKEN  → workspace token'ı
-      # Workspace token'ı hesaptaki bütün projelere erişiyor, yani hangi
-      # projeye dağıtılacağını kendi taşımıyor — `link` bunu söylüyor.
-      # Yanlış değişkene konursa hata "Invalid RAILWAY_TOKEN" oluyor ve
-      # token geçersiz sanılıyor; oysa token doğru, adı yanlış.
+      # Jeton **proje** jetonu olmalı: Project Settings › Tokens, ortamı
+      # `production`. Hesap ayarlarındaki (Account › Tokens) workspace
+      # jetonu BAŞKA bir tip ve CLI onu `RAILWAY_API_TOKEN`'dan okuyor —
+      # `RAILWAY_TOKEN`'a konursa "Invalid RAILWAY_TOKEN" der ve jeton
+      # bozuk sanılır; oysa yanlış olan tip. Proje jetonu projeyi ve
+      # ortamı kendi taşıdığı için `railway link` gerekmiyor.
       - name: Dağıtım
-        run: |
-          railway link \
-            --project "${{ vars.RAILWAY_PROJE }}" \
-            --environment production \
-            --service "${{ vars.RAILWAY_SERVICE }}"
-          railway up --service "${{ vars.RAILWAY_SERVICE }}" --ci
+        run: railway up --service "${{ vars.RAILWAY_SERVICE }}" --ci
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: /health bekleniyor
         # Kap açılırken önce migration koşuyor; ilk saniyelerde 502 normal.
