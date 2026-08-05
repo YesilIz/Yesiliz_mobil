@@ -101,7 +101,13 @@ jobs:
       # `RAILWAY_TOKEN`'a konursa "Invalid RAILWAY_TOKEN" der ve jeton
       # bozuk sanılır; oysa yanlış olan tip. Proje jetonu projeyi ve
       # ortamı kendi taşıdığı için `railway link` gerekmiyor.
+      #
+      # `railway up` bulunduğu dizini yüklüyor ve servisin **Root
+      # Directory** ayarı (`/backend`) yüklenenin üstüne uygulanıyor.
+      # Bu iş `backend/`'ten koşarsa Railway `backend/backend` arıyor ve
+      # build "Deploy failed" ile düşüyor — o yüzden depo kökünden.
       - name: Dağıtım
+        working-directory: .
         run: railway up --service "${{ vars.RAILWAY_SERVICE }}" --ci
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
