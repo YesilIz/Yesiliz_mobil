@@ -18,12 +18,22 @@ emülatörde `localhost` cihazın kendisi demek.
 ## Test
 
 ```bash
-docker compose exec api pytest -q     # 59 test
+docker compose exec api pytest -q     # 82 test
 ```
 
 Testler SQLite bellek veritabanında koşuyor — saniyeler sürüyor ve
 PostgreSQL kabına bağımlı değil. Şema aynı SQLAlchemy modellerinden
 üretiliyor.
+
+Canlı ortama karşı koşan smoke testleri `smoke/` altında ve `pytest.ini`
+onları normal koşumdan ayırıyor:
+
+```bash
+YESILIZ_SMOKE_TABAN=https://<alan-adi> python -m pytest smoke -q
+```
+
+Dağıtım, ortam değişkenleri ve CI/CD: `docs/dagitim.md`. Örnek ortam
+dosyası `.env.ornek`.
 
 ## Şema değişikliği
 

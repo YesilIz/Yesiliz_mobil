@@ -97,7 +97,7 @@ fun LigEkran(
             // Bunu söylemeden göstermek, demo günü "backend çalışıyor"
             // sanılmasına yol açardı (`debug.md` O-14).
             if (durum.cevrimdisi) {
-                item { CevrimdisiNotu() }
+                item { CevrimdisiNotu(ornekVeriVarMi = durum.siralama.isNotEmpty()) }
             }
             // "Ligde görün" kapalıysa söyleniyor. Kullanıcı kendi satırını
             // görmeye devam ediyor ama başkaları görmüyor; bunu bilmeden
@@ -168,13 +168,18 @@ private fun LigKurallari(durum: LigDurum, onKapat: () -> Unit) {
 }
 
 /**
- * "Ligde görün" kapalıyken gösterilen not.
+ * Sunucuya ulaşılamadığında gösterilen not.
  *
- * Tercih artık gerçekten çalışıyor: kullanıcı başkalarının sıralamasında
- * çıkmıyor. Bunu ekranda söylemek şart, yoksa özellik bozuk sanılır.
+ * Metin iki hâlli, çünkü altındaki liste iki türlü doluyor: debug
+ * derlemesinde yerel yedek örnek sıralama veriyor, release'de sahte veri
+ * hiç örneklenmediği için liste **boş** kalıyor (`di/DepoBaglama.kt`).
+ * "Aşağıdaki sıralama örnek veri" cümlesini boş listenin üstünde
+ * göstermek okuyanı yanıltırdı.
+ *
+ * @param ornekVeriVarMi altında gösterilecek satır var mı.
  */
 @Composable
-private fun CevrimdisiNotu() {
+private fun CevrimdisiNotu(ornekVeriVarMi: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -190,8 +195,13 @@ private fun CevrimdisiNotu() {
         )
         Spacer(modifier = Modifier.width(Bosluk.S))
         Text(
-            text = "Sunucuya ulaşılamıyor. Aşağıdaki sıralama örnek veri; " +
-                "bağlantı kurulunca gerçek lig görünecek.",
+            text = if (ornekVeriVarMi) {
+                "Sunucuya ulaşılamıyor. Aşağıdaki sıralama örnek veri; " +
+                    "bağlantı kurulunca gerçek lig görünecek."
+            } else {
+                "Sunucuya ulaşılamıyor. Bağlantı kurulunca lig sıralaman " +
+                    "burada görünecek."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )

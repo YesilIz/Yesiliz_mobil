@@ -130,16 +130,42 @@ gecelik özet öncesi, yürüyüş sayacının her tiki. Hesabın kendisi saf �
 bildirilmişti ama **hiç istenmiyordu**. İzin ekranı artık ayrı bir kartla
 istiyor.
 
-**Zincirin tamamı cihazda koştu.** Sensör `1789` okudu, önceki örnek `1000`
-idi, birikim `250 → 1039` oldu ve özet tablosuna girdi:
+**Zincir cihazda koştu — ama rakam ölçüm değil.**
+
+İlk **gerçek** örnekleme şunu yazdı:
 
 ```
-adim_sayac:  2026-08-03 | toplam=1039 | sonSayac=1789
+adim_sayac: 2026-08-03 | toplam=0 | sonSayac=1789
+```
+
+`1789` sensörün ham değeri, yani **açılıştan beri** biriken sayı; günlerdir
+açık olan bir telefonda bugünün adımı değil. Günün ilk örneği doğru davranıp
+bugüne `0` yazdı.
+
+Birikim aritmetiğinin cihazda gerçekten çalıştığını görmek için veritabanına
+elle sahte bir önceki durum enjekte edildi (`toplam=250, sonSayac=1000`);
+uygulama tekrar `1789` okuyunca `250 + 789 = 1039` çıktı ve özet tablosuna
+girdi:
+
+```
 gunluk_ozet: 2026-08-03 | adim=1039,0 | A=0,05195 | D=0,99221
 ```
 
-`D < 1` — **aktivite sönümlemesi gerçek cihazda ilk kez uygulandı**
-(`docs/spec-risk.md`; CLAUDE.md §10 bu dalın hiç test edilemediğini yazıyordu).
+> **`1039` uydurma bir sayıdır.** Enjekte edilen `250` ile yine enjekte edilen
+> tabana göre alınan farkın toplamı. O gün telefon çantada durdu; kullanıcının
+> saati ~500 adım saydı, telefon sıfıra yakın saymalıydı ve saydı.
+
+Doğrulanan şey **boru hattı**: sensör gerçek cihazda okunabiliyor, satır
+yazılıyor, fark aritmetiği koşuyor, sonuç `gunluk_ozet.adim`'e ve oradan
+`A` ile `D`'ye ulaşıyor. `D < 1` çıkması sönümleme dalının **kod olarak**
+ilk kez çalıştığını gösteriyor (CLAUDE.md §10 bu dalın hiç koşturulamadığını
+yazıyordu). Gerçek bir günün adım sayısıyla doğrulama **yapılmadı** — §5.
+
+**Bu telefonun sistematik yanlılığı.** Telefon cepte değilse adım sayılmıyor;
+saat sayıyor ama saatin verisi Health Connect'e akmıyor. Yani ölçülen adım
+gerçeğin altında kalıyor. Risk açısından bu **güvenli taraf**: az adım → düşük
+`A` → `D` 1'e yakın → sönümleme az → skor yüksek kalıyor. Uydurulan adım
+riski haksız yere aşağı çekerdi, eksik sayılan adım çekmiyor.
 
 ---
 
@@ -296,6 +322,14 @@ Kusur değil; kapsam ya da altyapı.
 
 Dürüstlük gereği: aşağıdakiler denenmedi, "çalışıyor" denemez.
 
+- **Adım sayacının gerçek bir günle doğrulanması** — K-0'da ölçülen şey boru
+  hattı: sensör okunuyor, fark aritmetiği koşuyor, sonuç `gunluk_ozet`'e
+  ulaşıyor. Ama `1039` sayısı enjekte edilmiş bir tabandan üretildi, gerçek
+  bir günün adımı değil. O gün telefon çantadaydı; kullanıcının saati ~500
+  adım saydı, telefon sıfıra yakın. **Telefonu bir gün boyunca cepte taşıyıp
+  bağımsız bir sayaçla (saat, başka uygulama) karşılaştırmak gerekiyor** —
+  yalnızca bu, sayının doğruluğunu gösterir. Şu an gösterilen tek şey
+  aritmetiğin doğruluğu.
 - **Widget'lar** (`EkranSuresiWidget`, `GununSorusuWidget`) — sağlayıcı olarak
   kayıtlı oldukları `dumpsys appwidget` ile doğrulandı, ama ana ekrana
   yerleştirme `uiautomator` ile otomatikleştirilemedi. **İki turdur kapsanmıyor;

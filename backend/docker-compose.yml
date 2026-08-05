@@ -28,6 +28,10 @@ services:
       db:
         condition: service_healthy
     environment:
+      # Yerel yığın her zaman `development`: üretim doğrulaması (varsayılan
+      # anahtar / SQLite reddi) burada çalışmasın, geliştirme kapıya
+      # takılmasın. Üretim ayarı sağlayıcı panelinden geliyor.
+      YESILIZ_ORTAM: development
       YESILIZ_VERITABANI_URL: postgresql+psycopg://yesiliz:yesiliz@db:5432/yesiliz
       # Geliştirme anahtarı. Üretimde ortam değişkeninden gelir ve ASLA
       # depoya girmez.

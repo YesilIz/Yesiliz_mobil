@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.data.depo
 
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -39,6 +40,10 @@ class OdulDeposu @Inject constructor(
     private val saat: Clock,
 ) {
 
+    private companion object {
+        const val ETIKET = "OdulDeposu"
+    }
+
     /** Kademe id → seçilen seçenek id. */
     val secimlerAkisi: Flow<Map<String, String>> = dao.hepsiAkisi().map { liste ->
         liste.associate { it.kademeId to it.secenekId }
@@ -58,9 +63,16 @@ class OdulDeposu @Inject constructor(
         val oturum = tercihler.oturum.first()
         if (!oturum.misafirMi && oturum.girisYapildiMi) {
             // Sunucuya ulaşılamazsa (ağ hatası ya da 409 — başka bir cihazdan
-            // zaten seçilmiş) yerel kayıt yine de kalıcı; bir sonraki
-            // senkronda tekrar denenmiyor ama kullanıcı ödülünü kaybetmiyor.
+            // zaten seçilmiş) yerel kayıt yine de kalıcı; kullanıcı ödülünü
+            // kaybetmiyor. **Yeniden deneme yok:** çağrı bir kez gidiyor,
+            // düşerse sunucudaki kopya eksik kalıyor. Telefon değişince
+            // `GET /odul/secimlerim` o seçimi geri getiremez — açık iş.
+            //
+            // Hata yutulmuyor, iz bırakıyor (CLAUDE.md §9): sessiz
+            // `runCatching`, sunucu tarafındaki eksikliği sınırsız süre
+            // saklardı.
             runCatching { api.odulSec(OdulSecimIstek(kademeId, secenekId)) }
+                .onFailure { Log.w(ETIKET, "ödül seçimi sunucuya yazılamadı: $kademeId", it) }
         }
         return true
     }
