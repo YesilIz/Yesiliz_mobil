@@ -50,17 +50,32 @@ Backend `backend/` klasörünün tamamı; `Dockerfile` ve `railway.json` orada.
 
 1. Railway'de yeni proje → **Deploy from GitHub repo** → `Yesiliz_mobil`.
 2. Servis ayarlarında **Root Directory** = `backend`.
-3. Aynı projeye **New → Database → PostgreSQL** ekleyin. `DATABASE_URL`
-   otomatik enjekte oluyor, elle tanımlamayın.
-4. Servis → Variables:
+3. Aynı projeye **New → Database → PostgreSQL** ekleyin.
+4. **API servisinin** (Postgres'in değil) Variables sekmesi:
    ```
-   ENVIRONMENT = production
-   JWT_SECRET  = <token_urlsafe(32) çıktısı>
+   ENVIRONMENT  = production
+   JWT_SECRET   = <token_urlsafe(32) çıktısı>
+   DATABASE_URL = ${{Postgres.DATABASE_URL}}
+   PORT         = 8000
    ```
-5. Servis → Settings → Networking → **Generate Domain**. Railway
-   `https://<ad>.up.railway.app` veriyor ve sertifikayı kendisi yönetiyor.
+   `DATABASE_URL` **otomatik enjekte olmuyor** — Railway'in referans
+   değişkeni süslü parantezlerle birebir böyle yazılmalı. Veritabanı
+   servisinin kendi değişken listesindeki `DATABASE_URL` başka bir
+   şeydir, oraya dokunulmaz.
+5. Servis → Settings → Networking → **Generate Domain**, hedef port
+   **8000**. Railway `https://<ad>.up.railway.app` veriyor ve sertifikayı
+   kendisi yönetiyor. Hedef port `baslat.sh`'ın dinlediği portla aynı
+   olmalı; `PORT` açıkça verildiği için ikisi de 8000.
 6. `railway.json` sağlık kontrolünü `/health`'e bağlıyor; ilk dağıtım
    yeşile dönünce hazır.
+
+> **Dağıtılan dal `main`.** Railway'in GitHub entegrasyonu varsayılan dalı
+> izliyor ve CI'daki dağıtım işi de yalnızca `main`'de koşuyor
+> (`backend.yml`). `dev`'e atılan bir değişiklik canlıya çıkmaz. 5 Ağu
+> 2026'da tam olarak bu yaşandı: ayarların hepsi doğruydu ama `/health`
+> 404 dönüyordu, çünkü `main` 18 commit geride ve o uç orada yoktu.
+> Teşhis: eski `/saglik` 200, yeni `/health` 404 → sorun sunucuda değil,
+> dağıtılan sürümde.
 
 `postgresql://` şeması psycopg3'e otomatik çevriliyor (`ayarlar.py`) —
 çevrilmezse kap açılışta `ModuleNotFoundError: psycopg2` ile ölürdü.

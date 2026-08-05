@@ -24,7 +24,7 @@ plugins {
 val canliSunucu: String = (
     (findProperty("yesiliz.sunucu") as String?)
         ?: System.getenv("YESILIZ_SUNUCU")
-        ?: "https://yesiliz-api.up.railway.app"
+        ?: "https://yesilizmobil-production.up.railway.app"
     ).trim().let { if (it.endsWith("/")) it else "$it/" }
 
 android {
