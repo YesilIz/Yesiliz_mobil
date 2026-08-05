@@ -28,12 +28,11 @@ import javax.inject.Singleton
 /**
  * Ağ katmanı — Faz 2 backend'i (`backend/`).
  *
- * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`).
- * Varsayılan `10.0.2.2` yalnızca emülatörde anlamlı; gerçek telefonda HER
- * çağrı zaman aşımına uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve
- * bu istisna değil **varsayılan durum** hâline gelmişti (`debug.md` O-14).
- * Adres artık Profil › Geliştirici'den değiştirilebiliyor, böylece gerçek
- * cihaz makinenin LAN adresine bağlanabiliyor.
+ * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`),
+ * varsayılanı build türünden geliyor (`BuildConfig.API_TABANI`): release'de
+ * gerçek HTTPS alan adı, debug'da emülatörün `10.0.2.2`'si. Adres ayrıca
+ * Profil › Geliştirici'den değiştirilebiliyor — gerçek cihazda geliştirme
+ * makinesinin LAN adresine bağlanabilmek için (`debug.md` O-14).
  *
  * Zaman aşımları **kısa** (5 sn): backend kapalıyken kullanıcı 30 saniye
  * boş ekrana bakmasın, `Yedekli*Deposu` hızlıca yerel veriye düşsün.
@@ -46,7 +45,7 @@ object AgModulu {
      * Retrofit'in derleme anında bir taban adrese ihtiyacı var; gerçek
      * adres [tabanDegistirici] tarafından her istekte yazılıyor.
      */
-    private const val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
+    private val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
 
     /**
      * Zaman aşımı.

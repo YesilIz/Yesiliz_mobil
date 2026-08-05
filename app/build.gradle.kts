@@ -12,6 +12,21 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+/**
+ * Canlı backend adresi — release derlemesine gömülüyor.
+ *
+ * Öncelik: `-Pyesiliz.sunucu=…` › `YESILIZ_SUNUCU` ortam değişkeni ›
+ * buradaki varsayılan. Alan adı değişirse **tek yer** burası; adres
+ * uygulama koduna dağınık şekilde yazılmıyor (`BuildConfig.API_TABANI`).
+ *
+ * Sondaki eğik çizgi Retrofit için şart, elle yazılmasına bırakılmıyor.
+ */
+val canliSunucu: String = (
+    (findProperty("yesiliz.sunucu") as String?)
+        ?: System.getenv("YESILIZ_SUNUCU")
+        ?: "https://yesiliz-api.up.railway.app"
+    ).trim().let { if (it.endsWith("/")) it else "$it/" }
+
 android {
     namespace = "tr.org.yesilay.yesiliz"
     // compileSdk 37: AndroidX 2026 sürümleri (core-ktx 1.19, lifecycle 2.11)
@@ -28,8 +43,18 @@ android {
         versionName = "0.1.0"
     }
 
+    // Sunucu adresi build türüne göre: debug yerel/test sunucusu, release
+    // gerçek HTTPS adresi. Tek yapılandırma noktası — `Tercihler` ve
+    // `AgModulu` buradan okuyor, koda ikinci bir adres yazılmıyor.
     buildTypes {
+        debug {
+            // Emülatörün geliştirme makinesine baktığı adres
+            // (`backend/docker-compose.yml`). Gerçek cihazda Profil ›
+            // Geliştirici'den LAN adresiyle değiştiriliyor.
+            buildConfigField("String", "API_TABANI", "\"http://10.0.2.2:8000/\"")
+        }
         release {
+            buildConfigField("String", "API_TABANI", "\"$canliSunucu\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -45,6 +70,9 @@ android {
 
     buildFeatures {
         compose = true
+        // AGP 8'den beri varsayılan kapalı; `BuildConfig.API_TABANI`
+        // üretilsin diye açık.
+        buildConfig = true
     }
 
     // CLAUDE.md §3.5: kaynaklar java/ değil kotlin/ altında.
@@ -63,6 +91,29 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 }
+
+// Release çıktısı şifresiz adresle üretilemez.
+//
+// Kontrol yapılandırma anında değil, yalnızca release derlenirken koşuyor:
+// aksi hâlde `-Pyesiliz.sunucu` vermeyen her `assembleDebug` de düşerdi.
+// Yayınlanan APK'ya http:// adres gömülmesi, ağ güvenliği yapılandırması
+// zaten şifresiz trafiği reddettiği için sessiz bir "sunucuya hiç
+// ulaşamıyor" hatasına dönüşürdü.
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
+    .configureEach {
+        // Adres yerel değişkene alınıyor: `doFirst` bloğu doğrudan
+        // `canliSunucu`'ya baksaydı build script nesnesini yakalardı ve
+        // yapılandırma önbelleği bunu serileştiremiyor
+        // ("cannot serialize Gradle script object references").
+        val adres = canliSunucu
+        doFirst {
+            require(adres.startsWith("https://")) {
+                "Release derlemesi HTTPS adresi istiyor, gelen: $adres\n" +
+                    "Adresi -Pyesiliz.sunucu=https://… ile ya da YESILIZ_SUNUCU " +
+                    "ortam değişkeniyle verin (docs/dagitim.md)."
+            }
+        }
+    }
 
 // Room şemasını JSON olarak dışa aktar.
 // DB.md bu dosyadan ÜRETİLİYOR (tools/db_dokuman_uret.py) — şema değişince

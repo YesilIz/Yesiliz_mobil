@@ -1,0 +1,68 @@
+# Android — ağ güvenliği nöbetçisi.
+#
+# Görev 1'in tamamlanma ölçütlerinden ikisi geri alınması çok kolay şeyler:
+# "Release APK içinde 10.0.2.2 ya da şifresiz HTTP adresi bulunmuyor" ve
+# "Android'de yerel geliştirme için tanımlanmış cleartext istisnası release
+# sürümünden kaldırılmıştır". Bir dosyaya tek satır eklenince ikisi de
+# sessizce bozulur ve bunu ancak APK'yı açan biri fark eder.
+#
+# Bu iş **kaynak düzeyinde** bakıyor: Android SDK kurmuyor, derleme
+# yapmıyor, saniyeler sürüyor. Gerçek APK doğrulaması sürüm çıkarken elle
+# yapılıyor (docs/dagitim.md § "Release APK doğrulaması").
+
+name: android-ağ-güvenliği
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "app/src/main/res/xml/**"
+      - "app/src/release/**"
+      - "app/build.gradle.kts"
+      - ".github/workflows/android-ag-guvenligi.yml"
+  pull_request:
+    paths:
+      - "app/src/main/res/xml/**"
+      - "app/src/release/**"
+      - "app/build.gradle.kts"
+  workflow_dispatch:
+
+jobs:
+  guvenlik:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Release ağ yapılandırmasında şifresiz trafik kapalı
+        run: |
+          dosya=app/src/main/res/xml/ag_guvenligi.xml
+          if grep -q 'cleartextTrafficPermitted="true"' "$dosya"; then
+            echo "::error file=$dosya::Release yapılandırmasında şifresiz trafik açık."
+            echo "Debug için gevşetme gerekiyorsa src/debug/res/xml/ag_guvenligi.xml'e yazılmalı."
+            exit 1
+          fi
+          echo "şifresiz trafik kapalı ✓"
+
+      - name: Emülatör adresi release kaynak setlerinde geçmiyor
+        # Yalnızca **string sabitleri** aranıyor: APK'ya giren şey o.
+        # Kdoc ve yorumlarda adresten söz etmek serbest ve gerekli —
+        # gerekçenin yazıldığı yer orası.
+        run: |
+          bulunan=$(grep -rnE '"[^"]*10\.0\.2\.2' app/src/main app/src/release || true)
+          if [ -n "$bulunan" ]; then
+            echo "::error::10.0.2.2 release derlemesine giren bir string sabitinde:"
+            echo "$bulunan"
+            echo "Bu adres yalnızca emülatörde anlamlı; app/src/debug altına taşıyın."
+            exit 1
+          fi
+          echo "10.0.2.2 string sabiti yok ✓"
+
+      - name: Varsayılan canlı adres HTTPS
+        run: |
+          satir=$(grep -n 'yesiliz-api\|YESILIZ_SUNUCU' app/build.gradle.kts | head -5)
+          if grep -qE '\?: *"http://' app/build.gradle.kts; then
+            echo "::error file=app/build.gradle.kts::Varsayılan canlı sunucu adresi http://"
+            echo "$satir"
+            exit 1
+          fi
+          echo "varsayılan adres HTTPS ✓"

@@ -2,11 +2,16 @@
 <!--
   Ağ güvenliği — release.
 
-  Şifresiz trafik **kapalı**; üretimde HTTPS zorunlu. Tek istisna
-  emülatörün makineye baktığı `10.0.2.2`: yerel geliştirme sunucusunun
-  (backend/docker-compose.yml) TLS sertifikası yok ve bunun için sahte
-  sertifika üretmek geliştirme akışına gereksiz yük. Bu istisna gerçek bir
-  cihazda hiçbir şeye izin vermiyor; 10.0.2.2 yalnızca emülatörde anlamlı.
+  Şifresiz trafik **kapalı**, istisnasız. Backend HTTPS ile yayında
+  (`docs/dagitim.md`) ve release derlemesinin gömdüğü adres
+  `BuildConfig.API_TABANI`; o adresin https:// olduğu derleme sırasında
+  ayrıca doğrulanıyor (`app/build.gradle.kts`).
+
+  Bir zamanlar `10.0.2.2` için cleartext istisnası vardı — emülatörün
+  TLS'siz geliştirme sunucusuna ulaşabilmesi için. Yayınlanan APK'da
+  hiçbir işe yaramıyordu (10.0.2.2 yalnızca emülatörde anlamlı) ama
+  release yapılandırmasında şifresiz trafiğe açık bir kapı bırakıyordu;
+  HTTPS gelince silindi.
 
   Debug derlemesi `src/debug/res/xml/ag_guvenligi.xml` ile bu dosyayı
   override ediyor: gerçek cihazda geliştirme sunucusuna LAN adresiyle
@@ -14,8 +19,4 @@
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
-
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.0.2.2</domain>
-    </domain-config>
 </network-security-config>

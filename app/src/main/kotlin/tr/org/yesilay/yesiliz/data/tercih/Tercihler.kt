@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import java.time.LocalDate
 import javax.inject.Inject
@@ -251,16 +252,14 @@ class Tercihler @Inject constructor(
      * ikisini birlikte yürütür.
      */
     /**
-     * Sunucu adresi — Profil › Geliştirici'den değiştirilebilir.
+     * Sunucu adresi — varsayılanı [VARSAYILAN_SUNUCU], yani build türü
+     * belirliyor. Release'de gerçek HTTPS alan adı; temiz kurulmuş bir
+     * telefon hiçbir ayar yapmadan sunucuya ulaşıyor.
      *
-     * Varsayılan `10.0.2.2` **yalnızca emülatörde** anlamlı: gerçek
-     * telefonda her çağrı zaman aşımına uğrayıp `Yedekli*Deposu`
-     * sahte veriye düşüyordu ve ekranda bunun çevrimdışı yedek olduğunu
-     * söyleyen hiçbir işaret yoktu (`debug.md` O-14). Gerçek cihazda
-     * geliştirme yapabilmek için makinenin LAN adresi girilebiliyor.
-     *
-     * Dağıtım yapıldığında varsayılan HTTPS alan adı olacak; alan
-     * yalnızca hata ayıklama için kalacak.
+     * Bu alan **hata ayıklama** için duruyor: debug derlemesinde varsayılan
+     * `10.0.2.2` yalnızca emülatörde anlamlı, gerçek cihazda geliştirme
+     * makinesinin LAN adresi girilebilsin diye Profil › Geliştirici'den
+     * değiştirilebiliyor (`debug.md` O-14).
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
         p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
@@ -295,11 +294,15 @@ class Tercihler @Inject constructor(
 
     companion object {
         /**
-         * Varsayılan sunucu adresi — emülatörün makineye baktığı yer
-         * (`backend/docker-compose.yml`). `AgModulu` yer tutucu taban
+         * Varsayılan sunucu adresi — **build türünden** geliyor.
+         *
+         * Release: gerçek HTTPS alan adı. Debug: emülatörün makineye
+         * baktığı `10.0.2.2` (`backend/docker-compose.yml`).
+         * Tek yapılandırma noktası `app/build.gradle.kts`; adres uygulama
+         * koduna ikinci bir yere yazılmıyor. `AgModulu` yer tutucu taban
          * olarak da bunu kullanıyor.
          */
-        const val VARSAYILAN_SUNUCU = "http://10.0.2.2:8000/"
+        val VARSAYILAN_SUNUCU: String = BuildConfig.API_TABANI
 
         // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
         private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
