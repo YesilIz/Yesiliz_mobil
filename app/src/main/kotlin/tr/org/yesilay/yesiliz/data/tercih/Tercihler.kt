@@ -252,16 +252,14 @@ class Tercihler @Inject constructor(
      * ikisini birlikte yürütür.
      */
     /**
-     * Sunucu adresi — Profil › Geliştirici'den değiştirilebilir.
+     * Sunucu adresi — varsayılanı [VARSAYILAN_SUNUCU], yani build türü
+     * belirliyor. Release'de gerçek HTTPS alan adı; temiz kurulmuş bir
+     * telefon hiçbir ayar yapmadan sunucuya ulaşıyor.
      *
-     * Varsayılan artık **derleme türüne göre** geliyor
-     * (`BuildConfig.API_BASE_URL`, görev tanımı §6): debug'da emülatörün
-     * makineye baktığı `10.0.2.2`, release'de gerçek HTTPS adresi. Eskiden
-     * ikisi de aynı sabitti — gerçek telefonda her çağrı zaman aşımına
-     * uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve ekranda bunun
-     * çevrimdışı yedek olduğunu söyleyen hiçbir işaret yoktu (`debug.md`
-     * O-14). Buradaki manuel geçersiz kılma hâlâ duruyor: gerçek cihazda
-     * geliştirme yapabilmek için makinenin LAN adresi girilebiliyor.
+     * Bu alan **hata ayıklama** için duruyor: debug derlemesinde varsayılan
+     * `10.0.2.2` yalnızca emülatörde anlamlı, gerçek cihazda geliştirme
+     * makinesinin LAN adresi girilebilsin diye Profil › Geliştirici'den
+     * değiştirilebiliyor (`debug.md` O-14).
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
         p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
@@ -296,12 +294,15 @@ class Tercihler @Inject constructor(
 
     companion object {
         /**
-         * Varsayılan sunucu adresi — `BuildConfig.API_BASE_URL`'den, yani
-         * derleme türüne göre değişiyor (debug: emülatörün baktığı
-         * `10.0.2.2`, release: gerçek HTTPS adresi). `AgModulu` yer tutucu
-         * taban olarak da bunu kullanıyor.
+         * Varsayılan sunucu adresi — **build türünden** geliyor.
+         *
+         * Release: gerçek HTTPS alan adı. Debug: emülatörün makineye
+         * baktığı `10.0.2.2` (`backend/docker-compose.yml`).
+         * Tek yapılandırma noktası `app/build.gradle.kts`; adres uygulama
+         * koduna ikinci bir yere yazılmıyor. `AgModulu` yer tutucu taban
+         * olarak da bunu kullanıyor.
          */
-        val VARSAYILAN_SUNUCU: String = BuildConfig.API_BASE_URL
+        val VARSAYILAN_SUNUCU: String = BuildConfig.API_TABANI
 
         // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
         private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")

@@ -13,6 +13,7 @@ import os
 import pytest
 
 # Ayarlar import edilmeden ÖNCE ezilmeli; `lru_cache` ilk okumayı saklıyor.
+os.environ["YESILIZ_ORTAM"] = "test"
 os.environ["YESILIZ_VERITABANI_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["YESILIZ_JWT_ANAHTARI"] = "test-anahtari"
 

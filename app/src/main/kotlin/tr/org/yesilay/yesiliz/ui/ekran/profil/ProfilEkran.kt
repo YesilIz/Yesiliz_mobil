@@ -599,10 +599,10 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
 /**
  * Sunucu adresi — yalnızca debug derlemesinde görünen geliştirici ayarı.
  *
- * `AgModulu.EMULATOR_TABANI = http://10.0.2.2:8000/` yalnızca emülatörden
- * erişilebiliyordu; gerçek telefonda HER çağrı zaman aşımına uğrayıp
- * `Yedekli*Deposu` sahte veriye düşüyordu ve bu istisna değil varsayılan
- * durum hâline gelmişti (`debug.md` O-14).
+ * Varsayılan adres artık build türünden geliyor (`BuildConfig.API_TABANI`):
+ * release'de gerçek HTTPS alan adı, debug'da emülatörün `10.0.2.2`'si. Bu
+ * alan yalnızca **debug'da** anlamlı — gerçek cihazdan geliştirme
+ * makinesine bağlanmak için (`debug.md` O-14).
  */
 @Composable
 private fun SunucuAdresiIcerik(
@@ -621,9 +621,9 @@ private fun SunucuAdresiIcerik(
         AltSayfaBasligi("Sunucu adresi", onKapat)
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "10.0.2.2 yalnızca emülatörde çalışır. Gerçek cihazda " +
-                "geliştirme makinenin yerel ağ adresini yaz " +
-                "(örnek: http://192.168.1.20:8000).",
+            // Metin kaynak setinden geliyor (`GelistiriciMetin.kt`):
+            // şifresiz geliştirme adresleri release APK'sına girmesin.
+            text = SUNUCU_ADRESI_ACIKLAMA,
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
@@ -631,7 +631,7 @@ private fun SunucuAdresiIcerik(
         OutlinedTextField(
             value = adres,
             onValueChange = { adres = it },
-            placeholder = { Text("http://192.168.1.20:8000/") },
+            placeholder = { Text(SUNUCU_ADRESI_ORNEK) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )

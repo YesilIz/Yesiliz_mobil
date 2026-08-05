@@ -27,14 +27,20 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 270)
+# testler  (toplam 293)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
 ./gradlew :app:testDebugUnitTest       # 153 · saf JVM
-./gradlew :app:connectedDebugAndroidTest   # 32 · GERÇEK CİHAZ ya da emülatör
+./gradlew :app:connectedDebugAndroidTest   # 36 · GERÇEK CİHAZ ya da emülatör
 ./gradlew :app:installDebug            # cihaza kur
 
-# backend  (53 pytest)
+# backend  (76 pytest)
 cd backend && docker compose up -d && docker compose exec api pytest -q
+
+# canlı ortam smoke testleri — dağıtılmış sunucuya karşı, `pytest -q` toplamıyor
+YESILIZ_SMOKE_TABAN=https://<alan-adi> python -m pytest smoke -q
+
+# release APK'yı başka bir adrese derlemek (varsayılan app/build.gradle.kts'te)
+./gradlew :app:assembleRelease -Pyesiliz.sunucu=https://api.ornek.com
 
 # Gerçek cihazdan yerel backend'e: telefon Wi-Fi'da değilse LAN adresi
 # çalışmaz. USB üzerinden tünel kur, sonra Profil › Geliştirici ›
@@ -99,6 +105,7 @@ fix/y             ●────●───
 | **`docs/tasarim-referans.md`** | **Teslim edilen 31 ekranın (19 + 12 ek) spek'i + tokenlar** | **UI yazarken — ekranların kaynağı** |
 | `docs/stitch-ekranlar.md` | DESIGN §5.X ↔ Stitch ekran ID eşlemesi | tarihsel — yeni ekran için kullanma |
 | `docs/spike-usagestats-sonuc.md` | UsageStats ortam bulguları | veri okumaya başlarken |
+| **`docs/dagitim.md`** | **Ortam değişkenleri, Railway, migration, /health, CI/CD, Android adres yönetimi** | **dağıtıma ya da sunucu adresine dokunurken** |
 
 ---
 
@@ -200,7 +207,8 @@ core-risk/…/risk/
 
 app/…/yesiliz/
 ├─ MainActivity.kt · YesilizApp.kt
-├─ di/                    Hilt — VeriModulu · AgModulu · DepoModulu
+├─ di/                    Hilt — VeriModulu · AgModulu
+│                         (DepoBaglama kaynak setinde: src/debug · src/release)
 ├─ data/
 │  ├─ kullanim/           UsageStatsManager sarmalayıcı
 │  ├─ saglik/             Health Connect + donanım adım sayacı (K27)
@@ -211,7 +219,8 @@ app/…/yesiliz/
 │                         Yerel: Kategori · Kullanim · Risk · Puan · Bildirim ·
 │                         Bilgi · Beyan · GecmisVeri · DisaAktar · VeriYonetimi
 │                         Uzak: RetrofitHesap · RetrofitLig · Senkron · Ebeveyn
-│                         Sarmalayıcı: YedekliLigDeposu · YedekliHesapDeposu
+│                         Sarmalayıcı: Yedekli*Deposu (debug) ·
+│                         Sunucu*Deposu (release) — §12 K18
 ├─ domain/
 │  ├─ model/              UI'ın gördüğü modeller
 │  ├─ kategori/           Kategori · KategoriEsleyici · KategoriTablosu
@@ -268,13 +277,20 @@ UsageStatsManager / Health Connect
 `domain/`'de `LigDeposu` / `HesapDeposu` **arayüzleri** var. MVP'de
 `YerelSahteLigDeposu` / `YerelSahteHesapDeposu` sahte veriyle uyguluyordu;
 backend gelince `RetrofitLigDeposu` / `RetrofitHesapDeposu` aynı arayüzü
-sunucuya bağladı. **Vaat edilen tam olarak gerçekleşti:** yalnızca
-`di/DepoModulu.kt` değişti, hiçbir ViewModel veya Composable'a dokunulmadı.
+sunucuya bağladı. **Vaat edilen tam olarak gerçekleşti:** yalnızca DI
+bağlaması değişti, hiçbir ViewModel veya Composable'a dokunulmadı.
 
-Bugün bağlanan şey ikisinden biri değil, **sarmalayıcı**: `YedekliLigDeposu`
-ve `YedekliHesapDeposu` önce Retrofit'i deniyor, **ağ hatasında** yerel sahteye
-düşüyor (§12 K18). İş hatası (401 yanlış şifre, 409 e-posta kayıtlı) olduğu
-gibi geçiyor — yoksa yanlış şifreyle "giriş yaptın" demiş olurduk.
+Bağlanan şey ikisinden biri değil, **sarmalayıcı** — ve sarmalayıcı build
+türüne göre değişiyor (`di/DepoBaglama.kt`, kaynak setinde):
+
+| Kaynak seti | Bağlanan | Sunucuya ulaşılamazsa |
+|---|---|---|
+| `src/debug` | `Yedekli*Deposu` | Yerel sahteye düşer, ekran `cevrimdisi` notunu gösterir |
+| `src/release` | `Sunucu*Deposu` | Boş sonuç + aynı not; sahte veri **hiç örneklenmez** |
+
+İkisinde de iş hatası (401 yanlış şifre, 409 e-posta kayıtlı) olduğu gibi
+geçiyor — yoksa yanlış şifreyle "giriş yaptın" demiş olurduk. Deseni bir
+kez daha sınayan şey bu ayrım oldu: dosya sayısı iki, dokunulan ekran sıfır.
 
 ### Sunucu ile senkron
 
@@ -445,6 +461,9 @@ Hepsi bir kez yaşandı. Tekrarlama.
 | **`runCatching { … }.getOrDefault(bosDeger)`** | Hatayı yutup **meşru görünen** bir değer döndürmek kusuru sınırsız süre saklıyor. HC okuması reddediliyordu, çağıran `adim = 0` alıyordu, sıfır da geçerli bir gün ("hiç yürümemiş") olduğu için ne kullanıcı ne logcat bir şey söylüyordu | Boş değer dönmek doğru olabilir ama **sessiz** olmamalı: `getOrElse { Log.w(…, it); bosDeger }`. Kural: yutulan istisnanın en az bir izi kalsın |
 | **Tek `sheetState` birden çok `ModalBottomSheet`'te** | Ekran tek bir `rememberModalBottomSheetState()` örneğini bütün alt sayfalarında paylaşıyor; biri kapanıp durum `Hidden`'a düştüğünde sıradaki sayfa aynı durumla açılıp **hiç çizilmiyor**. Boş `onDismissRequest` de aynı sınıf: sayfa gizleniyor ama bileşimde kalıp perde dokunuşlarını ve geri tuşunu yutuyor | `ui/bilesen/AltSayfa.kt` — her çağrı kendi durumunu alıyor, `skipPartiallyExpanded` ve iç `verticalScroll` tek yerden |
 | **Askıya alan çağrı `MutableStateFlow.update` bloğunun içinde** | `update` lambdayı yarışma durumunda **yeniden çalıştırıyor**; içeride ağ çağrısı varsa ikinci kez istek gidiyor | Askıya alan işi `update`'ten önce yap, sonuca göre `update` çağır |
+| **Sağlayıcının `DATABASE_URL`'i psycopg2 arıyor** | Railway/Render PostgreSQL eklendiğinde `postgresql://…` (bazen `postgres://…`) enjekte ediyor. SQLAlchemy 2.0 bu şemada psycopg **2**'yi arıyor, `requirements.txt`'de psycopg **3** var: kap açılışta `ModuleNotFoundError: psycopg2` ile ölüyor ve bu, sağlayıcı panelinde okunması en zor hatalardan biri | `ayarlar.py` şemayı `postgresql+psycopg://`'ye çeviriyor. Değişkenin adı da değiştirilemiyor — sağlayıcı yazıyor — o yüzden her ayar iki takma adla okunuyor (`YESILIZ_*` ve standart ad) |
+| **Alembic URL'inde `%`** | `alembic.ini` ConfigParser ile okunuyor ve `%` orada yerleştirme işareti. Sağlayıcının ürettiği veritabanı parolasında bir `%` geçerse migration `InterpolationSyntaxError` ile düşüyor; yerelde hiç görülmüyor çünkü compose parolası `yesiliz` | `alembic/env.py` `set_main_option` öncesi `%` → `%%` |
+| **Gradle `doFirst` içinde script değişkeni** | `doFirst { require(canliSunucu…) }` build script nesnesini yakalıyor; yapılandırma önbelleği bunu serileştiremiyor ve `assembleRelease` "cannot serialize Gradle script object references" ile düşüyor. Hata derlemeyle ilgili görünüyor, ilgisi yok | Değeri `configureEach` içinde yerel bir `val`'e al, lambda onu yakalasın |
 | **Yenileme jetonu saklanıp hiç kullanılmaması** | Erişim jetonu dolunca (30 dk) her kimlikli çağrı 401 veriyor ve `Yedekli*Deposu` sessizce sahte veriye düşüyor — kullanıcı hâlâ "giriş yapmış" görünüyor | `okhttp3.Authenticator` (`JetonAuthenticator`). Yenileme çağrısı **ayrı** bir istemciden gitmeli, yoksa Dagger döngüsü + sonsuz 401 özyinelemesi |
 
 ---
@@ -477,10 +496,16 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 > kusurlar da ilk kez buradan çıktı: `debug.md`.
 >
 > **Aktivite kolu da koştu (3 Ağu 2026):** aynı cihazda `gunluk_ozet.adim`
-> ilk kez doldu (`1039` → `A=0,05195` → `D=0,99221`). O güne kadar `D` hep
-> `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç ölçülememişti — sebebi
-> iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in bu
-> cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
+> ilk kez sıfırdan farklı bir değerle doldu ve `D < 1` çıktı. O güne kadar
+> `D` hep `1,0`'dı ve `spec-risk.md`'nin sönümleme dalı hiç **koşturulamamıştı**
+> — sebebi iki katmanlıydı: Health Connect ön plan şartı ve Health Connect'in
+> bu cihazda tamamen boş olması (`debug.md` K-0, §12 K27).
+>
+> **Ama koşan şey boru hattı, ölçüm değil.** Kullanılan `1039` sayısı
+> veritabanına elle enjekte edilmiş bir tabandan üretildi; o gün telefon
+> çantadaydı ve gerçek adım sıfıra yakındı. **Adım sayısının doğruluğu hâlâ
+> doğrulanmadı** — telefonu bir gün cepte taşıyıp bağımsız bir sayaçla
+> karşılaştırmak gerekiyor (`debug.md` §5).
 
 ---
 
@@ -508,7 +533,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
-| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; gerçek cihazda `gunluk_ozet.adim = 1039` → `D = 0,992` |
+| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; cihazda boru hattı uçtan uca koştu (`D < 1` ilk kez) — sayının kendisi gerçek bir günle **doğrulanmadı**, `debug.md` §5 |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
@@ -526,27 +551,34 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
-| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **59 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **82 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `backend/` dağıtım katmanı | Ortam ayrımı + üretim açılış kapısı (`ayarlar.py`) · `/health` (DB kontrollü) · JSON log + `X-Istek-Id` + gizli değer maskesi (`gunluk.py`) · CORS · açılışta migration (`baslat.sh`) · `railway.json` · `.env.ornek` | **23 pytest**; yerel yığında `/health` 200 ve `alembic current` = head |
+| `backend/smoke/` | Canlı ortama karşı uçtan uca akış — `/health` → kayıt → giriş → korumalı uç → `POST /ozet` → `GET /lig` → `DELETE /auth/hesap` temizliği | yerel yığına karşı koştu; `pytest.ini` normal koşumdan ayırıyor |
+| `.github/workflows/` | `backend.yml` (test → güvenlik kapısı → imaj → Railway → `/health` → smoke) · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | kontroller yerelde kuru koşuldu |
 | `app/data/uzak/` | `YesilizApi` (18 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme** | uçtan uca emülatörde doğrulandı; **7 birim testi** |
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
-| `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
+| `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18). **Yalnızca debug'da bağlı** | backend kapalıyken debug'da lig sekmesi yine dolu |
+| `app/data/depo/SunucuDepolar` | Release'in bağladığı sunucu-yalnız depolar — sahte veri yok, hata indirgeniyor (boş sonuç + `cevrimdisi` + logcat) | release APK'da `10.0.2.2` ve şifresiz adres yok (dex denetlendi) |
 | `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil | **3 cihaz testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 270 test** (153 Android birim + 36 cihaz/emülatör + 22 core-risk + 59 backend
+**Toplam 293 test** (153 Android birim + 36 cihaz/emülatör + 22 core-risk + 82 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
 
 **Hâlâ bilinçli sahte olanlar:** önerilen kişiler listesi (rehber okunmuyor —
-§12 K14) ve **backend kapalıyken** lig sıralaması/lig adı (§12 K18 sarmalayıcısı
-`YerelSahteLigDeposu`'na düşüyor). Sunucu ayaktayken lig, hesap, özet senkronu
-ve ebeveyn eşleştirmesi gerçek. Kullanıcı adı da gerçek: hesap ekranından ya da
-misafir modunda sabitten geliyor.
+§12 K14) ve **debug derlemesinde, backend kapalıyken** lig sıralaması/lig adı
+(§12 K18 sarmalayıcısı `YerelSahteLigDeposu`'na düşüyor). Release'de bu yol
+**yok**: sahte depo hiç örneklenmiyor, boş lig + "sunucuya ulaşılamıyor" notu
+görünüyor. Sunucu ayaktayken lig, hesap, özet senkronu ve ebeveyn eşleştirmesi
+gerçek. Kullanıcı adı da gerçek: hesap ekranından ya da misafir modunda
+sabitten geliyor.
 
-> **Demo günü uyarısı:** lig ekranındaki veri sunucu ayakta mı diye bakmadan
-> yorumlanmamalı — sahte veri sessizce devreye giriyor, bu bilinçli bir tasarım
-> kararı (§12 K18) ama demo sırasında "backend çalışıyor" diye gösterilemez.
+> **Demo günü uyarısı:** demo debug APK'sıyla yapılıyorsa lig ekranındaki veri
+> sunucu ayakta mı diye bakmadan yorumlanmamalı — yerel yedek devreye giriyor.
+> Ekran bunu `cevrimdisi` notuyla söylüyor ve o not göründüğü sürece "backend
+> çalışıyor" diye gösterilemez.
 
 **Demo tohumu:** `app/src/debug/` kaynak setinde — release derlemesine
 **giremiyor**. Profil → Geliştirici → "Örnek veri oluştur". Tohum yalnızca
@@ -561,7 +593,7 @@ doğrulandı. `debug.md` bu taramanın kaydı olarak duruyor, ✅ işaretli.
 
 | İş | Not |
 |---|---|
-| Backend dağıtımı | Adres artık çalışma zamanında okunuyor (§12 K24) ve gerçek cihaz USB üzerinden `adb reverse` ile yerel sunucuya bağlanabiliyor. **Kalıcı dağıtım + HTTPS alan adı hâlâ yok**; release `ag_guvenligi.xml` şifresiz trafiği yalnızca `10.0.2.2` için açıyor, debug kaynak seti kendi gevşek yapılandırmasını getiriyor |
+| Backend dağıtımı — **kod tarafı bitti, sağlayıcı adımı kaldı** | Kodda hazır: ortam ayrımı + üretim açılış kapısı (`ayarlar.py`), `/health` (DB kontrollü), yapılandırılmış log + CORS (`gunluk.py`), açılışta migration (`baslat.sh`), `railway.json`, CI/CD (`.github/workflows/`), smoke testleri (`backend/smoke/`), Android debug/release adres ayrımı (§12 K29), sahte veri release'den çıktı (§12 K18). **Kalan:** Railway hesabı, PostgreSQL örneği, `JWT_SECRET`, alan adı + sertifika, CI değişkenleri — hepsi `docs/dagitim.md §2` ve §7'de adım adım. Dağıtım yapılınca `app/build.gradle.kts`'teki `canliSunucu` varsayılanı gerçek alan adıyla değişecek |
 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
@@ -601,7 +633,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K4 | Font | **Inter** | Averta ticari lisans istiyor; lisans gelirse `Tipografi.kt` tek dosyadan değişir |
 | K5 | Grafik kütüphanesi | Custom Compose Canvas | yalnızca 3 grafik türü var, hepsi tek renk skalasında, pan/zoom istenmiyor. Vico/MPAndroidChart kendi paletiyle gelir — "kırmızı yok" kuralına sürekli karşı durmak gerekirdi. 4 Canvas bileşeni yazmak daha az risk |
 | K6 | İkon seti | Material Symbols + Stitch illüstrasyonları | işlevsel ikonlar hazır setten; ağaç/nefes/YEDAM gibi özgün görseller Stitch'ten |
-| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni | backend o sırada §11'de en sondaydı; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır. **Sonuç (31 Tem):** backend gelince yalnızca `di/DepoModulu.kt` değişti, tek bir ViewModel veya Composable'a dokunulmadı — desen vaadini tuttu |
+| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni | backend o sırada §11'de en sondaydı; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır. **Sonuç (31 Tem):** backend gelince yalnızca DI bağlaması değişti, tek bir ViewModel veya Composable'a dokunulmadı — desen vaadini tuttu. 5 Ağu'da bir kez daha sınandı: bağlama debug/release kaynak setine ayrıldı (`di/DepoBaglama.kt`), yine hiçbir ekran değişmedi |
 | K8 | Kategori kaynağı | LMU veri seti + referans tablo + Türkiye | LMU (doi:10.5334/jopd.59) 3.091 uygulama veriyor ama Almanya örneklemi; referans tablo Snapchat/TikTok gibi kritik çakışmaları düzeltiyor |
 | K9 | `sistem` kategorisi | Risk hesabına girmez | LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
 | K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** | Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
@@ -611,7 +643,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı | CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
 | ~~K15~~ | ~~Aktif yürüyüş **foreground service'siz**~~ | **1 Ağu 2026'da TERSİNE ÇEVRİLDİ → K21.** Eski karar: ekran açık kaldığı sürece sayıyor, gerekçesi "arka planda takip ayrı izin/bildirim/pil bütçesi ister, MVP'nin kritik yolunda değil". Gerçek cihazda bu, özelliği tam da kullanılacağı anda çalışmaz kılıyordu (`debug.md` İ-3) |
 | K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor | İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
-| K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor |
+| K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) — **yalnızca debug** | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil. **Bağlama kaynak setinde** (`di/DepoBaglama.kt`): debug → `Yedekli*`, release → `Sunucu*` | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor. **5 Ağu 2026 daraltması:** aynı davranış yayınlanan sürümde kullanıcıya uydurulmuş bir sıralamayı gerçekmiş gibi göstermek olurdu. Release'de `YerelSahte*` hiç örneklenmiyor; `Sunucu*Deposu` hatayı yutmuyor, indirgiyor — boş sonuç + `cevrimdisi` bayrağı + logcat izi |
 | K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor | `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor |
 | K20 | Görev doğrulaması **üç türlü**: `OTOMATIK` · `AKTIVITE` · `BEYAN` | İki değer varken aralarına sıkışan görevler yanlış tarafa düşüyordu. Ana ekranın `when` bloğu NEFES ve YURUYUS dışındaki her şeyi "Tamamlandı olarak işaretle" butonuna gönderiyordu — OTOMATIK ilan edilmiş `GECE_TEMIZ` ve `TUKETIM_HEDEFI` dahil. O iki görev **zaten** özetten puanlanıyor; elle işaretlenince aynı gün için çift sayılıyordu ve kayıt `dogrulamaTuru = "otomatik"` olarak yazıldığı için denetim izi de yanıltıcıydı (`debug.md` K-9). `OTOMATIK` görevler `PuanDeposu.gorevTamamla`'dan da yazılamıyor |
 | K21 | Aktif yürüyüş **foreground service ile** (K15 tersine) | `arkaplan/YuruyusServisi`, `foregroundServiceType="health"`. Servis yalnızca oturum sürerken yaşıyor, hedef süre dolunca kendini durduruyor; bildirimi sessiz ve düşük öncelikli. Ekranı 15 dakika açık tutarak yürümek ne makul bir istek ne de uygulamanın kendi mesajıyla ("ekrandan uzaklaş") tutarlıydı. `EkranAcikTut` kaldırıldı |
@@ -621,8 +653,9 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K25 | Eşleştirme **çevrimdışı yedeğe düşmüyor** (K18 istisnası) | `EbeveynDeposu.eslestir` ağ hatasında eşleşmeyi yerel olarak kaydedip başarı dönüyordu; gerçek telefonda sunucuya hiç ulaşılamadığı için bu **tek** davranıştı ve rastgele herhangi bir 6 haneli sayı ebeveyn panelini açıyordu. Çocuğun ekran verisine erişim veren bir akış, yanlış şifreyle giriş yaptırmakla aynı sınıfta (`debug.md` K-8) |
 | K26 | 18 yaş altı **beyan usulü ebeveyn onayı** | Varsayılan yaş 17'ydi: varsayılan kullanıcı 18 altıydı ve hiçbir şey sorulmuyordu. Varsayılan 18 oldu; yaş < 18 ise onay ekranı geliyor ve onaylanmadan devam edilemiyor. Bunun **doğrulanabilir olmadığı** ekranda yazılı; gerçek doğrulama ebeveyn panelinin işi ve A5 hâlâ açık. Özellik kısıtı yok (`debug.md` Y-11) |
 | K27 | Adım verisi **iki kaynaklı**: Health Connect + donanım sayacı | Health Connect adım **saymıyor**, saklıyor. Yazan bir uygulama yoksa okuma sonsuza kadar sıfır dönüyor — test telefonunda tam olarak bu oldu ("Health Connect'te hiç veriniz yok"; Samsung Health kurulu değil, Google Fit bağlı değil). Yani düzgün çalışan bir entegrasyon, kullanıcının **başka bir uygulama kurmasına** bağlıydı. `Sensor.TYPE_STEP_COUNTER` hiçbir şeye bağlı değil. `AktiviteSaglayici` ikisini birleştiriyor: **Health Connect önce** (saatten/bileklikten gelen veri telefonun cebe girmesinden bağımsız), sıfırsa sensör. **Toplama yok** — ikisi aynı ayakları ölçüyor, şişirilen her adım riski haksız yere aşağı çeker. Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor; hesap saf (`AdimBirikim.kt`, 6 test). Egzersiz süresi yalnızca Health Connect'ten — adımdan egzersiz uydurmak ölçüm değil tahmin olurdu (`debug.md` K-0) |
+| K28 | 5.000 ve 10.000 puanlık ödül kademelerinde **seçenek**: kupon veya fidan bağışı | Market kuponuyla ilgilenmeyen kullanıcı için kupon boşa giden bir ödüldü — "kazandım ama işime yaramadı". `OdulViewModel.Kademe` artık tek bir ödül yerine `secenekler` listesi taşıyor; kademe kazanılınca birden fazla seçenek varsa `OdulHali.SECIM_BEKLIYOR`, kullanıcı seçince `OdulDeposu` üzerinden **kalıcı** yazılıyor (CLAUDE.md §4 "yalnızca kazanç" — geri alma yok). 1. ve 2. kademede (rozet, fidan) tek seçenek olduğu için davranış değişmedi. Seçim, `Yedekli*Deposu` (K18) deseninden farklı çalışıyor: yerel yazma **birincil** (sunucu ulaşılamasa da ödül kaybolmasın), sunucuya senkron **rıza kapısına (K19) bağlı değil** — davranışsal veri taşımıyor, hesap açmakla aynı sınıfta bir kullanıcı eylemi. `docs/spec-puan.md §9.1` güncellendi. **Sınır (5 Ağu):** sunucuya yazma bir kez deneniyor, düşerse **yeniden denenmiyor** — seçim cihazda kalıcı ama sunucudaki kopya eksik kalabiliyor ve telefon değişince `GET /odul/secimlerim` onu geri getiremiyor. Hata artık logcat'e yazılıyor (§9 "yutulan istisnanın izi kalsın"); bekleyen seçimleri senkronda tekrar gönderme işi A7 |
+| K29 | Sunucu adresi **build türünden**, tek yapılandırma noktasından | `app/build.gradle.kts` → `BuildConfig.API_TABANI`: debug `http://10.0.2.2:8000/`, release `canliSunucu` (HTTPS). `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor, `AgModulu` ondan alıyor. Adres `-Pyesiliz.sunucu` ya da `YESILIZ_SUNUCU` ile eziliyor. K24 (çalışma zamanı okuma) duruyor — DataStore'daki değer hâlâ öne geçiyor, ama artık **varsayılan** da doğru: temiz kurulmuş telefon hiçbir ayar yapmadan sunucuya ulaşıyor. Üç koruma birlikte: release HTTPS olmayan adresle derlenmiyor, `ag_guvenligi.xml` şifresiz trafiği istisnasız reddediyor (10.0.2.2 istisnası silindi), CI ikisini de denetliyor |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
-| K28 | 5.000 ve 10.000 puanlık ödül kademelerinde **seçenek**: kupon veya fidan bağışı | Market kuponuyla ilgilenmeyen kullanıcı için kupon boşa giden bir ödüldü — "kazandım ama işime yaramadı". `OdulViewModel.Kademe` artık tek bir ödül yerine `secenekler` listesi taşıyor; kademe kazanılınca birden fazla seçenek varsa `OdulHali.SECIM_BEKLIYOR`, kullanıcı seçince `OdulDeposu` üzerinden **kalıcı** yazılıyor (CLAUDE.md §4 "yalnızca kazanç" — geri alma yok). 1. ve 2. kademede (rozet, fidan) tek seçenek olduğu için davranış değişmedi. Seçim, `Yedekli*Deposu` (K18) deseninden farklı çalışıyor: yerel yazma **birincil** (sunucu ulaşılamasa da ödül kaybolmasın), sunucuya senkron **rıza kapısına (K19) bağlı değil** — davranışsal veri taşımıyor, hesap açmakla aynı sınıfta bir kullanıcı eylemi. `docs/spec-puan.md §9.1` güncellendi |
 
 ### Açık
 
@@ -634,3 +667,4 @@ duruyor, ihtiyaç olursa oradan alınır.
 | A4 | Ödül finansmanı / sponsorluk | teknik değil |
 | A5 | Ebeveyn modu kapsamı | MVP kritik yolunda değil |
 | A6 | Bant inişi kademeli mi | pilot |
+| A7 | Ödül seçiminin sunucuya **yeniden gönderilmesi** | Seçim cihazda kalıcı ama sunucu çağrısı bir kez deneniyor (§12 K28). Bekleyen seçimleri `SenkronDeposu` turunda tekrar göndermek gerekiyor; telefon değiştirme senaryosu bu olmadan eksik |

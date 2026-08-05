@@ -1,3 +1,7 @@
+// `java.util.Properties` açıkça import ediliyor: Kotlin DSL'de `java`
+// Gradle'ın kendi uzantısına bağlanıyor ve paket adını gölgeliyor.
+import java.util.Properties
+
 // AGP 9'da Kotlin desteği eklentinin İÇİNDE — `org.jetbrains.kotlin.android`
 // artık uygulanmıyor, uygulanırsa çakışıyor. Kotlin ayarları `android { }`
 // bloğundaki `kotlin { }` alt bloğundan yapılır.
@@ -11,6 +15,49 @@ plugins {
     // `kotlin.android` eklentisiyle ilgili, bu ondan bağımsız).
     alias(libs.plugins.kotlin.serialization)
 }
+
+/**
+ * Canlı backend adresi — release derlemesine gömülüyor.
+ *
+ * Öncelik: `-Pyesiliz.sunucu=…` › `YESILIZ_SUNUCU` ortam değişkeni ›
+ * buradaki varsayılan. Alan adı değişirse **tek yer** burası; adres
+ * uygulama koduna dağınık şekilde yazılmıyor (`BuildConfig.API_TABANI`).
+ *
+ * Sondaki eğik çizgi Retrofit için şart, elle yazılmasına bırakılmıyor.
+ */
+val canliSunucu: String = (
+    (findProperty("yesiliz.sunucu") as String?)
+        ?: System.getenv("YESILIZ_SUNUCU")
+        ?: "https://yesilizmobil-production.up.railway.app"
+    ).trim().let { if (it.endsWith("/")) it else "$it/" }
+
+/**
+ * İmza bilgileri — depoya **girmiyor**.
+ *
+ * Öncelik: ortam değişkeni › `local.properties`. İkisi de yoksa `null`
+ * dönüyor ve release imzasız üretiliyor (aşağıda). Bu bilerek böyle:
+ * keystore'u olmayan bir ekip arkadaşının `assembleRelease`'i "dosya
+ * bulunamadı" ile düşmesin, sadece kurulamayan bir APK üretsin.
+ */
+fun imzaDegeri(ortamAdi: String, ozellikAdi: String): String? =
+    System.getenv(ortamAdi)
+        ?: rootProject.file("local.properties")
+            .takeIf { it.exists() }
+            ?.let { dosya ->
+                Properties()
+                    .apply { dosya.inputStream().use { load(it) } }
+                    .getProperty(ozellikAdi)
+            }
+
+// Yol **depo köküne** göre çözülüyor. `file()` modül dizinine (`app/`)
+// göre çözerdi ve `app/app/…` arayıp sessizce imzasız APK üretirdi.
+val imzaDeposu: File? =
+    imzaDegeri("YESILIZ_IMZA_DEPOSU", "yesiliz.imza.deposu")
+        ?.let { rootProject.file(it) }
+        ?.takeIf { it.exists() }
+
+val imzaParolasi: String? = imzaDegeri("YESILIZ_IMZA_PAROLASI", "yesiliz.imza.parolasi")
+val imzaTakmaAdi: String? = imzaDegeri("YESILIZ_IMZA_TAKMA_ADI", "yesiliz.imza.takmaAdi")
 
 android {
     namespace = "tr.org.yesilay.yesiliz"
@@ -28,24 +75,44 @@ android {
         versionName = "0.1.0"
     }
 
+    // İmzasız APK telefona KURULAMIYOR — Android her paketten kriptografik
+    // imza şart koşuyor. Debug'da Android Studio kendi anahtarını üretiyor,
+    // release'de üretmiyor; bu blok olmadan `assembleRelease` çıktısı
+    // `app-release-unsigned.apk` oluyor ve gerçek cihaz doğrulaması
+    // (`gorev1.md` son iki kriter) hiç yapılamıyor.
+    //
+    // Keystore ve parolalar depoda değil: `local.properties` (gitignore'da)
+    // ya da ortam değişkeni. Değerler yoksa blok hiç tanımlanmıyor.
+    signingConfigs {
+        if (imzaDeposu != null && imzaParolasi != null && imzaTakmaAdi != null) {
+            create("release") {
+                storeFile = imzaDeposu
+                storePassword = imzaParolasi
+                keyAlias = imzaTakmaAdi
+                keyPassword = imzaParolasi
+            }
+        }
+    }
+
+    // Sunucu adresi build türüne göre: debug yerel/test sunucusu, release
+    // gerçek HTTPS adresi. Tek yapılandırma noktası — `Tercihler` ve
+    // `AgModulu` buradan okuyor, koda ikinci bir adres yazılmıyor.
     buildTypes {
-        // Sunucu adresi artık BuildConfig'ten, dağınık bir Kotlin sabitinden
-        // değil (görev tanımı §6). `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor;
-        // Profil › Geliştirici'deki manuel adres hâlâ bunun üzerine yazabilir
-        // ama açılıştaki varsayılan artık derleme türüne göre doğru geliyor.
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
+            // Emülatörün geliştirme makinesine baktığı adres
+            // (`backend/docker-compose.yml`). Gerçek cihazda Profil ›
+            // Geliştirici'den LAN adresiyle değiştiriliyor.
+            buildConfigField("String", "API_TABANI", "\"http://10.0.2.2:8000/\"")
         }
         release {
+            buildConfigField("String", "API_TABANI", "\"$canliSunucu\"")
+            // Bulunamazsa imzasız kalıyor; aşağıdaki `assembleRelease`
+            // kontrolü bunu derleme sonunda söylüyor.
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
-            )
-            // Railway'de canlı — Görev 1 §2. Şifresiz HTTP asla yazılmasın,
-            // release ağ yapılandırması (ag_guvenligi.xml) zaten reddediyor.
-            buildConfigField(
-                "String", "API_BASE_URL", "\"https://yesilizmobil-production.up.railway.app/\"",
             )
         }
     }
@@ -57,6 +124,8 @@ android {
 
     buildFeatures {
         compose = true
+        // AGP 8'den beri varsayılan kapalı; `BuildConfig.API_TABANI`
+        // üretilsin diye açık.
         buildConfig = true
     }
 
@@ -76,6 +145,41 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 }
+
+// Release çıktısı şifresiz adresle üretilemez.
+//
+// Kontrol yapılandırma anında değil, yalnızca release derlenirken koşuyor:
+// aksi hâlde `-Pyesiliz.sunucu` vermeyen her `assembleDebug` de düşerdi.
+// Yayınlanan APK'ya http:// adres gömülmesi, ağ güvenliği yapılandırması
+// zaten şifresiz trafiği reddettiği için sessiz bir "sunucuya hiç
+// ulaşamıyor" hatasına dönüşürdü.
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
+    .configureEach {
+        // Adres yerel değişkene alınıyor: `doFirst` bloğu doğrudan
+        // `canliSunucu`'ya baksaydı build script nesnesini yakalardı ve
+        // yapılandırma önbelleği bunu serileştiremiyor
+        // ("cannot serialize Gradle script object references").
+        val adres = canliSunucu
+        val imzali = imzaDeposu != null && imzaParolasi != null && imzaTakmaAdi != null
+        doFirst {
+            require(adres.startsWith("https://")) {
+                "Release derlemesi HTTPS adresi istiyor, gelen: $adres\n" +
+                    "Adresi -Pyesiliz.sunucu=https://… ile ya da YESILIZ_SUNUCU " +
+                    "ortam değişkeniyle verin (docs/dagitim.md)."
+            }
+            // Uyarı, hata değil: keystore'u olmayan biri de derleyebilsin.
+            // Ama sessiz kalmıyor — imzasız APK telefona kurulmuyor ve
+            // sebebi çıktı adından ("-unsigned") anlaşılmıyor.
+            if (!imzali) {
+                logger.warn(
+                    "UYARI: imza bilgisi bulunamadı, release APK İMZASIZ " +
+                        "üretiliyor ve telefona KURULAMAZ. Keystore ve " +
+                        "parolalar local.properties'ten okunuyor " +
+                        "(docs/dagitim.md §10).",
+                )
+            }
+        }
+    }
 
 // Room şemasını JSON olarak dışa aktar.
 // DB.md bu dosyadan ÜRETİLİYOR (tools/db_dokuman_uret.py) — şema değişince

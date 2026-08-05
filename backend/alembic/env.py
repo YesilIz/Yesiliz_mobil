@@ -12,7 +12,13 @@ from app.veritabani import Taban
 import app.modeller  # noqa: F401
 
 yapilandirma = context.config
-yapilandirma.set_main_option("sqlalchemy.url", ayarlar().veritabani_url)
+# `%` iki katına çıkarılıyor: alembic.ini ConfigParser ile okunuyor ve
+# `%` orada değişken yerleştirme işareti. Sağlayıcının ürettiği veritabanı
+# parolasında bir `%` geçerse migration `InterpolationSyntaxError` ile
+# düşüyor — dağıtım günü sebebi en zor bulunacak hatalardan biri.
+yapilandirma.set_main_option(
+    "sqlalchemy.url", ayarlar().veritabani_url.replace("%", "%%")
+)
 
 if yapilandirma.config_file_name is not None:
     fileConfig(yapilandirma.config_file_name)

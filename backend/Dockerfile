@@ -7,17 +7,22 @@ FROM python:3.12-slim
 
 WORKDIR /uygulama
 
+# Python'un kap içindeki iki alışkanlığı: .pyc yazmasın, stdout'u
+# tamponlamasın. İkincisi loglama için şart — tamponlanmış stdout,
+# sağlayıcı panelinde logların dakikalarca geç görünmesi demek.
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 # Bağımlılıklar ayrı katmanda: kaynak değişince yeniden kurulmasın.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN chmod +x entrypoint.sh
+RUN chmod +x baslat.sh
 
+# Yerelde 8000; üretimde sağlayıcı `PORT`'u enjekte ediyor ve baslat.sh
+# onu okuyor. EXPOSE yalnızca belge değeri taşıyor.
 EXPOSE 8000
 
-# Migration önce, backend sonra — entrypoint.sh migration başarısız olursa
-# uvicorn'u hiç başlatmıyor (görev tanımı §4). docker-compose.yml kendi
-# `command`'ıyla bunu eziyor (canlı yeniden yükleme için); bu CMD yalnızca
-# Render gibi doğrudan imajı çalıştıran ortamlarda devreye giriyor.
-CMD ["./entrypoint.sh"]
+# Migration → sunucu. Migration düşerse sunucu hiç başlamıyor (baslat.sh).
+CMD ["./baslat.sh"]

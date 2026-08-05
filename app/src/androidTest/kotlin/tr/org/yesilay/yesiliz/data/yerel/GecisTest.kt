@@ -160,11 +160,6 @@ class GecisTest {
     }
 
     /**
-     * [olayVarMi] yalnızca sürüm 3 ve üstünde verilebiliyor — kolon 2 → 3
-     * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
-     * bırakıyor, kolon INSERT listesine hiç girmiyor.
-     */
-    /**
      * 4 → 5: `odul_secimi` tablosu.
      *
      * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
@@ -180,6 +175,11 @@ class GecisTest {
         )
     }
 
+    /**
+     * [olayVarMi] yalnızca sürüm 3 ve üstünde verilebiliyor — kolon 2 → 3
+     * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
+     * bırakıyor, kolon INSERT listesine hiç girmiyor.
+     */
     private fun satir(tarih: String, acilis: Int, olayVarMi: Int? = null): String {
         val ekKolon = if (olayVarMi == null) "" else ", olayVarMi"
         val ekDeger = if (olayVarMi == null) "" else ", $olayVarMi"

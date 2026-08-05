@@ -2,11 +2,16 @@
 <!--
   Ağ güvenliği — release.
 
-  Şifresiz trafik **tamamen kapalı**, istisnasız — üretimde HTTPS zorunlu
-  (görev tanımı §6: "Release sürümü oluşturulurken 10.0.2.2 kullanılmamalı").
-  `10.0.2.2` istisnası daha önce buradaydı; artık gerek yok çünkü release
-  `BuildConfig.API_BASE_URL` her zaman gerçek HTTPS adresini taşıyor,
-  emülatör adresine hiç başvurmuyor.
+  Şifresiz trafik **kapalı**, istisnasız. Backend HTTPS ile yayında
+  (`docs/dagitim.md`) ve release derlemesinin gömdüğü adres
+  `BuildConfig.API_TABANI`; o adresin https:// olduğu derleme sırasında
+  ayrıca doğrulanıyor (`app/build.gradle.kts`).
+
+  Bir zamanlar `10.0.2.2` için cleartext istisnası vardı — emülatörün
+  TLS'siz geliştirme sunucusuna ulaşabilmesi için. Yayınlanan APK'da
+  hiçbir işe yaramıyordu (10.0.2.2 yalnızca emülatörde anlamlı) ama
+  release yapılandırmasında şifresiz trafiğe açık bir kapı bırakıyordu;
+  HTTPS gelince silindi.
 
   Debug derlemesi `src/debug/res/xml/ag_guvenligi.xml` ile bu dosyayı
   override ediyor: gerçek cihazda geliştirme sunucusuna LAN adresiyle
