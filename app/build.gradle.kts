@@ -29,12 +29,23 @@ android {
     }
 
     buildTypes {
+        // Sunucu adresi artık BuildConfig'ten, dağınık bir Kotlin sabitinden
+        // değil (görev tanımı §6). `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor;
+        // Profil › Geliştirici'deki manuel adres hâlâ bunun üzerine yazabilir
+        // ama açılıştaki varsayılan artık derleme türüne göre doğru geliyor.
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // TODO: Render'a dağıtım (Görev 1 §2) tamamlanınca gerçek alan
+            // adıyla değiştirilecek. Şifresiz HTTP asla yazılmasın —
+            // release ağ yapılandırması (ag_guvenligi.xml) zaten reddediyor.
+            buildConfigField("String", "API_BASE_URL", "\"https://api.yesiliz.org.tr/\"")
         }
     }
 
@@ -45,6 +56,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // CLAUDE.md §3.5: kaynaklar java/ değil kotlin/ altında.

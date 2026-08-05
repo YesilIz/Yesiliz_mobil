@@ -45,8 +45,12 @@ object AgModulu {
     /**
      * Retrofit'in derleme anında bir taban adrese ihtiyacı var; gerçek
      * adres [tabanDegistirici] tarafından her istekte yazılıyor.
+     *
+     * `Tercihler.VARSAYILAN_SUNUCU` artık `BuildConfig.API_BASE_URL`'den
+     * geldiği için (görev tanımı §6) burası da `const` olamıyor — Kotlin
+     * `const val` yalnızca derleme zamanı sabitlerini kabul ediyor.
      */
-    private const val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
+    private val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
 
     /**
      * Zaman aşımı.

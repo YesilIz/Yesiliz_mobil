@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import java.time.LocalDate
 import javax.inject.Inject
@@ -253,14 +254,14 @@ class Tercihler @Inject constructor(
     /**
      * Sunucu adresi — Profil › Geliştirici'den değiştirilebilir.
      *
-     * Varsayılan `10.0.2.2` **yalnızca emülatörde** anlamlı: gerçek
-     * telefonda her çağrı zaman aşımına uğrayıp `Yedekli*Deposu`
-     * sahte veriye düşüyordu ve ekranda bunun çevrimdışı yedek olduğunu
-     * söyleyen hiçbir işaret yoktu (`debug.md` O-14). Gerçek cihazda
+     * Varsayılan artık **derleme türüne göre** geliyor
+     * (`BuildConfig.API_BASE_URL`, görev tanımı §6): debug'da emülatörün
+     * makineye baktığı `10.0.2.2`, release'de gerçek HTTPS adresi. Eskiden
+     * ikisi de aynı sabitti — gerçek telefonda her çağrı zaman aşımına
+     * uğrayıp `Yedekli*Deposu` sahte veriye düşüyordu ve ekranda bunun
+     * çevrimdışı yedek olduğunu söyleyen hiçbir işaret yoktu (`debug.md`
+     * O-14). Buradaki manuel geçersiz kılma hâlâ duruyor: gerçek cihazda
      * geliştirme yapabilmek için makinenin LAN adresi girilebiliyor.
-     *
-     * Dağıtım yapıldığında varsayılan HTTPS alan adı olacak; alan
-     * yalnızca hata ayıklama için kalacak.
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
         p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
@@ -295,11 +296,12 @@ class Tercihler @Inject constructor(
 
     companion object {
         /**
-         * Varsayılan sunucu adresi — emülatörün makineye baktığı yer
-         * (`backend/docker-compose.yml`). `AgModulu` yer tutucu taban
-         * olarak da bunu kullanıyor.
+         * Varsayılan sunucu adresi — `BuildConfig.API_BASE_URL`'den, yani
+         * derleme türüne göre değişiyor (debug: emülatörün baktığı
+         * `10.0.2.2`, release: gerçek HTTPS adresi). `AgModulu` yer tutucu
+         * taban olarak da bunu kullanıyor.
          */
-        const val VARSAYILAN_SUNUCU = "http://10.0.2.2:8000/"
+        val VARSAYILAN_SUNUCU: String = BuildConfig.API_BASE_URL
 
         // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
         private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
