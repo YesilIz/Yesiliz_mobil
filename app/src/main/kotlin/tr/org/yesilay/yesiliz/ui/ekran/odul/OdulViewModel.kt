@@ -20,7 +20,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.ui.ikonu
+import tr.org.yesilay.yesiliz.data.depo.OdulDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
@@ -35,10 +37,15 @@ import javax.inject.Inject
  * Kademeler ve ek koşullar `docs/spec-puan.md §9.1`'den. Ödül yalnızca puan
  * eşiğiyle değil **aktif gün** koşuluyla da açılıyor: tek günde patlama yapıp
  * ödül almayı engelliyor (§9.2 anti-gaming).
+ *
+ * Bazı kademelerde tek bir ödül yerine seçenek var (§12 K28: market kuponu
+ * kullanmak istemeyen kullanıcıya fidan bağışı alternatifi). Seçim
+ * [OdulDeposu]'nda kalıcı — bir kere yapılınca değişmiyor.
  */
 @HiltViewModel
 class OdulViewModel @Inject constructor(
     private val puanDeposu: PuanDeposu,
+    private val odulDeposu: OdulDeposu,
     tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
 ) : ViewModel() {
@@ -47,12 +54,14 @@ class OdulViewModel @Inject constructor(
         puanDeposu.toplamPuan,
         puanDeposu.aktifGunSayisi,
         puanDeposu.sonKayitlar(),
+        odulDeposu.secimlerAkisi,
         tercihler.oturum,
-    ) { puan, aktifGun, kayitlar, oturum ->
-        val ham = KADEMELER.map { it.duruma(puan, aktifGun) }
+    ) { puan, aktifGun, kayitlar, secimler, oturum ->
+        val ham = KADEMELER.map { it.duruma(puan, aktifGun, secimler[it.id]) }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
-        // gösterilen, kullanıcının hedeflediği ödül bu.
-        val siradaki = ham.filter { it.hal != OdulHali.KAZANILDI }.minByOrNull { it.esik }
+        // gösterilen, kullanıcının hedeflediği ödül bu. Seçim bekleyen bir
+        // kademe zaten kazanılmış sayılıyor, "sıradaki" olamaz.
+        val siradaki = ham.filter { it.hal == OdulHali.KILITLI }.minByOrNull { it.esik }
         val basamaklar = ham.map {
             if (it.id == siradaki?.id) it.copy(hal = OdulHali.AKTIF) else it
         }
@@ -71,26 +80,52 @@ class OdulViewModel @Inject constructor(
         initialValue = OdulDurum(),
     )
 
+    /**
+     * Seçim bekleyen bir kademe için kullanıcının kararını kaydeder.
+     *
+     * Kademe için zaten bir seçim varsa [OdulDeposu.sec] `false` döner ve
+     * hiçbir şey değişmez — seçim geri alınamaz (CLAUDE.md §4).
+     */
+    fun secYap(kademeId: String, secenekId: String) {
+        viewModelScope.launch { odulDeposu.sec(kademeId, secenekId) }
+    }
+
     /** `docs/spec-puan.md §9.1` — kademe tanımı. */
-    private data class Kademe(
+    private data class SecenekTanimi(
         val id: String,
         val ad: String,
-        val esik: Int,
-        val aktifGunKosulu: Int,
         val ikon: ImageVector,
         val aciklama: String,
+    )
+
+    private data class Kademe(
+        val id: String,
+        val esik: Int,
+        val aktifGunKosulu: Int,
+        val secenekler: List<SecenekTanimi>,
     ) {
-        fun duruma(puan: Int, aktifGun: Int) = Odul(
-            id = id,
-            ad = ad,
-            esik = esik,
-            ikon = ikon,
-            hal = when {
-                puan >= esik && aktifGun >= aktifGunKosulu -> OdulHali.KAZANILDI
-                else -> OdulHali.KILITLI
-            },
-            aciklama = aciklama,
-        )
+        fun duruma(puan: Int, aktifGun: Int, secilenId: String?): Odul {
+            val hakEdildi = puan >= esik && aktifGun >= aktifGunKosulu
+            val cokluSecenek = secenekler.size > 1
+            val secilen = secilenId?.let { id -> secenekler.firstOrNull { it.id == id } }
+            val gosterim = secilen ?: secenekler.first()
+
+            val hal = when {
+                !hakEdildi -> OdulHali.KILITLI
+                cokluSecenek && secilen == null -> OdulHali.SECIM_BEKLIYOR
+                else -> OdulHali.KAZANILDI
+            }
+
+            return Odul(
+                id = id,
+                ad = gosterim.ad,
+                esik = esik,
+                ikon = gosterim.ikon,
+                hal = hal,
+                aciklama = gosterim.aciklama,
+                secenekler = secenekler.map { Secenek(it.id, it.ad, it.ikon, it.aciklama) },
+            )
+        }
     }
 
     private companion object {
@@ -102,39 +137,73 @@ class OdulViewModel @Inject constructor(
         val KADEMELER = listOf(
             Kademe(
                 id = "rozet",
-                ad = "Dijital rozet",
                 esik = 500,
                 aktifGunKosulu = 0,
-                ikon = Icons.Filled.MilitaryTech,
-                aciklama = "İlk 500 puanı topladığın için profilinde görünen bir " +
-                    "rozet kazanırsın.",
+                secenekler = listOf(
+                    SecenekTanimi(
+                        id = "rozet",
+                        ad = "Dijital rozet",
+                        ikon = Icons.Filled.MilitaryTech,
+                        aciklama = "İlk 500 puanı topladığın için profilinde görünen " +
+                            "bir rozet kazanırsın.",
+                    ),
+                ),
             ),
             Kademe(
                 id = "fidan",
-                ad = "Adına fidan bağışı",
                 esik = 2_000,
                 aktifGunKosulu = 14,
-                ikon = Icons.Filled.Park,
-                aciklama = "Ekran süreni azaltarak kazandığın 2.000 puanla senin " +
-                    "adına 1 fidan toprakla buluşur.",
+                secenekler = listOf(
+                    SecenekTanimi(
+                        id = "fidan_bagisi",
+                        ad = "Adına fidan bağışı",
+                        ikon = Icons.Filled.Park,
+                        aciklama = "Ekran süreni azaltarak kazandığın 2.000 puanla " +
+                            "senin adına 1 fidan toprakla buluşur.",
+                    ),
+                ),
             ),
             Kademe(
                 id = "kupon_market",
-                ad = "Yeşilay Market kuponu",
                 esik = 5_000,
                 aktifGunKosulu = 30,
-                ikon = Icons.Filled.ShoppingBasket,
-                aciklama = "5.000 puana ulaştığında Yeşilay Market'te geçerli bir " +
-                    "alışveriş kuponu kazanırsın.",
+                secenekler = listOf(
+                    SecenekTanimi(
+                        id = "market_kuponu",
+                        ad = "Yeşilay Market kuponu",
+                        ikon = Icons.Filled.ShoppingBasket,
+                        aciklama = "5.000 puana ulaştığında Yeşilay Market'te " +
+                            "geçerli bir alışveriş kuponu kazanırsın.",
+                    ),
+                    SecenekTanimi(
+                        id = "fidan_bagisi",
+                        ad = "Adına fidan bağışı",
+                        ikon = Icons.Filled.Park,
+                        aciklama = "Market kuponu yerine, 5.000 puanla senin " +
+                            "adına 1 fidan toprakla buluşur.",
+                    ),
+                ),
             ),
             Kademe(
                 id = "kupon_spor",
-                ad = "Spor / kitap kuponu",
                 esik = 10_000,
                 aktifGunKosulu = 45,
-                ikon = Icons.Filled.SportsScore,
-                aciklama = "10.000 puana ulaştığında spor veya kitap alışverişinde " +
-                    "geçerli bir kupon kazanırsın.",
+                secenekler = listOf(
+                    SecenekTanimi(
+                        id = "kupon_spor_kitap",
+                        ad = "Spor / kitap kuponu",
+                        ikon = Icons.Filled.SportsScore,
+                        aciklama = "10.000 puana ulaştığında spor veya kitap " +
+                            "alışverişinde geçerli bir kupon kazanırsın.",
+                    ),
+                    SecenekTanimi(
+                        id = "fidan_bagisi",
+                        ad = "Adına fidan bağışı",
+                        ikon = Icons.Filled.Park,
+                        aciklama = "Kupon yerine, 10.000 puanla senin adına 1 " +
+                            "fidan toprakla buluşur.",
+                    ),
+                ),
             ),
         )
     }

@@ -133,11 +133,18 @@ Ek: okul/sınıf ligi (Yeşilay okul programlarıyla entegrasyon), arkadaş ligi
 |---|---|---|---|
 | 1 | 500 | Dijital rozet | — |
 | 2 | 2.000 | **Fidan bağışı** (kullanıcı adına, sertifikalı) | 14 aktif gün |
-| 3 | 5.000 | Yeşilay Market kuponu | 30 aktif gün |
-| 4 | 10.000 | Spor / kitap kuponu | 45 aktif gün |
+| 3 | 5.000 | Yeşilay Market kuponu **veya fidan bağışı** (kullanıcı seçiyor) | 30 aktif gün |
+| 4 | 10.000 | Spor / kitap kuponu **veya fidan bağışı** (kullanıcı seçiyor) | 45 aktif gün |
 
 **Aktif gün:** en az bir görev tamamlanmış + kullanım verisi kaydedilmiş gün.
 Aktif kullanıcı ~6 haftada ilk maddi ödüle ulaşır (~120 puan/gün).
+
+**Seçilebilir ödül (3. ve 4. kademe):** market kuponuyla ilgilenmeyen
+kullanıcıya alternatif sunuluyor — kupon kullanılmadan boşa giden bir ödül,
+"kazandım ama işime yaramadı" hissi yaratır. Seçim kademe kazanılınca
+yapılıyor ve **kalıcı**; değiştirilemez (CLAUDE.md §4 "yalnızca kazanç" —
+geri alma/değiştirme yolu yok). 1. ve 2. kademede seçenek yok, tasarım
+gereği tek ödül.
 
 ### 9.2 Anti-gaming
 

@@ -27,7 +27,7 @@
 ./gradlew :app:installDebug
 emulator -avd Yesiliz_Pixel7_API36 &
 
-# testler  (toplam 260)
+# testler  (toplam 270)
 ./gradlew :core-risk:test              # 22 · saf JVM, saniyeler
 ./gradlew :app:testDebugUnitTest       # 153 · saf JVM
 ./gradlew :app:connectedDebugAndroidTest   # 32 · GERÇEK CİHAZ ya da emülatör
@@ -278,7 +278,7 @@ gibi geçiyor — yoksa yanlış şifreyle "giriş yaptın" demiş olurduk.
 
 ### Sunucu ile senkron
 
-FastAPI backend (`backend/`) dört alanı karşılıyor — uç listesi
+FastAPI backend (`backend/`) beş alanı karşılıyor — uç listesi
 `data/uzak/YesilizApi.kt`'de:
 
 | Alan | Uçlar |
@@ -286,6 +286,7 @@ FastAPI backend (`backend/`) dört alanı karşılıyor — uç listesi
 | Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · `auth/sifre-sifirla` · `auth/sifre-yenile` · **`DELETE auth/hesap`** |
 | Özet | `POST ozet` · `GET ozet` · `POST heartbeat` |
 | Lig | `GET lig` · `POST lig/katil` · `GET arkadas` · `GET arkadas/kod` · `POST arkadas/davet` |
+| Ödül | `POST odul/sec` · `GET odul/secimlerim` (§12 K28) |
 | Ebeveyn | `POST ebeveyn/kod` · `POST ebeveyn/eslestir` · `GET ebeveyn/ozet` |
 
 İki kural pazarlık edilemez:
@@ -318,11 +319,12 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 13 entity · 13 DAO, şema sürümü 4.** `GECIS_1_2` (`Gecisler.kt`)
+**Şu an 14 entity · 14 DAO, şema sürümü 5.** `GECIS_1_2` (`Gecisler.kt`)
 `bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
 tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
 `olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
-geriye dönük dolduruyor (§9 "satır var ≠ veri var").
+geriye dönük dolduruyor (§9 "satır var ≠ veri var"); `GECIS_4_5` `odul_secimi`
+tablosunu ekliyor (§12 K28).
 
 Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
 ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
@@ -493,14 +495,14 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
-| `app/data/yerel/` | 13 entity · 13 DAO · `YesilizDb` (sürüm 4) · `Gecisler.kt` — destructive fallback **yok** | **8 + 7 cihaz testi** (`GecisTest` 1→2, 2→3, 3→4 geçişlerini gerçek cihazda koşuyor) |
+| `app/data/yerel/` | 14 entity · 14 DAO · `YesilizDb` (sürüm 5) · `Gecisler.kt` — destructive fallback **yok** | **8 + 8 cihaz testi** (`GecisTest` 1→2, 2→3, 3→4, 4→5 geçişlerini gerçek cihazda koşuyor) |
 | `app/data/kullanim/` | `OturumCikar` (saf) · `KullanimOkuyucu` · `KullanimIzni` | **13 birim + 7 emülatör testi** |
 | `app/data/depo/` | `KategoriDeposu` · `KullanimDeposu` (sistem → kategori → Room → özet) | seed + override korunuyor |
 | Dokümantasyon | `DB.md` · `docs/stitch-ekranlar.md` · spike raporu | üreticileri var |
 | Tasarım | **Dışarıdan 31 ekranlık teslim** (29 Tem + 30 Tem ek 2026) | `docs/tasarim-referans.md` · palet DESIGN.md §1 ile birebir |
 | `app/ui/bilesen/` | Kart · Cip · YesilizButon · IkonRozeti · AyarSatiri · LikertSecici · KullaniciAvatari · UstBaslik · IlerlemeCubugu + `veri/` CubukGrafik · DaireselGosterge · YiginBar | emülatörde görüldü |
 | `app/ui/gezinme/` | NavHost · 4 sekmeli alt bar · onboarding alt grafiği · çift gezinme koruması | akış uçtan uca yürüdü |
-| `app/ui/ekran/` | onboarding (7) · ana (+ görev detayı alt sayfası) · istatistik · riskdetay · lig · profil (+6 alt sayfa) · ödül (+3 alt sayfa) · ebeveyn · nefes | emülatörde ekran ekran doğrulandı |
+| `app/ui/ekran/` | onboarding (7) · ana (+ görev detayı alt sayfası) · istatistik · riskdetay · lig · profil (+6 alt sayfa) · ödül (+4 alt sayfa — sertifika/geçmiş/detay + seçim) · ebeveyn · nefes | emülatörde ekran ekran doğrulandı |
 | `app/di/` | Hilt — `VeriModulu`, `@HiltAndroidApp`, `HiltWorkerFactory` | uygulama açılıyor |
 | `app/data/tercih/` | DataStore: hedef · onboarding bayrağı · kurulum tarihi · gizlilik | yeniden başlatmada korunuyor |
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
@@ -524,12 +526,13 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
-| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **48 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
-| `app/data/uzak/` | `YesilizApi` (16 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme** | uçtan uca emülatörde doğrulandı; **7 birim testi** |
+| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **59 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `app/data/uzak/` | `YesilizApi` (18 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme** | uçtan uca emülatörde doğrulandı; **7 birim testi** |
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18) | backend kapalıyken lig sekmesi yine dolu |
+| `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil | **3 cihaz testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 260 test** (153 Android birim + 32 cihaz/emülatör + 22 core-risk + 53 backend
+**Toplam 270 test** (153 Android birim + 36 cihaz/emülatör + 22 core-risk + 59 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
@@ -619,6 +622,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K26 | 18 yaş altı **beyan usulü ebeveyn onayı** | Varsayılan yaş 17'ydi: varsayılan kullanıcı 18 altıydı ve hiçbir şey sorulmuyordu. Varsayılan 18 oldu; yaş < 18 ise onay ekranı geliyor ve onaylanmadan devam edilemiyor. Bunun **doğrulanabilir olmadığı** ekranda yazılı; gerçek doğrulama ebeveyn panelinin işi ve A5 hâlâ açık. Özellik kısıtı yok (`debug.md` Y-11) |
 | K27 | Adım verisi **iki kaynaklı**: Health Connect + donanım sayacı | Health Connect adım **saymıyor**, saklıyor. Yazan bir uygulama yoksa okuma sonsuza kadar sıfır dönüyor — test telefonunda tam olarak bu oldu ("Health Connect'te hiç veriniz yok"; Samsung Health kurulu değil, Google Fit bağlı değil). Yani düzgün çalışan bir entegrasyon, kullanıcının **başka bir uygulama kurmasına** bağlıydı. `Sensor.TYPE_STEP_COUNTER` hiçbir şeye bağlı değil. `AktiviteSaglayici` ikisini birleştiriyor: **Health Connect önce** (saatten/bileklikten gelen veri telefonun cebe girmesinden bağımsız), sıfırsa sensör. **Toplama yok** — ikisi aynı ayakları ölçüyor, şişirilen her adım riski haksız yere aşağı çeker. Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor; hesap saf (`AdimBirikim.kt`, 6 test). Egzersiz süresi yalnızca Health Connect'ten — adımdan egzersiz uydurmak ölçüm değil tahmin olurdu (`debug.md` K-0) |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
+| K28 | 5.000 ve 10.000 puanlık ödül kademelerinde **seçenek**: kupon veya fidan bağışı | Market kuponuyla ilgilenmeyen kullanıcı için kupon boşa giden bir ödüldü — "kazandım ama işime yaramadı". `OdulViewModel.Kademe` artık tek bir ödül yerine `secenekler` listesi taşıyor; kademe kazanılınca birden fazla seçenek varsa `OdulHali.SECIM_BEKLIYOR`, kullanıcı seçince `OdulDeposu` üzerinden **kalıcı** yazılıyor (CLAUDE.md §4 "yalnızca kazanç" — geri alma yok). 1. ve 2. kademede (rozet, fidan) tek seçenek olduğu için davranış değişmedi. Seçim, `Yedekli*Deposu` (K18) deseninden farklı çalışıyor: yerel yazma **birincil** (sunucu ulaşılamasa da ödül kaybolmasın), sunucuya senkron **rıza kapısına (K19) bağlı değil** — davranışsal veri taşımıyor, hesap açmakla aynı sınıfta bir kullanıcı eylemi. `docs/spec-puan.md §9.1` güncellendi |
 
 ### Açık
 

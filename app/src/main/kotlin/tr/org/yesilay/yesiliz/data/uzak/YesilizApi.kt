@@ -72,6 +72,14 @@ interface YesilizApi {
     @POST("arkadas/davet")
     suspend fun davetGonder(@Body istek: DavetIstek): List<ArkadasDto>
 
+    // --- ödül ---
+
+    @POST("odul/sec")
+    suspend fun odulSec(@Body istek: OdulSecimIstek): OdulSecimiDto
+
+    @GET("odul/secimlerim")
+    suspend fun odulSecimlerim(): List<OdulSecimiDto>
+
     // --- ebeveyn ---
 
     @POST("ebeveyn/kod")

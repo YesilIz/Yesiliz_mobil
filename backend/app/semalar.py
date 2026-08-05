@@ -127,6 +127,18 @@ class KodYanit(BaseModel):
     kod: str
 
 
+# --- ödül ---
+
+class OdulSecimIstek(BaseModel):
+    kademeId: str = Field(min_length=1, max_length=40)
+    secenekId: str = Field(min_length=1, max_length=40)
+
+
+class OdulSecimiDto(BaseModel):
+    kademeId: str
+    secenekId: str
+
+
 # --- ebeveyn ---
 
 class EslestirmeKoduIstek(BaseModel):

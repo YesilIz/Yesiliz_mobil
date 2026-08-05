@@ -2,8 +2,14 @@ package tr.org.yesilay.yesiliz.ui.ekran.odul
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/** Bir ödül basamağının durumu. */
-enum class OdulHali { KAZANILDI, AKTIF, KILITLI }
+/**
+ * Bir ödül basamağının durumu.
+ *
+ * [SECIM_BEKLIYOR]: eşik ve gün koşulu geçildi ama kademenin birden çok
+ * seçeneği var (örn. "Market kuponu" / "Fidan bağışı") ve kullanıcı henüz
+ * birini seçmedi. Seçim yapılınca [KAZANILDI]'ya döner.
+ */
+enum class OdulHali { KAZANILDI, AKTIF, SECIM_BEKLIYOR, KILITLI }
 
 /**
  * Ödüller ekranı — `docs/tasarim-referans.md §2 / 11`.
@@ -31,6 +37,20 @@ data class Odul(
     val aciklama: String,
     val bagisTarihi: String? = null,
     val sertifikaNo: String? = null,
+    /**
+     * Kademenin sunduğu seçenekler. Tek elemanlıysa (ya da boşsa) seçim
+     * ekranı hiç açılmıyor — bugüne kadarki otomatik davranış. Birden
+     * fazlaysa [OdulHali.SECIM_BEKLIYOR] devreye giriyor.
+     */
+    val secenekler: List<Secenek> = emptyList(),
+)
+
+/** Bir kademenin seçilebilir alternatiflerinden biri (örn. kupon ya da fidan). */
+data class Secenek(
+    val id: String,
+    val ad: String,
+    val ikon: ImageVector,
+    val aciklama: String,
 )
 
 /**

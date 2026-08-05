@@ -164,6 +164,22 @@ class GecisTest {
      * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
      * bırakıyor, kolon INSERT listesine hiç girmiyor.
      */
+    /**
+     * 4 → 5: `odul_secimi` tablosu.
+     *
+     * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
+     * ettiği şey geçişin **1'den 5'e kadar** zincirlenmesi ve Room'un
+     * beklediği şemayla birebir çıkması.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis4ten5eSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+        yardimci.runMigrationsAndValidate(
+            TEST_DB, 5, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5,
+        )
+    }
+
     private fun satir(tarih: String, acilis: Int, olayVarMi: Int? = null): String {
         val ekKolon = if (olayVarMi == null) "" else ", olayVarMi"
         val ekDeger = if (olayVarMi == null) "" else ", $olayVarMi"

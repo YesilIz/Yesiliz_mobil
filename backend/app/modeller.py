@@ -250,6 +250,29 @@ class EbeveynBaglanti(Taban):
     onay_tarihi: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
 
 
+class OdulSecimi(Taban):
+    """
+    Kullanıcının ödül seçimi — bazı kademelerde birden çok seçenek var
+    (örn. "Market kuponu" veya "Fidan bağışı"), kazanılınca kullanıcı biri
+    arasında seçim yapıyor.
+
+    Bir kademe için seçim **bir kez** yapılır ve değiştirilemez — tekil
+    kısıt bunu garanti ediyor, ikinci istek uç tarafında 409 ile reddediliyor
+    (CLAUDE.md §4 "yalnızca kazanç": geri alma/değiştirme yolu yok).
+    """
+
+    __tablename__ = "odul_secimi"
+    __table_args__ = (UniqueConstraint("kullanici_id", "kademe_id", name="uq_odul_kullanici_kademe"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    # Örn. "kupon_market", "kupon_spor" — `OdulViewModel.KADEMELER`'deki id.
+    kademe_id: Mapped[str] = mapped_column(String(40))
+    # Örn. "market_kuponu", "fidan_bagisi".
+    secenek_id: Mapped[str] = mapped_column(String(40))
+    tarih: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
 class Heartbeat(Taban):
     """
     Cihaz canlı sinyali.
