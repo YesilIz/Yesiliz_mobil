@@ -37,7 +37,8 @@ emulator -avd Yesiliz_Pixel7_API36 &
 cd backend && docker compose up -d && docker compose exec api pytest -q
 
 # canlı ortam smoke testleri — dağıtılmış sunucuya karşı, `pytest -q` toplamıyor
-YESILIZ_SMOKE_TABAN=https://<alan-adi> python -m pytest smoke -q
+YESILIZ_SMOKE_TABAN=https://yesilizmobil-production.up.railway.app \
+  python -m pytest smoke -q
 
 # release APK'yı başka bir adrese derlemek (varsayılan app/build.gradle.kts'te)
 ./gradlew :app:assembleRelease -Pyesiliz.sunucu=https://api.ornek.com
@@ -106,6 +107,7 @@ fix/y             ●────●───
 | `docs/stitch-ekranlar.md` | DESIGN §5.X ↔ Stitch ekran ID eşlemesi | tarihsel — yeni ekran için kullanma |
 | `docs/spike-usagestats-sonuc.md` | UsageStats ortam bulguları | veri okumaya başlarken |
 | **`docs/dagitim.md`** | **Ortam değişkenleri, Railway, migration, /health, CI/CD, Android adres yönetimi** | **dağıtıma ya da sunucu adresine dokunurken** |
+| `docs/gorev-dagilimi.md` | Altı kişilik ekibin modül sahipliği ve iş bölümü | kime hangi iş sorulacağını ararken |
 
 ---
 
@@ -464,6 +466,8 @@ Hepsi bir kez yaşandı. Tekrarlama.
 | **Sağlayıcının `DATABASE_URL`'i psycopg2 arıyor** | Railway/Render PostgreSQL eklendiğinde `postgresql://…` (bazen `postgres://…`) enjekte ediyor. SQLAlchemy 2.0 bu şemada psycopg **2**'yi arıyor, `requirements.txt`'de psycopg **3** var: kap açılışta `ModuleNotFoundError: psycopg2` ile ölüyor ve bu, sağlayıcı panelinde okunması en zor hatalardan biri | `ayarlar.py` şemayı `postgresql+psycopg://`'ye çeviriyor. Değişkenin adı da değiştirilemiyor — sağlayıcı yazıyor — o yüzden her ayar iki takma adla okunuyor (`YESILIZ_*` ve standart ad) |
 | **Alembic URL'inde `%`** | `alembic.ini` ConfigParser ile okunuyor ve `%` orada yerleştirme işareti. Sağlayıcının ürettiği veritabanı parolasında bir `%` geçerse migration `InterpolationSyntaxError` ile düşüyor; yerelde hiç görülmüyor çünkü compose parolası `yesiliz` | `alembic/env.py` `set_main_option` öncesi `%` → `%%` |
 | **Gradle `doFirst` içinde script değişkeni** | `doFirst { require(canliSunucu…) }` build script nesnesini yakalıyor; yapılandırma önbelleği bunu serileştiremiyor ve `assembleRelease` "cannot serialize Gradle script object references" ile düşüyor. Hata derlemeyle ilgili görünüyor, ilgisi yok | Değeri `configureEach` içinde yerel bir `val`'e al, lambda onu yakalasın |
+| **Gradle `file()` modül dizinine göre çözüyor** | `app/build.gradle.kts` içinde `file("yesiliz.jks")` **`app/`** altında arıyor; depo köküne göre yazılmış bir yol `app/app/…` oluyor. Keystore bulunamayınca derleme düşmüyor — sessizce **imzasız** APK üretiyor ve bu ancak telefona kurmaya çalışınca anlaşılıyor | Kök göreli yollar `rootProject.file(...)` ile çözülür. İmzasız üretim bilinçli (keystore'u olmayan ekip üyesi de derleyebilsin) ama **uyarı basıyor** — çıktının adı da söylüyor: `app-release-unsigned.apk` |
+| **`railway up` bulunduğu dizini yüklüyor** | Workflow'un çalışma dizini `backend/` olduğu için yüklenen ağacın kökü backend'in kendisi oluyordu; servisin **Root Directory** ayarı (`/backend`) bunun üstüne uygulanınca Railway `backend/backend` arıyor ve build düşüyordu. Hata dağıtımda çıkıyor, kodla ilgisi yok | Dağıtım adımı **depo kökünden** koşar; klasörü servisin Root Directory ayarı belirler, iki yerde birden verilmez |
 | **Yenileme jetonu saklanıp hiç kullanılmaması** | Erişim jetonu dolunca (30 dk) her kimlikli çağrı 401 veriyor ve `Yedekli*Deposu` sessizce sahte veriye düşüyor — kullanıcı hâlâ "giriş yapmış" görünüyor | `okhttp3.Authenticator` (`JetonAuthenticator`). Yenileme çağrısı **ayrı** bir istemciden gitmeli, yoksa Dagger döngüsü + sonsuz 401 özyinelemesi |
 
 ---
@@ -553,8 +557,10 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
 | `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **82 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
 | `backend/` dağıtım katmanı | Ortam ayrımı + üretim açılış kapısı (`ayarlar.py`) · `/health` (DB kontrollü) · JSON log + `X-Istek-Id` + gizli değer maskesi (`gunluk.py`) · CORS · açılışta migration (`baslat.sh`) · `railway.json` · `.env.ornek` | **23 pytest**; yerel yığında `/health` 200 ve `alembic current` = head |
-| `backend/smoke/` | Canlı ortama karşı uçtan uca akış — `/health` → kayıt → giriş → korumalı uç → `POST /ozet` → `GET /lig` → `DELETE /auth/hesap` temizliği | yerel yığına karşı koştu; `pytest.ini` normal koşumdan ayırıyor |
-| `.github/workflows/` | `backend.yml` (test → güvenlik kapısı → imaj → Railway → `/health` → smoke) · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | kontroller yerelde kuru koşuldu |
+| `backend/smoke/` | Canlı ortama karşı uçtan uca akış — `/health` → kayıt → giriş → korumalı uç → `POST /ozet` → `GET /lig` → `DELETE /auth/hesap` temizliği | **canlı ortama karşı koştu** (CI, 5 Ağu); `pytest.ini` normal koşumdan ayırıyor |
+| `.github/workflows/` | `backend.yml` (test → güvenlik kapısı → imaj → Railway → `/health` → smoke) · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | **`main`'de uçtan uca yeşil koştu** (5 Ağu): dağıtım + `/health` + smoke |
+| **Canlı ortam** | Railway'de yayında — `https://yesilizmobil-production.up.railway.app` · PostgreSQL bağlı · Alembic açılışta koşuyor · `ENVIRONMENT=production` kapısı devrede | `GET /health` → 200, `{"status":"healthy","database":"connected"}` |
+| Release imzalama | `app/build.gradle.kts` `signingConfigs` — keystore ve parolalar **depoda değil** (`local.properties` ya da ortam değişkeni). Üçünden biri eksikse derleme düşmüyor, imzasız üretip uyarı basıyor | V2 imza geçerli · dex'te `10.0.2.2` yok · gömülü adres canlı HTTPS |
 | `app/data/uzak/` | `YesilizApi` (18 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme** | uçtan uca emülatörde doğrulandı; **7 birim testi** |
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18). **Yalnızca debug'da bağlı** | backend kapalıyken debug'da lig sekmesi yine dolu |
@@ -591,9 +597,15 @@ sabitten geliyor.
 hepsi düzeltildi ve 5 kapsam kararının hepsi uygulandı; her biri aynı cihazda
 doğrulandı. `debug.md` bu taramanın kaydı olarak duruyor, ✅ işaretli.
 
+**Backend dağıtımı bitti (5 Ağustos 2026).** Sunucu Railway'de yayında
+(`https://yesilizmobil-production.up.railway.app`), PostgreSQL bağlı,
+migration'lar açılışta koşuyor, CI `main`'e her push'ta test → imaj →
+dağıtım → `/health` → smoke zincirini uçtan uca yeşil koşuyor. Release
+APK artık imzalı ve bu adresi gömülü taşıyor. Ayrıntı `docs/dagitim.md`.
+
 | İş | Not |
 |---|---|
-| Backend dağıtımı — **kod tarafı bitti, sağlayıcı adımı kaldı** | Kodda hazır: ortam ayrımı + üretim açılış kapısı (`ayarlar.py`), `/health` (DB kontrollü), yapılandırılmış log + CORS (`gunluk.py`), açılışta migration (`baslat.sh`), `railway.json`, CI/CD (`.github/workflows/`), smoke testleri (`backend/smoke/`), Android debug/release adres ayrımı (§12 K29), sahte veri release'den çıktı (§12 K18). **Kalan:** Railway hesabı, PostgreSQL örneği, `JWT_SECRET`, alan adı + sertifika, CI değişkenleri — hepsi `docs/dagitim.md §2` ve §7'de adım adım. Dağıtım yapılınca `app/build.gradle.kts`'teki `canliSunucu` varsayılanı gerçek alan adıyla değişecek |
+| Release APK'nın **gerçek telefonda** doğrulanması | Backend dağıtımı bitti (yukarıda); `gorev1.md`'nin 13 tamamlanma kriterinden 11'i sağlandı. Kalan ikisi cihaz istiyor: **sıfırlanmış telefonda hiçbir manuel sunucu ayarı yapılmadan** kayıt → giriş → lig, ve o turda "çevrimdışı" uyarısının **görünmemesi**. APK tarafı hazır — imza geçerli, dex'te `10.0.2.2` yok, gömülü adres canlı HTTPS; koşturulmayan şey akışın kendisi |
 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
