@@ -252,7 +252,11 @@ internal fun UygulamaAvatari(ad: String, olcu: androidx.compose.ui.unit.Dp = Olc
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = ad.take(2).replaceFirstChar { it.uppercase() },
+            // `replaceFirstChar { it.uppercase() }` Locale.ROOT kullanıyordu:
+            // "instagram" → "In" değil "IN" değil, Türkçe "İn" gerekiyordu.
+            // İkinci harf değişmiyor, yalnızca ilki `buyukHarf()` ile
+            // Türkçe-doğru büyütülüyor (`debug.md` üçüncü tarama A2).
+            text = ad.take(1).buyukHarf() + ad.drop(1).take(1),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = renk,

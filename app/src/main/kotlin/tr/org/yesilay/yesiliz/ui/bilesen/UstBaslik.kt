@@ -59,6 +59,18 @@ fun YesilBaslikliEkran(
     ) {
         Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
+        // Pay her iki tarafa da AYNI (gereken en büyük) miktarda veriliyor.
+        // `Box(contentAlignment = Center)` padding DAHİL ortalıyor; pay
+        // yalnızca dolu tarafa verilince (eski hal) başlık merkezden
+        // kayıyordu — geri oku var, sağ eylem yoksa 18 ekranda (96−20)/2 =
+        // 38dp (280dpi'de ~66px) sağa kaymış hâldeydi (`debug.md` üçüncü
+        // tarama A1). `TextAlign.Center` bunu kurtarmıyor: metin kendi
+        // kutusunun içinde ortalı, kutunun kendisi ekranın ortasında değil.
+        val yatayPay = maxOf(
+            if (onGeri != null) GeriPayi else Olcu.EkranKenari,
+            if (sagEylem != null) SagEylemPayi else Olcu.EkranKenari,
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -77,14 +89,7 @@ fun YesilBaslikliEkran(
                 // kırpılıyor ve kırpıldığına dair hiçbir işaret olmuyordu
                 // (`debug.md` O-6).
                 overflow = TextOverflow.Ellipsis,
-                // Pay yalnızca DOLU tarafa veriliyor. İki tarafa birden
-                // 96dp koymak, 720px/280dpi bir ekranda başlığa ~65dp
-                // bırakıyordu; sağ eylemi olmayan ekranlarda o payın
-                // yarısı boşuna harcanıyordu.
-                modifier = Modifier.padding(
-                    start = if (onGeri != null) BaslikKenarPayi else Olcu.EkranKenari,
-                    end = if (sagEylem != null) BaslikKenarPayi else Olcu.EkranKenari,
-                ),
+                modifier = Modifier.padding(horizontal = yatayPay),
             )
             if (onGeri != null) {
                 IconButton(
@@ -139,12 +144,16 @@ fun YesilBaslikliEkran(
     }
 }
 
-/** Geri oku ve sağ eylem için ayrılan yatay pay. */
-private val BaslikKenarPayi = 96.dp
-
 /**
- * Sağ eylemin alabileceği en fazla genişlik.
+ * Geri oku için ayrılan yatay pay.
  *
- * [BaslikKenarPayi] ile aynı: eylem başlığa ayrılan alana taşmıyor.
+ * Geri oku bir `IconButton`, yani 48dp — eskiden kullanılan 96dp bunun iki
+ * katı fazlasıyla abartılıydı (`debug.md` üçüncü tarama A1).
  */
+private val GeriPayi = 56.dp
+
+/** Sağ eylemin alabileceği en fazla genişlik. */
 private val SagEylemEnFazla = 96.dp
+
+/** [SagEylemEnFazla] + ekran kenar boşluğu — eylem başlığa ayrılan alana taşmıyor. */
+private val SagEylemPayi = SagEylemEnFazla + Olcu.EkranKenari
