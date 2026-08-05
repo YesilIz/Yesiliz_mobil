@@ -101,5 +101,22 @@ val GECIS_3_4 = object : Migration(3, 4) {
     }
 }
 
+/**
+ * Sürüm 4 → 5 (4 Ağu 2026).
+ *
+ * `odul_secimi` eklendi — bazı ödül kademelerinde market kuponu yerine
+ * fidan bağışı gibi alternatifler seçilebiliyor. Var olan hiçbir tablo
+ * değişmedi, veri taşıma adımı yok.
+ */
+val GECIS_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `odul_secimi` " +
+                "(`kademeId` TEXT NOT NULL, `secenekId` TEXT NOT NULL, " +
+                "`tarih` TEXT NOT NULL, PRIMARY KEY(`kademeId`))",
+        )
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
-val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4)
+val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5)

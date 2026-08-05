@@ -295,3 +295,21 @@ data class AdimSayacEntity(
     /** Sayacın son örnekteki ham değeri — bir sonraki farkın tabanı. */
     val sonSayac: Long = 0,
 )
+
+/**
+ * Ödül seçimi — bazı kademelerde tek bir ödül yerine birden çok seçenek
+ * var (örn. "Market kuponu" veya "Fidan bağışı"); kademe kazanılınca
+ * kullanıcı biri arasında seçim yapıyor.
+ *
+ * Cihaz tek kullanıcılı olduğu için birincil anahtar yalnızca [kademeId] —
+ * sunucudaki `(kullanici_id, kademe_id)` tekil kısıtının cihaz tarafı
+ * karşılığı. Seçim kalıcı: [OdulSecimiDao.kaydet] `Insert` kullanıyor,
+ * `Upsert` değil — bir kademe için ikinci yazma denemesi (rozet sürücüsü
+ * hatalıysa bile) var olan seçimi sessizce değiştirmesin diye.
+ */
+@Entity(tableName = "odul_secimi")
+data class OdulSecimiEntity(
+    @PrimaryKey val kademeId: String,
+    val secenekId: String,
+    val tarih: LocalDate,
+)

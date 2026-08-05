@@ -14,6 +14,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GorevTamamlamaDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KategoriEslemeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.OdulSecimiDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
@@ -27,6 +28,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KategoriEslemeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.OdulSecimiEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RuhHaliEntity
@@ -44,6 +46,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  *
  * **Sürüm 4** (3 Ağu 2026): adim_sayac — donanım adım sayacının günlük
  * birikimi (`debug.md` K-0). Sürüm 3 `gunluk_ozet.olayVarMi` kolonuydu.
+ *
+ * **Sürüm 5** (4 Ağu 2026): odul_secimi — bazı ödül kademelerinde market
+ * kuponu yerine fidan bağışı gibi alternatif seçenekler.
  */
 @Database(
     entities = [
@@ -60,8 +65,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         BildirimEntity::class,
         ArkadasEntity::class,
         AdimSayacEntity::class,
+        OdulSecimiEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)
@@ -80,6 +86,7 @@ abstract class YesilizDb : RoomDatabase() {
     abstract fun bildirimDao(): BildirimDao
     abstract fun arkadasDao(): ArkadasDao
     abstract fun adimSayacDao(): AdimSayacDao
+    abstract fun odulSecimiDao(): OdulSecimiDao
 
     companion object {
         private const val AD = "yesiliz.db"

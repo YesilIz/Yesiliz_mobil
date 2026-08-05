@@ -118,6 +118,14 @@ data class DavetIstek(val kod: String)
 @Serializable
 data class KodYanit(val kod: String)
 
+// --- ödül ---
+
+@Serializable
+data class OdulSecimIstek(val kademeId: String, val secenekId: String)
+
+@Serializable
+data class OdulSecimiDto(val kademeId: String, val secenekId: String)
+
 // --- ebeveyn ---
 
 @Serializable

@@ -52,6 +52,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.IlerlemeCubugu
+import tr.org.yesilay.yesiliz.ui.bilesen.SecenekKarti
 import tr.org.yesilay.yesiliz.ui.bilesen.YaprakZemini
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
@@ -83,6 +84,7 @@ fun OdulEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikOdul by remember { mutableStateOf<Odul?>(null) }
+    var secimOdulu by remember { mutableStateOf<Odul?>(null) }
     var sertifikaOdulu by remember { mutableStateOf<Odul?>(null) }
     var gecmisAcik by remember { mutableStateOf(false) }
     val baglam = androidx.compose.ui.platform.LocalContext.current
@@ -103,7 +105,13 @@ fun OdulEkran(
                         puan = durum.puan,
                         ilkMi = i == 0,
                         sonMu = i == durum.basamaklar.lastIndex,
-                        onTikla = { acikOdul = odul },
+                        onTikla = {
+                            if (odul.hal == OdulHali.SECIM_BEKLIYOR) {
+                                secimOdulu = odul
+                            } else {
+                                acikOdul = odul
+                            }
+                        },
                     )
                 }
 
@@ -121,6 +129,18 @@ fun OdulEkran(
                 onSertifika = {
                     acikOdul = null
                     sertifikaOdulu = odul
+                },
+            )
+        }
+    }
+
+    secimOdulu?.let { odul ->
+        AltSayfa(onKapat = { secimOdulu = null }) {
+            OdulSecimAlani(
+                odul = odul,
+                onSec = { secenekId ->
+                    viewModel.secYap(odul.id, secenekId)
+                    secimOdulu = null
                 },
             )
         }
@@ -208,6 +228,7 @@ private fun OdulBasamagi(
 ) {
     val kazanildi = odul.hal == OdulHali.KAZANILDI
     val kilitli = odul.hal == OdulHali.KILITLI
+    val secimBekliyor = odul.hal == OdulHali.SECIM_BEKLIYOR
     val yogunluk = LocalDensity.current
 
     Row(
@@ -234,7 +255,7 @@ private fun OdulBasamagi(
                     sekil = CircleShape,
                 )
 
-                OdulHali.AKTIF -> Box(
+                OdulHali.AKTIF, OdulHali.SECIM_BEKLIYOR -> Box(
                     modifier = Modifier
                         .size(Olcu.IkonRozeti)
                         .clip(CircleShape)
@@ -275,7 +296,13 @@ private fun OdulBasamagi(
                 modifier = Modifier
                     .width(Olcu.KartKenarligi)
                     .height(if (sonMu) Olcu.Sifir else Olcu.BasamakBoslugu)
-                    .background(if (kazanildi || odul.hal == OdulHali.AKTIF) YesilAna else Ayrac),
+                    .background(
+                        if (kazanildi || odul.hal == OdulHali.AKTIF || secimBekliyor) {
+                            YesilAna
+                        } else {
+                            Ayrac
+                        },
+                    ),
             )
         }
 
@@ -294,6 +321,7 @@ private fun OdulBasamagi(
             )
             when (odul.hal) {
                 OdulHali.KAZANILDI -> TamamlandiSatiri()
+                OdulHali.SECIM_BEKLIYOR -> SecimBekliyorSatiri()
                 OdulHali.AKTIF -> {
                     Spacer(modifier = Modifier.height(Bosluk.S))
                     IlerlemeCubugu(oran = puan.toFloat() / odul.esik)
@@ -328,6 +356,67 @@ private fun TamamlandiSatiri() {
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = YesilAna,
+        )
+    }
+}
+
+/** Kademe kazanıldı ama birden çok seçenek var, kullanıcı henüz seçmedi. */
+@Composable
+private fun SecimBekliyorSatiri() {
+    Text(
+        text = "Ödülünü seç →",
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = YesilAna,
+    )
+}
+
+/**
+ * Seçim alt sayfası — kademe kazanıldığında birden çok seçenek varsa açılır.
+ *
+ * Seçim tek yönlü: bir kart seçilip [BirincilButon]'a basılınca
+ * [onSec] çağrılır ve alt sayfa kapanır. Geri dönüş yok (CLAUDE.md §4).
+ */
+@Composable
+private fun OdulSecimAlani(odul: Odul, onSec: (String) -> Unit) {
+    var secilenId by remember(odul.id) { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+    ) {
+        Text(
+            text = "Ödülünü seç",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "${odul.esik.binlik()} puanı topladın. Hangi ödülü istersin?",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+
+        odul.secenekler.forEach { secenek ->
+            SecenekKarti(
+                ikon = secenek.ikon,
+                baslik = secenek.ad,
+                aciklama = secenek.aciklama,
+                secili = secilenId == secenek.id,
+                onTikla = { secilenId = secenek.id },
+                modifier = Modifier.padding(bottom = Bosluk.S),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        BirincilButon(
+            metin = "Seçimi onayla",
+            etkin = secilenId != null,
+            onTikla = { secilenId?.let(onSec) },
         )
     }
 }

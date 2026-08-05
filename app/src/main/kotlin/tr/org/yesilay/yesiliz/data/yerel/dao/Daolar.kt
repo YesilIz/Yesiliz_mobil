@@ -15,6 +15,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KategoriEslemeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.OdulSecimiEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RuhHaliEntity
@@ -333,6 +334,24 @@ interface ArkadasDao {
 
     @Query("DELETE FROM arkadas WHERE isim = :isim")
     suspend fun sil(isim: String)
+}
+
+@Dao
+interface OdulSecimiDao {
+    /**
+     * `Insert`, `Upsert` değil — bir kademe için ikinci yazma denemesi var
+     * olan seçimi sessizce değiştirmesin. Aynı [OdulSecimiEntity.kademeId]
+     * ile ikinci çağrı `SQLiteConstraintException` fırlatır; çağıran
+     * (`OdulDeposu`) bunu "zaten seçilmiş" olarak yorumluyor.
+     */
+    @Insert
+    suspend fun kaydet(kayit: OdulSecimiEntity)
+
+    @Query("SELECT * FROM odul_secimi")
+    fun hepsiAkisi(): Flow<List<OdulSecimiEntity>>
+
+    @Query("SELECT * FROM odul_secimi WHERE kademeId = :kademeId")
+    suspend fun getir(kademeId: String): OdulSecimiEntity?
 }
 
 @Dao

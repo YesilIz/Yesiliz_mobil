@@ -20,6 +20,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GorevTamamlamaDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KategoriEslemeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.OdulSecimiDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
@@ -101,6 +102,9 @@ object VeriModulu {
 
     @Provides
     fun arkadasDao(db: YesilizDb): ArkadasDao = db.arkadasDao()
+
+    @Provides
+    fun odulSecimiDao(db: YesilizDb): OdulSecimiDao = db.odulSecimiDao()
 
     @Provides
     @Singleton

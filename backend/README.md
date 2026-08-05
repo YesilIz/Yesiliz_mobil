@@ -18,7 +18,7 @@ emülatörde `localhost` cihazın kendisi demek.
 ## Test
 
 ```bash
-docker compose exec api pytest -q     # 48 test
+docker compose exec api pytest -q     # 59 test
 ```
 
 Testler SQLite bellek veritabanında koşuyor — saniyeler sürüyor ve
@@ -66,8 +66,10 @@ Ortam değişkenleri `YESILIZ_` önekli (`app/ayarlar.py`):
 
 | Değişken | Varsayılan | Not |
 |---|---|---|
-| `YESILIZ_VERITABANI_URL` | SQLite | docker-compose PostgreSQL veriyor |
+| `YESILIZ_ORTAM` | `development` | `development` / `test` / `production`. `production`'da varsayılan JWT anahtarı veya SQLite ile başlamak **hata verir** |
+| `YESILIZ_VERITABANI_URL` | SQLite | docker-compose PostgreSQL veriyor; production'da PostgreSQL zorunlu |
 | `YESILIZ_JWT_ANAHTARI` | geliştirme anahtarı | **Üretimde mutlaka değiştir**, depoya girmemeli |
+| `YESILIZ_IZINLI_KAYNAKLAR` | boş (hiçbir origin'e izin yok) | CORS — virgülle ayrılmış origin listesi. Android istemcisi Origin göndermez, bu yalnızca tarayıcı tabanlı istemcileri ilgilendirir |
 | `YESILIZ_ERISIM_DAKIKA` | 30 | erişim jetonu ömrü |
 | `YESILIZ_YENILEME_GUN` | 30 | yenileme jetonu ömrü |
 | `YESILIZ_ESLESTIRME_KODU_DAKIKA` | 10 | tasarım 21'deki metinle birebir |
