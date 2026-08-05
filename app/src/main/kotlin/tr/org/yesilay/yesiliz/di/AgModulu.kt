@@ -12,7 +12,9 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import tr.org.yesilay.yesiliz.BuildConfig
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.JetonAuthenticator
@@ -139,7 +141,7 @@ object AgModulu {
             zincir.proceed(istek)
         }
 
-        return OkHttpClient.Builder()
+        val olusturucu = OkHttpClient.Builder()
             // Adres değiştirici kimlikten ÖNCE: yeniden yazılan URL'ye
             // Authorization başlığı eklensin.
             .addInterceptor(tabanDegistirici(tercihler))
@@ -150,7 +152,18 @@ object AgModulu {
             .authenticator(authenticator)
             .connectTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .readTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
-            .build()
+
+        // Yalnızca debug'da gövdeyi de logluyor — "Sunucuya ulaşılamıyor"
+        // gibi hataların gerçek sebebini (401 mi, DNS mi, zaman aşımı mı)
+        // logcat'ten görebilmek için. Release'de sınıf sınıf yolunda olsa
+        // da hiç eklenmiyor, tek satır bile loglanmıyor.
+        if (BuildConfig.DEBUG) {
+            olusturucu.addInterceptor(
+                HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY },
+            )
+        }
+
+        return olusturucu.build()
     }
 
     @Provides

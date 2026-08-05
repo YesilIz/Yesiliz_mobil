@@ -135,7 +135,11 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.serialization)
     implementation(libs.okhttp)
-    debugImplementation(libs.okhttp.logging)
+    // `implementation`, `debugImplementation` değil: AgModulu (src/main) her
+    // iki derleme türünde de HttpLoggingInterceptor'ı kullanabilmeli.
+    // Release'de gerçek loglama BuildConfig.DEBUG kontrolüyle kapalı kalıyor
+    // — sınıf sınıf yolunda olsa da hiçbir şey loglamıyor.
+    implementation(libs.okhttp.logging)
 
     // Adım + egzersiz süresi → aktivite sönümlemesi (%15 tavan, spec-risk §4.4).
     // Cihazda Health Connect yoksa okuyucu sessizce sıfır döndürüyor.
