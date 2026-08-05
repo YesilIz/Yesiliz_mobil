@@ -42,10 +42,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // TODO: Render'a dağıtım (Görev 1 §2) tamamlanınca gerçek alan
-            // adıyla değiştirilecek. Şifresiz HTTP asla yazılmasın —
+            // Railway'de canlı — Görev 1 §2. Şifresiz HTTP asla yazılmasın,
             // release ağ yapılandırması (ag_guvenligi.xml) zaten reddediyor.
-            buildConfigField("String", "API_BASE_URL", "\"https://api.yesiliz.org.tr/\"")
+            buildConfigField(
+                "String", "API_BASE_URL", "\"https://yesilizmobil-production.up.railway.app/\"",
+            )
         }
     }
 
