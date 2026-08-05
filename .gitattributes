@@ -1,0 +1,5 @@
+# Shell scriptler Linux konteynerinde çalışıyor — Windows'ta autocrlf
+# CRLF'e çevirirse `#!/bin/sh` shebang'ı bozulup "bad interpreter" hatası
+# veriyor. Bu dosyalar platform fark etmeksizin hep LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
