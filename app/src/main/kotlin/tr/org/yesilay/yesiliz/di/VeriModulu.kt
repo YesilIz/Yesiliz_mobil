@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
+import tr.org.yesilay.yesiliz.data.saglik.AdimKaynagi
+import tr.org.yesilay.yesiliz.data.saglik.AdimSayacOkuyucu
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.AktiviteOturumuDao
@@ -109,6 +111,13 @@ object VeriModulu {
 
     @Provides
     fun aktiviteOturumuDao(db: YesilizDb): AktiviteOturumuDao = db.aktiviteOturumuDao()
+
+    /**
+     * `AdimDeposu` sahte bir kaynakla test edilebilsin diye somut sınıf
+     * yerine arayüz istiyor (`AdimDeposuTest`, `gorev2.md` §3).
+     */
+    @Provides
+    fun adimKaynagi(okuyucu: AdimSayacOkuyucu): AdimKaynagi = okuyucu
 
     @Provides
     @Singleton
