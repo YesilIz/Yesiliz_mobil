@@ -337,14 +337,15 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 14 entity · 14 DAO, şema sürümü 6.** `GECIS_1_2` (`Gecisler.kt`)
+**Şu an 15 entity · 15 DAO, şema sürümü 7.** `GECIS_1_2` (`Gecisler.kt`)
 `bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
 tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
 `olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
 geriye dönük dolduruyor (§9 "satır var ≠ veri var"); `GECIS_4_5` `odul_secimi`
 tablosunu ekliyor (§12 K28); `GECIS_5_6` `risk_sonuc`'a `veriDurumu`
 kolonunu ekleyip `gunluk_ozet.olayVarMi = 0` olan günleri geriye dönük
-`YETERSIZ`'e çekiyor (§12 K30).
+`YETERSIZ`'e çekiyor (§12 K30); `GECIS_6_7` `aktivite_oturumu` tablosunu
+ekliyor — uygulamanın kendi yürüyüş oturumları artık kalıcı (§12 K31).
 
 Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
 ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
@@ -539,7 +540,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
 | `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
-| `app/data/saglik/` | Health Connect (adım + egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` ikisini birleştiriyor | **6 birim testi**; cihazda boru hattı uçtan uca koştu (`D < 1` ilk kez) — sayının kendisi gerçek bir günle **doğrulanmadı**, `debug.md` §5 |
+| `app/data/saglik/` | Health Connect (adım + oturum bazlı egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` adımı birleştiriyor, spor dakikasını `domain/kullanim/AktiviteTekillestir` ile tekilleştiriyor (§12 K31) | **6 + 11 birim testi**; cihazda boru hattı uçtan uca koştu (`D < 1` ilk kez) — sayının kendisi gerçek bir günle **doğrulanmadı**, `debug.md` §5 |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
 | `ui/ekran/nefes/` | Kutu nefesi tam ekran — `NefesFazHesapla` (saf faz/tempo hesabı) + `NefesViewModel` (sayaç, 4/5/6 sn tempo) + `NefesEkran` (animasyonlu daire) | **8 birim testi**; tamamlanınca `Gorev.NEFES` puanı veriyor |
@@ -569,7 +570,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/SunucuDepolar` | Release'in bağladığı sunucu-yalnız depolar — sahte veri yok, hata indirgeniyor (boş sonuç + `cevrimdisi` + logcat) | release APK'da `10.0.2.2` ve şifresiz adres yok (dex denetlendi) |
 | `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil | **3 cihaz testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 305 test** (153 Android birim + 38 cihaz/emülatör + 32 core-risk + 82 backend
+**Toplam 317 test** (164 Android birim + 39 cihaz/emülatör + 32 core-risk + 82 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
@@ -671,6 +672,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K29 | Sunucu adresi **build türünden**, tek yapılandırma noktasından | `app/build.gradle.kts` → `BuildConfig.API_TABANI`: debug `http://10.0.2.2:8000/`, release `canliSunucu` (HTTPS). `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor, `AgModulu` ondan alıyor. Adres `-Pyesiliz.sunucu` ya da `YESILIZ_SUNUCU` ile eziliyor. K24 (çalışma zamanı okuma) duruyor — DataStore'daki değer hâlâ öne geçiyor, ama artık **varsayılan** da doğru: temiz kurulmuş telefon hiçbir ayar yapmadan sunucuya ulaşıyor. Üç koruma birlikte: release HTTPS olmayan adresle derlenmiyor, `ag_guvenligi.xml` şifresiz trafiği istisnasız reddediyor (10.0.2.2 istisnası silindi), CI ikisini de denetliyor |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
 | K30 | Risk motoruna **`VeriDurumu`** (YETERSİZ/HESAPLANDI/ESKİ) eklendi | `gorev2.md` §8: "15 dakikadan az kullanım" kuralı `EtkileyenFaktorler`'deki alt faktörleri koruyordu (`FAKTOR_ASGARI_DK`, K-7/Y-3) ama günün **kendi bandını** korumuyordu — `RiskDeposu.gunuHesapla` `olayVarMi = false` olan (hiç ölçüm olmayan) bir günü bile sessizce hesaplayıp `R = 0 → AZ RİSKLİ` yazıyordu; 34 saniyeliğine açıp bırakan bir kullanıcı ilk günde "düşük risk" görüyordu. `RiskHesapla.hesapla` artık `gun.toplamDk < Sabitler.GUN_ASGARI_DK` iken `VeriDurumu.YETERSIZ` dönüyor; `RiskDetayViewModel` ve `AnaViewModel` bu durumda bandı **hiç göstermiyor**, `RiskDetayEkran` var olan "Henüz yeterli veri yok" boş durumuna düşüyor. `VeriDurumu.ESKI` ayrı bir eksen: `RiskDeposu` her günü kendi tarihi için taze hesapladığından hiç üretmiyor, `RiskDetayViewModel` son `risk_sonuc` satırının tarihini gösterim ANINDA bugünle karşılaştırıp türetiyor (`Sabitler.VERI_ESKI_ESIK_GUN = 3` gün) — kullanıcı birkaç gündür uygulamayı açmadıysa eski bant "güncelmiş" gibi durmuyor. `risk_sonuc.veriDurumu` kolonu `GECIS_5_6` ile eklendi, geriye dönük `gunluk_ozet.olayVarMi = 0` olan günler `YETERSIZ`'e çekildi. 10 yeni `core-risk` senaryo testi (34sn gece kullanımı, sınır değerin altı/tam/üstü, ESKİ) eklendi |
+| K31 | Uygulamanın kendi yürüyüşü artık spor dakikasına giriyor; ortak aktivite modeli + tekilleştirme | `gorev2.md` §4-§6: `AktiviteSaglayici` egzersiz süresini **yalnızca** Health Connect'ten alıyordu — `YuruyusServisi`'nde tamamlanan bir yürüyüş hiçbir yere yazılmıyordu, aktif yürüyüş özelliği Görev tamamlama puanı veriyordu ama risk motorunun aktivite sönümlemesine (`D`, tavan %15) hiç girmiyordu. `domain/kullanim/AktiviteOturumu.kt` ortak modeli tanımlıyor (`baslangic`/`bitis`/`kaynak`/`disKimlik`), `AktiviteTekillestir.birlestirilmisSureDk` çakışan oturumları (aynı yürüyüş hem uygulamada hem saatte) tek sayıyor, çakışmayanları topluyor — çakışma oranı eşiği (`CAKISMA_ORANI_ESIGI = 0.5`) tek yerde. `aktivite_oturumu` tablosu (`GECIS_6_7`) uygulama yürüyüşlerini kalıcı tutuyor; `SaglikOkuyucu.gununEgzersizOturumlari` artık Health Connect'in `ExerciseSessionRecord`'larını tek tek okuyor (eskiden yalnızca toplam süre aggregate'i vardı — oturum bazlı çakışma hesabı bununla mümkün oldu), `Metadata.id` [AktiviteOturumu.disKimlik]'e giriyor ki aynı Health Connect kaydının iki kez senkronize edilmesi çift saymasın. `AktiviteSaglayici` ikisini `AktiviteTekillestir`'e veriyor. 11 yeni birim testi (`gorev2.md` §6'daki 8 senaryonun tamamı + sınır değer + boş liste + negatif süre reddi) |
 
 ### Açık
 

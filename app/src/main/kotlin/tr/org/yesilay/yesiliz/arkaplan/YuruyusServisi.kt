@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.MainActivity
 import tr.org.yesilay.yesiliz.R
+import tr.org.yesilay.yesiliz.data.depo.AktiviteOturumuDeposu
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.YuruyusOturumDeposu
@@ -28,6 +29,7 @@ import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusHesapla
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -71,6 +73,8 @@ class YuruyusServisi : Service() {
     @Inject lateinit var aktiviteSaglayici: AktiviteSaglayici
 
     @Inject lateinit var adimDeposu: AdimDeposu
+
+    @Inject lateinit var aktiviteOturumuDeposu: AktiviteOturumuDeposu
 
     @Inject lateinit var saat: Clock
 
@@ -128,6 +132,18 @@ class YuruyusServisi : Service() {
     private fun bitir(puanVer: Boolean) {
         sayacIsi?.cancel()
         kapsam.launch {
+            // Gerçek yürünen süre — duraklatılan aralıkları saymaz (sayaç
+            // yalnızca çalışırken artıyor). Hedefe ulaşılmasa bile (`puanVer
+            // = false`, kullanıcı elle bitirdi) yürünen süre gerçek: spor
+            // dakikasına yansımalı (`gorev2.md` §5). Aralık "şimdi"den geriye
+            // doğru kuruluyor — gerçek başlangıç zamanını tutmak, duraklatma
+            // sırasında geçen zamanı da (yanlışlıkla) süreye katardı.
+            val gecenSaniye = oturumDeposu.oturum.value.gecenSaniye
+            if (gecenSaniye > 0) {
+                val bitis = Instant.now(saat)
+                aktiviteOturumuDeposu.kaydet(bitis.minusSeconds(gecenSaniye.toLong()), bitis)
+            }
+
             var yazildi = false
             if (puanVer) {
                 val bugun = LocalDate.now(saat)

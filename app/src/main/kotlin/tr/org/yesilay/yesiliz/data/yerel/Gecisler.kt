@@ -143,5 +143,26 @@ val GECIS_5_6 = object : Migration(5, 6) {
     }
 }
 
+/**
+ * Sürüm 6 → 7 (6 Ağustos 2026).
+ *
+ * `aktivite_oturumu` eklendi — uygulamanın kendi yürüyüş oturumları artık
+ * kalıcı (`gorev2.md` §4). Var olan hiçbir tablo değişmediği için veri
+ * taşıma adımı yok.
+ */
+val GECIS_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `aktivite_oturumu` " +
+                "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`baslangic` INTEGER NOT NULL, `bitis` INTEGER NOT NULL, `tarih` TEXT NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_aktivite_oturumu_tarih` " +
+                "ON `aktivite_oturumu` (`tarih`)",
+        )
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
-val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6)
+val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7)

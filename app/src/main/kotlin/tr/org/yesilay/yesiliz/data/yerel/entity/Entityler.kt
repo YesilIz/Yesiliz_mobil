@@ -42,6 +42,27 @@ data class KullanimOlayEntity(
 )
 
 /**
+ * Uygulamanın kendi kaydettiği aktivite oturumu (şu an yalnızca aktif
+ * yürüyüş, `YuruyusServisi`) — Health Connect'ten canlı okunan egzersiz
+ * kayıtlarıyla birlikte [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e
+ * giriyor (`gorev2.md` §4-§6). Health Connect'in kendi kayıtları burada
+ * ayrıca SAKLANMIYOR — Health Connect zaten kendi kaynağı, tekrar
+ * tutmak veri çatallanması yaratırdı; yalnızca uygulamanın kendi
+ * ölçtüğü oturumlar burada.
+ *
+ * `tarih` gün sınırı sorgularını hızlandırıyor, `baslangic`/`bitis`
+ * [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteOturumu]'nun örtüşme
+ * hesabı için gerekli.
+ */
+@Entity(tableName = "aktivite_oturumu", indices = [Index("tarih")])
+data class AktiviteOturumuEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val baslangic: Instant,
+    val bitis: Instant,
+    val tarih: LocalDate,
+)
+
+/**
  * Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır.
  *
  * Hem ham girdiler (kategori dakikaları, örüntü değerleri) hem de hesabın

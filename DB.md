@@ -1,14 +1,14 @@
 # DB.md — Yeşilİz Veritabanı
 
 > **ÜRETİLEN DOSYA — elle düzenleme.**
-> Kaynak: `app\schemas\tr.org.yesilay.yesiliz.data.yerel.YesilizDb\6.json`
+> Kaynak: `app\schemas\tr.org.yesilay.yesiliz.data.yerel.YesilizDb\7.json`
 > Yeniden üretmek için:
 > ```bash
 > ./gradlew :app:assembleDebug      # Room şemayı yeniden yazar
 > python3 tools/db_dokuman_uret.py  # bu dosyayı günceller
 > ```
 
-**Şema sürümü:** 6 · **Tablo sayısı:** 14 · **Güncelleme:** 2026-08-06
+**Şema sürümü:** 7 · **Tablo sayısı:** 15 · **Güncelleme:** 2026-08-06
 
 ---
 
@@ -28,6 +28,7 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 | Tablo | Kolon | Birincil anahtar | İndeks | Amaç |
 |---|---|---|---|---|
 | `adim_sayac` | 3 | `tarih` | 0 |  |
+| `aktivite_oturumu` | 4 | `id` | 1 |  |
 | `anket_yanit` | 14 | `id` | 0 | SAS-SV yanıtları. Ham puan saklanır, bant değil (spec-anket.md §6.4). |
 | `arkadas` | 3 | `isim` | 0 |  |
 | `bildirim` | 6 | `id` | 1 |  |
@@ -54,6 +55,17 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 | `toplam` | INTEGER | hayır |  |  |
 | `sonSayac` | INTEGER | hayır |  |  |
 
+
+### `aktivite_oturumu`
+
+| Kolon | SQLite | Null? | PK | Not |
+|---|---|---|---|---|
+| `id` | INTEGER | hayır | ✔ |  |
+| `baslangic` | INTEGER | hayır |  | epoch milisaniye — hedef motorda `TIMESTAMPTZ` / `DATETIME2` yapılabilir |
+| `bitis` | INTEGER | hayır |  | epoch milisaniye — hedef motorda `TIMESTAMPTZ` / `DATETIME2` yapılabilir |
+| `tarih` | TEXT | hayır |  | ISO tarih metni (`2026-07-28`) — hedef motorda `DATE` yapılabilir |
+
+- İndeks `index_aktivite_oturumu_tarih` → (tarih)
 
 ### `anket_yanit`
 
@@ -251,6 +263,8 @@ Bu bölüm Room tarafından üretildi, elle yazılmadı.
 
 ```sql
 CREATE TABLE IF NOT EXISTS `adim_sayac` (`tarih` TEXT NOT NULL, `toplam` INTEGER NOT NULL, `sonSayac` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `aktivite_oturumu` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `baslangic` INTEGER NOT NULL, `bitis` INTEGER NOT NULL, `tarih` TEXT NOT NULL)
+CREATE INDEX IF NOT EXISTS `index_aktivite_oturumu_tarih` ON `aktivite_oturumu` (`tarih`)
 CREATE TABLE IF NOT EXISTS `anket_yanit` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `madde1` INTEGER NOT NULL, `madde2` INTEGER NOT NULL, `madde3` INTEGER NOT NULL, `madde4` INTEGER NOT NULL, `madde5` INTEGER NOT NULL, `madde6` INTEGER NOT NULL, `madde7` INTEGER NOT NULL, `madde8` INTEGER NOT NULL, `madde9` INTEGER NOT NULL, `madde10` INTEGER NOT NULL, `hamPuan` REAL NOT NULL, `rS` REAL NOT NULL)
 CREATE TABLE IF NOT EXISTS `arkadas` (`isim` TEXT NOT NULL, `durum` TEXT NOT NULL, `eklenmeTarihi` TEXT NOT NULL, PRIMARY KEY(`isim`))
 CREATE TABLE IF NOT EXISTS `bildirim` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tur` TEXT NOT NULL, `baslik` TEXT NOT NULL, `govde` TEXT NOT NULL, `zaman` INTEGER NOT NULL, `okundu` INTEGER NOT NULL)
@@ -331,6 +345,15 @@ CREATE TABLE "adim_sayac" (
   "sonSayac" BIGINT NOT NULL,
   PRIMARY KEY ("tarih")
 );
+
+CREATE TABLE "aktivite_oturumu" (
+  "id" BIGSERIAL NOT NULL,
+  "baslangic" BIGINT NOT NULL,
+  "bitis" BIGINT NOT NULL,
+  "tarih" TEXT NOT NULL,
+  PRIMARY KEY ("id")
+);
+CREATE INDEX "index_aktivite_oturumu_tarih" ON "aktivite_oturumu" ("tarih");
 
 CREATE TABLE "anket_yanit" (
   "id" BIGSERIAL NOT NULL,
@@ -493,6 +516,15 @@ CREATE TABLE [adim_sayac] (
   [sonSayac] BIGINT NOT NULL,
   PRIMARY KEY ([tarih])
 );
+
+CREATE TABLE [aktivite_oturumu] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [baslangic] BIGINT NOT NULL,
+  [bitis] BIGINT NOT NULL,
+  [tarih] NVARCHAR(450) NOT NULL,
+  PRIMARY KEY ([id])
+);
+CREATE INDEX [index_aktivite_oturumu_tarih] ON [aktivite_oturumu] ([tarih]);
 
 CREATE TABLE [anket_yanit] (
   [id] BIGINT IDENTITY(1,1) NOT NULL,

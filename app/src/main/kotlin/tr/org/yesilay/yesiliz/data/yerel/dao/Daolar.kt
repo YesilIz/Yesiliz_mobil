@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.AktiviteOturumuEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -364,5 +365,17 @@ interface AdimSayacDao {
 
     /** Sayaç birikimi geçmişe dönük anlam taşımıyor; eskiler temizlenir. */
     @Query("DELETE FROM adim_sayac WHERE tarih < :tarih")
+    suspend fun eskileriSil(tarih: LocalDate): Int
+}
+
+@Dao
+interface AktiviteOturumuDao {
+    @Insert
+    suspend fun ekle(oturum: AktiviteOturumuEntity)
+
+    @Query("SELECT * FROM aktivite_oturumu WHERE tarih = :tarih")
+    suspend fun gununOturumlari(tarih: LocalDate): List<AktiviteOturumuEntity>
+
+    @Query("DELETE FROM aktivite_oturumu WHERE tarih < :tarih")
     suspend fun eskileriSil(tarih: LocalDate): Int
 }

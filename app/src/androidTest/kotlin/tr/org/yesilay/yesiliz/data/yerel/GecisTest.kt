@@ -225,6 +225,22 @@ class GecisTest {
     }
 
     /**
+     * 6 → 7: `aktivite_oturumu` tablosu (`gorev2.md` §4).
+     *
+     * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
+     * ettiği şey geçişin **1'den 7'ye kadar** zincirlenmesi ve Room'un
+     * beklediği şemayla birebir çıkması.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis6dan7yeSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+        yardimci.runMigrationsAndValidate(
+            TEST_DB, 7, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7,
+        )
+    }
+
+    /**
      * [olayVarMi] yalnızca sürüm 3 ve üstünde verilebiliyor — kolon 2 → 3
      * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
      * bırakıyor, kolon INSERT listesine hiç girmiyor.

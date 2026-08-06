@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.AktiviteOturumuDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.ArkadasDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.BildirimDao
@@ -20,6 +21,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.UykuBeyaniDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.AktiviteOturumuEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -53,6 +55,11 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  * **Sürüm 6** (5 Ağu 2026): risk_sonuc.veriDurumu — yetersiz ölçümlü bir
  * günün "AZ RİSKLİ" olarak gösterilmesini engelliyor (`gorev2.md` §8,
  * `Gecisler.kt` GECIS_5_6).
+ *
+ * **Sürüm 7** (6 Ağu 2026): aktivite_oturumu — uygulamanın kendi yürüyüş
+ * oturumları artık kalıcı; Health Connect'in egzersiz kayıtlarıyla birlikte
+ * [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e giriyor
+ * (`gorev2.md` §4-§6, `Gecisler.kt` GECIS_6_7).
  */
 @Database(
     entities = [
@@ -70,8 +77,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         ArkadasEntity::class,
         AdimSayacEntity::class,
         OdulSecimiEntity::class,
+        AktiviteOturumuEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)
@@ -91,6 +99,7 @@ abstract class YesilizDb : RoomDatabase() {
     abstract fun arkadasDao(): ArkadasDao
     abstract fun adimSayacDao(): AdimSayacDao
     abstract fun odulSecimiDao(): OdulSecimiDao
+    abstract fun aktiviteOturumuDao(): AktiviteOturumuDao
 
     companion object {
         private const val AD = "yesiliz.db"
