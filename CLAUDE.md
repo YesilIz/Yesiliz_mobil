@@ -337,12 +337,14 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 14 entity · 14 DAO, şema sürümü 5.** `GECIS_1_2` (`Gecisler.kt`)
+**Şu an 14 entity · 14 DAO, şema sürümü 6.** `GECIS_1_2` (`Gecisler.kt`)
 `bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
 tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
 `olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
 geriye dönük dolduruyor (§9 "satır var ≠ veri var"); `GECIS_4_5` `odul_secimi`
-tablosunu ekliyor (§12 K28).
+tablosunu ekliyor (§12 K28); `GECIS_5_6` `risk_sonuc`'a `veriDurumu`
+kolonunu ekleyip `gunluk_ozet.olayVarMi = 0` olan günleri geriye dönük
+`YETERSIZ`'e çekiyor (§12 K30).
 
 Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
 ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
@@ -520,7 +522,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | Alan | İçerik | Doğrulama |
 |---|---|---|
 | Araç zinciri | JDK 17 · Android Studio · SDK 37 · AVD | emülatör açılıyor |
-| `core-risk/` | 6 dosya — risk motoru tam | **22 test**, referansla birebir |
+| `core-risk/` | 6 dosya — risk motoru tam, artık `VeriDurumu` (YETERSİZ/HESAPLANDI/ESKİ, §12 K30) | **32 test**, referansla birebir |
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
@@ -567,7 +569,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/SunucuDepolar` | Release'in bağladığı sunucu-yalnız depolar — sahte veri yok, hata indirgeniyor (boş sonuç + `cevrimdisi` + logcat) | release APK'da `10.0.2.2` ve şifresiz adres yok (dex denetlendi) |
 | `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil | **3 cihaz testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 293 test** (153 Android birim + 36 cihaz/emülatör + 22 core-risk + 82 backend
+**Toplam 305 test** (153 Android birim + 38 cihaz/emülatör + 32 core-risk + 82 backend
 pytest). Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
@@ -668,6 +670,7 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K28 | 5.000 ve 10.000 puanlık ödül kademelerinde **seçenek**: kupon veya fidan bağışı | Market kuponuyla ilgilenmeyen kullanıcı için kupon boşa giden bir ödüldü — "kazandım ama işime yaramadı". `OdulViewModel.Kademe` artık tek bir ödül yerine `secenekler` listesi taşıyor; kademe kazanılınca birden fazla seçenek varsa `OdulHali.SECIM_BEKLIYOR`, kullanıcı seçince `OdulDeposu` üzerinden **kalıcı** yazılıyor (CLAUDE.md §4 "yalnızca kazanç" — geri alma yok). 1. ve 2. kademede (rozet, fidan) tek seçenek olduğu için davranış değişmedi. Seçim, `Yedekli*Deposu` (K18) deseninden farklı çalışıyor: yerel yazma **birincil** (sunucu ulaşılamasa da ödül kaybolmasın), sunucuya senkron **rıza kapısına (K19) bağlı değil** — davranışsal veri taşımıyor, hesap açmakla aynı sınıfta bir kullanıcı eylemi. `docs/spec-puan.md §9.1` güncellendi. **Sınır (5 Ağu):** sunucuya yazma bir kez deneniyor, düşerse **yeniden denenmiyor** — seçim cihazda kalıcı ama sunucudaki kopya eksik kalabiliyor ve telefon değişince `GET /odul/secimlerim` onu geri getiremiyor. Hata artık logcat'e yazılıyor (§9 "yutulan istisnanın izi kalsın"); bekleyen seçimleri senkronda tekrar gönderme işi A7 |
 | K29 | Sunucu adresi **build türünden**, tek yapılandırma noktasından | `app/build.gradle.kts` → `BuildConfig.API_TABANI`: debug `http://10.0.2.2:8000/`, release `canliSunucu` (HTTPS). `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor, `AgModulu` ondan alıyor. Adres `-Pyesiliz.sunucu` ya da `YESILIZ_SUNUCU` ile eziliyor. K24 (çalışma zamanı okuma) duruyor — DataStore'daki değer hâlâ öne geçiyor, ama artık **varsayılan** da doğru: temiz kurulmuş telefon hiçbir ayar yapmadan sunucuya ulaşıyor. Üç koruma birlikte: release HTTPS olmayan adresle derlenmiyor, `ag_guvenligi.xml` şifresiz trafiği istisnasız reddediyor (10.0.2.2 istisnası silindi), CI ikisini de denetliyor |
 | K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
+| K30 | Risk motoruna **`VeriDurumu`** (YETERSİZ/HESAPLANDI/ESKİ) eklendi | `gorev2.md` §8: "15 dakikadan az kullanım" kuralı `EtkileyenFaktorler`'deki alt faktörleri koruyordu (`FAKTOR_ASGARI_DK`, K-7/Y-3) ama günün **kendi bandını** korumuyordu — `RiskDeposu.gunuHesapla` `olayVarMi = false` olan (hiç ölçüm olmayan) bir günü bile sessizce hesaplayıp `R = 0 → AZ RİSKLİ` yazıyordu; 34 saniyeliğine açıp bırakan bir kullanıcı ilk günde "düşük risk" görüyordu. `RiskHesapla.hesapla` artık `gun.toplamDk < Sabitler.GUN_ASGARI_DK` iken `VeriDurumu.YETERSIZ` dönüyor; `RiskDetayViewModel` ve `AnaViewModel` bu durumda bandı **hiç göstermiyor**, `RiskDetayEkran` var olan "Henüz yeterli veri yok" boş durumuna düşüyor. `VeriDurumu.ESKI` ayrı bir eksen: `RiskDeposu` her günü kendi tarihi için taze hesapladığından hiç üretmiyor, `RiskDetayViewModel` son `risk_sonuc` satırının tarihini gösterim ANINDA bugünle karşılaştırıp türetiyor (`Sabitler.VERI_ESKI_ESIK_GUN = 3` gün) — kullanıcı birkaç gündür uygulamayı açmadıysa eski bant "güncelmiş" gibi durmuyor. `risk_sonuc.veriDurumu` kolonu `GECIS_5_6` ile eklendi, geriye dönük `gunluk_ozet.olayVarMi = 0` olan günler `YETERSIZ`'e çekildi. 10 yeni `core-risk` senaryo testi (34sn gece kullanımı, sınır değerin altı/tam/üstü, ESKİ) eklendi |
 
 ### Açık
 

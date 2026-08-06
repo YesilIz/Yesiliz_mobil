@@ -1,14 +1,14 @@
 # DB.md — Yeşilİz Veritabanı
 
 > **ÜRETİLEN DOSYA — elle düzenleme.**
-> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/5.json`
+> Kaynak: `app\schemas\tr.org.yesilay.yesiliz.data.yerel.YesilizDb\6.json`
 > Yeniden üretmek için:
 > ```bash
 > ./gradlew :app:assembleDebug      # Room şemayı yeniden yazar
 > python3 tools/db_dokuman_uret.py  # bu dosyayı günceller
 > ```
 
-**Şema sürümü:** 5 · **Tablo sayısı:** 14 · **Güncelleme:** 2026-08-05
+**Şema sürümü:** 6 · **Tablo sayısı:** 14 · **Güncelleme:** 2026-08-06
 
 ---
 
@@ -38,7 +38,7 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 | `kullanim_olay` | 6 | `id` | 2 | Ham kullanım olayları. **Cihazdan çıkmaz** (CLAUDE.md §4). En hacimli tablo; özet çıkarıldıktan sonra eskiler silinir. |
 | `odul_secimi` | 3 | `kademeId` | 0 |  |
 | `puan_gunluk` | 5 | `tarih` | 0 | Günlük puan ve seri. Ceza yok, sadece kazanç. |
-| `risk_sonuc` | 11 | `tarih` | 0 | Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı. |
+| `risk_sonuc` | 12 | `tarih` | 0 | Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı. |
 | `ruh_hali` | 2 | `tarih` | 0 |  |
 | `uyku_beyani` | 2 | `tarih` | 0 |  |
 
@@ -224,6 +224,7 @@ Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı.
 | `guvenlikKurali` | TEXT | evet |  |  |
 | `trend` | TEXT | hayır |  |  |
 | `surukleyiciler` | TEXT | hayır |  | virgülle ayrılmış liste — hedef motorda `TEXT[]` / ayrı tablo olabilir |
+| `veriDurumu` | TEXT | hayır |  |  |
 
 
 ### `ruh_hali`
@@ -264,7 +265,7 @@ CREATE INDEX IF NOT EXISTS `index_kullanim_olay_tarih` ON `kullanim_olay` (`tari
 CREATE INDEX IF NOT EXISTS `index_kullanim_olay_baslangic` ON `kullanim_olay` (`baslangic`)
 CREATE TABLE IF NOT EXISTS `odul_secimi` (`kademeId` TEXT NOT NULL, `secenekId` TEXT NOT NULL, `tarih` TEXT NOT NULL, PRIMARY KEY(`kademeId`))
 CREATE TABLE IF NOT EXISTS `puan_gunluk` (`tarih` TEXT NOT NULL, `puanHam` INTEGER NOT NULL, `puanNet` INTEGER NOT NULL, `seriGun` INTEGER NOT NULL, `carpani` REAL NOT NULL, PRIMARY KEY(`tarih`))
-CREATE TABLE IF NOT EXISTS `risk_sonuc` (`tarih` TEXT NOT NULL, `S` REAL NOT NULL, `rB` REAL NOT NULL, `rS` REAL, `alpha` REAL NOT NULL, `R` REAL NOT NULL, `adayBant` TEXT NOT NULL, `gosterilenBant` TEXT NOT NULL, `guvenlikKurali` TEXT, `trend` TEXT NOT NULL, `surukleyiciler` TEXT NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `risk_sonuc` (`tarih` TEXT NOT NULL, `S` REAL NOT NULL, `rB` REAL NOT NULL, `rS` REAL, `alpha` REAL NOT NULL, `R` REAL NOT NULL, `adayBant` TEXT NOT NULL, `gosterilenBant` TEXT NOT NULL, `guvenlikKurali` TEXT, `trend` TEXT NOT NULL, `surukleyiciler` TEXT NOT NULL, `veriDurumu` TEXT NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `ruh_hali` (`tarih` TEXT NOT NULL, `deger` REAL NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `uyku_beyani` (`tarih` TEXT NOT NULL, `aralik` TEXT NOT NULL, PRIMARY KEY(`tarih`))
 ```
@@ -463,6 +464,7 @@ CREATE TABLE "risk_sonuc" (
   "guvenlikKurali" TEXT,
   "trend" TEXT NOT NULL,
   "surukleyiciler" TEXT NOT NULL,
+  "veriDurumu" TEXT NOT NULL,
   PRIMARY KEY ("tarih")
 );
 
@@ -624,6 +626,7 @@ CREATE TABLE [risk_sonuc] (
   [guvenlikKurali] NVARCHAR(MAX),
   [trend] NVARCHAR(MAX) NOT NULL,
   [surukleyiciler] NVARCHAR(MAX) NOT NULL,
+  [veriDurumu] NVARCHAR(MAX) NOT NULL,
   PRIMARY KEY ([tarih])
 );
 

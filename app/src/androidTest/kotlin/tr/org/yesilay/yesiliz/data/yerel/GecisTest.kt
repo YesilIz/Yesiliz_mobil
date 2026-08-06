@@ -176,6 +176,55 @@ class GecisTest {
     }
 
     /**
+     * 5 → 6: `risk_sonuc.veriDurumu` (`gorev2.md` §8/§10 — dolu veritabanı ile).
+     *
+     * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
+     * ettiği şey geçişin **1'den 6'ya kadar** zincirlenmesi ve Room'un
+     * beklediği şemayla birebir çıkması.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis5ten6yaSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 1).close()
+        yardimci.runMigrationsAndValidate(
+            TEST_DB, 6, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6,
+        )
+    }
+
+    /**
+     * Dolu veritabanı: iki günlük gerçek geçmiş (biri ölçülmüş, biri boş
+     * telafi günü) + ikisinin `risk_sonuc` satırı — `gorev2.md` §10
+     * "gerçek kullanıcı geçmişine benzeyen dolu bir veritabanı". Geçiş
+     * sonrası eski satırlar kaybolmamalı ve `veriDurumu`
+     * `gunluk_ozet.olayVarMi`'ye göre doğru ayrılmalı.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis5ten6yaYetersizGunleriIsaretliyor() {
+        yardimci.createDatabase(TEST_DB, 5).apply {
+            execSQL(satir("2026-08-03", acilis = 20, olayVarMi = 1))
+            execSQL(satir("2026-08-04", acilis = 0, olayVarMi = 0))
+            execSQL(riskSonucSatiri("2026-08-03", bant = "ORTA"))
+            execSQL(riskSonucSatiri("2026-08-04", bant = "AZ"))
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(
+            TEST_DB, 6, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6,
+        )
+
+        db.query("SELECT tarih, veriDurumu FROM risk_sonuc ORDER BY tarih").use { imlec ->
+            assertTrue("satır kaybolmuş", imlec.moveToFirst())
+            assertEquals("2026-08-03", imlec.getString(0))
+            assertEquals("ölçülmüş gün HESAPLANDI kalmalı", "HESAPLANDI", imlec.getString(1))
+
+            assertTrue(imlec.moveToNext())
+            assertEquals("2026-08-04", imlec.getString(0))
+            assertEquals("boş telafi günü YETERSİZ işaretlenmemiş", "YETERSIZ", imlec.getString(1))
+        }
+    }
+
+    /**
      * [olayVarMi] yalnızca sürüm 3 ve üstünde verilebiliyor — kolon 2 → 3
      * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
      * bırakıyor, kolon INSERT listesine hiç girmiyor.
@@ -190,6 +239,12 @@ class GecisTest {
             "VALUES (\'$tarih\', 0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0,0, " +
             "0,0,1,0,1,0, 0,$acilis$ekDeger)"
     }
+
+    /** Sürüm 5 `risk_sonuc` şeması — `surukleyiciler` boş listeyle (`""`). */
+    private fun riskSonucSatiri(tarih: String, bant: String): String =
+        "INSERT INTO risk_sonuc (tarih, S, rB, rS, alpha, R, adayBant, gosterilenBant, " +
+            "guvenlikKurali, trend, surukleyiciler) VALUES " +
+            "('$tarih', 0,0, NULL, 0,0, '$bant', '$bant', NULL, 'sabit', '')"
 
     private companion object {
         const val TEST_DB = "gecis_testi.db"

@@ -123,6 +123,12 @@ data class RiskSonucEntity(
     val trend: String,
     /** En çok katkı yapan 3 kategori, virgülle. §4.6 md.5: hep dolu olmalı. */
     val surukleyiciler: List<String>,
+    /**
+     * [tr.org.yesilay.yesiliz.risk.VeriDurumu] adı — `YETERSIZ` iken
+     * [gosterilenBant] hesaplanmış olsa da UI'da GÖSTERİLMEMELİ
+     * (gorev2.md §8, `RiskDeposu.gunuHesapla`).
+     */
+    val veriDurumu: String = "HESAPLANDI",
 )
 
 /**

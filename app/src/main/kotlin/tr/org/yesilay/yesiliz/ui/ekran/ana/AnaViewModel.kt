@@ -32,6 +32,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.risk.Bant
+import tr.org.yesilay.yesiliz.risk.VeriDurumu
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
@@ -97,7 +98,13 @@ class AnaViewModel @Inject constructor(
     ) { ozet, risk, toplamPuan, gunlukPuan, hedef ->
         Ara(
             ozet = ozet,
-            bant = risk?.let { Bant.valueOf(it.gosterilenBant) },
+            // Yetersiz ölçümlü bir gün bandı da uydurmasın (`gorev2.md`
+            // §8) — Ana Sayfa kartı `RiskDetayEkran` ile aynı kuralı
+            // izliyor. `ESKI` burada süzülmüyor: kart zaten "son bilinen"
+            // bandı gösteriyor, risk detayının aksine güncellik iddiası
+            // taşımıyor.
+            bant = risk?.takeIf { it.veriDurumu != VeriDurumu.YETERSIZ.name }
+                ?.let { Bant.valueOf(it.gosterilenBant) },
             toplamPuan = toplamPuan,
             seriGun = gunlukPuan?.seriGun ?: 0,
             hedefDk = hedef,

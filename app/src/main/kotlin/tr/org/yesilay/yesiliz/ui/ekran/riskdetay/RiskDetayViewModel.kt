@@ -16,8 +16,12 @@ import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.risk.EtkileyenFaktor
+import tr.org.yesilay.yesiliz.risk.Sabitler
 import tr.org.yesilay.yesiliz.risk.Trend
+import tr.org.yesilay.yesiliz.risk.VeriDurumu
+import java.time.Clock
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
@@ -33,6 +37,7 @@ import javax.inject.Inject
 class RiskDetayViewModel @Inject constructor(
     riskDao: RiskSonucDao,
     private val riskDeposu: RiskDeposu,
+    private val saat: Clock,
 ) : ViewModel() {
 
     val durum: StateFlow<RiskDetayDurum> = riskDao.sonuncuAkisi()
@@ -41,22 +46,38 @@ class RiskDetayViewModel @Inject constructor(
                 flowOf(RiskDetayDurum(veriVarMi = false))
             } else {
                 faktorlerAkisi(risk.tarih).map { faktorler ->
-                    val bant = Bant.valueOf(risk.gosterilenBant)
-                    RiskDetayDurum(
-                        veriVarMi = true,
-                        bant = bant,
-                        bantEtiketiKisa = bantKisaEtiket(bant),
-                        aciklama = aciklama(bant),
-                        trendMesaji = trendMesaji(Trend.valueOf(risk.trend)),
-                        oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
-                        faktorler = faktorler,
-                        // YEDAM teklifi yalnızca yüksek bantta.
-                        oneriler = if (bant == Bant.COK) {
-                            VarsayilanOneriler + YedamOnerisi
-                        } else {
-                            VarsayilanOneriler
-                        },
-                    )
+                    when (etkinVeriDurumu(risk.veriDurumu, risk.tarih)) {
+                        // Yetersiz/eski ölçüme dayanan bir bant, "veri yok"
+                        // ekranından daha yanıltıcı olurdu — 34 saniyelik
+                        // kullanımı olan biri "AZ RİSKLİ" görmemeli
+                        // (`gorev2.md` §8, aynı sınıf hata: debug.md K-7).
+                        VeriDurumu.YETERSIZ -> RiskDetayDurum(veriVarMi = true)
+                        VeriDurumu.ESKI -> RiskDetayDurum(
+                            veriVarMi = true,
+                            bosDurumBaslik = "Risk analizin güncellenmeyi bekliyor",
+                            bosDurumAciklama = "Uygulamayı son açtığından beri birkaç " +
+                                "gün geçti; yeni bir analiz için uygulamayı kullanmaya " +
+                                "devam et.",
+                        )
+                        VeriDurumu.HESAPLANDI -> {
+                            val bant = Bant.valueOf(risk.gosterilenBant)
+                            RiskDetayDurum(
+                                veriVarMi = true,
+                                bant = bant,
+                                bantEtiketiKisa = bantKisaEtiket(bant),
+                                aciklama = aciklama(bant),
+                                trendMesaji = trendMesaji(Trend.valueOf(risk.trend)),
+                                oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
+                                faktorler = faktorler,
+                                // YEDAM teklifi yalnızca yüksek bantta.
+                                oneriler = if (bant == Bant.COK) {
+                                    VarsayilanOneriler + YedamOnerisi
+                                } else {
+                                    VarsayilanOneriler
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -65,6 +86,20 @@ class RiskDetayViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
             initialValue = RiskDetayDurum(),
         )
+
+    /**
+     * [risk_sonuc.veriDurumu] hesap ANINDA yazıldı ([VeriDurumu.ESKI] hiç
+     * üretmez — `RiskDeposu` her günü kendi tarihi için taze hesaplıyor).
+     * Eskilik GÖSTERİM anında türetiliyor: son satır bugünden
+     * [Sabitler.VERI_ESKI_ESIK_GUN] günden fazla eskiyse, kullanıcı
+     * uygulamayı birkaç gündür açmamış demektir ve o bant artık güncel
+     * değildir.
+     */
+    private fun etkinVeriDurumu(kayitliDurum: String, tarih: LocalDate): VeriDurumu {
+        if (VeriDurumu.valueOf(kayitliDurum) == VeriDurumu.YETERSIZ) return VeriDurumu.YETERSIZ
+        val gunGecmisi = ChronoUnit.DAYS.between(tarih, LocalDate.now(saat))
+        return if (gunGecmisi > Sabitler.VERI_ESKI_ESIK_GUN) VeriDurumu.ESKI else VeriDurumu.HESAPLANDI
+    }
 
     private fun faktorlerAkisi(tarih: LocalDate): Flow<List<EtkileyenFaktor>> = flow {
         emit(riskDeposu.etkileyenFaktorler(tarih) ?: emptyList())

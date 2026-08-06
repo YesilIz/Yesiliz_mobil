@@ -49,6 +49,10 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  *
  * **Sürüm 5** (4 Ağu 2026): odul_secimi — bazı ödül kademelerinde market
  * kuponu yerine fidan bağışı gibi alternatif seçenekler.
+ *
+ * **Sürüm 6** (5 Ağu 2026): risk_sonuc.veriDurumu — yetersiz ölçümlü bir
+ * günün "AZ RİSKLİ" olarak gösterilmesini engelliyor (`gorev2.md` §8,
+ * `Gecisler.kt` GECIS_5_6).
  */
 @Database(
     entities = [
@@ -67,7 +71,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         AdimSayacEntity::class,
         OdulSecimiEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)
