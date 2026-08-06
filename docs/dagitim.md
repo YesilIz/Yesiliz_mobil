@@ -212,7 +212,21 @@ keytool -genkeypair -keystore app/yesiliz-release.jks -alias yesiliz \
 
 ### Release APK doğrulaması
 
-Sürüm çıkarken bir kez:
+**Otomatik (`gorev2.md` §11):**
+
+```bash
+./gradlew :app:dogrulaReleaseApk
+```
+
+`app/build.gradle.kts`'teki `ReleaseApkAgGuvenligiDenetimi` task'ı —
+`assembleRelease`'e bağlı, üretilen APK'nın **her dosyasını** (dex +
+kaynaklar) açıp `"10.0.2.2"` arıyor (bulunursa derleme düşer) ve canlı
+HTTPS adresinin gerçekten gömüldüğünü doğruluyor (bulunmazsa derleme
+düşer). `android-ağ-güvenliği` CI'ı kaynak düzeyinde aynı şeye bakıyor;
+bu, gerçekten üretilmiş APK'ya bakan daha güçlü garanti — üçüncü parti
+bir bağımlılığın sızdırdığı bir durumu da yakalar.
+
+**Elle (araçtan şüphe edilirse):**
 
 ```bash
 ./gradlew :app:assembleRelease
