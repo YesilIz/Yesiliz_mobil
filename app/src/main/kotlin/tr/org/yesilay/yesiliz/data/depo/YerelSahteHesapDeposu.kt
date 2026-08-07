@@ -7,6 +7,7 @@ import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDogrula
 import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
+import tr.org.yesilay.yesiliz.ui.buyukHarf
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,7 +36,13 @@ class YerelSahteHesapDeposu @Inject constructor(
 
         // Sunucu yok: e-postanın yerel kısmı ad olarak kullanılıyor.
         // Faz 2'de sunucudan gerçek ad gelecek.
-        val ad = eposta.substringBefore('@').replaceFirstChar { it.uppercase() }
+        //
+        // `replaceFirstChar { it.uppercase() }` Locale.ROOT kullanıyordu:
+        // "irem@…" → "Irem" (yanlış), Türkçede "İrem" olmalı. Yalnızca ilk
+        // harf `buyukHarf()` ile Türkçe-doğru büyütülüyor, gerisi aynen
+        // kalıyor (`debug.md` üçüncü tarama A2).
+        val yerelKisim = eposta.substringBefore('@')
+        val ad = yerelKisim.take(1).buyukHarf() + yerelKisim.drop(1)
         tercihler.oturumuKaydet(ad = ad, eposta = eposta.trim(), misafir = false)
         return HesapSonuc.Basarili
     }

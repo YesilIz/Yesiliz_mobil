@@ -62,9 +62,8 @@ fun RiskDetayEkran(
             if (!durum.veriVarMi || durum.bant == null) {
                 Kart {
                     BosDurum(
-                        baslik = "Henüz yeterli veri yok",
-                        aciklama = "Birkaç günlük kullanım biriktiğinde risk " +
-                            "analizin burada görünecek.",
+                        baslik = durum.bosDurumBaslik,
+                        aciklama = durum.bosDurumAciklama,
                     )
                 }
                 return@YesilBaslikliEkran

@@ -1,11 +1,15 @@
 # debug.md — Yeşilİz açık kusur listesi
 
 > **Cihaz:** Samsung SM-A217F (Galaxy A21s) · Android 12 / API 31 · 720×1600 @280dpi · 3 tuşlu gezinme
-> **Tarih:** 1 Ağustos 2026 · **Derleme:** `fix/gercek-telefon-onkosullari` @ `170a3c4`
+> **Tarih:** 1 Ağustos 2026 (2. tarama) · 5 Ağustos 2026 (3. tarama) · **Derleme:** `fix/gercek-telefon-onkosullari` @ `170a3c4`
 >
 > **İKİNCİ TARAMA.** Birinci tarama (31 Temmuz) `docs/tarama-01.md`'de arşivlendi;
 > oradaki **9 kritik + 12 yüksek + 18 orta kusurun ve 5 kapsam kararının tamamı**
 > kapatıldı ve her biri bu cihazda doğrulandı.
+>
+> **ÜÇÜNCÜ TARAMA (5 Ağustos).** Bu turun kapsamı UI hizalama/metin —
+> `kubragorev.md`. İkinci taramanın odağı davranış/veri kusurlarıydı; **ekran
+> ekran hizalama/tipografi denetimi hiç yapılmamıştı.** Bulgular §7'de.
 >
 > Bu turun yöntemi:
 > - `[cihaz]` — `pm clear` ile sıfırlanıp uçtan uca gezildi; her ekran `uiautomator`
@@ -365,3 +369,82 @@ Dürüstlük gereği: aşağıdakiler denenmedi, "çalışıyor" denemez.
 | Yeni CLAUDE.md kararı | K20–K26; K15 tersine çevrildi |
 | Yeni bilinen tuzak | 6 (CLAUDE.md §9) |
 | Yeni backend ucu | `DELETE /auth/hesap` · `lig_uyelik.gorunur` (Alembic) |
+
+---
+
+## §7 · ÜÇÜNCÜ TARAMA (5 Ağustos 2026) — UI hizalama ve metin
+
+`kubragorev.md` A-B-C-D-E. Kök nedenleri önceden bulunmuş üç kusur düzeltildi
+(A1-A3), ardından cihazda `adb` ile kısmi bir ekran taraması yapıldı (B —
+tam ~30 ekran değil, aşağıdaki alt kısımda gerekçesi var).
+
+### ✅ Y-6 · Başlık ortalanmıyor — 18 ekran `[kod]` `[cihaz]`
+
+**`ui/bilesen/UstBaslik.kt`**
+
+Geri oku varken sağ eylem yoksa (23 `YesilBaslikliEkran` kullanan ekranın
+18'inde geçerli durum) başlık yatay pay asimetrik veriliyordu (`96dp` /
+`20dp`), `Box(contentAlignment = Center)` padding dahil ortaladığı için
+başlık ekran merkezinden **38dp (280dpi'de ~66px)** sağa kayıyordu.
+
+**Cihazda ölçüldü** (`uiautomator dump`, düzeltme öncesi):
+
+| Ekran | Başlık merkezi | Ekran merkezi | Sapma |
+|---|---|---|---|
+| Ödüller | 427px | 360px | **+67px** |
+| Risk analizi | 426,5px | 360px | **+66,5px** |
+
+İkisi de dokümanın öngördüğü +66px'e neredeyse birebir uyuyor.
+
+**Düzeltme.** Pay artık her iki tarafa da **aynı** (gereken en büyük) miktarda
+veriliyor: geri oku için `56dp` (48dp `IconButton` + nefes payı, eskiden
+`96dp` fazlasıyla abartılıydı), sağ eylem için `SagEylemEnFazla +
+Olcu.EkranKenari`. `maxOf` ile ikisinden büyüğü seçiliyor. Etkilenen 18
+ekranın listesi `kubragorev.md`'de.
+
+### ✅ O-6 · Çıplak `uppercase()` — Türkçe İ bozuluyor (2 yer) `[kod]`
+
+**`ui/ekran/kategori/KategoriEkran.kt:255` · `data/depo/YerelSahteHesapDeposu.kt:38`**
+
+`replaceFirstChar { it.uppercase() }` `Locale.ROOT` kullanıyordu: "instagram"
+rozetinde "İn" yerine "In", misafir hesap adında "irem@…" için "İrem" yerine
+"Irem" çıkıyordu (CLAUDE.md §9'daki bilinen tuzak — bu kez iki yeni yerde).
+`ui/TurkceMetin.kt`'deki `buyukHarf()` yalnızca ilk harfe uygulanıp geri
+kalanı değişmeden bırakılacak şekilde düzeltildi.
+
+### ✅ Y-7 · Onboarding "Atla" sonsuz döngüsü `[kod]` `[işlevsel]`
+
+**`ui/gezinme/OnboardingAkisi.kt:142`**
+
+İlk Sonuç ekranındaki "Atla" `vm.tamamla()` çağırmıyordu (HEDEF ve
+HEDEF_OZEL'deki eşdeğerleri çağırıyor). `onboardingBitti` bayrağı yalnızca
+`tamamla()` içinde yazıldığı için, "Atla"ya basan misafir kullanıcı ana
+sayfayı görüyor ama uygulamayı kapatıp açınca onboarding'e geri
+düşüyordu — çıkış yolu yoktu. `onAtla`'ya `vm.tamamla()` eklendi; hedef
+seçilmediği için varsayılan (120 dk) yazılıyor.
+
+### Cihaz taraması (B) — kısmi, gerekçesi
+
+Tam ~30 ekranlık gezinti bu turda **tamamlanamadı**: canlı ekran görüşü
+olmadan yalnızca `uiautomator` dökümünden çıkarılan koordinatlarla "kör"
+dokunmak güvenilir değil (bir denemede yanlışlıkla Profil'e gidildi, bir
+ara ekran zaman aşımıyla kilitlendi). Taranan kısım:
+
+| Ekran | Sonuç |
+|---|---|
+| Lig, Profil, İstatistik | Başlık doğru ortalı — geri oku yok, beklendiği gibi |
+| Ödüller, Risk analizi | Y-6 doğrulandı (yukarıda) |
+| Ödül detay alt sayfası | Sorun yok |
+| Bildirim (zil) ikonu | Dokunma tepki vermedi — **doğrulanmadı, tekrar bakılmalı** |
+
+**Kalan ~25 ekran taranmadı.** Gerçek cihazda gözle gezinti, kör `adb`
+taramasından daha güvenilir olacağı için sıradaki iş listesine kaldı.
+
+### Açık — bu turdan
+
+| İş | Not |
+|---|---|
+| Bell ikonu | Tek denemede tepkisiz; kusur mu zamanlama sorunu mu belirsiz |
+| Kalan ~25 ekran | Gözle tarama tamamlanmadı |
+| A1-A3'ün "sonrası" ölçümü | Yeni derleme telefona kurulunca (JDK kurulum engeli çözülünce) alınacak |
+| Testler (D) | **Düzeltme (6 Ağu):** JDK 17'nin kendisi çalışıyor — `java`, `gradlew`, `kotlinc`, `python` (winget ile kuruldu) sorunsuz. Asıl kısıt daha dar: bu makinedeki bir güvenlik politikası (AppLocker/WDAC benzeri, antivirüs değil) belirli native exe'leri **hash bazlı ve kalıcı** olarak "erişim engellendi" ile reddediyor — `keytool`, `javap`, `aapt2.exe` (Android kaynak derleyicisi) ve git-bash'in `grep`/`head`/`tail`/`find`/`ls`/`uname`/`sed`/`tr`/`xargs` gibi coreutils'i. Dosyayı başka bir klasöre kopyalamak değiştirmiyor (hash bazlı olduğunun kanıtı). Somut etki: `AndroidManifest.xml`'e her dokunuş `aapt2`'yi tetikliyor ve `:app:testDebugUnitTest`/`:app:assembleRelease` gibi kaynak-işleyen görevler bu makinede çalışmıyor; `compileDebugKotlin`/`compileDebugAndroidTestKotlin`/core-risk testleri (aapt2 gerektirmeyenler) etkilenmiyor. IT'ye bu native exe'ler için istisna talebi açılmalı |

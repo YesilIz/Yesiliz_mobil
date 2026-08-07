@@ -7,7 +7,7 @@ FastAPI + PostgreSQL. CLAUDE.md §5'teki Faz 2 sunucusu.
 ```bash
 cd backend
 docker compose up -d          # PostgreSQL 16 + API (localhost:8000)
-curl localhost:8000/saglik    # {"durum":"ayakta"}
+curl localhost:8000/saglik    # {"status":"healthy","database":"connected","version":"0.1.0"}
 ```
 
 API dokümanı: <http://localhost:8000/docs>

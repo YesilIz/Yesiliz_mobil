@@ -3,7 +3,7 @@ package tr.org.yesilay.yesiliz.data.depo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.data.saglik.AdimDurumu
-import tr.org.yesilay.yesiliz.data.saglik.AdimSayacOkuyucu
+import tr.org.yesilay.yesiliz.data.saglik.AdimKaynagi
 import tr.org.yesilay.yesiliz.data.saglik.adimBirikimGuncelle
 import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
@@ -35,7 +35,7 @@ import javax.inject.Singleton
 @Singleton
 class AdimDeposu @Inject constructor(
     private val dao: AdimSayacDao,
-    private val okuyucu: AdimSayacOkuyucu,
+    private val okuyucu: AdimKaynagi,
     private val saat: Clock,
 ) {
 

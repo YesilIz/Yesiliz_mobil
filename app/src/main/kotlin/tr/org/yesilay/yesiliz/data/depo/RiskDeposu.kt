@@ -89,6 +89,7 @@ class RiskDeposu @Inject constructor(
             guvenlikKurali = gunSonuc.guvenlikKurali,
             trend = gunSonuc.trend.name,
             surukleyiciler = sonuc.surukleyiciler,
+            veriDurumu = sonuc.veriDurumu.name,
         )
         riskDao.kaydet(satir)
         return satir
