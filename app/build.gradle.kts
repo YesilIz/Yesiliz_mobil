@@ -197,7 +197,8 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
 // arıyor. Bu görev daha güçlü bir garanti: gerçekten üretilmiş **APK
 // dosyasının içine** (dex + kaynaklar) bakıyor, üçüncü parti bir
 // bağımlılığın ya da üretilen kodun sızdırdığı bir durumu da yakalar.
-// `assembleRelease` sonrası `dogrulaReleaseApk` ile tetiklenir.
+// `assembleRelease` her koştuğunda otomatik tetikleniyor (aşağıda
+// `finalizedBy`) — elle çağrılması gereken bir nöbetçi nöbet tutmaz.
 abstract class ReleaseApkAgGuvenligiDenetimi : DefaultTask() {
 
     @get:InputDirectory
@@ -266,6 +267,21 @@ tasks.register<ReleaseApkAgGuvenligiDenetimi>("dogrulaReleaseApk") {
     apkDizini.set(layout.buildDirectory.dir("outputs/apk/release"))
     yasakliDesenler.set(listOf("10.0.2.2"))
     zorunluDesen.set(canliSunucu)
+}
+
+// `dependsOn` tek yönlü: `dogrulaReleaseApk` çağrılınca APK üretiliyor ama
+// `assembleRelease` tek başına koştuğunda denetim ÇALIŞMIYORDU — CI de
+// hiçbir yerde task'ı adıyla çağırmıyor, yani nöbetçi hiç nöbet tutmuyordu.
+// `finalizedBy` bağı tersini kuruyor: release APK üretilen her yolda denetim
+// koşuyor ve düşerse derleme düşüyor.
+// `tasks.named` burada çalışmıyor: AGP `assembleRelease`'i bu script
+// değerlendirilirken henüz kaydetmemiş oluyor ("Task with name
+// 'assembleRelease' not found"). Yukarıdaki HTTPS kapısıyla aynı desen —
+// `matching { }.configureEach` görev eklendiğinde bağlanıyor.
+// Yalnızca `assembleRelease`: `bundleRelease` AAB üretiyor, denetimin
+// baktığı `outputs/apk/release` dizinine dokunmuyor.
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy("dogrulaReleaseApk")
 }
 
 // Room şemasını JSON olarak dışa aktar.
