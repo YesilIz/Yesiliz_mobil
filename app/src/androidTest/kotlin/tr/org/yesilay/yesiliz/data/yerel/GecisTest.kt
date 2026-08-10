@@ -241,6 +241,85 @@ class GecisTest {
     }
 
     /**
+     * Kapsamlı dolu veritabanı — `gorev2.md` §10 "gerçek kullanıcı geçmişine
+     * benzeyen dolu bir veritabanı": üç günlük geçmiş, dört tablo birden
+     * (`gunluk_ozet`, `risk_sonuc`, `adim_sayac`) — sürüm 4'te (adım sayacı
+     * eklendikten sonra) kurulup 7'ye kadar TÜM geçişlerden (5→6 ve 6→7
+     * dahil) geçiriliyor. Doğrulanan üç şey: hiçbir satır kaybolmuyor, yeni
+     * kolon/tablo doğru dolduruluyor, hiçbir geçiş veriyi mükerrer yazmıyor
+     * (satır sayıları girdiyle birebir).
+     */
+    @Test
+    @Throws(IOException::class)
+    fun doluVeritabaniTumGecislerdenVeriKaybiOlmadanGeciyor() {
+        val gunler = listOf(
+            Triple("2026-08-01", 30, 1), // ölçülmüş gün
+            Triple("2026-08-02", 0, 0), // boş telafi günü
+            Triple("2026-08-03", 45, 1), // ölçülmüş gün
+        )
+
+        yardimci.createDatabase(TEST_DB, 4).apply {
+            gunler.forEach { (tarih, acilis, olayVarMi) ->
+                execSQL(satir(tarih, acilis = acilis, olayVarMi = olayVarMi))
+                execSQL(
+                    riskSonucSatiri(
+                        tarih,
+                        bant = if (olayVarMi == 1) "ORTA" else "AZ",
+                    ),
+                )
+                execSQL(adimSayacSatiri(tarih, toplam = acilis * 100))
+            }
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(
+            TEST_DB, 7, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7,
+        )
+
+        db.query("SELECT COUNT(*) FROM gunluk_ozet").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals("3 günlük özet kaybolmuş/çoğalmış", 3, imlec.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM risk_sonuc").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals("3 risk sonucu kaybolmuş/çoğalmış", 3, imlec.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM adim_sayac").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals("3 adım sayacı kaybolmuş/çoğalmış", 3, imlec.getInt(0))
+        }
+        // Yeni tablo boş açılıyor — veri taşıma iddiası yok, yalnızca varlığı.
+        db.query("SELECT COUNT(*) FROM aktivite_oturumu").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals(0, imlec.getInt(0))
+        }
+
+        db.query("SELECT tarih, veriDurumu FROM risk_sonuc ORDER BY tarih").use { imlec ->
+            gunler.forEach { (tarih, _, olayVarMi) ->
+                assertTrue("$tarih satırı kaybolmuş", imlec.moveToNext())
+                assertEquals(tarih, imlec.getString(0))
+                assertEquals(
+                    "$tarih için veriDurumu olayVarMi'ye göre yanlış",
+                    if (olayVarMi == 1) "HESAPLANDI" else "YETERSIZ",
+                    imlec.getString(1),
+                )
+            }
+        }
+
+        db.query("SELECT tarih, toplam FROM adim_sayac ORDER BY tarih").use { imlec ->
+            gunler.forEach { (tarih, acilis, _) ->
+                assertTrue(imlec.moveToNext())
+                assertEquals(tarih, imlec.getString(0))
+                assertEquals("adım birikimi bozulmuş", (acilis * 100).toLong(), imlec.getLong(1))
+            }
+        }
+    }
+
+    /** Sürüm 4 `adim_sayac` şeması. */
+    private fun adimSayacSatiri(tarih: String, toplam: Int): String =
+        "INSERT INTO adim_sayac (tarih, toplam, sonSayac) VALUES ('$tarih', $toplam, $toplam)"
+
+    /**
      * [olayVarMi] yalnızca sürüm 3 ve üstünde verilebiliyor — kolon 2 → 3
      * geçişinde eklendi ve `NOT NULL`. Sürüm 2 satırı yazan testler `null`
      * bırakıyor, kolon INSERT listesine hiç girmiyor.
