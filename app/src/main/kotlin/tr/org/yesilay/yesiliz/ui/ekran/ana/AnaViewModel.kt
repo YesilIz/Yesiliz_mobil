@@ -245,8 +245,10 @@ class AnaViewModel @Inject constructor(
     )
 
     private companion object {
-        // Hesap sistemi Faz 2 — o zamana kadar sabit.
-        const val SABIT_ISIM = "Turan"
+        // Misafirin adı yok (`oturum.ad` boş). "Turan" gibi belirli bir kişi
+        // adı kullanmak, sahte veriyle birleşince gerçek bir hesaba
+        // girilmiş izlenimi veriyordu. Nötr bir etiket olduğunu belli ediyor.
+        const val SABIT_ISIM = "Misafir"
 
         /** Ekran arka plana gidince akışı hemen kesme. */
         const val AKIS_BEKLEME_MS = 5_000L

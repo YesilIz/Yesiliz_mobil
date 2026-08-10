@@ -117,6 +117,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilEkran(
+    onGeri: () -> Unit,
     onEbeveyn: () -> Unit,
     onGunlukHedef: () -> Unit,
     onKategoriler: () -> Unit,
@@ -156,7 +157,7 @@ fun ProfilEkran(
     }
     val bildirimIzni = bildirimIzniIstegi()
 
-    YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
+    YesilBaslikliEkran(baslik = "Profil", onGeri = onGeri, modifier = modifier) {
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()),
         ) {

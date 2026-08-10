@@ -129,8 +129,8 @@ class OdulViewModel @Inject constructor(
     }
 
     private companion object {
-        /** Hesap sistemi öncesi ad — AnaViewModel ve Profil ile aynı. */
-        const val SABIT_ISIM = "Turan"
+        /** Misafirin görünür adı — AnaViewModel ve Profil ile aynı. */
+        const val SABIT_ISIM = "Misafir"
 
         const val AKIS_BEKLEME_MS = 5_000L
 

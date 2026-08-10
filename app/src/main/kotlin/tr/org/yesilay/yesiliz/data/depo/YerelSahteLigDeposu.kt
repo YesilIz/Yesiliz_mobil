@@ -41,15 +41,20 @@ class YerelSahteLigDeposu @Inject constructor(
         tercihler.ligeKatildiMi,
         arkadasDao.hepsiAkisi(),
         puanDeposu.toplamPuan,
-    ) { katildi, arkadaslar, puan ->
+        tercihler.oturum,
+    ) { katildi, arkadaslar, puan, oturum ->
         val eklenenler = arkadaslar.filter { it.durum == ArkadasEntity.DURUM_EKLENDI }
+        // Misafirin adı yok; AnaViewModel/OdulViewModel/ProfilViewModel ile
+        // aynı geri düşüş. Sabit "Turan" ismi, sıralamada gerçek kullanıcı
+        // adıyla hiç örtüşmeyen bir kişiymiş izlenimi veriyordu.
+        val benIsim = oturum.ad.ifBlank { SABIT_ISIM }
 
         LigOzeti(
             ligAdi = LIG_ADI,
             kalanGun = KALAN_GUN,
             yukselen = YUKSELEN,
             dusen = DUSEN,
-            siralama = siralamaKur(eklenenler.map { it.isim }, puan),
+            siralama = siralamaKur(eklenenler.map { it.isim }, puan, benIsim),
             // Boş durum: ne lige katılmış ne de arkadaşı var.
             katildiMi = katildi || eklenenler.isNotEmpty(),
         )
@@ -95,14 +100,18 @@ class YerelSahteLigDeposu @Inject constructor(
      * bir sıraya değil — puan kazandıkça ligde yükseldiğini görüyor.
      * Eklenen arkadaşlar da listeye giriyor.
      */
-    private fun siralamaKur(arkadasIsimleri: List<String>, puan: Int): List<LigSatiri> {
+    private fun siralamaKur(
+        arkadasIsimleri: List<String>,
+        puan: Int,
+        benIsim: String,
+    ): List<LigSatiri> {
         val sahteler = SAHTE_RAKIPLER.map { (isim, p) -> Triple(isim, p, false) }
         val arkadaslar = arkadasIsimleri.mapIndexed { i, isim ->
             // Arkadaş puanı sunucudan gelmiyor; isimden türetilen sabit bir
             // değer kullanılıyor ki liste her açılışta zıplamasın.
             Triple(isim, ARKADAS_TABAN + (isim.sumOf { it.code } % ARKADAS_ARALIK), true)
         }
-        val ben = Triple(BEN, puan, false)
+        val ben = Triple(benIsim, puan, false)
 
         return (sahteler + arkadaslar + ben)
             .sortedByDescending { it.second }
@@ -111,7 +120,7 @@ class YerelSahteLigDeposu @Inject constructor(
                     sira = indeks + 1,
                     isim = isim,
                     puan = p,
-                    benMiyim = isim == BEN,
+                    benMiyim = isim == benIsim,
                     arkadasMi = arkadasMi,
                 )
             }
@@ -123,8 +132,8 @@ class YerelSahteLigDeposu @Inject constructor(
         const val YUKSELEN = 7
         const val DUSEN = 7
 
-        /** Hesap sistemi Faz 2 — o zamana kadar sabit (AnaViewModel ile aynı). */
-        const val BEN = "Turan"
+        /** Misafirin görünür adı — AnaViewModel, Ödüller, Profil ile aynı. */
+        const val SABIT_ISIM = "Misafir"
 
         const val ARKADAS_TABAN = 900
         const val ARKADAS_ARALIK = 600
