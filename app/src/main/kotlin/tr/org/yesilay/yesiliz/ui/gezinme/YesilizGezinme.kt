@@ -135,7 +135,16 @@ fun YesilizGezinme(
                             navController.hesaptanCik(Rota.ONBOARDING)
                         }
                     },
-                    onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
+                    // Kayıt ekranı iki yerden açılıyor: Giriş ekranından
+                    // ("Kayıt ol") ve Profil'den ("Hesap oluştur", misafir
+                    // akışı). İlkinde Giriş geri yığınında var, `popBackStack`
+                    // yeterli. İkincisinde yok — `popBackStack` sessizce
+                    // `false` dönüyordu ve "Giriş yap" hiçbir şey yapmıyordu.
+                    onGiris = {
+                        if (!navController.popBackStack(Rota.GIRIS, inclusive = false)) {
+                            navController.navigate(Rota.GIRIS)
+                        }
+                    },
                     onGeri = { navController.popBackStack() },
                     onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
                 )
@@ -217,6 +226,7 @@ fun YesilizGezinme(
                     // (`debug.md` O-8).
                     acilacakSayfa = girdiP.arguments
                         ?.getString(Rota.PROFIL_SAYFA_ARG),
+                    onGeri = { navController.popBackStack() },
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
                     onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },

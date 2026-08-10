@@ -1,8 +1,6 @@
 package tr.org.yesilay.yesiliz.ui.ekran.ekransiz
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -53,7 +51,7 @@ fun EkransizEkran(
             Yigin {
                 Text(
                     text = if (durum.kaydedildi) "Kaydedildi" else "Bugün ekransız ne yaptın?",
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )
@@ -81,25 +79,20 @@ fun EkransizEkran(
                     return@Yigin
                 }
 
-                EkransizSecenek.entries.chunked(SUTUN).forEach { satir ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
-                        satir.forEach { secenek ->
-                            SecenekKarti(
-                                ikon = secenek.ikon,
-                                baslik = secenek.etiket,
-                                aciklama = "",
-                                secili = durum.secilen == secenek,
-                                onTikla = { viewModel.sec(secenek) },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        // Tek kalan kartın satırı doldurmasını engelliyor.
-                        repeat(SUTUN - satir.size) {
-                            androidx.compose.foundation.layout.Spacer(
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
+                // Tek sütun, tam genişlik — `SecenekKarti`'nin Ebeveyn cihaz
+                // rolü seçimindeki (EbeveynEkran) kullanımıyla aynı desen.
+                // İki sütunlu ızgara ikon + metin + radyo düğmesini yarım
+                // genişlikte sığdıramıyordu: ölçülen metin genişliği 31px'e
+                // kadar düşüyor, her kelime tek harf tek satır olacak
+                // şekilde dikey bir şeride kırılıyordu.
+                EkransizSecenek.entries.forEach { secenek ->
+                    SecenekKarti(
+                        ikon = secenek.ikon,
+                        baslik = secenek.etiket,
+                        aciklama = "",
+                        secili = durum.secilen == secenek,
+                        onTikla = { viewModel.sec(secenek) },
+                    )
                 }
 
                 Text(
@@ -116,5 +109,3 @@ fun EkransizEkran(
         }
     }
 }
-
-private const val SUTUN = 2

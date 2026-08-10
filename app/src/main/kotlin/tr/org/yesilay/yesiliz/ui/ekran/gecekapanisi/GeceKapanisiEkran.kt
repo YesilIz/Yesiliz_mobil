@@ -57,7 +57,7 @@ fun GeceKapanisiEkran(
             Yigin {
                 Text(
                     text = if (durum.tamamlandi) "Günü kapattın" else "Günü kapat",
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )

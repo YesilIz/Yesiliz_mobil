@@ -17,7 +17,7 @@ import javax.inject.Singleton
  * **Şifre hiçbir yere yazılmıyor.** Yalnızca doğrulanıyor ve unutuluyor;
  * yerelde saklamak, güvenli olmayan bir kimlik doğrulamayı güvenliymiş gibi
  * göstermek olurdu. Saklanan tek şey ad ve e-posta — ekranlardaki
- * `SABIT_ISIM = "Turan"` bunun yerine geçiyor.
+ * `SABIT_ISIM = "Misafir"` bunun yerine geçiyor.
  *
  * `sifreSifirla` gerçek bir e-posta göndermiyor; ekran bunu kullanıcıya
  * açıkça söylüyor. Faz 2'de `RetrofitHesapDeposu` bağlanınca ekran

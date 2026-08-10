@@ -420,7 +420,7 @@ private fun EbeveynPaneli(
                 Text(text = "ORTALAMA", style = MaterialTheme.typography.labelMedium, color = MetinIkincil)
                 Text(
                     text = durum.ekranSuresiOrtalama,
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )

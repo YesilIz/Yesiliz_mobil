@@ -266,8 +266,8 @@ class ProfilViewModel @Inject constructor(
     )
 
     private companion object {
-        // Hesap sistemi Faz 2 — o zamana kadar sabit.
-        const val SABIT_ISIM = "Turan"
+        // Misafirin görünür adı — AnaViewModel ve Ödüller ile aynı.
+        const val SABIT_ISIM = "Misafir"
         const val SABIT_LIG = "Filiz Ligi"
 
         /** Ekran arka plana gidince akışı hemen kesme — dönüşte yeniden kurulmasın. */

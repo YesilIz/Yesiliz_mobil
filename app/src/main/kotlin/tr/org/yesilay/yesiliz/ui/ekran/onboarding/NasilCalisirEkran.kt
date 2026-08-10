@@ -56,7 +56,7 @@ fun NasilCalisirEkran(
     ) {
         Text(
             text = "Yeşilİz nasıl çalışır?",
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )

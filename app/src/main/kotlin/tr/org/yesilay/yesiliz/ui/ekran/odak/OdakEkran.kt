@@ -92,7 +92,7 @@ fun OdakEkran(
 private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Unit) {
     Text(
         text = "Telefonu bırak",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
     )
@@ -119,7 +119,7 @@ private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Uni
 private fun Suruyor(durum: OdakDurum, onVazgec: () -> Unit) {
     Text(
         text = if (durum.ekranAcildi) "Seans bozuldu" else "Odaklanıyorsun",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
     )
@@ -148,7 +148,7 @@ private fun Sonuc(durum: OdakDurum, onTekrar: () -> Unit, onGeri: () -> Unit) {
     val basarili = OdakHesapla.basariliMi(true, durum.ekranAcildi)
     Text(
         text = if (basarili) "Seansı tamamladın" else "Bu sefer olmadı",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
         textAlign = TextAlign.Center,
@@ -188,7 +188,7 @@ private fun HalkaIcerik(ana: String, alt: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = ana,
-            style = MaterialTheme.typography.displayLarge,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )

@@ -85,7 +85,7 @@ fun EbeveynOnayiEkran(
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
             text = "Ebeveyn onayı gerekiyor",
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )

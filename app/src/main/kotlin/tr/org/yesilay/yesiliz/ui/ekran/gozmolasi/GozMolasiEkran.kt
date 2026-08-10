@@ -63,7 +63,7 @@ fun GozMolasiEkran(
                     durum.basladi -> "Uzağa bak"
                     else -> "20-20-20 kuralı"
                 },
-                style = MaterialTheme.typography.displayMedium,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MetinBirincil,
                 textAlign = TextAlign.Center,
@@ -90,7 +90,7 @@ fun GozMolasiEkran(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "${durum.ilerleme.kalanSaniye}",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = MetinBirincil,
                     )
