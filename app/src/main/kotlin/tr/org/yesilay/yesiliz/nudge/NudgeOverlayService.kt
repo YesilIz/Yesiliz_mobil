@@ -74,6 +74,12 @@ class NudgeOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Ayar ekranında izin servis başlarken/yaşarken geri alınabilir.
+        // İzinsiz addView bir SecurityException ile tüm süreci düşürür.
+        if (!NudgeIzni.verildiMi(this)) {
+            stopSelf()
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 BILDIRIM_ID,
@@ -116,20 +122,25 @@ class NudgeOverlayService : Service() {
                 }
 
                 if (Tetikleyici.degerlendir(tuketimOlaylari, simdi, sonEylem) == TetikSonucu.GOSTER) {
-                    overlayiGoster()
-                    // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
-                    // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
-                    // "neden mola önerdi" sorusunun cevabını saklıyor.
-                    bildirimDeposu.molaHatirlatildi(
-                        NudgeSabitleri.ESIK.toMinutes().toInt(),
-                    )
+                    if (overlayiGoster()) {
+                        // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
+                        // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
+                        // "neden mola önerdi" sorusunun cevabını saklıyor.
+                        bildirimDeposu.molaHatirlatildi(
+                            NudgeSabitleri.ESIK.toMinutes().toInt(),
+                        )
+                    }
                 }
             }
             delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
         }
     }
 
-    private fun overlayiGoster() {
+    private fun overlayiGoster(): Boolean {
+        if (!NudgeIzni.verildiMi(this)) {
+            stopSelf()
+            return false
+        }
         val yasamDongusu = OverlayYasamDongusu().apply { baslat() }
         val viewModelSahibi = object : ViewModelStoreOwner {
             override val viewModelStore = ViewModelStore()
@@ -172,7 +183,15 @@ class NudgeOverlayService : Service() {
         }
 
         val pencereYoneticisi = getSystemService(WINDOW_SERVICE) as WindowManager
-        pencereYoneticisi.addView(composeView, katmanParametreleri)
+        try {
+            pencereYoneticisi.addView(composeView, katmanParametreleri)
+        } catch (_: SecurityException) {
+            // İzin, yukarıdaki kontrolden addView'e kadar olan dar aralıkta
+            // da geri alınabilir. Bu normal bir izin yarışıdır, fatal değil.
+            yasamDongusu.durdur()
+            stopSelf()
+            return false
+        }
 
         overlayGorunumu = composeView
         overlaySahibi = yasamDongusu
@@ -181,6 +200,7 @@ class NudgeOverlayService : Service() {
             delay(NudgeSabitleri.OTO_KAPANMA.toMillis())
             eylemVeKapat(EylemTuru.DEVAM_EDILDI)
         }
+        return true
     }
 
     private fun eylemVeKapat(tur: EylemTuru) {

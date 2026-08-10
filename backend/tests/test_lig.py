@@ -8,7 +8,8 @@ from sqlalchemy import select
 
 from app.ayarlar import ayarlar
 from app.modeller import LigGrup, LigUyelik
-from app.uclar.lig import hafta_baslangici
+from app.uclar.lig import _kalan_gun, hafta_baslangici
+from app.zaman import yerel_bugun
 
 
 def test_hafta_baslangici_pazartesi():
@@ -18,6 +19,15 @@ def test_hafta_baslangici_pazartesi():
     assert hafta_baslangici(dt.date(2026, 7, 27)) == dt.date(2026, 7, 27)
     # Pazar hâlâ aynı haftada.
     assert hafta_baslangici(dt.date(2026, 8, 2)) == dt.date(2026, 7, 27)
+
+
+def test_utc_pazar_gecesi_istanbulda_yeni_haftadir():
+    # Railway/Docker 21:30 UTC gösterirken Türkiye'de pazartesi 00:30'dur.
+    simdi = dt.datetime(2026, 8, 9, 21, 30, tzinfo=dt.timezone.utc)
+
+    assert yerel_bugun(simdi) == dt.date(2026, 8, 10)
+    assert hafta_baslangici(yerel_bugun(simdi)) == dt.date(2026, 8, 10)
+    assert _kalan_gun(dt.date(2026, 8, 10), yerel_bugun(simdi)) == 7
 
 
 def test_katilmamis_kullanici_bos_siralama_goruyor(istemci, kullanici_kur):
@@ -114,6 +124,19 @@ def test_davetle_arkadaslik_karsilikli(istemci, kullanici_kur):
     b_arkadaslar = istemci.get("/arkadas", headers=b_basliklar).json()
     assert [a["isim"] for a in a_arkadaslar] == ["Veli"]
     assert [a["isim"] for a in b_arkadaslar] == ["Ali"]
+
+
+def test_arkadas_listesi_en_yeni_once_kararli(istemci, kullanici_kur):
+    benim, _ = kullanici_kur(ad="Ben", eposta="ben@b.com")
+    ali, _ = kullanici_kur(ad="Ali", eposta="ali@b.com")
+    veli, _ = kullanici_kur(ad="Veli", eposta="veli@b.com")
+
+    ali_kodu = istemci.get("/arkadas/kod", headers=ali).json()["kod"]
+    veli_kodu = istemci.get("/arkadas/kod", headers=veli).json()["kod"]
+    istemci.post("/arkadas/davet", json={"kod": ali_kodu}, headers=benim)
+    yanit = istemci.post("/arkadas/davet", json={"kod": veli_kodu}, headers=benim)
+
+    assert [a["isim"] for a in yanit.json()] == ["Veli", "Ali"]
 
 
 def test_kendi_kodunu_kullanmak_reddediliyor(istemci, kullanici_kur):

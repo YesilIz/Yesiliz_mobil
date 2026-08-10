@@ -92,7 +92,7 @@ class YuruyusServisi : Service() {
                 sayacIsi?.cancel()
                 oturumDeposu.duraklat()
                 bildirimiTazele()
-                return START_STICKY
+                return START_NOT_STICKY
             }
 
             EYLEM_BITIR -> {
@@ -104,7 +104,12 @@ class YuruyusServisi : Service() {
         kanaliKur()
         startForeground(BILDIRIM_ID, bildirim())
         if (sayacIsi?.isActive != true) baslat()
-        return START_STICKY
+        // Devam eden sayaç henüz diske yazılmıyor. START_STICKY ile
+        // süreç ölümünden sonra boş Intent alan yeni servis, bellekteki
+        // sıfırlanmış depoyu "sürdürüp" kullanıcı istemeden yeni bir
+        // yürüyüş başlatıyordu. Geri yüklenebilir oturum yoksa doğru
+        // davranış yeniden doğmamaktır.
+        return START_NOT_STICKY
     }
 
     private fun baslat() {

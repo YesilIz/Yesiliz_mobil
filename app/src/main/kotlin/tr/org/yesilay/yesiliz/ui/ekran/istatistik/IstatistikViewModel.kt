@@ -14,13 +14,13 @@ import kotlinx.coroutines.flow.stateIn
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Dilim
 import tr.org.yesilay.yesiliz.ui.tema.adi
 import tr.org.yesilay.yesiliz.ui.tema.grafikRengi
-import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -42,7 +42,7 @@ import kotlin.math.roundToInt
 class IstatistikViewModel @Inject constructor(
     private val ozetDao: GunlukOzetDao,
     riskDao: RiskSonucDao,
-    private val saat: Clock,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
     private val secilenAralik = MutableStateFlow(Aralik.HAFTA)
@@ -50,9 +50,11 @@ class IstatistikViewModel @Inject constructor(
     /** Grafikte dokunulan gün; -1 = seçim yok, ekran ortalamayı gösteriyor. */
     private val secilenIndeks = MutableStateFlow(SECIM_YOK)
 
-    val durum: StateFlow<IstatistikDurum> = secilenAralik
-        .flatMapLatest { aralik ->
-            val bugun = LocalDate.now(saat)
+    val durum: StateFlow<IstatistikDurum> = combine(
+        secilenAralik,
+        guncelGun.akis,
+    ) { aralik, bugun -> aralik to bugun }
+        .flatMapLatest { (aralik, bugun) ->
             val pencere = aralik.pencere(bugun)
             // Karşılaştırma için bir önceki pencereyi de çekiyoruz; tek sorgu
             // yerine iki sorgu, ama aralık küçük (en fazla 60 satır).

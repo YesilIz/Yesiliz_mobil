@@ -120,6 +120,7 @@ class OdulDeposuTest {
             override suspend fun odulSecimlerim(): List<OdulSecimiDto> = patla()
             override suspend fun eslestirmeKodu(istek: EslestirmeKoduIstek): KodYanit = patla()
             override suspend fun eslestir(istek: EslestirIstek) = patla()
+            override suspend fun eslesmeyiKaldir() = patla()
             override suspend fun ebeveynOzeti(): EbeveynOzetDto = patla()
         }
     }

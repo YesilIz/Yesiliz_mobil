@@ -21,6 +21,7 @@ adları değiştirilemiyor.
 | `JWT_SECRET` | `YESILIZ_JWT_ANAHTARI` | üretimde **evet** | Jeton imza anahtarı, ≥ 32 karakter |
 | `ALLOWED_ORIGINS` | `YESILIZ_IZINLI_KAYNAKLAR` | hayır | Virgülle ayrılmış CORS listesi (web paneli için) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `YESILIZ_ERISIM_DAKIKA` | hayır | Erişim jetonu ömrü, varsayılan 30 |
+| — | `YESILIZ_SAAT_DILIMI` | hayır | Lig haftası ve ebeveyn "bugün" penceresi; varsayılan `Europe/Istanbul` |
 | `PORT` | — | hayır | Sağlayıcı enjekte ediyor; yerelde 8000 |
 
 Örnek dosya: `backend/.env.ornek`. Anahtar üretmek için:

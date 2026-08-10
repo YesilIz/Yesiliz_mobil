@@ -41,6 +41,10 @@ data class SaglikIzinDurum(
      * uyarı olarak gösteriyor.
      */
     val arkaPlanEksik: Boolean get() = izinVarMi && !arkaPlanIzniVarMi
+
+    /** Tüm kullanılabilir kaynakların izinleri tamamsa reddetme notu artık gösterilmez. */
+    val izinEksikligiVarMi: Boolean
+        get() = !izinVarMi || arkaPlanEksik || sayacIzniEksik
 }
 
 @HiltViewModel

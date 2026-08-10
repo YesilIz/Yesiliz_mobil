@@ -88,6 +88,9 @@ interface YesilizApi {
     @POST("ebeveyn/eslestir")
     suspend fun eslestir(@Body istek: EslestirIstek): Map<String, String>
 
+    @DELETE("ebeveyn/eslesme")
+    suspend fun eslesmeyiKaldir(): Map<String, String>
+
     @GET("ebeveyn/ozet")
     suspend fun ebeveynOzeti(): EbeveynOzetDto
 }

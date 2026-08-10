@@ -16,16 +16,16 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimGrubu
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimGrupla
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimTuru
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -34,18 +34,20 @@ class BildirimViewModel @Inject constructor(
     private val depo: BildirimDeposu,
     private val saat: Clock,
     private val zon: ZoneId,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
-    val durum: StateFlow<BildirimDurum> = depo.sonlar()
-        .map { kayitlar ->
-            val simdi = Instant.now(saat)
-            val bugun = LocalDate.now(saat)
+    val durum: StateFlow<BildirimDurum> = combine(
+        depo.sonlar(),
+        guncelGun.akis,
+    ) { kayitlar, bugun ->
+        val simdi = Instant.now(saat)
 
-            // Gruplar, kayıtların gerçekten düştüğü gruplarla sınırlı —
-            // boş "DÜN" başlığı göstermek ekranı yalancı doldurur.
-            val gruplu = kayitlar.groupBy { BildirimGrupla.grubu(it.zaman, bugun, zon) }
+        // Gruplar, kayıtların gerçekten düştüğü gruplarla sınırlı —
+        // boş "DÜN" başlığı göstermek ekranı yalancı doldurur.
+        val gruplu = kayitlar.groupBy { BildirimGrupla.grubu(it.zaman, bugun, zon) }
 
-            BildirimDurum(
+        BildirimDurum(
                 gruplar = BildirimGrubu.entries.mapNotNull { grup ->
                     gruplu[grup]?.takeIf { it.isNotEmpty() }?.let { satirlar ->
                         BildirimGrubuModel(
@@ -69,8 +71,8 @@ class BildirimViewModel @Inject constructor(
                 },
                 okunmamisVarMi = kayitlar.any { !it.okundu },
                 yukleniyor = false,
-            )
-        }
+        )
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),

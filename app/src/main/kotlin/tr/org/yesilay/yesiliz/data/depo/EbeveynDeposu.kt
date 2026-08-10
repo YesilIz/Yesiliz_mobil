@@ -39,16 +39,23 @@ class EbeveynDeposu @Inject constructor(
     /**
      * Eşleştirme kodu üretir.
      *
-     * @return kod ve bunun sunucudan mı geldiği
+     * Sunucuya ulaşılamıyorsa kullanılamayacak rastgele bir kod
+     * gösterilmez; doğrulanabilir hata döner.
      */
-    suspend fun kodUret(rol: String): Pair<String, Boolean> = try {
-        api.eslestirmeKodu(EslestirmeKoduIstek(rol)).kod to true
+    suspend fun kodUret(rol: String): KodUretSonucu = try {
+        KodUretSonucu(kod = api.eslestirmeKodu(EslestirmeKoduIstek(rol)).kod)
     } catch (iptal: CancellationException) {
         throw iptal
+    } catch (hata: retrofit2.HttpException) {
+        KodUretSonucu(
+            hata = if (hata.code() == 401) {
+                "Kod oluşturmak için yeniden giriş yapmalısın."
+            } else {
+                "Eşleştirme kodu oluşturulamadı. Biraz sonra tekrar dene."
+            },
+        )
     } catch (_: Exception) {
-        // Çevrimdışı: yerel kod üretiliyor ama karşı cihaz bunu
-        // doğrulayamaz. Ekran "çevrimdışı" rozetiyle bunu belirtiyor.
-        "%06d".format((0..999_999).random()) to false
+        KodUretSonucu(hata = "Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.")
     }
 
     /**
@@ -67,6 +74,7 @@ class EbeveynDeposu @Inject constructor(
             when (hata.code()) {
                 KOD_BULUNAMADI -> "Kod geçersiz ya da daha önce kullanılmış."
                 KOD_SURESI_DOLDU -> "Kodun süresi dolmuş. Yeni bir kod üretin."
+                KOD_CAKISMASI -> "Cihazlardan biri zaten başka bir cihazla eşleştirilmiş."
                 else -> "Eşleştirme tamamlanamadı."
             }
         } catch (iptal: CancellationException) {
@@ -78,18 +86,63 @@ class EbeveynDeposu @Inject constructor(
         }
     }
 
-    /** Çocuğun **özeti** — ham veri değil. Sunucu yoksa `null`. */
-    suspend fun cocukOzeti(): EbeveynOzetDto? = try {
-        api.ebeveynOzeti()
+    /** Çocuğun **özeti** — ham veri değil; sahte yedeğe düşmez. */
+    suspend fun cocukOzeti(): EbeveynOzetSonucu = try {
+        EbeveynOzetSonucu(veri = api.ebeveynOzeti())
     } catch (iptal: CancellationException) {
         throw iptal
+    } catch (hata: retrofit2.HttpException) {
+        if (hata.code() == 404) {
+            // Diğer cihaz bağı kaldırdıysa bu cihazın yerel bayrağı
+            // eskidir. Sunucunun yetki kararını yerelde de yansıt.
+            tercihler.ebeveynEslesmeyiKaldir()
+            EbeveynOzetSonucu(hata = "Eşleştirme artık etkin değil.")
+        } else {
+            EbeveynOzetSonucu(hata = "Özet alınamadı. Biraz sonra tekrar dene.")
+        }
     } catch (_: Exception) {
+        EbeveynOzetSonucu(
+            hata = "Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.",
+        )
+    }
+
+    /**
+     * Sunucudaki bağı kaldırır; yalnızca doğrulanmış başarıdan sonra
+     * cihaz bayrağını temizler. Aksi hâlde diğer cihazın özet erişimi
+     * sürerken bu telefonda eşleşme yokmuş gibi davranılmaz.
+     *
+     * @return `null` başarı; aksi hâlde tekrar denenebilir hata metni.
+     */
+    suspend fun eslesmeyiKaldir(): String? = try {
+        api.eslesmeyiKaldir()
+        tercihler.ebeveynEslesmeyiKaldir()
         null
+    } catch (iptal: CancellationException) {
+        throw iptal
+    } catch (hata: retrofit2.HttpException) {
+        if (hata.code() == 401) {
+            "Eşleştirmeyi kaldırmak için yeniden giriş yapmalısın."
+        } else {
+            "Eşleştirme kaldırılamadı. Biraz sonra tekrar dene."
+        }
+    } catch (_: Exception) {
+        "Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene."
     }
 
     private companion object {
         const val KOD_UZUNLUK = 6
         const val KOD_BULUNAMADI = 404
         const val KOD_SURESI_DOLDU = 410
+        const val KOD_CAKISMASI = 409
     }
 }
+
+data class KodUretSonucu(
+    val kod: String = "",
+    val hata: String? = null,
+)
+
+data class EbeveynOzetSonucu(
+    val veri: EbeveynOzetDto? = null,
+    val hata: String? = null,
+)

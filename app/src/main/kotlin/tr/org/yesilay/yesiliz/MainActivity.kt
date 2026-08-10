@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.nudge.NudgeOverlayService
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
@@ -46,6 +47,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var tercihler: Tercihler
 
+    @Inject lateinit var guncelGun: GuncelGun
+
     private var hedefRota by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +56,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         hedefRota = intent?.let { hedefRotaOku(it) }
         nudgeServisiniIzle()
+        geceYarisiniIzle()
         setContent {
             YesilizTemasi {
                 YesilizGezinme(
@@ -71,6 +75,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Uzun süre arka planda kalan ViewModel'ler eski tarihi saklamasın.
+        // Aynı günde dönülse bile selamlama ve zaman etiketleri tazelenir.
+        guncelGun.yenile()
         lifecycleScope.launch {
             gecmisVeriDeposu.hesaplaGerekirse()
             // Donanım adım sayacı yalnızca açılıştan beri biriken kümülatif
@@ -78,6 +85,15 @@ class MainActivity : ComponentActivity() {
             // ve iki örnek arasında kalan adımlar kayboluyor. Uygulamanın
             // her açılışı bedava bir örnekleme noktası.
             adimDeposu.ornekle()
+        }
+    }
+
+    /** Uygulama ekrandayken gece yarısı geçilirse tüm tarihli akışları yeniler. */
+    private fun geceYarisiniIzle() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                guncelGun.geceYarilariniIzle()
+            }
         }
     }
 
@@ -125,10 +141,10 @@ class MainActivity : ComponentActivity() {
      *    ("Yalnızca adım sayısı ve egzersiz süresi okunur. Kalp atışı, uyku,
      *    kilo ve konum hiç istenmez."), o yüzden ayrı bir ekran yok.
      */
-    private fun hedefRotaOku(intent: Intent): String? = when (intent.action) {
-        GEREKCE_EYLEMI, Intent.ACTION_VIEW_PERMISSION_USAGE -> Rota.SAGLIK_IZIN
-        else -> intent.getStringExtra(EXTRA_HEDEF_ROTA)
-    }
+    private fun hedefRotaOku(intent: Intent): String? = disHedefRotasiniDogrula(
+        eylem = intent.action,
+        hamRota = intent.getStringExtra(EXTRA_HEDEF_ROTA),
+    )
 
     companion object {
         /** Nudge overlay'in "Nefes egzersizi yapmak ister misin? → Evet" derin bağlantısı. */
@@ -144,4 +160,16 @@ class MainActivity : ComponentActivity() {
          */
         const val GEREKCE_EYLEMI = "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
     }
+}
+
+/**
+ * [MainActivity] başlatıcı olduğu için dışa açıktır; başka bir uygulama
+ * ona keyfî bir `hedef_rota` extra'sı gönderebilir. Ham değeri NavController'a
+ * vermek, grafikte olmayan her dizede ana iş parçacığını çökertir. Yalnızca
+ * kendi immutable PendingIntent/servis akışlarımızın ürettiği iki hedef kabul
+ * edilir; Health Connect gerekçe eylemi kendi sabit hedefini seçer.
+ */
+internal fun disHedefRotasiniDogrula(eylem: String?, hamRota: String?): String? = when (eylem) {
+    MainActivity.GEREKCE_EYLEMI, Intent.ACTION_VIEW_PERMISSION_USAGE -> Rota.SAGLIK_IZIN
+    else -> hamRota?.takeIf { it == Rota.NEFES || it == Rota.YURUYUS }
 }

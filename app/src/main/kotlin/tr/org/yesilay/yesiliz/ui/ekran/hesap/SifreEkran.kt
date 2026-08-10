@@ -50,9 +50,8 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 /**
  * Şifremi unuttum — `docs/tasarim-referans.md §2 / 38`.
  *
- * **Gerçek bir e-posta gönderilmiyor** (sunucu Faz 2). Ekran bunu
- * kullanıcıya açıkça söylüyor; "bağlantı gönderildi" deyip hiçbir şey
- * yapmamak, kullanıcıyı gelen kutusunda beklemeye bırakırdı.
+ * E-posta teslim sağlayıcısı yapılandırılmamışsa sunucu başarı
+ * döndürmez; ekranda hizmetin kullanılamadığı açıkça gösterilir.
  */
 @Composable
 fun SifreEkran(
@@ -127,9 +126,8 @@ fun SifreEkran(
 
             if (durum.sifirlamaGonderildi) {
                 Text(
-                    // O-11: backend bağlandı, eski metin artık yanlıştı.
                     // Adresin kayıtlı olup olmadığının söylenmemesi
-                    // bilinçli -- sunucu da 202 dönüyor (backend §hesap).
+                    // bilinçli -- hesap keşfini engelliyor.
                     text = "Bu adres kayıtlıysa sıfırlama bağlantısı " +
                         "gönderildi. Güvenlik gereği adresin kayıtlı olup " +
                         "olmadığını söylemiyoruz.",

@@ -117,6 +117,8 @@
     <application
         android:name=".YesilizApp"
         android:allowBackup="false"
+        android:fullBackupContent="@xml/yedekleme_kurallari"
+        android:dataExtractionRules="@xml/veri_aktarma_kurallari"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/uygulama_adi"
         android:roundIcon="@mipmap/ic_launcher"

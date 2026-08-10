@@ -81,8 +81,201 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: Sharing a code had no corresponding receiving action, while unrelated example actions called the endpoint with invalid payloads.
 - Status: Fixed. Added code entry, normalization, format/self-code checks, visible progress/success/error states, and correct repository routing. Two focused input regression tests and the existing six domain code tests pass.
 
+## DBG-009 — Password reset promised undelivered mail and logged its bearer secret
+
+- Severity: P1 — account security / product truthfulness
+- Areas: `backend/app/uclar/hesap.py`, `RetrofitHesapDeposu`, backend documentation
+- Evidence: No SMTP/e-mail provider exists, yet production returned 202 and Android said a reset link was sent. The only usable password-reset token was written verbatim to provider-collected server logs.
+- Expected: A reusable password-reset secret never enters logs; an unavailable delivery channel must not be reported as success.
+- Actual: Log readers could take over an account using the token, while ordinary users waited for an e-mail that could not arrive.
+- Status: Fixed. Tokens are never logged. Production returns 503 before generating one until a provider exists; Android maps that to a visible general service-unavailable message. Development/test contract remains testable through the database. Focused Android test and 19 account backend tests pass.
+
+## DBG-010 — Completed health-permission screen still warned as if permission were denied
+
+- Severity: P3 — permission-state UX correctness
+- Area: `SaglikIzinEkran`, `SaglikIzinDurum`
+- Evidence: On the physical API 31 phone, after granting Health Connect Steps/Exercise, background reading, and Android activity recognition, the success card and “İzin vermezsen…” warning appeared together.
+- Expected: The denial consequence note is shown only while an available required permission remains missing.
+- Actual: A fully granted state presented contradictory guidance.
+- Status: Fixed and physically validated. Derived missing-permission state has two JVM regressions; the refreshed side-by-side package showed the completed state without the denial warning.
+
+## DBG-011 — Accounts with a reward choice could not be deleted on PostgreSQL
+
+- Severity: P1 — account deletion / privacy
+- Area: `backend/app/uclar/hesap.py`
+- Evidence: `OdulSecimi.kullanici_id` has a foreign key to `Kullanici`, but the explicit account-deletion transaction omitted `odul_secimi` while deleting every other child table. PostgreSQL therefore rejects deletion for any account that selected a reward.
+- Expected: “Hesabımı kalıcı sil” removes every user-owned server row in foreign-key-safe order.
+- Actual: The request fails after a legitimate reward selection; the account and server data remain.
+- Status: Fixed. Reward selections are deleted before the user. The account-deletion regression now creates a reward choice and verifies both it and the account disappear; backend suite passes.
+
+## DBG-012 — UTC server calendar disagreed with the Turkish phone for three hours nightly
+
+- Severity: P1 — league and parental-summary correctness
+- Areas: `backend/app/uclar/lig.py`, `backend/app/uclar/ebeveyn.py`, backend settings/time helper
+- Evidence: At physical-device time `2026-08-11 00:55 +03`, the Docker API process reported `2026-08-10 21:55 +00` and `date.today()` returned 10 August. League week/group membership and the parental seven-day window used that process-local date.
+- Expected: Product calendar rules share the configured Turkish business day; UTC remains appropriate only for instants/timestamps.
+- Actual: Each local midnight–03:00 interval used yesterday; early Monday hours also used the previous weekly league.
+- Status: Fixed. Calendar boundaries use validated `YESILIZ_SAAT_DILIMI` (default `Europe/Istanbul`) through one helper. A fixed UTC Sunday-night regression proves it becomes local Monday; the running UTC container now reports local 11 August and all 84 backend tests pass.
+
+## DBG-013 — Long-running screens kept yesterday's date after local midnight
+
+- Severity: P1 — daily data correctness
+- Areas: `MainActivity`, daily dashboard/target/activity/statistics/risk/category/notification/reward ViewModels
+- Evidence: Several singleton or navigation-scoped objects captured `LocalDate.now()` only when constructed. If the app remained alive across midnight, reads and writes continued against the previous date until Android recreated those objects.
+- Expected: The active local calendar date changes at midnight without requiring a process restart; user actions always write to their actual day.
+- Actual: A retained app could show yesterday and attribute new mood/task/activity data to it.
+- Status: Fixed. One app-wide current-day source advances at the next local midnight and refreshes on resume; writes resolve the date at call time. JVM regressions cover an active collector crossing Istanbul midnight and Berlin's 23-hour DST day.
+
+## DBG-014 — Equal-time rows produced unstable lists
+
+- Severity: P2 — deterministic UI/data behavior
+- Areas: Room list queries; backend friend and league-group ordering
+- Evidence: Queries ordered only by non-unique timestamps, dates, scores, or sequence values. Rows with ties could change order across SQLite/PostgreSQL plans and cause Compose list movement or inconsistent selections.
+- Expected: Every user-visible ordered result has a stable, unique tie-breaker.
+- Actual: Equal-time notifications, usage, tasks, rewards, friends, and sessions could swap positions; a tied league group lookup was nondeterministic.
+- Status: Fixed. DAO queries and backend selections now add deterministic secondary keys. New Room and backend regressions pass; updated connected suites pass on API 31 and API 36.
+
+## DBG-015 — Custom server URLs silently discarded their path prefix
+
+- Severity: P2 — self-hosted/server configuration
+- Area: `AgModulu`
+- Evidence: Runtime URL rewriting retained only scheme, host, and port from a configured URL. A legitimate base such as `https://example.org/api/v1/` therefore sent requests to `/auth/...` instead of `/api/v1/auth/...`.
+- Expected: A configured base-path prefix is prepended while each request path/query remains intact.
+- Actual: Reverse-proxy deployments mounted below a path could never be reached.
+- Status: Fixed. URL composition preserves normalized base paths and request queries; focused security/network unit regression passes.
+
+## DBG-016 — Upgrading a completed guest account restarted onboarding
+
+- Severity: P1 — account conversion / data continuity
+- Area: `YesilizGezinme`
+- Evidence: On the physical API 31 phone, a completed guest successfully registered through the local API (HTTP 201), then landed on “Adım 1/4”. The route check compared `profil` with the parameterized destination `profil?acilacakSayfa=...`, so it could never recognize the profile flow.
+- Expected: A completed guest keeps local history and returns to Profile after registering or signing in; only first-run account flows continue onboarding.
+- Actual: The app appeared to restart setup immediately after successful conversion.
+- Status: Fixed and physically validated. The graph now remembers its initial destination instead of resetting when the session changes; post-authentication navigation is based on persisted onboarding state and rebuilds a clean `Ana Sayfa → Profil` stack. Registration retained the guest's 38 points, a cold relaunch returned to Ana Sayfa, logout/login returned to Profil, and Back returned to Ana Sayfa rather than the stale login screen. Two focused navigation regressions pass.
+
+## DBG-017 — Offline league failure was presented as a real empty league
+
+- Severity: P2 — network recovery / truthful UI
+- Area: `LigEkran`
+- Evidence: On the physical API 31 phone, removing the API tunnel and reopening a server-backed league produced a connection failure and `cevrimdisi=true`, but the empty-state branch returned before rendering the offline notice. It instead said “Henüz kimseyle yarışmıyorsun” and offered “Lige katıl” even though this account was already in Fidan Ligi. In release that action is reduced to a silent no-op while offline.
+- Expected: Failure to retrieve league data is distinguished from a genuinely empty league; unavailable network actions are not offered as if they can succeed.
+- Actual: A temporary outage looked like lost league membership and invited a misleading repeat action.
+- Status: Fixed and physically validated. The offline-empty state now says the league is temporarily unavailable and hides join/invite actions. Two focused regressions pass. Restoring the tunnel and reopening the tab returned the real Fidan Ligi and preserved the authenticated session.
+
+## DBG-018 — Concurrent/revoked step-sensor reads could lose daily steps or crash work
+
+- Severity: P1 — activity/risk data integrity
+- Area: `AdimDeposu`
+- Evidence: MainActivity, the nightly worker, and the walking service can sample the cumulative hardware counter concurrently. Each independently read the old Room row and then wrote a derived total, so the later write could overwrite a newer sample. Permission could also be revoked after the availability check but before listener registration, allowing `SecurityException` out of the repository.
+- Expected: The sensor-read→state-read→write sequence is serialized; permission revocation is a no-write outcome and coroutine cancellation still propagates.
+- Actual: Interleavings could undercount/temporarily regress steps; a normal permission race could fail a foreground/background caller.
+- Status: Fixed. A repository mutex protects the whole state transition and the permission race is classified explicitly. Nine focused tests cover serialization, accumulated total, revocation, restoration, day/time-zone rollover, process-counter reset, idempotence, and cancellation.
+
+## DBG-019 — An untrusted external route extra crashed MainActivity
+
+- Severity: P1 — exported-component crash
+- Area: `MainActivity`
+- Evidence: On the physical phone, `am start ... --es hedef_rota not/a/route` produced `FATAL EXCEPTION main` / `IllegalArgumentException: Navigation destination ... cannot be found`. MainActivity is exported and forwarded an arbitrary string extra directly to Navigation.
+- Expected: Only destinations intentionally exposed through immutable app PendingIntents are accepted; unknown external strings are ignored.
+- Actual: Any app could repeatedly crash Yeşilİz by launching its exported Activity with a fabricated extra.
+- Status: Fixed and physically validated. Only Nefes/Yürüyüş are accepted from the extra; Health Connect actions map independently to the permission screen. Three JVM regressions pass; the invalid physical launch no longer crashes and a valid `nefes` launch still opens the timer.
+
+## DBG-020 — Daily task limits and material-reward active days were not trustworthy
+
+- Severity: P1 — points/reward integrity
+- Areas: `GorevTamamlamaDao`, `PuanGunlukDao`, `PuanDeposu`
+- Evidence: The daily limit was a separate COUNT followed by INSERT. Widget, service, and screen calls could all observe room below the limit and then exceed it. Material reward eligibility counted any day with positive points, despite `spec-puan.md` requiring both a completed task and real usage for an active day.
+- Expected: Limit admission is one atomic database operation; an active day has points, a task completion, and a real-usage summary.
+- Actual: Concurrent completion could over-award points, and claim-only/empty days could advance 30/45-day material rewards.
+- Status: Fixed. `INSERT ... SELECT ... WHERE COUNT < limit` runs inside one Room transaction; eligibility requires both related proofs. API 36 instrumentation verifies eight concurrent attempts create exactly two allowed completions and exercises the active-day proof matrix (12/12 database tests pass).
+
+## DBG-021 — Removing a parent pairing only hid it on one phone
+
+- Severity: P1 — child privacy / authorization revocation
+- Areas: Android parent repository/ViewModel/screen; `DELETE /ebeveyn/eslesme`
+- Evidence: The confirmation text promised to cut the two-device link, but `EbeveynViewModel.eslesmeyiKaldir()` only cleared a local DataStore flag. `EbeveynBaglanti` remained on the server, so the parent account retained authorized summary access.
+- Expected: Either participant can revoke the server relationship; the local flag clears only after the server confirms it.
+- Actual: The UI reported removal while remote access survived.
+- Status: Fixed. The idempotent authenticated endpoint deletes parent- or child-side links. Android keeps the confirmation sheet open through progress/error and clears local state only on success. Backend regressions prove either side immediately loses summary access.
+
+## DBG-022 — Parent panel fabricated a named child, age, history, and alerts
+
+- Severity: P1 — privacy identity/truthfulness
+- Areas: `EbeveynDeposu`, `EbeveynViewModel`, `EbeveynEkran`
+- Evidence: On process reopen no summary refresh ran. A null/failed response silently became a hard-coded Elif, age 14, 22–28 July graph, risk band, and notifications. A phone paired in the child role displayed the same fake parent dashboard. The API has no age field, so even successful responses fabricated age 14.
+- Expected: Parent-role screens fetch authenticated data on every entry; child-role screens explain sharing only; unavailable fields and network failures are not invented.
+- Actual: The app attributed sensitive behavior and risk information to a person who might not exist.
+- Status: Fixed. Reopen triggers a refresh, explicit loading/error/retry states replace mock fallback, child role has a separate privacy screen, and unknown age is omitted. A remote 404 also clears a stale local pairing.
+
+## DBG-023 — Offline pairing displayed an unusable random code as server-valid
+
+- Severity: P2 — pairing truthfulness
+- Area: `EbeveynDeposu` and pairing wizard
+- Evidence: `kodUret` generated a random local six-digit number after any network/authentication failure, while the screen unconditionally said it was valid for ten minutes. The other device could never verify that number because it did not exist on the server; the returned server/local flag was ignored.
+- Expected: A code appears only after successful authenticated server creation; failures distinguish sign-in, server, and connectivity cases and can be retried.
+- Actual: Users were asked to exchange a guaranteed-invalid code.
+- Status: Fixed. Local code generation was removed; the wizard shows loading, a truthful classified error, and an explicit retry action.
+
+## DBG-024 — A device could enter multiple ambiguous parent relationships
+
+- Severity: P1 — summary authorization / identity integrity
+- Area: backend parent model and pairing endpoint
+- Evidence: The database constrained only the exact `(parent, child)` pair. The singular UI and summary endpoint nevertheless select one child, without deterministic identity semantics, while removal deleted every relationship. One account could therefore see an arbitrary child's panel or unexpectedly revoke several links.
+- Expected: This one-device/one-panel product permits one active parent relationship per participant and rejects collisions, including races.
+- Actual: The schema allowed states the API/UI could not represent truthfully.
+- Status: Fixed. Endpoint checks both participant identities, returns 409 for an existing link, and new PostgreSQL unique constraints protect parent/child columns. Migration keeps the newest non-conflicting links. A regression proves a second child is rejected and the original child's summary remains selected.
+
+## DBG-025 — Parent chart assigned missing dates to the wrong weekdays
+
+- Severity: P2 — behavioral summary accuracy
+- Areas: parent summary API/DTO/presentation mapping
+- Evidence: The server returned only minute values for dates with rows. Android labeled list index zero as Monday regardless of the row's actual date. A sole Tuesday summary therefore appeared under Monday; gaps shifted every following bar.
+- Expected: Every bar is paired with its actual calendar date and the displayed range derives from those dates.
+- Actual: Sparse weekly data was visually misdated.
+- Status: Fixed. The API returns an aligned `gunlukTarihler` list; Android derives Turkish weekday labels and the range from those ISO dates. Backend contract regression passes.
+
+## DBG-026 — Database theft exposed reusable session and password-reset secrets
+
+- Severity: P1 — account security
+- Areas: backend token issuance/storage/rotation; Alembic migration
+- Evidence: Opaque refresh tokens (30-day lifetime) and password-reset tokens were stored verbatim. Anyone able to read a database snapshot could replay them directly. Rotation also selected a token without a row lock, allowing two concurrent refresh requests to consume the same one.
+- Expected: Only one-way token digests are stored; single-use consumption is serialized.
+- Actual: Database contents were bearer credentials, and server concurrency weakened the one-use promise.
+- Status: Fixed. SHA-256 digests are stored/looked up, existing live rows were migrated in place without invalidating client-held raw tokens, and consumption uses row locking before rotation/reset. All 20 account tests pass; the live database reports only 64-character digests.
+
+## DBG-027 — Android could resurrect a killed walk as a new zero-time session
+
+- Severity: P2 — foreground-service lifecycle/data correctness
+- Area: `YuruyusServisi`
+- Evidence: The in-progress walk exists only in an in-memory singleton, but the service returned `START_STICKY`. After process death Android may recreate it with a null Intent and a reset repository; the service then called `surdur()` and began a fresh walk the user did not start.
+- Expected: A non-persisted session is not automatically resurrected.
+- Actual: Restart semantics contradicted the storage model and could create false activity.
+- Status: Fixed. Running and paused paths use `START_NOT_STICKY`; explicit user starts continue to work normally.
+
+## DBG-028 — Revoking overlay permission during monitoring could crash the app process
+
+- Severity: P1 — permission lifecycle
+- Area: `NudgeOverlayService`
+- Evidence: Permission was checked only by MainActivity before starting the sticky service. Revoking it later left the service alive; its next `WindowManager.addView` could throw `SecurityException`. A sticky recreation also started without rechecking permission.
+- Expected: Service start and every overlay insertion tolerate permission revocation.
+- Actual: A normal Settings change could become a fatal exception.
+- Status: Fixed. Service creation and insertion both recheck; the check→add race catches only the expected security exception, stops cleanly, and does not record an overlay notification that was never displayed.
+
+## DBG-029 — The declared API 26 minimum contained four runtime incompatibilities
+
+- Severity: P1 — supported-device compatibility
+- Areas: activity persistence, usage permission, reminder worker, theme resources
+- Evidence: Android lint failed with four errors. `LocalDate.ofInstant` is unavailable before API 34 without core desugaring; `unsafeCheckOpNoThrow` is unavailable before API 29; `windowLightNavigationBar` was in an unqualified API 26 resource despite requiring API 27; notification permission could be revoked between check and notify.
+- Expected: Every API used on the advertised minSdk 26 path is available or guarded.
+- Actual: Specific activity/permission/UI paths could throw or misinflate on supported older devices.
+- Status: Fixed. Compatible date conversion and AppOps fallback are used, the theme item moved to `values-v27`, notification send explicitly tolerates revocation, and backup/device-transfer exclusion rules now explicitly protect behavioral data and tokens. `lintDebug` passes with zero errors.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
 - API 36 emulator: connected suite passed (44 discovered; 40 passed; 4 permission-precondition skips).
 - Physical Samsung API 31: installed build cold start and `GunlukOzetWorker` smoke passed; no focused fatal/Room/Health Connect exception found. Exact mission APK installation was refused by Android because its signing certificate differs; no uninstall, data clear, or destructive workaround was used.
+- Physical Samsung API 31 exact source: a property-scoped `.mission` package was installed beside the original. Guest onboarding, all four primary tabs, profile, and the full available Health Connect/hardware-step permission matrix passed without an app exception; original package/data remained untouched.
+- Updated connected suites: API 36 passed 42 tests with 4 documented permission-precondition skips; physical API 31 passed all 42 tests with no skip or failure.
+- Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
+- Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.

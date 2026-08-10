@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import secrets
 
 import jwt
@@ -42,6 +43,11 @@ def sifre_dogrula(ozet: str, sifre: str) -> bool:
 def rastgele_jeton() -> str:
     """Yenileme ve sıfırlama jetonları — 32 bayt, URL güvenli."""
     return secrets.token_urlsafe(32)[:64]
+
+
+def jeton_ozetle(jeton: str) -> str:
+    """Tek kullanımlı ve yenileme sırlarını veritabanında düz tutma."""
+    return hashlib.sha256(jeton.encode("utf-8")).hexdigest()
 
 
 def erisim_jetonu(kullanici_id: int) -> str:

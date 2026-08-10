@@ -160,6 +160,7 @@ class EbeveynOzetYanit(BaseModel):
     """
 
     cocukAdi: str
+    gunlukTarihler: list[dt.date]
     gunlukDakikalar: list[int]
     ortalamaDk: int
     bant: str | None

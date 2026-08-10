@@ -137,6 +137,7 @@ data class EslestirIstek(val kod: String, val rol: String)
 @Serializable
 data class EbeveynOzetDto(
     val cocukAdi: String,
+    val gunlukTarihler: List<String> = emptyList(),
     val gunlukDakikalar: List<Int>,
     val ortalamaDk: Int,
     val bant: String? = null,

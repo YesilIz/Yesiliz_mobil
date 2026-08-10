@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,13 +87,34 @@ fun EbeveynEkran(
     var yedamAcik by remember { mutableStateOf(false) }
     var kaldirmaOnayi by remember { mutableStateOf(false) }
 
+    LaunchedEffect(durum.eslesmisMi) {
+        if (!durum.eslesmisMi) kaldirmaOnayi = false
+    }
+
+    LaunchedEffect(durum.eslesmisMi, durum.cihazRolu) {
+        if (durum.eslesmisMi && durum.cihazRolu == CihazRolu.EBEVEYN.deger) {
+            viewModel.ozetiTazele()
+        }
+    }
+
     YesilBaslikliEkran(baslik = "Ebeveyn paneli", onGeri = onGeri, modifier = modifier) {
         if (durum.eslesmisMi) {
-            EbeveynPaneli(
-                durum = durum,
-                onYedam = { yedamAcik = true },
-                onEslesmeyiKaldir = { kaldirmaOnayi = true },
-            )
+            when {
+                durum.cihazRolu == CihazRolu.COCUK.deger -> CocukEslesmePaneli(
+                    onEslesmeyiKaldir = { kaldirmaOnayi = true },
+                )
+                durum.ozetYukleniyor -> EbeveynOzetBekleme()
+                durum.ozetHatasi != null -> EbeveynOzetHatasi(
+                    mesaj = durum.ozetHatasi.orEmpty(),
+                    onTekrarDene = viewModel::ozetiTazele,
+                    onEslesmeyiKaldir = { kaldirmaOnayi = true },
+                )
+                else -> EbeveynPaneli(
+                    durum = durum,
+                    onYedam = { yedamAcik = true },
+                    onEslesmeyiKaldir = { kaldirmaOnayi = true },
+                )
+            }
         }
     }
 
@@ -112,7 +134,10 @@ fun EbeveynEkran(
 
                 EslestirmeAdimi.KOD -> KodAdimi(
                     uretilenKod = durum.uretilenKod,
+                    kodYukleniyor = durum.kodYukleniyor,
+                    kodSunucudanMi = durum.kodSunucudanMi,
                     hata = durum.eslestirmeHatasi,
+                    onKodTekrarDene = viewModel::kodUret,
                     onEslestir = viewModel::eslestir,
                 )
 
@@ -134,10 +159,9 @@ fun EbeveynEkran(
     if (kaldirmaOnayi) {
         AltSayfa(onKapat = { kaldirmaOnayi = false }) {
             EslesmeKaldirmaOnayi(
-                onOnayla = {
-                    viewModel.eslesmeyiKaldir()
-                    kaldirmaOnayi = false
-                },
+                islemde = durum.eslesmeKaldiriliyor,
+                hata = durum.eslesmeKaldirmaHatasi,
+                onOnayla = viewModel::eslesmeyiKaldir,
                 onVazgec = { kaldirmaOnayi = false },
             )
         }
@@ -153,7 +177,12 @@ fun EbeveynEkran(
  * yazdırma gibi ağır bir kapı yok.
  */
 @Composable
-private fun EslesmeKaldirmaOnayi(onOnayla: () -> Unit, onVazgec: () -> Unit) {
+private fun EslesmeKaldirmaOnayi(
+    islemde: Boolean,
+    hata: String?,
+    onOnayla: () -> Unit,
+    onVazgec: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,9 +214,22 @@ private fun EslesmeKaldirmaOnayi(onOnayla: () -> Unit, onVazgec: () -> Unit) {
             color = MetinIkincil,
             textAlign = TextAlign.Center,
         )
+        hata?.let {
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
+        }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        BirincilButon(metin = "Eşleştirmeyi kaldır", onTikla = onOnayla)
-        MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
+        BirincilButon(
+            metin = if (islemde) "Kaldırılıyor…" else "Eşleştirmeyi kaldır",
+            onTikla = onOnayla,
+            islemde = islemde,
+        )
+        if (!islemde) MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
 
@@ -229,9 +271,16 @@ private fun RolSecimiAdimi(secilenRol: CihazRolu, onRolSec: (CihazRolu) -> Unit,
     }
 }
 
-/** Ekran 21 — kod üretme + girme. MOCK: girilen kod doğrulanmıyor, 6 hane yeterli. */
+/** Ekran 21 — sunucuda tek kullanımlı kod üretme + girme. */
 @Composable
-private fun KodAdimi(uretilenKod: String, hata: String?, onEslestir: (String) -> Unit) {
+private fun KodAdimi(
+    uretilenKod: String,
+    kodYukleniyor: Boolean,
+    kodSunucudanMi: Boolean,
+    hata: String?,
+    onKodTekrarDene: () -> Unit,
+    onEslestir: (String) -> Unit,
+) {
     var girilenKod by remember { mutableStateOf(TextFieldValue("")) }
 
     SihirbazIskeleti {
@@ -248,10 +297,18 @@ private fun KodAdimi(uretilenKod: String, hata: String?, onEslestir: (String) ->
             color = MetinIkincil,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        KodGoster(kod = uretilenKod)
+        if (kodYukleniyor) {
+            androidx.compose.material3.CircularProgressIndicator(color = YesilAna)
+        } else if (kodSunucudanMi) {
+            KodGoster(kod = uretilenKod)
+        }
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Kod 10 dakika geçerlidir",
+            text = if (kodSunucudanMi) {
+                "Kod 10 dakika geçerlidir"
+            } else {
+                "Kod oluşturmak için internet bağlantısı gerekir"
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MetinUcuncul,
             modifier = Modifier.fillMaxWidth(),
@@ -301,6 +358,10 @@ private fun KodAdimi(uretilenKod: String, hata: String?, onEslestir: (String) ->
                 color = tr.org.yesilay.yesiliz.ui.tema.Hata,
             )
         }
+        if (!kodYukleniyor && !kodSunucudanMi) {
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            MetinBaglanti(metin = "Kod oluşturmayı tekrar dene", onTikla = onKodTekrarDene)
+        }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(
             metin = "Eşleştir",
@@ -313,6 +374,11 @@ private fun KodAdimi(uretilenKod: String, hata: String?, onEslestir: (String) ->
 /** Ekran 22 — eşleştirme başarılı. */
 @Composable
 private fun BasariliAdimi(cocukAdi: String, rol: CihazRolu, onDevam: () -> Unit) {
+    val eslesenCihaz = when {
+        rol == CihazRolu.EBEVEYN && cocukAdi.isNotBlank() -> "$cocukAdi'in cihazı"
+        rol == CihazRolu.EBEVEYN -> "Çocuk cihazı"
+        else -> "Ebeveyn cihazı"
+    }
     SihirbazIskeleti {
         IkonRozeti(
             ikon = Icons.Filled.CheckCircle,
@@ -325,7 +391,7 @@ private fun BasariliAdimi(cocukAdi: String, rol: CihazRolu, onDevam: () -> Unit)
         Cip(metin = "Eşleştirme başarılı", ikon = Icons.Filled.CheckCircle, zemin = YesilNane, renk = YesilAna)
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
-            text = "$cocukAdi'in cihazıyla eşleştirildi",
+            text = "$eslesenCihaz ile eşleştirildi",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
@@ -333,8 +399,11 @@ private fun BasariliAdimi(cocukAdi: String, rol: CihazRolu, onDevam: () -> Unit)
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Artık ekran süresini, hedeflerini ve ilerlemesini bu " +
-                "panelden takip edebilirsin.",
+            text = if (rol == CihazRolu.EBEVEYN) {
+                "Artık çocuğunun paylaştığı haftalık özeti bu panelden takip edebilirsin."
+            } else {
+                "Ebeveyn cihazı yalnızca paylaşılan haftalık özeti görebilir."
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MetinIkincil,
             textAlign = TextAlign.Center,
@@ -347,12 +416,85 @@ private fun BasariliAdimi(cocukAdi: String, rol: CihazRolu, onDevam: () -> Unit)
                 .background(Yesil50)
                 .padding(Olcu.Aralik),
         ) {
-            SatirCift("Eşleşen cihaz", "$cocukAdi'in cihazı")
+            SatirCift("Eşleşen cihaz", eslesenCihaz)
             Spacer(modifier = Modifier.height(Bosluk.S))
             SatirCift("Rol", if (rol == CihazRolu.EBEVEYN) "Çocuk cihazı" else "Ebeveyn cihazı")
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Ebeveyn paneline git", onTikla = onDevam)
+    }
+}
+
+@Composable
+private fun EbeveynOzetBekleme() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(Olcu.EkranKenari),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+        androidx.compose.material3.CircularProgressIndicator(color = YesilAna)
+        Spacer(modifier = Modifier.height(Bosluk.M))
+        Text("Haftalık özet alınıyor…", color = MetinIkincil)
+    }
+}
+
+@Composable
+private fun EbeveynOzetHatasi(
+    mesaj: String,
+    onTekrarDene: () -> Unit,
+    onEslesmeyiKaldir: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(Olcu.EkranKenari),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+        Text(
+            text = "Haftalık özet gösterilemiyor",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(mesaj, color = MetinIkincil, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        BirincilButon(metin = "Tekrar dene", onTikla = onTekrarDene)
+        MetinBaglanti(metin = "Eşleştirmeyi kaldır", onTikla = onEslesmeyiKaldir)
+    }
+}
+
+@Composable
+private fun CocukEslesmePaneli(onEslesmeyiKaldir: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(Olcu.EkranKenari),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+        IkonRozeti(
+            ikon = Icons.Filled.Lock,
+            zemin = YesilNane,
+            renk = YesilKoyu,
+            olcu = Olcu.AvatarBuyuk,
+            sekil = CircleShape,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.M))
+        Text(
+            text = "Cihazlar eşleştirildi",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "Ebeveyn cihazına yalnızca haftalık özet bilgilerin gönderilir; " +
+                "ayrıntılı kullanım verilerin paylaşılmaz.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MetinIkincil,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(Olcu.Aralik))
+        MetinBaglanti(metin = "Eşleştirmeyi kaldır", onTikla = onEslesmeyiKaldir)
     }
 }
 
@@ -411,7 +553,7 @@ private fun EbeveynPaneli(
                         fontWeight = FontWeight.Bold,
                         color = MetinBirincil,
                     )
-                    Cip(metin = "${durum.cocukYasi} yaşında")
+                    durum.cocukYasi?.let { yas -> Cip(metin = "$yas yaşında") }
                 }
             }
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
@@ -452,6 +594,10 @@ private fun EbeveynPaneli(
 
             Kart {
                 Text(text = "Bildirimler", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MetinBirincil)
+                if (durum.bildirimler.isEmpty()) {
+                    Spacer(modifier = Modifier.height(Bosluk.S))
+                    Text(text = "Yeni bildirim yok.", style = MaterialTheme.typography.bodyMedium, color = MetinIkincil)
+                }
                 durum.bildirimler.forEachIndexed { i, bildirim ->
                     if (i > 0) KartAyraci()
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

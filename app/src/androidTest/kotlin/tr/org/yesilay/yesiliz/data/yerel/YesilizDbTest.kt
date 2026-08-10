@@ -3,6 +3,9 @@ package tr.org.yesilay.yesiliz.data.yerel
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -13,11 +16,18 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
+import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.arkaplan.gunlukZinciriAtomik
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
+import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import java.time.Instant
 import java.time.LocalDate
 
@@ -145,6 +155,76 @@ class YesilizDbTest {
         assertEquals(1, silinen)
         assertEquals(1, dao.gununSayisi(yeni))
         assertEquals(0, dao.gununSayisi(eski))
+    }
+
+    @Test
+    fun esitZamanliListelerKararliSiralanir() = runTest {
+        val an = Instant.parse("2026-08-10T21:00:00Z")
+        val bildirimDao = db.bildirimDao()
+        listOf("Bir", "İki", "Üç").forEach { baslik ->
+            bildirimDao.ekle(
+                BildirimEntity(
+                    tur = "hatirlatma",
+                    baslik = baslik,
+                    govde = "Gövde",
+                    zaman = an,
+                ),
+            )
+        }
+
+        assertEquals(
+            listOf("Üç", "İki", "Bir"),
+            bildirimDao.sonlarAkisi(10).first().map { it.baslik },
+        )
+
+        val tarih = LocalDate.of(2026, 8, 11)
+        val arkadasDao = db.arkadasDao()
+        arkadasDao.kaydet(ArkadasEntity("Zeynep", ArkadasEntity.DURUM_EKLENDI, tarih))
+        arkadasDao.kaydet(ArkadasEntity("Ali", ArkadasEntity.DURUM_EKLENDI, tarih))
+
+        assertEquals(
+            listOf("Ali", "Zeynep"),
+            arkadasDao.hepsiAkisi().first().map { it.isim },
+        )
+    }
+
+    @Test
+    fun aktifGunGorevVeGercekKullanimKanitiBirlikteIster() = runTest {
+        val puanDao = db.puanGunlukDao()
+        val gorevDao = db.gorevTamamlamaDao()
+        val ozetDao = db.gunlukOzetDao()
+        val gunler = (1..4).map { LocalDate.of(2026, 8, it) }
+
+        gunler.forEach { gun ->
+            puanDao.kaydet(PuanGunlukEntity(gun, 10, 10, 1, 1.0))
+        }
+        // 1: yalnızca görev, 2: yalnızca kullanım, 3: ikisi de,
+        // 4: görev + telafi için yazılmış boş özet.
+        listOf(gunler[0], gunler[2], gunler[3]).forEach { gun ->
+            gorevDao.ekle(GorevTamamlamaEntity(tarih = gun, gorevId = "nefes", puan = 5, dogrulamaTuru = "aktivite"))
+        }
+        ozetDao.kaydet(GunlukOzetEntity(tarih = gunler[1], olayVarMi = true))
+        ozetDao.kaydet(GunlukOzetEntity(tarih = gunler[2], olayVarMi = true))
+        ozetDao.kaydet(GunlukOzetEntity(tarih = gunler[3], olayVarMi = false))
+
+        assertEquals(1, puanDao.aktifGunAkisi().first())
+    }
+
+    @Test
+    fun esZamanliGorevTamamlamaGunlukLimitiAsamaz() = runTest {
+        val depo = PuanDeposu(
+            db = db,
+            gorevDao = db.gorevTamamlamaDao(),
+            puanDao = db.puanGunlukDao(),
+            ozetDao = db.gunlukOzetDao(),
+            tercihler = Tercihler(baglam),
+        )
+        val gun = LocalDate.of(2026, 8, 11)
+
+        val sonuclar = List(8) { async { depo.gorevTamamla(Gorev.NEFES, gun) } }.awaitAll()
+
+        assertEquals(Gorev.NEFES.gunlukLimit, sonuclar.count { it })
+        assertEquals(Gorev.NEFES.gunlukLimit, db.gorevTamamlamaDao().gununSayisi(gun, Gorev.NEFES.id))
     }
 
     // -----------------------------------------------------------------

@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -14,12 +15,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.risk.EtkileyenFaktor
 import tr.org.yesilay.yesiliz.risk.Sabitler
 import tr.org.yesilay.yesiliz.risk.Trend
 import tr.org.yesilay.yesiliz.risk.VeriDurumu
-import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -37,16 +38,19 @@ import javax.inject.Inject
 class RiskDetayViewModel @Inject constructor(
     riskDao: RiskSonucDao,
     private val riskDeposu: RiskDeposu,
-    private val saat: Clock,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
-    val durum: StateFlow<RiskDetayDurum> = riskDao.sonuncuAkisi()
-        .flatMapLatest { risk ->
+    val durum: StateFlow<RiskDetayDurum> = combine(
+        riskDao.sonuncuAkisi(),
+        guncelGun.akis,
+    ) { risk, bugun -> risk to bugun }
+        .flatMapLatest { (risk, bugun) ->
             if (risk == null) {
                 flowOf(RiskDetayDurum(veriVarMi = false))
             } else {
                 faktorlerAkisi(risk.tarih).map { faktorler ->
-                    when (etkinVeriDurumu(risk.veriDurumu, risk.tarih)) {
+                    when (etkinVeriDurumu(risk.veriDurumu, risk.tarih, bugun)) {
                         // Yetersiz/eski ölçüme dayanan bir bant, "veri yok"
                         // ekranından daha yanıltıcı olurdu — 34 saniyelik
                         // kullanımı olan biri "AZ RİSKLİ" görmemeli
@@ -95,9 +99,13 @@ class RiskDetayViewModel @Inject constructor(
      * uygulamayı birkaç gündür açmamış demektir ve o bant artık güncel
      * değildir.
      */
-    private fun etkinVeriDurumu(kayitliDurum: String, tarih: LocalDate): VeriDurumu {
+    private fun etkinVeriDurumu(
+        kayitliDurum: String,
+        tarih: LocalDate,
+        bugun: LocalDate,
+    ): VeriDurumu {
         if (VeriDurumu.valueOf(kayitliDurum) == VeriDurumu.YETERSIZ) return VeriDurumu.YETERSIZ
-        val gunGecmisi = ChronoUnit.DAYS.between(tarih, LocalDate.now(saat))
+        val gunGecmisi = ChronoUnit.DAYS.between(tarih, bugun)
         return if (gunGecmisi > Sabitler.VERI_ESKI_ESIK_GUN) VeriDurumu.ESKI else VeriDurumu.HESAPLANDI
     }
 

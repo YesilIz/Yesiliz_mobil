@@ -37,7 +37,9 @@ class AktiviteOturumuDeposu @Inject constructor(
             AktiviteOturumuEntity(
                 baslangic = oturum.baslangic,
                 bitis = oturum.bitis,
-                tarih = LocalDate.ofInstant(bitis, saat.zone),
+                // LocalDate.ofInstant Android'de API 34'e kadar yok;
+                // atZone(...).toLocalDate() aynı hesabı minSdk 26'da yapar.
+                tarih = bitis.atZone(saat.zone).toLocalDate(),
             ),
         )
     }

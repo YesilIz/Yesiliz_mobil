@@ -82,7 +82,11 @@ fun LigEkran(
         // var. Sahte bir sıralama göstermektense ne yapabileceğini söylemek
         // doğru — aynı ilke İstatistik'in boş durumunda da geçerli.
         if (!durum.yukleniyor && !durum.katildiMi) {
-            BosLig(onKatil = viewModel::ligeKatil, onArkadasEkle = onArkadasEkle)
+            BosLig(
+                cevrimdisi = durum.cevrimdisi,
+                onKatil = viewModel::ligeKatil,
+                onArkadasEkle = onArkadasEkle,
+            )
             return@YesilBaslikliEkran
         }
 
@@ -236,7 +240,12 @@ private fun GorunmuyorNotu() {
 
 /** Lig — boş durum (tasarım 37). */
 @Composable
-private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
+private fun BosLig(
+    cevrimdisi: Boolean,
+    onKatil: () -> Unit,
+    onArkadasEkle: () -> Unit,
+) {
+    val icerik = bosLigIcerigi(cevrimdisi)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,7 +260,7 @@ private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
-            text = "Henüz kimseyle yarışmıyorsun",
+            text = icerik.baslik,
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
@@ -259,17 +268,46 @@ private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Bir lige katıl ya da arkadaşlarını davet et, birlikte " +
-                "ilerlemenizi görün.",
+            text = icerik.aciklama,
             style = MaterialTheme.typography.bodyLarge,
             color = MetinUcuncul,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(Olcu.BolumArasi))
-        BirincilButon(metin = "Lige katıl", onTikla = onKatil)
-        Spacer(modifier = Modifier.height(Bosluk.S))
-        IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
+        if (icerik.eylemlerGorunur) {
+            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+            BirincilButon(metin = "Lige katıl", onTikla = onKatil)
+            Spacer(modifier = Modifier.height(Bosluk.S))
+            IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
+        }
     }
+}
+
+/**
+ * Sunucu boş bir lig döndürdüğünde iki farklı durum vardır:
+ * kullanıcı gerçekten henüz lige katılmamış olabilir veya lig verisi
+ * hiç alınamamış olabilir. İkincisinde katıl/davet eylemleri göstermek,
+ * ulaşılamayan sunucuda sessizce sonuçsuz kalan sahte bir başarı vaadidir.
+ */
+internal data class BosLigIcerigi(
+    val baslik: String,
+    val aciklama: String,
+    val eylemlerGorunur: Boolean,
+)
+
+internal fun bosLigIcerigi(cevrimdisi: Boolean): BosLigIcerigi = if (cevrimdisi) {
+    BosLigIcerigi(
+        baslik = "Lig şu anda kullanılamıyor",
+        aciklama = "Sunucuya ulaşılamıyor. Bağlantın geldiğinde Lig sekmesini " +
+            "yeniden açıp tekrar deneyebilirsin.",
+        eylemlerGorunur = false,
+    )
+} else {
+    BosLigIcerigi(
+        baslik = "Henüz kimseyle yarışmıyorsun",
+        aciklama = "Bir lige katıl ya da arkadaşlarını davet et, birlikte " +
+            "ilerlemenizi görün.",
+        eylemlerGorunur = true,
+    )
 }
 
 @Composable

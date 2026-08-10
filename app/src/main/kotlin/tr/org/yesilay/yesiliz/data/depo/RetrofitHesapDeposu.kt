@@ -46,7 +46,7 @@ class RetrofitHesapDeposu @Inject constructor(
         api.sifreSifirla(SifreSifirlaIstek(eposta.trim().lowercase()))
         HesapSonuc.Basarili
     } catch (hata: HttpException) {
-        HesapSonuc.Hata(HesapAlani.EPOSTA, mesaj(hata))
+        HesapSonuc.Hata(alan(hata), mesaj(hata))
     }
 
     override suspend fun misafirDevam() {
@@ -81,28 +81,34 @@ class RetrofitHesapDeposu @Inject constructor(
     }
 
     /** HTTP kodunu forma geri bildirilebilir bir alana çeviriyor. */
-    private fun alan(hata: HttpException): HesapAlani = when (hata.code()) {
-        KOD_CAKISMA -> HesapAlani.EPOSTA
-        KOD_YETKISIZ -> HesapAlani.SIFRE
-        // 422 sunucunun girdi doğrulaması (geçersiz e-posta biçimi, kısa
-        // şifre). Cihaz tarafı da doğruluyor ama sunucu daha katı
-        // olabiliyor — ör. `.test` gibi özel amaçlı alan adları.
-        KOD_DOGRULAMA -> HesapAlani.EPOSTA
-        else -> HesapAlani.GENEL
-    }
+    private fun alan(hata: HttpException): HesapAlani = hesapHataAlani(hata.code())
 
-    private fun mesaj(hata: HttpException): String = when (hata.code()) {
-        KOD_CAKISMA -> "Bu e-posta zaten kayıtlı."
-        KOD_YETKISIZ -> "E-posta ya da şifre hatalı."
-        KOD_DOGRULAMA -> "Bu e-posta adresi kabul edilmedi. Gerçek bir adres yazmayı dene."
-        else -> "Şu an bağlanılamıyor. Biraz sonra tekrar deneyebilirsin."
-    }
+    private fun mesaj(hata: HttpException): String = hesapHataMesaji(hata.code())
+}
 
-    private companion object {
-        const val KOD_CAKISMA = 409
-        const val KOD_YETKISIZ = 401
-        const val KOD_DOGRULAMA = 422
-    }
+private const val KOD_CAKISMA = 409
+private const val KOD_YETKISIZ = 401
+private const val KOD_DOGRULAMA = 422
+private const val KOD_KULLANILAMIYOR = 503
+
+/** HTTP hesap hatasını forma geri bildirilebilir alana çevirir. */
+internal fun hesapHataAlani(kod: Int): HesapAlani = when (kod) {
+    KOD_CAKISMA -> HesapAlani.EPOSTA
+    KOD_YETKISIZ -> HesapAlani.SIFRE
+    // 422 sunucunun girdi doğrulaması (geçersiz e-posta biçimi, kısa
+    // şifre). Cihaz tarafı da doğruluyor ama sunucu daha katı olabilir.
+    KOD_DOGRULAMA -> HesapAlani.EPOSTA
+    else -> HesapAlani.GENEL
+}
+
+/** Sunucu ayrıntısını/sırrını taşımadan kullanıcıya güvenli hata metni üretir. */
+internal fun hesapHataMesaji(kod: Int): String = when (kod) {
+    KOD_CAKISMA -> "Bu e-posta zaten kayıtlı."
+    KOD_YETKISIZ -> "E-posta ya da şifre hatalı."
+    KOD_DOGRULAMA -> "Bu e-posta adresi kabul edilmedi. Gerçek bir adres yazmayı dene."
+    KOD_KULLANILAMIYOR ->
+        "Şifre sıfırlama e-postası henüz kullanılamıyor. Biraz sonra tekrar deneyebilirsin."
+    else -> "Şu an bağlanılamıyor. Biraz sonra tekrar deneyebilirsin."
 }
 
 /** Beklenen uzak hatayı görünür `false` yapar; iş iptalini asla yutmaz. */

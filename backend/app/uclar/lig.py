@@ -14,6 +14,7 @@ from app.guvenlik import mevcut_kullanici
 from app.modeller import Arkadaslik, DavetKodu, Kullanici, LigGrup, LigUyelik
 from app.semalar import ArkadasDto, DavetIstek, KodYanit, LigSatiriDto, LigYanit
 from app.veritabani import oturum
+from app.zaman import yerel_bugun
 
 yonlendirici = APIRouter(tags=["lig"])
 
@@ -33,7 +34,7 @@ def hafta_baslangici(gun: dt.date | None = None) -> dt.date:
     `Aralik.HAFTA` (İstatistik) ve `BildirimGrupla` ile aynı tanım —
     ISO haftası, pazartesi başlangıçlı.
     """
-    gun = gun or dt.date.today()
+    gun = gun or yerel_bugun()
     return gun - dt.timedelta(days=gun.weekday())
 
 
@@ -144,7 +145,9 @@ def arkadaslar(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> list[ArkadasDto]:
     satirlar = db.scalars(
-        select(Arkadaslik).where(Arkadaslik.kullanici_id == kullanici.id)
+        select(Arkadaslik)
+        .where(Arkadaslik.kullanici_id == kullanici.id)
+        .order_by(Arkadaslik.olusturma.desc(), Arkadaslik.id.desc())
     ).all()
 
     sonuc = []
@@ -220,7 +223,9 @@ def _arkadas_idleri(db: Session, kullanici_id: int) -> set[int]:
 def _uygun_grup(db: Session, hafta: dt.date, seviye: int, boy: int) -> LigGrup:
     """Aynı seviyede yeri olan ilk grup; yoksa yeni grup."""
     gruplar = db.scalars(
-        select(LigGrup).where(LigGrup.hafta_baslangic == hafta, LigGrup.seviye == seviye)
+        select(LigGrup)
+        .where(LigGrup.hafta_baslangic == hafta, LigGrup.seviye == seviye)
+        .order_by(LigGrup.id)
     ).all()
 
     for grup in gruplar:
@@ -272,9 +277,9 @@ def _onceki_seviye(db: Session, kullanici_id: int, hafta: dt.date) -> int:
     return seviye
 
 
-def _kalan_gun(hafta: dt.date) -> int:
+def _kalan_gun(hafta: dt.date, bugun: dt.date | None = None) -> int:
     bitis = hafta + dt.timedelta(days=7)
-    return max((bitis - dt.date.today()).days, 0)
+    return max((bitis - (bugun or yerel_bugun())).days, 0)
 
 
 def _kod_uret(db: Session) -> str:

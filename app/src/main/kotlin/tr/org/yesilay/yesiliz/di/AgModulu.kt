@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
+import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -112,11 +113,7 @@ object AgModulu {
         if (taban == null) {
             zincir.proceed(istek)
         } else {
-            val yeniUrl = istek.url.newBuilder()
-                .scheme(taban.scheme)
-                .host(taban.host)
-                .port(taban.port)
-                .build()
+            val yeniUrl = tabaniUygula(istek.url, taban)
             zincir.proceed(istek.newBuilder().url(yeniUrl).build())
         }
     }
@@ -173,6 +170,21 @@ object AgModulu {
         .build()
         .create(YesilizApi::class.java)
 }
+
+/**
+ * Retrofit'in ürettiği uç yolunu kullanıcının seçtiği tabana ekler.
+ *
+ * Yalnızca scheme/host/port değiştirmek `https://ornek/api/` gibi ters
+ * vekil alt yollarını sessizce atıyordu ve istek `/api/auth/giris` yerine
+ * `/auth/giris`e gidiyordu. Sorgu da istekten korunur; tabandaki olası bir
+ * sorgu parçası API isteğine taşınmaz.
+ */
+internal fun tabaniUygula(istek: HttpUrl, taban: HttpUrl): HttpUrl =
+    taban.newBuilder()
+        .addEncodedPathSegments(istek.encodedPath.trimStart('/'))
+        .encodedQuery(istek.encodedQuery)
+        .fragment(istek.fragment)
+        .build()
 
 /**
  * Debug ağ günlüğünün güvenlik sınırı.

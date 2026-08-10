@@ -28,6 +28,24 @@ def test_eslestirme_akisi(istemci, kullanici_kur):
     assert yanit.json()["durum"] == "eslesti"
 
 
+def test_ebeveyn_eslesmeyi_kaldirinca_ozet_erisimi_biter(istemci, kullanici_kur):
+    _, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
+
+    kaldirma = istemci.delete("/ebeveyn/eslesme", headers=ebeveyn_basliklar)
+
+    assert kaldirma.status_code == 200
+    assert kaldirma.json()["durum"] == "kaldirildi"
+    assert istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).status_code == 404
+
+
+def test_cocuk_da_eslesmeyi_kaldirabilir_ve_islem_idempotenttir(istemci, kullanici_kur):
+    cocuk_basliklar, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
+
+    assert istemci.delete("/ebeveyn/eslesme", headers=cocuk_basliklar).status_code == 200
+    assert istemci.delete("/ebeveyn/eslesme", headers=cocuk_basliklar).status_code == 200
+    assert istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).status_code == 404
+
+
 def test_kod_alti_haneli(istemci, kullanici_kur):
     basliklar, _ = kullanici_kur()
 
@@ -137,6 +155,7 @@ def test_ozet_cocugun_verisini_donduruyor(istemci, kullanici_kur):
 
     ozet = istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).json()
     assert ozet["cocukAdi"] == "Elif"
+    assert ozet["gunlukTarihler"] == [bugun]
     assert ozet["gunlukDakikalar"] == [240]
     assert ozet["ortalamaDk"] == 240
     assert ozet["bant"] == "ORTA"
@@ -159,6 +178,21 @@ def test_ozet_ham_veri_icermiyor(istemci, kullanici_kur):
 
     yasakli = {"socialDk", "paketAdi", "uygulamalar", "oturum", "kategoriler"}
     assert not (set(ozet.keys()) & yasakli)
+
+
+def test_bir_cihaz_ayni_anda_yalnizca_bir_eslesmede_olabilir(istemci, kullanici_kur):
+    _, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
+    ikinci_cocuk, _ = kullanici_kur(ad="Can", eposta="can@b.com")
+    kod = istemci.post(
+        "/ebeveyn/kod", json={"rol": "cocuk"}, headers=ikinci_cocuk
+    ).json()["kod"]
+
+    yanit = istemci.post(
+        "/ebeveyn/eslestir", json={"kod": kod, "rol": "ebeveyn"}, headers=ebeveyn_basliklar
+    )
+
+    assert yanit.status_code == 409
+    assert istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).json()["cocukAdi"] == "Elif"
 
 
 def test_heartbeat_saat_hesabi(istemci, kullanici_kur):

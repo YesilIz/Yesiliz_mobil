@@ -37,9 +37,8 @@ private const val HANE = 6
  * paneli ilk kurulum, ekran 21 üst satır) hem kullanıcıdan **almak**
  * (aynı ekranın alt satırı) için kullanılıyor.
  *
- * Ebeveyn eşleştirmesi MVP'de mock (`Tercihler`, gerçek sunucu doğrulaması
- * yok — bkz. `EbeveynViewModel`), bu yüzden burada da doğrulama değil
- * yalnızca 6 haneli girişi toplama sorumluluğu var.
+ * Kodun geçerlilik ve tek-kullanımlılık doğrulaması sunucudadır; bu
+ * bileşen yalnızca altı haneli girişi gösterir/toplar.
  */
 @Composable
 fun KodGoster(kod: String, modifier: Modifier = Modifier) {

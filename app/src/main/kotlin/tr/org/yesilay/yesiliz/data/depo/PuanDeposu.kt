@@ -1,7 +1,9 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
+import androidx.room.withTransaction
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
+import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.data.yerel.dao.GorevTamamlamaDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
@@ -29,6 +31,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class PuanDeposu @Inject constructor(
+    private val db: YesilizDb,
     private val gorevDao: GorevTamamlamaDao,
     private val puanDao: PuanGunlukDao,
     private val ozetDao: GunlukOzetDao,
@@ -57,20 +60,19 @@ class PuanDeposu @Inject constructor(
      *
      * @return kayıt yapıldıysa true
      */
-    suspend fun gorevTamamla(gorev: Gorev, tarih: LocalDate): Boolean {
-        if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) return false
-        if (gorevDao.gununSayisi(tarih, gorev.id) >= gorev.gunlukLimit) return false
-
-        gorevDao.ekle(
-            GorevTamamlamaEntity(
-                tarih = tarih,
-                gorevId = gorev.id,
-                puan = gorev.puan,
-                dogrulamaTuru = gorev.dogrulama.anahtar,
-            ),
+    suspend fun gorevTamamla(gorev: Gorev, tarih: LocalDate): Boolean = db.withTransaction {
+        if (gorev.dogrulama == DogrulamaTuru.OTOMATIK) return@withTransaction false
+        val eklendi = gorevDao.limitAltindaEkle(
+            tarih = tarih,
+            gorevId = gorev.id,
+            puan = gorev.puan,
+            dogrulamaTuru = gorev.dogrulama.anahtar,
+            limit = gorev.gunlukLimit,
         )
-        gunuYenidenHesapla(tarih)
-        return true
+        if (eklendi < 0L) return@withTransaction false
+
+        gunuYenidenHesaplaIc(tarih)
+        true
     }
 
     /**
@@ -80,7 +82,12 @@ class PuanDeposu @Inject constructor(
      * gece kullanımı değiştiğinde puan da değişiyor. `Upsert` olduğu için
      * tekrar güvenli.
      */
-    suspend fun gunuYenidenHesapla(tarih: LocalDate) {
+    suspend fun gunuYenidenHesapla(tarih: LocalDate) = db.withTransaction {
+        gunuYenidenHesaplaIc(tarih)
+    }
+
+    /** Çağıran zaten [YesilizDb.withTransaction] içindeyken ortak hesap. */
+    private suspend fun gunuYenidenHesaplaIc(tarih: LocalDate) {
         val ozet = ozetDao.getir(tarih)
         val hedefDk = tercihler.anlik().gunlukHedefDk
 

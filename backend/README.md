@@ -83,11 +83,13 @@ Ortam değişkenleri `YESILIZ_` önekli (`app/ayarlar.py`):
 | `YESILIZ_ERISIM_DAKIKA` | 30 | erişim jetonu ömrü |
 | `YESILIZ_YENILEME_GUN` | 30 | yenileme jetonu ömrü |
 | `YESILIZ_ESLESTIRME_KODU_DAKIKA` | 10 | tasarım 21'deki metinle birebir |
+| `YESILIZ_SAAT_DILIMI` | `Europe/Istanbul` | haftalık lig ve ebeveyn özeti için IANA iş saat dilimi; anlık kayıtlar yine UTC |
 
 ## Henüz yok
 
-- **E-posta gönderimi** — şifre sıfırlama jetonu üretiliyor ve günlüğe
-  yazılıyor; SMTP bağlanınca `uclar/hesap.py`'nin son satırı değişecek
+- **E-posta gönderimi** — sağlayıcı bağlanana kadar üretim ucu açıkça 503
+  döndürüyor. Geliştirme/test jetonu yalnızca veritabanında tutulur; sırlar
+  hiçbir ortamda günlüğe yazılmaz.
 - **Google OAuth** — kapsam dışı bırakıldı
 - **Uzman paneli arayüzü** — `kullanici.rol` alanı hazır, arayüz Faz 3
 - **HTTPS** — yerel geliştirmede şifresiz; dağıtımda TLS zorunlu

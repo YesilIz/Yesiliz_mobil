@@ -25,8 +25,8 @@ import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.OdulDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
-import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -47,16 +47,18 @@ class OdulViewModel @Inject constructor(
     private val puanDeposu: PuanDeposu,
     private val odulDeposu: OdulDeposu,
     tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
-    private val saat: Clock,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
     val durum: StateFlow<OdulDurum> = combine(
         puanDeposu.toplamPuan,
         puanDeposu.aktifGunSayisi,
-        puanDeposu.sonKayitlar(),
+        combine(puanDeposu.sonKayitlar(), guncelGun.akis) { kayitlar, bugun ->
+            kayitlar.map { it.kaydaCevir(bugun) }
+        },
         odulDeposu.secimlerAkisi,
         tercihler.oturum,
-    ) { puan, aktifGun, kayitlar, secimler, oturum ->
+    ) { puan, aktifGun, gecmis, secimler, oturum ->
         val ham = KADEMELER.map { it.duruma(puan, aktifGun, secimler[it.id]) }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
         // gösterilen, kullanıcının hedeflediği ödül bu. Seçim bekleyen bir
@@ -72,7 +74,7 @@ class OdulViewModel @Inject constructor(
             puan = puan,
             sonrakiEsik = siradaki?.esik ?: ham.maxOf { it.esik },
             basamaklar = basamaklar.sortedByDescending { it.esik },
-            gecmis = kayitlar.map { it.kaydaCevir(LocalDate.now(saat)) },
+            gecmis = gecmis,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -231,4 +233,3 @@ private fun zamanMetni(tarih: LocalDate, bugun: LocalDate): String =
         1 -> "Dün"
         else -> "$gun gün önce"
     }
-

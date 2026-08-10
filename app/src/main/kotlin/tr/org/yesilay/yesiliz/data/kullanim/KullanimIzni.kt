@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.data.kullanim
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Process
 import android.provider.Settings
 
@@ -22,11 +23,20 @@ object KullanimIzni {
     /** İzin verilmiş mi? */
     fun verildiMi(baglam: Context): Boolean {
         val appOps = baglam.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val sonuc = appOps.unsafeCheckOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            baglam.packageName,
-        )
+        val sonuc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                baglam.packageName,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                baglam.packageName,
+            )
+        }
         return sonuc == AppOpsManager.MODE_ALLOWED
     }
 

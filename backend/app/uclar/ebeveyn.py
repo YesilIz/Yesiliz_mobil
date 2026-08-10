@@ -6,7 +6,8 @@ import datetime as dt
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
@@ -21,6 +22,7 @@ from app.modeller import (
 )
 from app.semalar import EbeveynOzetYanit, EslestirIstek, EslestirmeKoduIstek, KodYanit
 from app.veritabani import oturum
+from app.zaman import yerel_bugun
 
 yonlendirici = APIRouter(prefix="/ebeveyn", tags=["ebeveyn"])
 
@@ -96,17 +98,59 @@ def eslestir(
     ebeveyn_id = kullanici.id if istek.rol == "ebeveyn" else kayit.ureten_id
     cocuk_id = kayit.ureten_id if istek.rol == "ebeveyn" else kullanici.id
 
+    # Uygulama tek bir cihaz rolü/bağlantısı saklıyor ve özet ucu tek
+    # çocuk döndürüyor. Aynı hesabı ikinci bir bağlantıya eklemek,
+    # hangi çocuğun gösterildiğini belirsiz ve kaldırma sonucunu sürprizli
+    # yapardı. Katılımcılardan herhangi biri zaten bağlıysa reddet.
     var = db.scalar(
         select(EbeveynBaglanti).where(
-            EbeveynBaglanti.ebeveyn_id == ebeveyn_id, EbeveynBaglanti.cocuk_id == cocuk_id
+            or_(
+                EbeveynBaglanti.ebeveyn_id.in_((ebeveyn_id, cocuk_id)),
+                EbeveynBaglanti.cocuk_id.in_((ebeveyn_id, cocuk_id)),
+            )
         )
     )
-    if var is None:
-        db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn_id, cocuk_id=cocuk_id))
+    if var is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cihazlardan biri zaten eşleştirilmiş")
+
+    db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn_id, cocuk_id=cocuk_id))
 
     kayit.kullanildi = True
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as hata:
+        # Ayrı istekler aynı anda ön kontrolden geçerse son söz veritabanı
+        # tekillik kısıtınındır.
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cihazlardan biri zaten eşleştirilmiş",
+        ) from hata
     return {"durum": "eslesti"}
+
+
+@yonlendirici.delete("/eslesme")
+def eslesmeyi_kaldir(
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """
+    Ebeveyn–çocuk bağını iki taraftan herhangi biri için kaldırır.
+
+    İşlem idempotenttir: bağ zaten yoksa da başarı döner. Cihazdaki
+    yerel bayrak ancak bu yanıt geldikten sonra temizlenir; ağ kesintisinde
+    diğer cihazın erişimi sürerken "bağ kesildi" denmez.
+    """
+    db.execute(
+        delete(EbeveynBaglanti).where(
+            or_(
+                EbeveynBaglanti.ebeveyn_id == kullanici.id,
+                EbeveynBaglanti.cocuk_id == kullanici.id,
+            )
+        )
+    )
+    db.commit()
+    return {"durum": "kaldirildi"}
 
 
 @yonlendirici.get("/ozet", response_model=EbeveynOzetYanit)
@@ -132,7 +176,7 @@ def ozet(
     if cocuk is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Çocuk hesabı bulunamadı")
 
-    bugun = dt.date.today()
+    bugun = yerel_bugun()
     bas = bugun - dt.timedelta(days=6)
     ozetler = db.scalars(
         select(GunlukOzet)
@@ -156,6 +200,7 @@ def ozet(
 
     return EbeveynOzetYanit(
         cocukAdi=cocuk.ad,
+        gunlukTarihler=[o.tarih for o in ozetler],
         gunlukDakikalar=dakikalar,
         ortalamaDk=ortalama,
         bant=son_risk.gosterilen_bant if son_risk else None,

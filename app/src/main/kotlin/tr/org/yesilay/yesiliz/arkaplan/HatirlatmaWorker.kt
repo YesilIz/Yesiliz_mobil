@@ -71,9 +71,13 @@ class HatirlatmaWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .build()
 
-        runCatching {
+        try {
             NotificationManagerCompat.from(baglam)
                 .notify(if (aksamMi) AKSAM_ID else SABAH_ID, bildirim)
+        } catch (_: SecurityException) {
+            // İzin, yukarıdaki kontrolden bildirimin gönderilmesine kadar
+            // olan dar aralıkta geri alınabilir. Uygulama içi kayıt zaten
+            // yazıldı; worker'ı düşürmek veya sonsuz denemek gereksiz.
         }
     }
 

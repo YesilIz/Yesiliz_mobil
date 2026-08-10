@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import enum
 from functools import lru_cache
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -135,6 +136,12 @@ class Ayarlar(BaseSettings):
     # Şifre sıfırlama bağlantısı 1 saat.
     sifirlama_saat: int = 1
 
+    # Takvim tabanlı ürün kuralları (haftalık lig, ebeveynin "bugün"
+    # penceresi) sunucunun çoğunlukla UTC olan işletim sistemi saat dilimine
+    # bırakılamaz. Yarışma ve hedef kitle Türkiye olduğu için ortak iş günü
+    # varsayılan olarak İstanbul takvimidir; dağıtımda gerektiğinde ezilebilir.
+    saat_dilimi: str = "Europe/Istanbul"
+
     # Lig grubu üst sınırı ve yükselme/düşme sayıları (CLAUDE.md §12 K1).
     lig_grup_boyu: int = 10
     lig_yukselen: int = 3
@@ -145,6 +152,15 @@ class Ayarlar(BaseSettings):
     _url_duzelt = field_validator("veritabani_url")(
         staticmethod(_veritabani_url_duzelt)
     )
+
+    @field_validator("saat_dilimi")
+    @classmethod
+    def _saat_dilimini_dogrula(cls, deger: str) -> str:
+        try:
+            ZoneInfo(deger)
+        except ZoneInfoNotFoundError as hata:
+            raise ValueError("Geçerli bir IANA saat dilimi olmalı") from hata
+        return deger
 
     @property
     def uretim_mi(self) -> bool:

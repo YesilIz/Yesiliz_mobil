@@ -283,12 +283,18 @@ fun SaglikIzinEkran(
                     )
                 }
 
-                Text(
-                    text = "İzin vermezsen de uygulama çalışır — adım verisi " +
-                        "olmadan risk hesabı hareketi hiç düşmez, o kadar.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MetinIkincil,
-                )
+                // İzinlerin tamamı verildikten sonra "izin vermezsen" diye
+                // konuşmak hem çelişkili hem de ekrandaki başarılı durumu
+                // belirsizleştiriyordu. Not yalnızca gerçek bir eksik varsa
+                // görünür.
+                if (durum.izinEksikligiVarMi) {
+                    Text(
+                        text = "İzin vermezsen de uygulama çalışır — adım verisi " +
+                            "olmadan risk hesabı hareketi hiç düşmez, o kadar.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MetinIkincil,
+                    )
+                }
             }
         }
     }

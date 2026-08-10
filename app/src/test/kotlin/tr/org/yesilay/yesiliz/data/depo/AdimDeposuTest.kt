@@ -1,5 +1,9 @@
 package tr.org.yesilay.yesiliz.data.depo
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -156,6 +160,74 @@ class AdimDeposuTest {
             60L,
             dao.gunun(LocalDate.of(2026, 8, 6))!!.toplam,
         )
+    }
+
+    @Test
+    fun `izin okuma sirasinda geri alinirsa mevcut satir korunur`() = runBlocking {
+        val dao = SahteDao().apply {
+            satirlar[LocalDate.of(2026, 8, 6)] =
+                AdimSayacEntity(LocalDate.of(2026, 8, 6), toplam = 25L, sonSayac = 200L)
+        }
+        val kaynak = object : AdimKaynagi {
+            override fun kullanilabilir(): Boolean = true
+            override suspend fun anlikSayac(): Long? = throw SecurityException("izin geri alındı")
+        }
+        val depo = AdimDeposu(
+            dao,
+            kaynak,
+            DegisebilirSaat(Instant.parse("2026-08-06T10:00:00Z"), ZoneOffset.UTC),
+        )
+
+        depo.ornekle()
+
+        assertEquals(25L, dao.gunun(LocalDate.of(2026, 8, 6))!!.toplam)
+    }
+
+    @Test(expected = CancellationException::class)
+    fun `ornekleme iptali yutulmaz`() = runBlocking {
+        val kaynak = object : AdimKaynagi {
+            override fun kullanilabilir(): Boolean = true
+            override suspend fun anlikSayac(): Long? = throw CancellationException("ekran kapandı")
+        }
+        val depo = AdimDeposu(
+            SahteDao(),
+            kaynak,
+            DegisebilirSaat(Instant.parse("2026-08-06T10:00:00Z"), ZoneOffset.UTC),
+        )
+
+        depo.ornekle()
+    }
+
+    @Test
+    fun `es zamanli cagiranlar sensor zincirine tek tek girer`() = runBlocking {
+        val dao = SahteDao()
+        val kaynak = object : AdimKaynagi {
+            var etkin = 0
+            var enCokEtkin = 0
+            var sayac = 100L
+
+            override fun kullanilabilir(): Boolean = true
+
+            override suspend fun anlikSayac(): Long? {
+                etkin++
+                enCokEtkin = maxOf(enCokEtkin, etkin)
+                delay(20)
+                val sonuc = sayac
+                sayac += 10
+                etkin--
+                return sonuc
+            }
+        }
+        val depo = AdimDeposu(
+            dao,
+            kaynak,
+            DegisebilirSaat(Instant.parse("2026-08-06T10:00:00Z"), ZoneOffset.UTC),
+        )
+
+        List(6) { async { depo.ornekle() } }.awaitAll()
+
+        assertEquals(1, kaynak.enCokEtkin)
+        assertEquals(50L, dao.gunun(LocalDate.of(2026, 8, 6))!!.toplam)
     }
 
     @Test
