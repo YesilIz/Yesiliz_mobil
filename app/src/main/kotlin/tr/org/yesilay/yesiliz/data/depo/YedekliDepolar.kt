@@ -12,6 +12,7 @@ import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
+import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
@@ -66,7 +67,9 @@ class YedekliLigDeposu @Inject constructor(
         val kaynak = try {
             uzak.tazele()
             uzak.arkadaslarAkisi()
-        } catch (_: Exception) {
+        } catch (_: IOException) {
+            yerel.arkadaslarAkisi()
+        } catch (_: retrofit2.HttpException) {
             yerel.arkadaslarAkisi()
         }
         emitAll(kaynak)
@@ -79,8 +82,14 @@ class YedekliLigDeposu @Inject constructor(
         agdanAl({ uzak.ligeKatil() }, { yerel.ligeKatil() })
     }
 
-    override suspend fun davetGonder(isim: String) {
-        agdanAl({ uzak.davetGonder(isim) }, { yerel.davetGonder(isim) })
+    override suspend fun davetGonder(kod: String) {
+        // Örnek kişi çipleri yalnızca debug deposunda var ve isim taşır;
+        // bunları gerçek sunucunun kod ucuna yollamak daima 404 üretirdi.
+        if (!DavetKodu.gecerliMi(kod)) {
+            yerel.davetGonder(kod)
+            return
+        }
+        agdanAl({ uzak.davetGonder(kod) }, { yerel.davetGonder(kod) })
     }
 
     override suspend fun onerilenler(): List<OnerilenKisi> =
@@ -118,7 +127,7 @@ class YedekliHesapDeposu @Inject constructor(
     override suspend fun cikisYap() {
         // Jetonları da temizlemek için uzak depo çağrılıyor; o da yerel
         // tercihleri siliyor.
-        runCatching { uzak.cikisYap() }.onFailure { yerel.cikisYap() }
+        uzak.cikisYap()
     }
 
     /**
@@ -130,8 +139,8 @@ class YedekliHesapDeposu @Inject constructor(
         val misafir = yerel.oturum.first().misafirMi
         if (misafir) return yerel.hesabiSil()
 
-        val silindi = runCatching { uzak.hesabiSil() }.getOrDefault(false)
-        yerel.hesabiSil()
+        val silindi = uzak.hesabiSil()
+        if (silindi) yerel.hesabiSil()
         return silindi
     }
 
@@ -143,10 +152,10 @@ class YedekliHesapDeposu @Inject constructor(
     }
 }
 
-/** Ağ hatasında yedeği çalıştıran ortak yardımcı. */
-private suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
+/** Yalnızca bağlantı hatasında yedeği çalıştıran ortak yardımcı. */
+internal suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
     uzak()
-} catch (_: Exception) {
+} catch (_: IOException) {
     yerel()
 }
 

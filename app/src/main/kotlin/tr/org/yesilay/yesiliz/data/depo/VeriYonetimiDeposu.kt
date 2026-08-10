@@ -51,15 +51,16 @@ class VeriYonetimiDeposu @Inject constructor(
     /**
      * Cihazdaki tüm veri **ve** sunucudaki hesap.
      *
-     * @return sunucudaki kayıt gerçekten silindi mi. `false` ise cihaz
-     *   temizlendi ama sunucuda kopya kaldı; ekran bunu söylemek zorunda.
+     * @return sunucudaki kayıt gerçekten silindi mi. `false` ise oturum ve
+     *   cihaz verisi korunur; kimlik kaybedilmeden yeniden denenebilir.
      */
     suspend fun hesabiSil(): Boolean = withContext(Dispatchers.IO) {
         // Sunucu çağrısı yerel temizlikten ÖNCE: jeton silinirse kimlik
         // kaybolur ve hesap bir daha silinemez.
-        val sunucudanSilindi = hesapDeposu.get().hesabiSil()
-        yereliTemizle()
-        sunucudanSilindi
+        uzakSilinirseYereliTemizle(
+            uzagiSil = { hesapDeposu.get().hesabiSil() },
+            yereliSil = { yereliTemizle() },
+        )
     }
 
     private suspend fun yereliTemizle() {
@@ -73,4 +74,14 @@ class VeriYonetimiDeposu @Inject constructor(
         // "kategorisiz" kalır ve risk hesabı bozulur.
         kategoriDeposu.seedEt(zorla = true)
     }
+}
+
+/** Uzak silme doğrulanmadan geri döndürülemez yerel temizliği başlatmaz. */
+internal suspend fun uzakSilinirseYereliTemizle(
+    uzagiSil: suspend () -> Boolean,
+    yereliSil: suspend () -> Unit,
+): Boolean {
+    val silindi = uzagiSil()
+    if (silindi) yereliSil()
+    return silindi
 }

@@ -233,18 +233,17 @@ class ProfilViewModel @Inject constructor(
         }
     }
 
-    /** Uyarı okunduktan sonra kullanıcı yine de çıkmak isterse. */
+    /** Başarısızlık uyarısını kapatır; oturumu kapatmadan yeniden denetir. */
     fun uyariyiKapat() {
         silmeHali.value = SilmeHali()
-        viewModelScope.launch { _silindi.send(Unit) }
     }
 
     /**
      * Ortak silme sarmalayıcısı.
      *
      * Blok `false` dönerse (sunucudaki hesap silinemedi) ekrandan
-     * **çıkılmıyor**: önce uyarı gösteriliyor. Sessizce çıkmak, silinmemiş
-     * bir hesabı silinmiş göstermek olurdu.
+     * **çıkılmıyor** ve oturum/veri korunuyor. Kullanıcı kimliğini
+     * kaybetmeden aynı isteği yeniden gönderebilir.
      */
     private fun sil(blok: suspend () -> Boolean) {
         if (silmeHali.value.calisiyor) return

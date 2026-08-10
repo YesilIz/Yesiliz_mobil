@@ -829,10 +829,10 @@ private fun VerileriSilIcerik(
 }
 
 /**
- * Silme bitti ama sunucudaki kopya duruyor.
+ * Silme isteği tamamlanamadı; oturum ve cihaz verisi korundu.
  *
- * Kullanıcıyı sessizce dışarı atmak yerine bunu söylüyoruz: "kalıcı sil"
- * dedikten sonra sunucuda veri kalmışsa bilmeye hakkı var (`debug.md` K-2).
+ * Kullanıcının doğrulanmış isteği yeniden gönderebilmesi için kimliği
+ * silmiyoruz ve durumu açıkça söylüyoruz.
  */
 @Composable
 private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
@@ -844,21 +844,20 @@ private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
             .padding(Olcu.Aralik),
     ) {
         Text(
-            text = "Cihazındaki her şey silindi.",
+            text = "Hesap silinemedi.",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )
         Spacer(modifier = Modifier.height(Bosluk.Xs))
         Text(
-            text = "Sunucuya şu an ulaşılamadığı için oradaki kaydın " +
-                "silinemedi. Bağlantın olduğunda tekrar giriş yapıp " +
-                "silme işlemini yenileyebilirsin.",
+            text = "Cihazındaki veriler ve oturumun korunuyor. Bağlantını " +
+                "kontrol edip silme işlemini yeniden deneyebilirsin.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Anladım", onTikla = onKapat)
+        TehlikeliButon(metin = "Tekrar dene", onTikla = onKapat)
     }
 }
 

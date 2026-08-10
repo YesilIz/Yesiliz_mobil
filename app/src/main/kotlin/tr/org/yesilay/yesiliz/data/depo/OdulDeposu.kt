@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -71,8 +72,13 @@ class OdulDeposu @Inject constructor(
             // Hata yutulmuyor, iz bırakıyor (CLAUDE.md §9): sessiz
             // `runCatching`, sunucu tarafındaki eksikliği sınırsız süre
             // saklardı.
-            runCatching { api.odulSec(OdulSecimIstek(kademeId, secenekId)) }
-                .onFailure { Log.w(ETIKET, "ödül seçimi sunucuya yazılamadı: $kademeId", it) }
+            try {
+                api.odulSec(OdulSecimIstek(kademeId, secenekId))
+            } catch (iptal: CancellationException) {
+                throw iptal
+            } catch (hata: Exception) {
+                Log.w(ETIKET, "ödül seçimi sunucuya yazılamadı: $kademeId", hata)
+            }
         }
         return true
     }

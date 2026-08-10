@@ -40,6 +40,10 @@ data class LigSatiriModel(
 /** Arkadaş ekle ekranı — tasarım 36. */
 data class ArkadasEkleDurum(
     val davetKodu: String = "",
+    val girilenKod: String = "",
+    val kodHatasi: String? = null,
+    val kodIslemde: Boolean = false,
+    val kodlaEklendi: Boolean = false,
     val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
     /**

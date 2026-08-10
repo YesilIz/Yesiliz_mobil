@@ -1,9 +1,11 @@
 package tr.org.yesilay.yesiliz.arkaplan
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.room.withTransaction
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
@@ -16,7 +18,11 @@ import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.widget.widgetlariTazele
+import kotlinx.coroutines.CancellationException
 import java.time.Clock
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -51,7 +57,10 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val puanDeposu: PuanDeposu,
     private val aktiviteSaglayici: AktiviteSaglayici,
     private val adimDeposu: AdimDeposu,
+    private val db: YesilizDb,
     private val ozetDao: GunlukOzetDao,
+    private val riskDao: RiskSonucDao,
+    private val puanDao: PuanGunlukDao,
     private val olayDao: KullanimOlayDao,
     private val bildirimDeposu: BildirimDeposu,
     private val senkronDeposu: SenkronDeposu,
@@ -65,34 +74,40 @@ class GunlukOzetWorker @AssistedInject constructor(
         // uygulama açılışı zaten telafiyi tetikliyor.
         if (!KullanimIzni.verildiMi(applicationContext)) return Result.success()
 
-        val bugun = LocalDate.now(saat)
-        val islenmis = ozetDao
-            .islenmisGunler(bugun.minusDays(TELAFI_GUN), bugun)
-            .toSet()
+        return try {
+            val bugun = LocalDate.now(saat)
+            val baslangic = bugun.minusDays(TELAFI_GUN)
+            val islenmis = tamamlanmisGunler(
+                ozetDao.islenmisGunler(baslangic, bugun),
+                riskDao.islenmisGunler(baslangic, bugun),
+                puanDao.islenmisGunler(baslangic, bugun),
+            )
 
-        // Kurulumdan ÖNCEsi telafi edilmiyor. UsageStats kurulumdan önceki
-        // günler için de veri verebiliyor ama uygulama o günlerde kullanıcıyı
-        // izlemiyordu; o günleri işlemek geçmişi geriye doğru uydurmak olurdu.
-        // Telafinin asıl işi, uygulama birkaç gün açılmadığında oluşan
-        // BOŞLUKLARI kapatmak (`debug.md` K-4).
-        val kurulum = tercihler.anlik().ilkKurulumTarihi
+            // Kurulumdan ÖNCEsi telafi edilmiyor. UsageStats kurulumdan önceki
+            // günler için de veri verebiliyor ama uygulama o günlerde kullanıcıyı
+            // izlemiyordu; o günleri işlemek geçmişi geriye doğru uydurmak olurdu.
+            // Telafinin asıl işi, uygulama birkaç gün açılmadığında oluşan
+            // BOŞLUKLARI kapatmak (`debug.md` K-4).
+            val kurulum = tercihler.anlik().ilkKurulumTarihi
 
-        // Donanım sayacı özet hesaplanmadan HEMEN ÖNCE örnekleniyor. Sensör
-        // yalnızca açılıştan beri biriken kümülatif sayıyı veriyor; son örnek
-        // ile gece yarısı arasındaki adımlar örneklenmezse kaybolur.
-        adimDeposu.ornekle()
+            // Donanım sayacı özet hesaplanmadan HEMEN ÖNCE örnekleniyor. Sensör
+            // yalnızca açılıştan beri biriken kümülatif sayıyı veriyor; son örnek
+            // ile gece yarısı arasındaki adımlar örneklenmezse kaybolur.
+            adimDeposu.ornekle()
 
-        return runCatching {
             (TELAFI_GUN downTo 0).forEach { geriGun ->
                 val gun = bugun.minusDays(geriGun)
                 if (kurulum != null && gun < kurulum) return@forEach
                 // Bugün hep yeniden; geçmiş günler yalnızca eksikse.
                 if (gun != bugun && gun in islenmis) return@forEach
 
-                kullanimDeposu.gunuIsle(gun, aktiviteSaglayici.gununAktivitesi(gun))
-                riskDeposu.gunuHesapla(gun)
-                // Adım/spor/gece değerleri değişti; günün puanı da değişir.
-                puanDeposu.gunuYenidenHesapla(gun)
+                val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
+                gunlukZinciriAtomik(db) {
+                    kullanimDeposu.gunuIsle(gun, aktivite)
+                    riskDeposu.gunuHesapla(gun)
+                    // Adım/spor/gece değerleri değişti; günün puanı da değişir.
+                    puanDeposu.gunuYenidenHesapla(gun)
+                }
             }
 
             // Bildirim defterine bugünün kazanımları. `birKezGunde` koruması
@@ -119,7 +134,14 @@ class GunlukOzetWorker @AssistedInject constructor(
             senkronDeposu.heartbeat()
 
             Result.success()
-        }.getOrElse { Result.retry() }
+        } catch (iptal: CancellationException) {
+            // WorkManager işi durdurduysa yerel yazma/senkron zincirini
+            // sürdürme ve yeni bir retry planlama.
+            throw iptal
+        } catch (hata: Exception) {
+            Log.w(ETIKET, "Günlük özet zinciri tamamlanamadı; yeniden denenecek", hata)
+            Result.retry()
+        }
     }
 
     /**
@@ -158,5 +180,24 @@ class GunlukOzetWorker @AssistedInject constructor(
         const val HAM_OLAY_SAKLAMA_GUN = 30L
 
         const val IS_ADI = "gunluk_ozet"
+
+        private const val ETIKET = "GunlukOzetWorker"
     }
 }
+
+/**
+ * Bir gün ancak üç kalıcı çıktısı da varsa tamamlanmıştır. Kesişim yerine
+ * yalnızca özet satırına bakmak, risk/puan aşamasındaki kısmi hatayı kalıcı
+ * bir veri boşluğuna dönüştürür.
+ */
+internal fun tamamlanmisGunler(
+    ozetGunleri: List<LocalDate>,
+    riskGunleri: List<LocalDate>,
+    puanGunleri: List<LocalDate>,
+): Set<LocalDate> = ozetGunleri.toSet()
+    .intersect(riskGunleri.toSet())
+    .intersect(puanGunleri.toSet())
+
+/** Bir günün ham olay + özet + risk + puan yazılarını tek işlem yapar. */
+internal suspend fun <T> gunlukZinciriAtomik(db: YesilizDb, blok: suspend () -> T): T =
+    db.withTransaction { blok() }

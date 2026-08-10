@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
@@ -72,8 +73,10 @@ class SenkronDeposu @Inject constructor(
                 ),
             )
             true
+        } catch (iptal: CancellationException) {
+            throw iptal
         } catch (hata: Exception) {
-            Log.d(ETIKET, "Senkron başarısız, yarın tekrar denenecek: ${hata.message}")
+            Log.w(ETIKET, "Senkron başarısız, yarın tekrar denenecek", hata)
             false
         }
     }
@@ -87,7 +90,13 @@ class SenkronDeposu @Inject constructor(
     suspend fun heartbeat() {
         val oturum = tercihler.oturum.first()
         if (oturum.misafirMi || !oturum.girisYapildiMi) return
-        runCatching { api.heartbeat() }
+        try {
+            api.heartbeat()
+        } catch (iptal: CancellationException) {
+            throw iptal
+        } catch (hata: Exception) {
+            Log.w(ETIKET, "Heartbeat gönderilemedi", hata)
+        }
     }
 
     /**

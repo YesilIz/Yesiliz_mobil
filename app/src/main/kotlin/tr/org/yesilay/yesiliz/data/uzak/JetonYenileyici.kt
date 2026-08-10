@@ -96,9 +96,18 @@ class RetrofitJetonYenileyici(
             YenilemeSonuc.Basarili(api.yenile(YenileIstek(yenilemeJetonu)))
         } catch (_: IOException) {
             YenilemeSonuc.AgHatasi
-        } catch (_: HttpException) {
-            // 401 ya da başka bir sunucu yanıtı: jeton kabul edilmedi.
-            YenilemeSonuc.Reddedildi
+        } catch (hata: HttpException) {
+            yenilemeHttpSonucu(hata.code())
         }
     }
+}
+
+/**
+ * Yalnızca istemcinin yenileme jetonunun geçersiz olduğunu kanıtlayan
+ * yanıtlar oturumu kapatabilir. 429 ve 5xx gibi geçici sunucu yanıtlarında
+ * kimlik bilgileri korunur; sonraki istek yeniden dener.
+ */
+internal fun yenilemeHttpSonucu(kod: Int): YenilemeSonuc = when (kod) {
+    400, 401, 403, 422 -> YenilemeSonuc.Reddedildi
+    else -> YenilemeSonuc.AgHatasi
 }

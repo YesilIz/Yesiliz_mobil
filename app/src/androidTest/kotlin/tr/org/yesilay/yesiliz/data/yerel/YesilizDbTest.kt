@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
+import tr.org.yesilay.yesiliz.arkaplan.gunlukZinciriAtomik
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
@@ -106,6 +107,23 @@ class YesilizDbTest {
 
         assertEquals(1, dao.sonGunler(10).size)
         assertEquals(90.0, dao.getir(tarih)!!.socialDk, 0.0)
+    }
+
+    @Test
+    fun gunlukZincirOrtadaBozulursaKismiYazmaGeriAlinir() = runTest {
+        val tarih = LocalDate.of(2026, 8, 10)
+        val dao = db.gunlukOzetDao()
+
+        try {
+            gunlukZinciriAtomik(db) {
+                dao.kaydet(GunlukOzetEntity(tarih = tarih, socialDk = 45.0))
+                error("risk hesabı benzetimli olarak bozuldu")
+            }
+        } catch (_: IllegalStateException) {
+            // Beklenen: işlem geri alınacak.
+        }
+
+        assertNull("kısmi özet satırı kalmamalı", dao.getir(tarih))
     }
 
     @Test

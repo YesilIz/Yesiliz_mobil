@@ -77,11 +77,12 @@ class YerelSahteLigDeposu @Inject constructor(
         tercihler.ligeKatildiIsaretle()
     }
 
-    override suspend fun davetGonder(isim: String) {
+    override suspend fun davetGonder(kod: String) {
+        val kodMu = DavetKodu.gecerliMi(kod)
         arkadasDao.kaydet(
             ArkadasEntity(
-                isim = isim,
-                durum = ArkadasEntity.DURUM_DAVET,
+                isim = if (kodMu) "Arkadaş ${kod.trim().uppercase().takeLast(4)}" else kod,
+                durum = if (kodMu) ArkadasEntity.DURUM_EKLENDI else ArkadasEntity.DURUM_DAVET,
                 eklenmeTarihi = LocalDate.now(saat),
             ),
         )

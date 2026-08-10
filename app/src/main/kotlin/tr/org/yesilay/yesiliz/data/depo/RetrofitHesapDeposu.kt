@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GirisIstek
@@ -64,9 +65,10 @@ class RetrofitHesapDeposu @Inject constructor(
         // hesabı bir daha silemeyiz.
         // 401 dahil her hata `false`: jeton geçersizse sunucudaki hesap
         // yerinde duruyor demektir ve kullanıcıya "silindi" denemez.
-        val silindi = runCatching { api.hesabiSil() }.isSuccess
+        val silindi = hesapSilmeIstegi { api.hesabiSil() }
+        if (!silindi) return false
         cikisYap()
-        return silindi
+        return true
     }
 
     private suspend fun cagir(blok: suspend () -> JetonlarDto): HesapSonuc = try {
@@ -101,4 +103,14 @@ class RetrofitHesapDeposu @Inject constructor(
         const val KOD_YETKISIZ = 401
         const val KOD_DOGRULAMA = 422
     }
+}
+
+/** Beklenen uzak hatayı görünür `false` yapar; iş iptalini asla yutmaz. */
+internal suspend fun hesapSilmeIstegi(istek: suspend () -> Unit): Boolean = try {
+    istek()
+    true
+} catch (iptal: CancellationException) {
+    throw iptal
+} catch (_: Exception) {
+    false
 }

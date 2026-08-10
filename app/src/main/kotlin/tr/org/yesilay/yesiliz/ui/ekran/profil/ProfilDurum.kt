@@ -22,11 +22,10 @@ data class ProfilDurum(
     /** Silme sürerken onay butonu pasif ve göstergeli olsun diye. */
     val siliniyor: Boolean = false,
     /**
-     * Silme bitti ama sunucudaki hesap duruyor.
+     * Silme isteği tamamlanamadı; hiçbir veri silinmedi.
      *
-     * Kullanıcıyı sessizce dışarı atmak yerine bu uyarı gösteriliyor:
-     * "kalıcı sil" dedikten sonra sunucuda kopya kalmışsa bunu bilmeye
-     * hakkı var (`debug.md` K-2).
+     * Kullanıcının kimliği ve yerel verisi yeniden deneyebilmesi için
+     * korunuyor; ekran bunu açıkça bildiriyor.
      */
     val sunucudaKaldiUyarisi: Boolean = false,
     /** Gerçek bir hesapla giriş yapıldı mı — misafirde "Çıkış yap" yok. */

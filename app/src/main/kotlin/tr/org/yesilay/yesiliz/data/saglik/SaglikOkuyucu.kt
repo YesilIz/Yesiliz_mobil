@@ -12,6 +12,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import tr.org.yesilay.yesiliz.data.depo.GunlukAktivite
 import tr.org.yesilay.yesiliz.domain.kullanim.AktiviteKaynagi
 import tr.org.yesilay.yesiliz.domain.kullanim.AktiviteOturumu
@@ -81,7 +82,10 @@ class SaglikOkuyucu @Inject constructor(
         val istemci = istemci() ?: return false
         return runCatching {
             istemci.permissionController.getGrantedPermissions().contains(ARKA_PLAN_IZNI)
-        }.getOrDefault(false)
+        }.getOrElse { hata ->
+            if (hata is CancellationException) throw hata
+            false
+        }
     }
 
     private fun arkaPlanDestekli(): Boolean {
@@ -114,7 +118,10 @@ class SaglikOkuyucu @Inject constructor(
         val istemci = istemci() ?: return false
         return runCatching {
             istemci.permissionController.getGrantedPermissions().containsAll(gerekliIzinler)
-        }.getOrDefault(false)
+        }.getOrElse { hata ->
+            if (hata is CancellationException) throw hata
+            false
+        }
     }
 
     /**
@@ -141,6 +148,7 @@ class SaglikOkuyucu @Inject constructor(
             )
             GunlukAktivite(adim = (sonuc[StepsRecord.COUNT_TOTAL] ?: 0L).toDouble())
         }.getOrElse { hata ->
+            if (hata is CancellationException) throw hata
             // Sessiz `getOrDefault` bu kusuru aylarca sakladı: arka plan
             // okuması reddediliyordu, çağıran sıfır alıyordu ve hiçbir yerde
             // sebebi yazmıyordu. Sıfır dönmeye devam ediyor (güvenli taraf),
@@ -178,6 +186,7 @@ class SaglikOkuyucu @Inject constructor(
                 )
             }
         }.getOrElse { hata ->
+            if (hata is CancellationException) throw hata
             Log.w(ETIKET, "Health Connect egzersiz oturumları okunamadı ($tarih)", hata)
             emptyList()
         }

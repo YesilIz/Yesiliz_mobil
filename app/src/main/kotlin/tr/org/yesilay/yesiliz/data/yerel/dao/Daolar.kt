@@ -104,6 +104,10 @@ interface GunlukOzetDao {
     @Query("SELECT * FROM gunluk_ozet WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih ASC")
     fun araliktakilerAkisi(bas: LocalDate, bit: LocalDate): Flow<List<GunlukOzetEntity>>
 
+    /** Çok günlü hesaplar için aynı pencerenin tek seferlik okuması. */
+    @Query("SELECT * FROM gunluk_ozet WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih ASC")
+    suspend fun araliktakiler(bas: LocalDate, bit: LocalDate): List<GunlukOzetEntity>
+
     /** Bir günün özeti — Ana Sayfa canlı okuma. */
     @Query("SELECT * FROM gunluk_ozet WHERE tarih = :tarih")
     fun gununAkisi(tarih: LocalDate): Flow<GunlukOzetEntity?>
@@ -143,6 +147,10 @@ interface RiskSonucDao {
         """,
     )
     suspend fun oncekiler(tarih: LocalDate, gun: Int): List<RiskSonucEntity>
+
+    /** Worker telafisi: risk çıktısı gerçekten yazılmış günler. */
+    @Query("SELECT tarih FROM risk_sonuc WHERE tarih BETWEEN :bas AND :bit")
+    suspend fun islenmisGunler(bas: LocalDate, bit: LocalDate): List<LocalDate>
 }
 
 @Dao
@@ -255,6 +263,10 @@ interface PuanGunlukDao {
     /** Lig sıralamasının girdisi — haftalık toplam (SenkronDeposu). */
     @Query("SELECT COALESCE(SUM(puanNet), 0) FROM puan_gunluk WHERE tarih BETWEEN :bas AND :bit")
     suspend fun aralikToplami(bas: LocalDate, bit: LocalDate): Int
+
+    /** Worker telafisi: puan çıktısı gerçekten yazılmış günler. */
+    @Query("SELECT tarih FROM puan_gunluk WHERE tarih BETWEEN :bas AND :bit")
+    suspend fun islenmisGunler(bas: LocalDate, bit: LocalDate): List<LocalDate>
 }
 
 @Dao

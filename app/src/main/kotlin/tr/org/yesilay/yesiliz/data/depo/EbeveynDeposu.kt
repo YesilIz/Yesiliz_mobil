@@ -1,5 +1,6 @@
 package tr.org.yesilay.yesiliz.data.depo
 
+import kotlinx.coroutines.CancellationException
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto
 import tr.org.yesilay.yesiliz.data.uzak.EslestirIstek
@@ -42,6 +43,8 @@ class EbeveynDeposu @Inject constructor(
      */
     suspend fun kodUret(rol: String): Pair<String, Boolean> = try {
         api.eslestirmeKodu(EslestirmeKoduIstek(rol)).kod to true
+    } catch (iptal: CancellationException) {
+        throw iptal
     } catch (_: Exception) {
         // Çevrimdışı: yerel kod üretiliyor ama karşı cihaz bunu
         // doğrulayamaz. Ekran "çevrimdışı" rozetiyle bunu belirtiyor.
@@ -66,6 +69,8 @@ class EbeveynDeposu @Inject constructor(
                 KOD_SURESI_DOLDU -> "Kodun süresi dolmuş. Yeni bir kod üretin."
                 else -> "Eşleştirme tamamlanamadı."
             }
+        } catch (iptal: CancellationException) {
+            throw iptal
         } catch (_: Exception) {
             // Ağ hatası. Eşleşme İŞARETLENMİYOR: kodu doğrulayan tek yer
             // sunucu, ona ulaşılamıyorsa doğrulanmış bir eşleşme yok.
@@ -76,6 +81,8 @@ class EbeveynDeposu @Inject constructor(
     /** Çocuğun **özeti** — ham veri değil. Sunucu yoksa `null`. */
     suspend fun cocukOzeti(): EbeveynOzetDto? = try {
         api.ebeveynOzeti()
+    } catch (iptal: CancellationException) {
+        throw iptal
     } catch (_: Exception) {
         null
     }

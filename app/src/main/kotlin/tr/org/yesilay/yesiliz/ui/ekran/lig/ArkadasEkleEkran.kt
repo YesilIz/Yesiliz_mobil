@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.PermContactCalendar
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,10 +38,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
+import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -89,6 +94,15 @@ fun ArkadasEkleEkran(
                         panoyaKopyala(context, durum.davetKodu)
                         viewModel.kopyalandiIsaretle()
                     },
+                )
+
+                DavetKoduGirisi(
+                    kod = durum.girilenKod,
+                    hata = durum.kodHatasi,
+                    islemde = durum.kodIslemde,
+                    eklendi = durum.kodlaEklendi,
+                    onKodDegis = viewModel::davetKodunuDegistir,
+                    onEkle = viewModel::kodlaArkadasEkle,
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
@@ -143,6 +157,55 @@ fun ArkadasEkleEkran(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DavetKoduGirisi(
+    kod: String,
+    hata: String?,
+    islemde: Boolean,
+    eklendi: Boolean,
+    onKodDegis: (String) -> Unit,
+    onEkle: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Arkadaşının kodunu ekle",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MetinBirincil,
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        OutlinedTextField(
+            value = kod,
+            onValueChange = onKodDegis,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Davet kodu") },
+            placeholder = { Text("YSZ-7K2Q") },
+            singleLine = true,
+            enabled = !islemde,
+            isError = hata != null,
+            supportingText = hata?.let { mesaj -> { Text(mesaj) } },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Characters,
+                imeAction = ImeAction.Done,
+            ),
+        )
+        if (eklendi) {
+            Text(
+                text = "Arkadaşın eklendi.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = YesilAna,
+                modifier = Modifier.padding(top = Bosluk.S),
+            )
+        }
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        BirincilButon(
+            metin = if (islemde) "Ekleniyor…" else "Kodla arkadaş ekle",
+            onTikla = onEkle,
+            etkin = kod.isNotBlank() && !islemde,
+        )
     }
 }
 

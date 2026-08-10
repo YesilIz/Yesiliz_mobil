@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
@@ -45,6 +46,8 @@ class SunucuLigDeposu @Inject constructor(
         val ulasildi = try {
             uzak.tazele()
             true
+        } catch (iptal: CancellationException) {
+            throw iptal
         } catch (hata: Exception) {
             Log.w(ETIKET, "lig tazelenemedi", hata)
             false
@@ -62,6 +65,8 @@ class SunucuLigDeposu @Inject constructor(
         val ulasildi = try {
             uzak.tazele()
             true
+        } catch (iptal: CancellationException) {
+            throw iptal
         } catch (hata: Exception) {
             Log.w(ETIKET, "arkadaş listesi alınamadı", hata)
             false
@@ -78,9 +83,10 @@ class SunucuLigDeposu @Inject constructor(
         sessizce("lige katılınamadı", Unit) { uzak.ligeKatil() }
     }
 
-    override suspend fun davetGonder(isim: String) {
-        sessizce("davet gönderilemedi", Unit) { uzak.davetGonder(isim) }
-    }
+    // Kod hatası kullanıcıya gösterilmeli; boş başarıya indirgenirse ekran
+    // geçersiz kod için "eklendi" der. ViewModel beklenen HTTP/ağ hatalarını
+    // alan bazında gösteriyor.
+    override suspend fun davetGonder(kod: String) = uzak.davetGonder(kod)
 
     /** Öneri listesi sunucuda yok; rehber de okunmuyor (§12 K14). */
     override suspend fun onerilenler(): List<OnerilenKisi> = emptyList()
@@ -147,6 +153,8 @@ class SunucuHesapDeposu @Inject constructor(
 /** Ağ hatasında [bosDeger] döner ama **iz bırakır** (CLAUDE.md §9). */
 private suspend fun <T> sessizce(mesaj: String, bosDeger: T, blok: suspend () -> T): T = try {
     blok()
+} catch (iptal: CancellationException) {
+    throw iptal
 } catch (hata: Exception) {
     Log.w(ETIKET, mesaj, hata)
     bosDeger

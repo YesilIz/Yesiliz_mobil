@@ -59,8 +59,8 @@ class RetrofitLigDeposu @Inject constructor(
      * `ArkadasEkleEkran`'daki "Ekle" butonu öneri listesinden geldiği için
      * yalnızca yerel depoda anlamlı; gerçek akış "davet kodu paylaş".
      */
-    override suspend fun davetGonder(isim: String) {
-        arkadaslar.value = api.davetGonder(DavetIstek(isim))
+    override suspend fun davetGonder(kod: String) {
+        arkadaslar.value = api.davetGonder(DavetIstek(kod.trim().uppercase()))
             .map { Arkadas(it.isim, it.davetBekliyorMu) }
     }
 

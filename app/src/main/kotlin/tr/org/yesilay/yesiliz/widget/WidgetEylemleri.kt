@@ -2,6 +2,7 @@ package tr.org.yesilay.yesiliz.widget
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.glance.GlanceId
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
@@ -10,6 +11,7 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.CancellationException
 import tr.org.yesilay.yesiliz.MainActivity
 import tr.org.yesilay.yesiliz.domain.gorev.UykuAraligi
 
@@ -72,9 +74,13 @@ class UykuCevapEylemi : ActionCallback {
  * Widget hiç eklenmemişse `updateAll` sessizce hiçbir şey yapmıyor.
  */
 suspend fun widgetlariTazele(baglam: Context) {
-    runCatching {
+    try {
         EkranSuresiWidget().updateAll(baglam)
         GununSorusuWidget().updateAll(baglam)
+    } catch (iptal: CancellationException) {
+        throw iptal
+    } catch (hata: Exception) {
+        Log.w("YesilizWidget", "Widget'lar tazelenemedi", hata)
     }
 }
 
@@ -83,4 +89,8 @@ suspend fun widgetSayisi(baglam: Context): Int = runCatching {
     val yonetici = GlanceAppWidgetManager(baglam)
     yonetici.getGlanceIds(EkranSuresiWidget::class.java).size +
         yonetici.getGlanceIds(GununSorusuWidget::class.java).size
-}.getOrDefault(0)
+}.getOrElse { hata ->
+    if (hata is CancellationException) throw hata
+    Log.w("YesilizWidget", "Widget sayısı okunamadı", hata)
+    0
+}

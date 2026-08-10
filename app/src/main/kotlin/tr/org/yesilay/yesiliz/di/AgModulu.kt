@@ -152,14 +152,13 @@ object AgModulu {
             .connectTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .readTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
 
-        // Yalnızca debug'da gövdeyi de logluyor — "Sunucuya ulaşılamıyor"
-        // gibi hataların gerçek sebebini (401 mi, DNS mi, zaman aşımı mı)
-        // logcat'ten görebilmek için. Release'de sınıf sınıf yolunda olsa
-        // da hiç eklenmiyor, tek satır bile loglanmıyor.
+        // Debug günlüğü yalnızca yöntem/URL/yanıt kodu yazar. BODY düzeyi
+        // giriş-kayıt şifrelerini ve yanıttaki erişim/yenileme jetonlarını;
+        // HEADERS düzeyi de Authorization başlığını logcat'e sızdırır.
+        // Hata türünü (401 mi, 500 mü, zaman aşımı mı) BASIC düzeyiyle de
+        // ayırt edebiliyoruz. Release'de interceptor hiç eklenmiyor.
         if (BuildConfig.DEBUG) {
-            olusturucu.addInterceptor(
-                HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY },
-            )
+            olusturucu.addInterceptor(guvenliHttpGunlugu())
         }
 
         return olusturucu.build()
@@ -174,3 +173,18 @@ object AgModulu {
         .build()
         .create(YesilizApi::class.java)
 }
+
+/**
+ * Debug ağ günlüğünün güvenlik sınırı.
+ *
+ * Başlıklar BASIC düzeyinde yazılmıyor; yine de ileride seviye değiştirilse
+ * bile iki yeniden kullanılabilir kimlik bilgisini redaksiyon listesinde
+ * tutuyoruz. Düz metin JSON şifresi alan bazlı güvenle maskelenemediği için
+ * gövde günlüğüne hiçbir koşulda geçilmiyor.
+ */
+internal fun guvenliHttpGunlugu(): HttpLoggingInterceptor =
+    HttpLoggingInterceptor().apply {
+        redactHeader("Authorization")
+        redactHeader("Cookie")
+        level = HttpLoggingInterceptor.Level.BASIC
+    }
