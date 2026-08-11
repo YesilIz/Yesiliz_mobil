@@ -128,6 +128,7 @@ abstract class YesilizDb : RoomDatabase() {
                 AD,
             )
                 .addMigrations(*TUM_GECISLER)
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 .also { ornek = it }
         }

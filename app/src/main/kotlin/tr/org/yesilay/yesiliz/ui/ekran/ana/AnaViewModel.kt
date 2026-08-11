@@ -149,7 +149,7 @@ class AnaViewModel @Inject constructor(
                         selamlama = selamlama(),
                         isim = ara.isim,
                         serideGun = ara.seriGun,
-                        agacEvresi = agacEvresi(ara.seriGun),
+                        agacEvresi = agacEvresi(ara.toplamPuan),
                         puan = ara.toplamPuan,
                         ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
                         hedefDakika = ara.hedefDk,
@@ -226,18 +226,24 @@ class AnaViewModel @Inject constructor(
     }
 
     /**
-     * Ağaç evresi **seriden** türüyor, risk bandından değil.
+     * Ağaç evresi **toplam puandan** türüyor, risk bandından değil.
      *
      * `spec-puan.md` ilkesi: "durumu değil, çabayı ödüllendir". Ağacı risk
      * bandına bağlamak kötü bir günde ağacı kurutup kullanıcıyı cezalandırırdı.
-     * Seriye bağlıyken ağaç yalnızca büyüyor.
+     * Toplam puan da seri gibi yalnızca artıyor (§4 "ceza puanı yok"), yani
+     * ağaç hiçbir koşulda geri gitmiyor.
+     *
+     * Son iki eşik ödül kademeleriyle hizalı (§12 K28): 5.000 ve 10.000.
      */
-    private fun agacEvresi(seriGun: Int): Int = when {
-        seriGun >= EVRE6_GUN -> 6
-        seriGun >= EVRE5_GUN -> 5
-        seriGun >= EVRE4_GUN -> 4
-        seriGun >= EVRE3_GUN -> 3
-        seriGun >= EVRE2_GUN -> 2
+    private fun agacEvresi(puan: Int): Int = when {
+        puan >= EVRE9_PUAN -> 9
+        puan >= EVRE8_PUAN -> 8
+        puan >= EVRE7_PUAN -> 7
+        puan >= EVRE6_PUAN -> 6
+        puan >= EVRE5_PUAN -> 5
+        puan >= EVRE4_PUAN -> 4
+        puan >= EVRE3_PUAN -> 3
+        puan >= EVRE2_PUAN -> 2
         else -> 1
     }
 
@@ -275,11 +281,15 @@ class AnaViewModel @Inject constructor(
         const val OGLE_BAS = 12
         const val AKSAM_BAS = 18
 
-        const val EVRE2_GUN = 3
-        const val EVRE3_GUN = 7
-        const val EVRE4_GUN = 14
-        const val EVRE5_GUN = 30
-        const val EVRE6_GUN = 60
+        /** Ağacın 9 büyüme evresinin toplam puan eşikleri (§12 K2). */
+        const val EVRE2_PUAN = 100
+        const val EVRE3_PUAN = 250
+        const val EVRE4_PUAN = 500
+        const val EVRE5_PUAN = 1_000
+        const val EVRE6_PUAN = 2_000
+        const val EVRE7_PUAN = 3_500
+        const val EVRE8_PUAN = 5_000
+        const val EVRE9_PUAN = 10_000
     }
 }
 

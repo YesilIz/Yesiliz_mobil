@@ -77,7 +77,7 @@ fun IlkSonucEkran(
             )
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
             Image(
-                painter = painterResource(R.drawable.agac_evre2_narenciye),
+                painter = painterResource(R.drawable.tree_phase_2),
                 contentDescription = null,
                 modifier = Modifier.height(Olcu.AgacBoyu),
             )
