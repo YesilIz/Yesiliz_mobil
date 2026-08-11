@@ -18,6 +18,10 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Backend varsayılanlarıyla aynı, 10 kişilik örnek grupta çakışmayan eşikler. */
+internal const val ORNEK_LIG_YUKSELEN = 3
+internal const val ORNEK_LIG_DUSEN = 3
+
 /**
  * [LigDeposu]'nun MVP uygulaması — CLAUDE.md §12 K7'de vaat edilen sınıf.
  *
@@ -52,8 +56,8 @@ class YerelSahteLigDeposu @Inject constructor(
         LigOzeti(
             ligAdi = LIG_ADI,
             kalanGun = KALAN_GUN,
-            yukselen = YUKSELEN,
-            dusen = DUSEN,
+            yukselen = ORNEK_LIG_YUKSELEN,
+            dusen = ORNEK_LIG_DUSEN,
             siralama = siralamaKur(eklenenler.map { it.isim }, puan, benIsim),
             // Boş durum: ne lige katılmış ne de arkadaşı var.
             katildiMi = katildi || eklenenler.isNotEmpty(),
@@ -130,9 +134,6 @@ class YerelSahteLigDeposu @Inject constructor(
     private companion object {
         const val LIG_ADI = "Filiz Ligi"
         const val KALAN_GUN = 5
-        const val YUKSELEN = 7
-        const val DUSEN = 7
-
         /** Misafirin görünür adı — AnaViewModel, Ödüller, Profil ile aynı. */
         const val SABIT_ISIM = "Misafir"
 
