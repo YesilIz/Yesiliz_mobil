@@ -284,10 +284,18 @@ class Tercihler @Inject constructor(
      * değiştirilebiliyor (`debug.md` O-14).
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
-        p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
+        etkinSunucuTabani(
+            debugMi = BuildConfig.DEBUG,
+            saklanan = p[SUNUCU_TABANI],
+            varsayilan = VARSAYILAN_SUNUCU,
+        )
     }
 
     suspend fun sunucuTabaniniKaydet(adres: String) {
+        // Geliştirici adresi yalnızca debug aracıdır. Eski/test bir
+        // kurulumdan kalmış değer yayın istemcisinin token veya özetlerini
+        // başka bir sunucuya yönlendirememeli.
+        if (!BuildConfig.DEBUG) return
         depo.edit { p ->
             // Sondaki eğik çizgi Retrofit ve OkHttp için şart; kullanıcıya
             // yazdırmak yerine burada tamamlanıyor.
@@ -360,4 +368,15 @@ class Tercihler @Inject constructor(
         /** Hedef henüz belirlenmediyse — onboarding'i atlayan kullanıcı. */
         const val VARSAYILAN_HEDEF = 240
     }
+}
+
+/** Yayın istemcisi kalıcı bir debug sunucu geçersiz kılmasını asla kullanmaz. */
+internal fun etkinSunucuTabani(
+    debugMi: Boolean,
+    saklanan: String?,
+    varsayilan: String,
+): String = if (debugMi) {
+    saklanan?.takeIf { it.isNotBlank() } ?: varsayilan
+} else {
+    varsayilan
 }

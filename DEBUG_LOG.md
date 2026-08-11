@@ -495,6 +495,24 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A successful destructive action generated redundant network traffic and an alarming failure log, obscuring real account problems.
 - Status: Fixed. Logout and deletion share non-cancellable local cleanup, while only an actual logout calls `/auth/cikis`. The temporary mission account was deleted through the UI and a PostgreSQL count confirmed zero remaining `mission.%` accounts.
 
+## DBG-055 — Parent summary presented an arbitrarily old risk band as current
+
+- Severity: P1 — family-data truthfulness
+- Area: backend parent summary endpoint
+- Evidence: Screen-time bars were limited to the latest seven calendar days, but the risk query independently returned the newest row in the entire history. If a child stopped sharing or the daily worker stopped, a weeks-old band was still rendered beside the current seven-day summary with no age warning.
+- Expected: The risk label represents the same seven-day window as the rest of the parent summary; without a row in that window it is absent.
+- Actual: A parent could act on stale wellbeing information believing it described the child's current state.
+- Status: Fixed. The risk query now shares the summary window's lower bound. A regression creates only an eight-day-old risk row and proves the endpoint returns no current band; the full backend suite passes 103 tests.
+
+## DBG-056 — A persisted developer server override could redirect a release build
+
+- Severity: P1 — network/security boundary
+- Areas: server-base preference and network dependency construction
+- Evidence: The developer-only address control was hidden in release, but the persisted DataStore value remained authoritative. Installing/upgrading a release over a debug build, restoring app data or another write path could therefore make production send credentials and behavioral data to the old development host despite the release build's compile-time HTTPS guard.
+- Expected: Release traffic is locked to the build-time `API_TABANI`; only debug builds can read or save a runtime override.
+- Actual: The release guard validated one URL while the live client could silently use another persisted value.
+- Status: Fixed. Release ignores the stored value and refuses to persist runtime overrides; debug retains the device-testing workflow. Two JVM regressions prove both branches, and release Kotlin compilation plus all 234 app JVM tests pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

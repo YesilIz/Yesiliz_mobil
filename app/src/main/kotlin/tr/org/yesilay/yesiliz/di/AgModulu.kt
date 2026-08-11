@@ -31,11 +31,11 @@ import javax.inject.Singleton
 /**
  * Ağ katmanı — Faz 2 backend'i (`backend/`).
  *
- * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`),
- * varsayılanı build türünden geliyor (`BuildConfig.API_TABANI`): release'de
- * gerçek HTTPS alan adı, debug'da emülatörün `10.0.2.2`'si. Adres ayrıca
- * Profil › Geliştirici'den değiştirilebiliyor — gerçek cihazda geliştirme
- * makinesinin LAN adresine bağlanabilmek için (`debug.md` O-14).
+ * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`).
+ * Debug'da Profil › Geliştirici'den değiştirilebilir; release'de kalıcı
+ * geçersiz kılmalar yok sayılır ve yalnızca `BuildConfig.API_TABANI`
+ * kullanılır. Böylece test kurulumundan kalmış bir adres yayın trafiğini
+ * başka bir sunucuya taşıyamaz.
  *
  * Zaman aşımları **kısa** (5 sn): backend kapalıyken kullanıcı 30 saniye
  * boş ekrana bakmasın, `Yedekli*Deposu` hızlıca yerel veriye düşsün.

@@ -225,7 +225,11 @@ def ozet(
 
     son_risk = db.scalar(
         select(RiskSonuc)
-        .where(RiskSonuc.kullanici_id == cocuk.id)
+        .where(
+            RiskSonuc.kullanici_id == cocuk.id,
+            RiskSonuc.tarih >= bas,
+            RiskSonuc.tarih <= bugun,
+        )
         .order_by(RiskSonuc.tarih.desc())
         .limit(1)
     )

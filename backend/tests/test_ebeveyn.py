@@ -7,6 +7,7 @@ import datetime as dt
 from sqlalchemy import select
 
 from app.modeller import EslestirmeKodu
+from app.zaman import yerel_bugun
 
 
 def _eslestir(istemci, kullanici_kur):
@@ -178,6 +179,32 @@ def test_ozet_ham_veri_icermiyor(istemci, kullanici_kur):
 
     yasakli = {"socialDk", "paketAdi", "uygulamalar", "oturum", "kategoriler"}
     assert not (set(ozet.keys()) & yasakli)
+
+
+def test_ozet_yedi_gunden_eski_riski_guncel_gibi_gostermez(istemci, kullanici_kur):
+    cocuk_basliklar, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
+    eski_gun = (yerel_bugun() - dt.timedelta(days=8)).isoformat()
+    yanit = istemci.post(
+        "/ozet",
+        json={
+            "riskler": [
+                {
+                    "tarih": eski_gun,
+                    "S": 300.0,
+                    "R": 62.0,
+                    "gosterilenBant": "ORTA",
+                    "trend": "IYILESIYOR",
+                }
+            ]
+        },
+        headers=cocuk_basliklar,
+    )
+    assert yanit.status_code == 200
+
+    ozet = istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).json()
+
+    assert ozet["bant"] is None
+    assert ozet["trend"] is None
 
 
 def test_bir_cihaz_ayni_anda_yalnizca_bir_eslesmede_olabilir(istemci, kullanici_kur):
