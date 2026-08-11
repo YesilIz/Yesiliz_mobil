@@ -16,8 +16,8 @@ import kotlinx.coroutines.CancellationException
 import tr.org.yesilay.yesiliz.data.depo.GunlukAktivite
 import tr.org.yesilay.yesiliz.domain.kullanim.AktiviteKaynagi
 import tr.org.yesilay.yesiliz.domain.kullanim.AktiviteOturumu
+import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,7 +44,7 @@ import javax.inject.Singleton
 @Singleton
 class SaglikOkuyucu @Inject constructor(
     @ApplicationContext private val baglam: Context,
-    private val zon: ZoneId,
+    private val saat: Clock,
 ) {
 
     /**
@@ -192,10 +192,13 @@ class SaglikOkuyucu @Inject constructor(
         }
     }
 
-    private fun gunAraligi(tarih: LocalDate): TimeRangeFilter = TimeRangeFilter.between(
-        tarih.atStartOfDay(zon).toLocalDateTime(),
-        tarih.plusDays(1).atStartOfDay(zon).toLocalDateTime(),
-    )
+    private fun gunAraligi(tarih: LocalDate): TimeRangeFilter {
+        val zon = saat.zone
+        return TimeRangeFilter.between(
+            tarih.atStartOfDay(zon).toLocalDateTime(),
+            tarih.plusDays(1).atStartOfDay(zon).toLocalDateTime(),
+        )
+    }
 
     private fun istemci(): HealthConnectClient? =
         if (kullanilabilir()) {

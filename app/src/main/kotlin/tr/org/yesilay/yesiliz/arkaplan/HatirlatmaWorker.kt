@@ -36,6 +36,7 @@ class HatirlatmaWorker @AssistedInject constructor(
     @Assisted parametreler: WorkerParameters,
     private val tercihler: Tercihler,
     private val bildirimDeposu: BildirimDeposu,
+    private val isPlanlayici: IsPlanlayici,
 ) : CoroutineWorker(baglam, parametreler) {
 
     override suspend fun doWork(): Result {
@@ -54,6 +55,10 @@ class HatirlatmaWorker @AssistedInject constructor(
         // olsa bile kullanıcı Bildirimler ekranında görebilsin.
         bildirimDeposu.hatirlatma(baslik, govde)
         sistemBildirimiGonder(baslik, govde, aksamMi)
+
+        // 24 saatlik geçen-süre periyodu DST veya saat dilimi değişiminde
+        // duvar saatinden kaymasın; sonraki takvim anını her koşuda yenile.
+        isPlanlayici.hatirlatmayiPlanla(saatler)
 
         return Result.success()
     }

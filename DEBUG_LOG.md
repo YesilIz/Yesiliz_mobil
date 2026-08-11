@@ -513,6 +513,24 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: The release guard validated one URL while the live client could silently use another persisted value.
 - Status: Fixed. Release ignores the stored value and refuses to persist runtime overrides; debug retains the device-testing workflow. Two JVM regressions prove both branches, and release Kotlin compilation plus all 234 app JVM tests pass.
 
+## DBG-057 — A running process kept using the time zone from app startup
+
+- Severity: P1 — daily data integrity
+- Areas: shared clock, UsageStats windows, Health Connect windows and date-based UI/workers
+- Evidence: Hilt constructed singleton `ZoneId.systemDefault()` and `Clock.system(zon)` objects once. Android can keep an app process alive while the user travels or changes the system zone, so every later “today”, local-midnight and usage-window calculation continued using the old zone until process death.
+- Expected: Each operation obtains the current system zone while tests can still inject a fixed clock.
+- Actual: After a zone change, usage/steps could be attributed to the wrong calendar day and notification labels or risk inputs could remain one day behind/ahead.
+- Status: Fixed. Production now injects a `Clock` that re-reads the system zone on each access, and all former singleton-zone consumers read that clock at operation time. A regression changes the clock's provided zone without recreating it and proves `LocalDate.now` and the visible zone both change; release and Android-test compilation pass.
+
+## DBG-058 — “Daily” background work drifted from the chosen wall-clock time
+
+- Severity: P2 — reminder/reliability
+- Areas: nightly summary and daily reminder WorkManager schedules
+- Evidence: Both jobs used an initial local-time delay followed by a fixed 24-hour periodic interval. WorkManager periods are elapsed durations, not recurring calendar times; DST and time-zone changes therefore moved the promised morning/evening notification and nightly 03:00 processing by an hour or more. `KEEP` also preserved the stale schedule when the app reopened.
+- Expected: The next local target is recalculated after every run and on app startup using current zone rules.
+- Actual: A user could select 09:00 but receive the reminder at 08:00/10:00 after a clock transition, indefinitely.
+- Status: Fixed. WorkManager 2.11's explicit next-schedule override is updated in-place after each worker run and at startup, avoiding cancellation of a running job. Calendar regressions prove the spring DST day targets the real 03:00 instant rather than adding 24 hours and that a passed target rolls to the next local day. Forced suites pass 30 core-risk + 237 app JVM tests and lint has zero errors.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

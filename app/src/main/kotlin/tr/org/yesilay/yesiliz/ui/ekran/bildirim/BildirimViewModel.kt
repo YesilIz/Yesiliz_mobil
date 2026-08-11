@@ -26,14 +26,12 @@ import tr.org.yesilay.yesiliz.domain.bildirim.BildirimTuru
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
 class BildirimViewModel @Inject constructor(
     private val depo: BildirimDeposu,
     private val saat: Clock,
-    private val zon: ZoneId,
     guncelGun: GuncelGun,
 ) : ViewModel() {
 
@@ -42,6 +40,7 @@ class BildirimViewModel @Inject constructor(
         guncelGun.akis,
     ) { kayitlar, bugun ->
         val simdi = Instant.now(saat)
+        val zon = saat.zone
 
         // Gruplar, kayıtların gerçekten düştüğü gruplarla sınırlı —
         // boş "DÜN" başlığı göstermek ekranı yalancı doldurur.

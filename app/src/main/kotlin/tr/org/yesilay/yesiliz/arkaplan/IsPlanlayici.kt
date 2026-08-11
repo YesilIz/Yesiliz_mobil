@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ExperimentalWorkRequestBuilderApi
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -12,9 +13,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import java.time.Clock
 import java.time.Duration
-import java.time.LocalDate
+import java.time.Instant
 import java.time.LocalTime
-import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,21 +32,24 @@ import javax.inject.Singleton
 @Singleton
 class IsPlanlayici @Inject constructor(
     @ApplicationContext private val baglam: Context,
-    private val zon: ZoneId,
     private val saat: Clock,
 ) {
 
     private val isYoneticisi get() = WorkManager.getInstance(baglam)
 
     /**
-     * Gecelik işi planlar. `KEEP` ile: uygulama her açılışta yeniden
-     * planlanmıyor, yoksa periyot sürekli baştan başlar ve iş hiç koşmaz.
+     * Gecelik işi bir sonraki gerçek yerel 03:00 anına bağlar. `UPDATE`
+     * çalışan işi iptal etmeden takvimi yeniler; sabit 24 saat eklemez.
      */
+    @OptIn(ExperimentalWorkRequestBuilderApi::class)
     fun gecelikPlanla() {
         val istek = PeriodicWorkRequestBuilder<GunlukOzetWorker>(
             Duration.ofDays(1),
         )
-            .setInitialDelay(geceyeKalanSure())
+            // Periyodik aralık geçen süreye göredir; DST/seyahat sonrası
+            // duvar saatinde kayar. Bir sonraki takvim anını açıkça verip
+            // worker bitince yeniden hesaplıyoruz.
+            .setNextScheduleTimeOverride(sonrakiHedefAni(saat, CALISMA_SAATI).toEpochMilli())
             .setConstraints(
                 Constraints.Builder()
                     // Ağ yok, pil kısıtı yok: iş tamamen cihaz içi ve kısa.
@@ -58,7 +61,7 @@ class IsPlanlayici @Inject constructor(
 
         isYoneticisi.enqueueUniquePeriodicWork(
             GunlukOzetWorker.IS_ADI,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             istek,
         )
     }
@@ -96,9 +99,11 @@ class IsPlanlayici @Inject constructor(
         planla(HatirlatmaWorker.AKSAM_IS_ADI, saatler.aksamSaati, aksamMi = true)
     }
 
+    @OptIn(ExperimentalWorkRequestBuilderApi::class)
     private fun planla(isAdi: String, saatDegeri: Int, aksamMi: Boolean) {
+        val hedefSaat = LocalTime.of(saatDegeri, 0)
         val istek = PeriodicWorkRequestBuilder<HatirlatmaWorker>(Duration.ofDays(1))
-            .setInitialDelay(saateKalanSure(LocalTime.of(saatDegeri, 0)))
+            .setNextScheduleTimeOverride(sonrakiHedefAni(saat, hedefSaat).toEpochMilli())
             .setInputData(workDataOf(HatirlatmaWorker.AKSAM_MI to aksamMi))
             .build()
 
@@ -111,24 +116,20 @@ class IsPlanlayici @Inject constructor(
         )
     }
 
-    /**
-     * Bir sonraki [CALISMA_SAATI]'ne kalan süre.
-     *
-     * Gece 03:00 seçildi: gün dönmüş oluyor ve kullanıcı büyük olasılıkla
-     * uyuyor, yani işin telefonu yavaşlatması kimseyi rahatsız etmiyor.
-     */
-    private fun geceyeKalanSure(): Duration = saateKalanSure(CALISMA_SAATI)
-
-    /** Bugünkü [hedefSaat] geçtiyse yarınkine — negatif gecikme olmasın. */
-    private fun saateKalanSure(hedefSaat: LocalTime): Duration {
-        val simdi = LocalDate.now(saat).atTime(LocalTime.now(saat)).atZone(zon)
-        var hedef = simdi.toLocalDate().atTime(hedefSaat).atZone(zon)
-        if (!hedef.isAfter(simdi)) hedef = hedef.plusDays(1)
-        return Duration.between(simdi, hedef)
-    }
-
     private companion object {
         val CALISMA_SAATI: LocalTime = LocalTime.of(3, 0)
         const val ACILIS_IS_ADI = "gunluk_ozet_acilis"
     }
+}
+
+/** DST boşluk/tekrarlarını saat bölgesinin kurallarına bırakarak sıradaki hedefi bulur. */
+internal fun sonrakiHedefAni(saat: Clock, hedefSaat: LocalTime): Instant {
+    val simdi = Instant.now(saat)
+    val zon = saat.zone
+    val yerelSimdi = simdi.atZone(zon)
+    var hedef = yerelSimdi.toLocalDate().atTime(hedefSaat).atZone(zon)
+    if (!hedef.toInstant().isAfter(simdi)) {
+        hedef = yerelSimdi.toLocalDate().plusDays(1).atTime(hedefSaat).atZone(zon)
+    }
+    return hedef.toInstant()
 }

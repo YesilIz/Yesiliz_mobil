@@ -67,15 +67,19 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val senkronDeposu: SenkronDeposu,
     private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
+    private val isPlanlayici: IsPlanlayici,
 ) : CoroutineWorker(baglam, parametreler) {
 
     override suspend fun doWork(): Result {
         // İzin yoksa yapacak bir şey yok. `retry` DEĞİL: izin Ayarlar'dan
         // elle veriliyor, tekrar denemek pili boşuna yakar. İzin verildiğinde
         // uygulama açılışı zaten telafiyi tetikliyor.
-        if (!KullanimIzni.verildiMi(applicationContext)) return Result.success()
+        if (!KullanimIzni.verildiMi(applicationContext)) {
+            isPlanlayici.gecelikPlanla()
+            return Result.success()
+        }
 
-        return try {
+        val sonuc = try {
             val bugun = LocalDate.now(saat)
             val baslangic = bugun.minusDays(TELAFI_GUN)
             val islenmis = tamamlanmisGunler(
@@ -147,6 +151,10 @@ class GunlukOzetWorker @AssistedInject constructor(
             Log.w(ETIKET, "Günlük özet zinciri tamamlanamadı; yeniden denenecek", hata)
             Result.retry()
         }
+        // WorkManager'ın 24 saatlik periyodu duvar saati değildir. Sonraki
+        // 03:00 anını her tamamlanan/yeniden denenecek koşudan sonra güncelle.
+        isPlanlayici.gecelikPlanla()
+        return sonuc
     }
 
     /**

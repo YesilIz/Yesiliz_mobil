@@ -15,7 +15,7 @@ import tr.org.yesilay.yesiliz.risk.GunlukGirdi
 import tr.org.yesilay.yesiliz.risk.RiskHesapla
 import java.time.LocalDate
 import java.time.Instant
-import java.time.ZoneId
+import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,7 +37,7 @@ class KullanimDeposu @Inject constructor(
     private val kategoriDeposu: KategoriDeposu,
     private val olayDao: KullanimOlayDao,
     private val ozetDao: GunlukOzetDao,
-    private val zon: ZoneId,
+    private val saat: Clock,
 ) {
 
     /**
@@ -76,7 +76,7 @@ class KullanimDeposu @Inject constructor(
             },
         )
 
-        val cikarim = OruntuCikar.cikar(olaylar, tarih, zon)
+        val cikarim = OruntuCikar.cikar(olaylar, tarih, saat.zone)
         val gecmis = ozetDao.araliktakiler(
             tarih.minusDays(YER_DEGIS_GUN - 1L),
             tarih.minusDays(1),

@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
@@ -75,6 +76,9 @@ class AcilisViewModel @Inject constructor(
         isPlanlayici.gecelikPlanla()
 
         viewModelScope.launch {
+            // Uygulama sürüm/DST/saat dilimi değişiminden sonra ilk kez
+            // açıldığında eski 24 saatlik periyodu hemen duvar saatine bağla.
+            isPlanlayici.hatirlatmayiPlanla(tercihler.bildirimSaatleri.first())
             kategoriDeposu.seedEt()
             // Güvenli varsayılan: izin bu anda verilmemiş olabilir, gerçek sayı
             // `GecmisVeriDeposu.hesaplaGerekirse` tarafından izin onaylandıktan

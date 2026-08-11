@@ -44,6 +44,23 @@ class GuncelGunTest {
 
         assertEquals(Duration.ofMinutes(22 * 60L + 30L).toMillis(), sonrakiGuneKalanMillis(saat))
     }
+
+    @Test
+    fun `uretim saati surec acikken degisen sistem bolgesini yeniden okur`() {
+        val an = Instant.parse("2026-08-10T21:30:00Z")
+        var zon = ZoneId.of("Europe/Istanbul")
+        val saat = DegiskenSistemSaati(
+            anSaglayici = { an },
+            zonSaglayici = { zon },
+        )
+
+        assertEquals(LocalDate.of(2026, 8, 11), LocalDate.now(saat))
+
+        zon = ZoneId.of("America/New_York")
+
+        assertEquals(LocalDate.of(2026, 8, 10), LocalDate.now(saat))
+        assertEquals(ZoneId.of("America/New_York"), saat.zone)
+    }
 }
 
 private class AyarlanabilirSaat(
