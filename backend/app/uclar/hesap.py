@@ -14,6 +14,7 @@ from app.ayarlar import ayarlar
 from app.guvenlik import (
     erisim_jetonu,
     jeton_ozetle,
+    kullaniciyi_kilitle,
     mevcut_kullanici,
     rastgele_jeton,
     sifre_dogrula,
@@ -162,7 +163,7 @@ def cikis(
     jetonu üretemez. Tüm oturumları kapatmak, kopyalanmış eski bir cihaz
     jetonunun kullanıcı "çıkış" dedikten sonra yaşamasını önler.
     """
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
     for jeton in db.scalars(
         select(YenilemeJetonu).where(
             YenilemeJetonu.kullanici_id == kullanici.id,
@@ -293,7 +294,7 @@ def hesabi_sil(
     # Giriş/senkron/eşleştirme gibi kullanıcıya yazan uçlarla aynı
     # kilit. Temizlik sürerken yeni bir alt satır eklenip FK hatası ya da
     # silme sonrasında kalıntı oluşmasın.
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kid).with_for_update())
+    kullanici = kullaniciyi_kilitle(db, kid)
 
     db.execute(delete(Heartbeat).where(Heartbeat.kullanici_id == kid))
     db.execute(delete(RiskSonuc).where(RiskSonuc.kullanici_id == kid))

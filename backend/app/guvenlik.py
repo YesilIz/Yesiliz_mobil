@@ -89,3 +89,20 @@ def mevcut_kullanici(
     if kullanici is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
     return kullanici
+
+
+def kullaniciyi_kilitle(db: Session, kullanici_id: int) -> Kullanici:
+    """Korunan yazma boyunca hesabın silinemeyeceğini garanti eder.
+
+    Kimlik bağımlılığının ilk SELECT'i ile uçtaki yazma arasında başka bir
+    istek hesabı silebilir. Kilit sorgusunun boş sonucunu yok saymak,
+    ardından yabancı anahtarlı satır ekleyip 500 üretmek demekti.
+    """
+    kullanici = db.scalar(
+        select(Kullanici)
+        .where(Kullanici.id == kullanici_id)
+        .with_for_update()
+    )
+    if kullanici is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
+    return kullanici

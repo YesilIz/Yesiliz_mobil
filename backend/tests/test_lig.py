@@ -204,3 +204,32 @@ def test_gorunmeyen_kullanici_kendi_satirini_goruyor(istemci, kullanici_kur):
     # hiç öğrenemezdi.
     assert [s["isim"] for s in yanit["siralama"]] == ["Turan"]
     assert yanit["gorunuyorMuyum"] is False
+
+
+def test_gorunurluk_ozet_paylasmadan_hemen_kapanir(istemci, kullanici_kur):
+    """Gizlilik anahtarı `/ozet` ve veri paylaşımı rızasına bağlı değildir."""
+    ben, _ = kullanici_kur(eposta="ben2@b.com")
+    oteki, _ = kullanici_kur(ad="Gizli", eposta="gizli@b.com")
+    istemci.post("/lig/katil", headers=ben)
+    istemci.post("/lig/katil", headers=oteki)
+
+    yanit = istemci.post(
+        "/lig/gorunurluk", headers=oteki, json={"gorunur": False}
+    )
+
+    assert yanit.status_code == 200
+    assert istemci.get("/lig", headers=oteki).json()["gorunuyorMuyum"] is False
+    isimler = [s["isim"] for s in istemci.get("/lig", headers=ben).json()["siralama"]]
+    assert "Gizli" not in isimler
+
+
+def test_lige_katilim_ilk_anda_gizli_olabilir(istemci, kullanici_kur):
+    """Yeni hafta/üyelik, cihazdaki kapalı tercihi tekrar açmamalı."""
+    gizli, _ = kullanici_kur(eposta="ilk-gizli@b.com")
+
+    yanit = istemci.post(
+        "/lig/katil", headers=gizli, json={"gorunur": False}
+    ).json()
+
+    assert yanit["katildiMi"] is True
+    assert yanit["gorunuyorMuyum"] is False

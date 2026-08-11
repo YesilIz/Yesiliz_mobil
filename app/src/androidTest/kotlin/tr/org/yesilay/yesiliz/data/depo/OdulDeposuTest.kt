@@ -23,6 +23,8 @@ import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
 import tr.org.yesilay.yesiliz.data.uzak.JetonlarDto
 import tr.org.yesilay.yesiliz.data.uzak.KayitIstek
 import tr.org.yesilay.yesiliz.data.uzak.KodYanit
+import tr.org.yesilay.yesiliz.data.uzak.LigGorunurlukIstek
+import tr.org.yesilay.yesiliz.data.uzak.LigKatilIstek
 import tr.org.yesilay.yesiliz.data.uzak.LigYanit
 import tr.org.yesilay.yesiliz.data.uzak.OdulSecimIstek
 import tr.org.yesilay.yesiliz.data.uzak.OdulSecimiDto
@@ -113,7 +115,8 @@ class OdulDeposuTest {
             override suspend fun ozetleriGetir(bas: String, bit: String): List<GunlukOzetDto> = patla()
             override suspend fun heartbeat() = patla()
             override suspend fun lig(): LigYanit = patla()
-            override suspend fun ligeKatil(): LigYanit = patla()
+            override suspend fun ligeKatil(istek: LigKatilIstek): LigYanit = patla()
+            override suspend fun ligGorunurlugu(istek: LigGorunurlukIstek) = patla()
             override suspend fun arkadaslar(): List<ArkadasDto> = patla()
             override suspend fun davetKodu(): KodYanit = patla()
             override suspend fun davetGonder(istek: DavetIstek): List<ArkadasDto> = patla()

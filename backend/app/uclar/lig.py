@@ -10,9 +10,17 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import Arkadaslik, DavetKodu, Kullanici, LigGrup, LigUyelik
-from app.semalar import ArkadasDto, DavetIstek, KodYanit, LigSatiriDto, LigYanit
+from app.semalar import (
+    ArkadasDto,
+    DavetIstek,
+    KodYanit,
+    LigGorunurlukIstek,
+    LigKatilIstek,
+    LigSatiriDto,
+    LigYanit,
+)
 from app.veritabani import oturum
 from app.zaman import yerel_bugun
 
@@ -107,6 +115,7 @@ def lig(
 def katil(
     db: Session = Depends(oturum),
     kullanici: Kullanici = Depends(mevcut_kullanici),
+    istek: LigKatilIstek | None = None,
 ) -> LigYanit:
     """
     Uygun gruba yerleştirir; yer yoksa yeni grup açar.
@@ -124,7 +133,7 @@ def katil(
     db.scalar(select(Kullanici.id).order_by(Kullanici.id).limit(1).with_for_update())
     # Aynı hesabın paralel katılma istekleri tekillik kontrolünden aynı
     # anda geçmesin. Kilit işlem bitene kadar tutulur.
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
 
     mevcut = db.scalar(
         select(LigUyelik).where(
@@ -140,11 +149,44 @@ def katil(
                 grup_id=grup.id,
                 hafta_baslangic=hafta,
                 haftalik_puan=0,
+                # Yeni istemci yerel gizlilik tercihini katılım anında
+                # gönderiyor. Gövdesiz eski istemci için geriye uyumlu
+                # varsayılan görünürdür.
+                gorunur=istek.gorunur if istek is not None else True,
             )
         )
         db.commit()
+    elif istek is not None and mevcut.gorunur != istek.gorunur:
+        # Aynı ucu yeniden çağırmak üyelik açmaz ama cihazdaki güncel
+        # tercihi geri yükleyebilir.
+        mevcut.gorunur = istek.gorunur
+        db.commit()
 
     return lig(db=db, kullanici=kullanici)
+
+
+@yonlendirici.post("/lig/gorunurluk")
+def gorunurluk(
+    istek: LigGorunurlukIstek,
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """Lig gizliliğini davranış verisi paylaşımından bağımsız kaydeder.
+
+    Üyelik yoksa işlem idempotenttir. Uygulama gelecekteki katılımda aynı
+    tercihi `/lig/katil` gövdesiyle yeniden yollar.
+    """
+    kullaniciyi_kilitle(db, kullanici.id)
+    uyelik = db.scalar(
+        select(LigUyelik).where(
+            LigUyelik.kullanici_id == kullanici.id,
+            LigUyelik.hafta_baslangic == hafta_baslangici(),
+        )
+    )
+    if uyelik is not None:
+        uyelik.gorunur = istek.gorunur
+    db.commit()
+    return {"durum": "guncellendi"}
 
 
 @yonlendirici.get("/arkadas", response_model=list[ArkadasDto])
@@ -172,7 +214,7 @@ def davet_kodu(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> KodYanit:
     """Kullanıcı başına tek, kalıcı kod. Var olan kod **değiştirilmiyor**."""
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
     kayit = db.scalar(select(DavetKodu).where(DavetKodu.kullanici_id == kullanici.id))
     if kayit is None:
         kayit = DavetKodu(kullanici_id=kullanici.id, kod=_kod_uret(db))

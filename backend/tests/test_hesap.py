@@ -5,9 +5,11 @@ from __future__ import annotations
 import datetime as dt
 from types import SimpleNamespace
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.guvenlik import jeton_ozetle
+from app.guvenlik import jeton_ozetle, kullaniciyi_kilitle
 from app.modeller import GunlukOzet, Kullanici, OdulSecimi, SifreSifirlama, YenilemeJetonu
 from app.uclar import hesap
 
@@ -275,3 +277,22 @@ def test_silinen_hesabin_jetonu_artik_calismiyor(istemci, kullanici_kur):
 
     # Erişim jetonu hâlâ süresi içinde ama kullanıcı yok — 401 dönmeli.
     assert istemci.get("/ozet", headers=baslik).status_code == 401
+
+
+def test_yazma_kilidi_arada_silinen_hesabi_401_ile_reddeder(db):
+    """Eski kimlik nesnesiyle FK yazıp 500 üretmek yerine oturum kapanır."""
+    kullanici = Kullanici(
+        ad="Yarış",
+        eposta="yaris@example.com",
+        sifre_ozet="testte-dogrulanmayacak",
+    )
+    db.add(kullanici)
+    db.commit()
+    kullanici_id = kullanici.id
+    db.delete(kullanici)
+    db.commit()
+
+    with pytest.raises(HTTPException) as yakalanan:
+        kullaniciyi_kilitle(db, kullanici_id)
+
+    assert yakalanan.value.status_code == 401

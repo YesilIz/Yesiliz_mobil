@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
+import tr.org.yesilay.yesiliz.data.uzak.LigGorunurlukIstek
 import tr.org.yesilay.yesiliz.data.uzak.RiskSonucDto
 import tr.org.yesilay.yesiliz.data.uzak.SenkronIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
@@ -96,6 +97,28 @@ class SenkronDeposu @Inject constructor(
             throw iptal
         } catch (hata: Exception) {
             Log.w(ETIKET, "Heartbeat gönderilemedi", hata)
+        }
+    }
+
+    /**
+     * Lig gizliliğini özet/puan paylaşımı rızasından bağımsız yollar.
+     * Bu bir davranış özeti değildir; kullanıcının kimlere görünmek
+     * istediğine dair açık ayarıdır. Hata halinde günlük worker yeniden
+     * dener, profil akışı da kullanıcı değiştirir değiştirmez çağırır.
+     */
+    suspend fun ligGorunurlugunuSenkronEt(): Boolean {
+        val oturum = tercihler.oturum.first()
+        if (oturum.misafirMi || !oturum.girisYapildiMi) return false
+        return try {
+            api.ligGorunurlugu(
+                LigGorunurlukIstek(gorunur = tercihler.ligdeGorun.first()),
+            )
+            true
+        } catch (iptal: CancellationException) {
+            throw iptal
+        } catch (hata: Exception) {
+            Log.w(ETIKET, "Lig görünürlüğü eşitlenemedi; yeniden denenecek", hata)
+            false
         }
     }
 

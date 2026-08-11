@@ -154,6 +154,16 @@ class KodYanit(BaseModel):
     kod: str
 
 
+class LigKatilIstek(BaseModel):
+    """Yeni üyeliğin gizlilik tercihi; eski istemcide gövde olmayabilir."""
+
+    gorunur: bool = True
+
+
+class LigGorunurlukIstek(BaseModel):
+    gorunur: bool
+
+
 # --- ödül ---
 
 class OdulSecimIstek(BaseModel):

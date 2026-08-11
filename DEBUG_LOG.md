@@ -414,6 +414,51 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: The whole app process crashed on the supported modern Android path.
 - Status: Fixed and API 36 validated. The timer now uses the declared `specialUse` subtype with an explicit Play-facing explanation; optional `ACTIVITY_RECOGNITION` remains solely for sensor data. With that permission still denied, the service started as a typed foreground service, counted, survived forced deep sleep, and stopped cleanly with no focused fatal/security log. Lint passes.
 
+## DBG-046 — Device health check lied when the database was unavailable
+
+- Severity: P1 — service availability/auth reliability
+- Areas: backend `/saglik` compatibility endpoint
+- Evidence: `/health` queried the database and returned 503 on failure, while the Android-facing `/saglik` always returned 200 + `ayakta` as long as the web process itself was alive. Every meaningful app endpoint depends on that database.
+- Expected: The device receives a failure status when the service cannot authenticate or read/write data, without breaking the installed response shape.
+- Actual: A broken deployment could advertise itself as usable and turn the next user action into a confusing unrelated failure.
+- Status: Fixed. `/saglik` retains its one-field compatibility body, checks the database and returns 503 + `erisim_yok` when unavailable. Both healthy and failed states have regression coverage.
+
+## DBG-047 — Untrusted request IDs were reflected without a size or character limit
+
+- Severity: P2 — operational security/availability
+- Areas: backend request-log middleware
+- Evidence: Any `X-Istek-Id` value was copied directly into the structured log and response header. A very large value could amplify every log row; invalid header characters could also make response construction fail.
+- Expected: Preserve ordinary proxy trace IDs but bound and validate all client-controlled log/header fields.
+- Actual: The observability field was an unbounded reflection surface.
+- Status: Fixed. Only 1–64 ASCII letters, digits, dot, underscore and dash are accepted; every other value is replaced by a short server-generated ID. Unit and HTTP reflection regressions pass.
+
+## DBG-048 — Unexpected local account-write failures crashed the form and stranded its spinner
+
+- Severity: P1 — account flow reliability
+- Area: `HesapViewModel`
+- Evidence: Repositories normalized expected HTTP and transport failures, but a DataStore/Room/runtime write failure escaped `viewModelScope.launch`. Android could terminate the process and the form's synchronous `islemde` claim was never released. Guest continuation had the same exposure.
+- Expected: Unexpected storage failures are recorded, shown as a retryable general error and release the form; coroutine cancellation remains a lifecycle signal.
+- Actual: A recoverable device/storage condition could close the app or leave the only account action permanently loading.
+- Status: Fixed. All four account actions share a guarded result boundary. Regression tests prove unexpected exceptions become a general error and `CancellationException` is never swallowed; all 232 app JVM tests pass.
+
+## DBG-049 — “Ligde görün” was ineffective unless behavioral-data sharing was enabled
+
+- Severity: P0 — explicit privacy control failure
+- Areas: Profile privacy setting, summary sync, league join/API
+- Evidence: The switch called `SenkronDeposu.senkronEt()`, whose first gate returns when “Yeşilay ile paylaşım” is off (the default). The UI saved `false` locally but the server membership remained visible. A new week's membership also defaulted to visible before any later sync.
+- Expected: League visibility is an independent privacy decision, applies immediately without sending summaries/points, retries after network loss, and is honored at the instant a new membership is created.
+- Actual: The screen could promise invisibility while other league members still saw the user.
+- Status: Fixed and API 36/live-PostgreSQL validated. A dedicated visibility endpoint is independent of summary consent; the daily worker retries it, and join carries the current local preference. With sharing still off, the emulator disabled visibility, joined a real local-server league, showed the truthful hidden-state explanation and produced a `gorunur=false` membership row. Backend regressions cover immediate update and hidden first join.
+
+## DBG-050 — A protected write could race account deletion into a foreign-key 500
+
+- Severity: P1 — server race/reliability
+- Areas: authenticated write endpoints and account deletion
+- Evidence: Authentication loaded a user before endpoint execution. Most writers later issued `SELECT … FOR UPDATE` but ignored an empty result. If deletion committed between those reads, the stale request continued and could insert a child row for a missing account or delete the same stale ORM object, surfacing a 500.
+- Expected: Every protected mutation acquires and validates the account row for its full transaction; a vanished account closes as 401.
+- Actual: A valid logout/deletion race could become an internal error even though no user action was wrong.
+- Status: Fixed. A shared validated user lock now guards summary, heartbeat, league, invite-code, visibility, reward, parent-code/unlink, logout and deletion mutations. A deleted-row regression confirms the stale path returns 401; the full backend suite passes 102 tests.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

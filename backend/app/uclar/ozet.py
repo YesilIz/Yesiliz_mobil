@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import GunlukOzet, Heartbeat, Kullanici, LigUyelik, RiskSonuc
 from app.semalar import GunlukOzetDto, RiskSonucDto, SenkronIstek, SenkronYanit
 from app.uclar.lig import hafta_baslangici
@@ -30,7 +30,7 @@ def senkron(
     satır açılmıyor. Cihaz gecelik worker'da geriye dönük 7 günü de
     gönderiyor (`GunlukOzetWorker.TELAFI_GUN`), o yüzden tekrar kaçınılmaz.
     """
-    _kullaniciyi_kilitle(db, kullanici.id)
+    kullaniciyi_kilitle(db, kullanici.id)
     _senkron_tarihlerini_dogrula(istek)
 
     for dto in istek.ozetler:
@@ -103,7 +103,7 @@ def heartbeat(
     `docs/spec-veri.md`: çocuk uygulamayı silerse ebeveyne bildirim, doğrudan
     silme tespitiyle değil **sinyal kesilmesiyle** anlaşılıyor.
     """
-    _kullaniciyi_kilitle(db, kullanici.id)
+    kullaniciyi_kilitle(db, kullanici.id)
     _heartbeat(db, kullanici.id)
     db.commit()
     return {"durum": "tamam"}
@@ -187,9 +187,6 @@ def _heartbeat(db: Session, kullanici_id: int) -> None:
         kayit.son_sinyal = simdi
 
 
-def _kullaniciyi_kilitle(db: Session, kullanici_id: int) -> None:
-    """Aynı hesabın paralel upsert/heartbeat isteklerini sıraya koyar."""
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici_id).with_for_update())
 
 
 def _senkron_tarihlerini_dogrula(istek: SenkronIstek) -> None:

@@ -360,6 +360,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(project(":core-risk"))
+    testImplementation(libs.coroutines.test)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.junit)

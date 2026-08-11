@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import (
     EbeveynBaglanti,
     EslestirmeKodu,
@@ -42,7 +42,7 @@ def kod_uret(
     a = ayarlar()
 
     # Paralel kod isteklerinde yalnızca son üretilen kod geçerli kalsın.
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
 
     # Aynı kullanıcının bekleyen eski kodları iptal ediliyor: aynı anda iki
     # geçerli kod, hangisinin kullanıldığını belirsizleştirirdi.
@@ -172,7 +172,7 @@ def eslesmeyi_kaldir(
     yerel bayrak ancak bu yanıt geldikten sonra temizlenir; ağ kesintisinde
     diğer cihazın erişimi sürerken "bağ kesildi" denmez.
     """
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
     db.execute(
         delete(EbeveynBaglanti).where(
             or_(

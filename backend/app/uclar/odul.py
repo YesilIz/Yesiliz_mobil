@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import Kullanici, OdulSecimi
 from app.semalar import OdulSecimIstek, OdulSecimiDto
 from app.veritabani import oturum
@@ -38,7 +38,7 @@ def sec(
     if istek.secenekId not in SECILEBILIR_ODULLER.get(istek.kademeId, set()):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Geçersiz ödül seçimi")
 
-    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    kullaniciyi_kilitle(db, kullanici.id)
     var = db.scalar(
         select(OdulSecimi).where(
             OdulSecimi.kullanici_id == kullanici.id,

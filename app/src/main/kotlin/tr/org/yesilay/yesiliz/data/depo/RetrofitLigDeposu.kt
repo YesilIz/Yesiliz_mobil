@@ -2,8 +2,11 @@ package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.DavetIstek
+import tr.org.yesilay.yesiliz.data.uzak.LigKatilIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
@@ -24,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class RetrofitLigDeposu @Inject constructor(
     private val api: YesilizApi,
+    private val tercihler: Tercihler,
 ) : LigDeposu {
 
     private val ozet = MutableStateFlow<LigOzeti?>(null)
@@ -49,7 +53,11 @@ class RetrofitLigDeposu @Inject constructor(
     override suspend fun davetKodu(): String = api.davetKodu().kod
 
     override suspend fun ligeKatil() {
-        ozet.value = api.ligeKatil().cevir()
+        // Gizlilik tercihi veri paylaşım rızasından bağımsızdır ve yeni
+        // haftanın üyeliği açılırken ilk andan uygulanmalıdır.
+        ozet.value = api.ligeKatil(
+            LigKatilIstek(gorunur = tercihler.ligdeGorun.first()),
+        ).cevir()
     }
 
     /**

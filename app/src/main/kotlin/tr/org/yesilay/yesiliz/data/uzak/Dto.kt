@@ -110,6 +110,12 @@ data class LigYanit(
 )
 
 @Serializable
+data class LigKatilIstek(val gorunur: Boolean)
+
+@Serializable
+data class LigGorunurlukIstek(val gorunur: Boolean)
+
+@Serializable
 data class ArkadasDto(val isim: String, val davetBekliyorMu: Boolean)
 
 @Serializable

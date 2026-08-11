@@ -133,6 +133,9 @@ class GunlukOzetWorker @AssistedInject constructor(
             // göndermeden dönüyor, hata da sessizce yutuluyor. Senkron
             // başarısız diye günlük özet hesabı geri alınmamalı.
             senkronDeposu.senkronEt()
+            // Gizlilik tercihi davranış verisi rızasından bağımsız ve
+            // ağ kesintisinden sonra da sonunda uygulanmalı.
+            senkronDeposu.ligGorunurlugunuSenkronEt()
             senkronDeposu.heartbeat()
 
             Result.success()

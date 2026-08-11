@@ -64,7 +64,10 @@ interface YesilizApi {
     suspend fun lig(): LigYanit
 
     @POST("lig/katil")
-    suspend fun ligeKatil(): LigYanit
+    suspend fun ligeKatil(@Body istek: LigKatilIstek): LigYanit
+
+    @POST("lig/gorunurluk")
+    suspend fun ligGorunurlugu(@Body istek: LigGorunurlukIstek): Map<String, String>
 
     @GET("arkadas")
     suspend fun arkadaslar(): List<ArkadasDto>

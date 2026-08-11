@@ -129,12 +129,14 @@ class ProfilViewModel @Inject constructor(
      * Kaydetmenin yanında senkron da tetikleniyor: tercih sunucuda tutulan
      * lig üyeliğine yazılıyor ve gecelik worker'ı beklemek, kullanıcının
      * anahtarı kapattıktan sonra saatlerce ligde görünmeye devam etmesi
-     * demekti. Tercih zaten hiç tüketilmiyordu (`debug.md` Y-5).
+     * demekti. Bu çağrı özet paylaşımı rızasından özellikle bağımsızdır;
+     * aksi hâlde varsayılan kapalı rıza, gizlilik anahtarını da etkisiz
+     * bırakırdı.
      */
     fun ligdeGorun(acik: Boolean) {
         viewModelScope.launch {
             tercihler.ligdeGorunAyarla(acik)
-            senkronDeposu.senkronEt()
+            senkronDeposu.ligGorunurlugunuSenkronEt()
         }
     }
 

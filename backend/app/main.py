@@ -97,12 +97,18 @@ def health(yanit: Response) -> dict[str, str]:
 
 
 @uygulama.get("/saglik", tags=["sistem"])
-def saglik() -> dict[str, str]:
+def saglik(yanit: Response) -> dict[str, str]:
     """
     Cihazın 'sunucu ayakta mı' yoklaması.
 
     `/health`'ten ayrı duruyor çünkü Android istemcisi bunu çağırıyor
     (`data/uzak/YesilizApi.kt`) ve kurulu APK'lar güncellenene kadar
-    yanıt biçimi değişemez. Yeni iş `/health`'e gitmeli.
+    yanıt biçimi değişemez. Yeni iş `/health`'e gitmeli. Bununla birlikte
+    yalnızca web sürecinin çalışması yeterli değil: uygulamanın kullandığı
+    bütün kimlik/özet uçları veritabanına bağlı. Veritabanı yokken 200 +
+    ``ayakta`` dönmek cihazda sahte bir başarı sinyali üretiyordu.
     """
-    return {"durum": "ayakta"}
+    baglandi = _veritabani_ayakta()
+    if not baglandi:
+        yanit.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {"durum": "ayakta" if baglandi else "erisim_yok"}

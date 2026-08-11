@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import time
 import uuid
@@ -31,6 +32,7 @@ from starlette.responses import Response
 from app.ayarlar import ayarlar
 
 ISTEK_BASLIGI = "X-Istek-Id"
+ISTEK_KIMLIGI_DESENI = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 _gunlukcu = logging.getLogger("yesiliz")
 
@@ -91,7 +93,7 @@ class IstekGunlugu(BaseHTTPMiddleware):
     """İstek başına tek satır log + yanıta istek kimliği başlığı."""
 
     async def dispatch(self, istek: Request, sonraki) -> Response:  # noqa: ANN001
-        istek_id = istek.headers.get(ISTEK_BASLIGI) or uuid.uuid4().hex[:12]
+        istek_id = _istek_kimligi(istek.headers.get(ISTEK_BASLIGI))
         baslangic = time.perf_counter()
         alanlar = {
             "istek_id": istek_id,
@@ -120,3 +122,16 @@ class IstekGunlugu(BaseHTTPMiddleware):
         )
         yanit.headers[ISTEK_BASLIGI] = istek_id
         return yanit
+
+
+def _istek_kimligi(aday: str | None) -> str:
+    """Güvenilir zincir kimliğini korur; günlük/başlık girdisini sınırlar.
+
+    İstemci başlığı iz sürmek için yararlı ama güven sınırının dışında.
+    Sınırsız ya da denetim karakterli bir değer günlükleri şişirebilir,
+    yanıt başlığını da geçersiz kılabilir. Geçersiz değeri yansıtmak yerine
+    sunucuda kısa, güvenli bir kimlik üretiyoruz.
+    """
+    if aday is not None and ISTEK_KIMLIGI_DESENI.fullmatch(aday):
+        return aday
+    return uuid.uuid4().hex[:12]

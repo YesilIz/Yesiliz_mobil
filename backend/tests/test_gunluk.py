@@ -60,3 +60,12 @@ def test_govde_ve_basliklar_loglanmiyor(istemci, caplog):
     assert "parola123" not in metin
     assert "sahte-jeton" not in metin
     assert "log@example.com" not in metin
+
+
+def test_istek_kimligi_yalnizca_guvenli_karakterleri_kabul_ediyor():
+    assert gunluk._istek_kimligi("proxy_1-abc.xyz") == "proxy_1-abc.xyz"
+
+    for gecersiz in ("", "boşluk var", "satir\nsonu", "a" * 65):
+        uretilen = gunluk._istek_kimligi(gecersiz)
+        assert uretilen != gecersiz
+        assert gunluk.ISTEK_KIMLIGI_DESENI.fullmatch(uretilen)
