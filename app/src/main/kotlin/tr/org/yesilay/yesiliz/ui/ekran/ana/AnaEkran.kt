@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -206,9 +207,10 @@ fun AnaEkran(
                     Image(
                         painter = painterResource(agacGorseli(durum.agacEvresi)),
                         contentDescription = null,
-                        modifier = Modifier.height(320.dp),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(340.dp),
                     )
-                    SallananYapraklar(modifier = Modifier.height(320.dp).aspectRatio(1f))
+                    SallananYapraklar(modifier = Modifier.size(340.dp))
                 }
             }
         }
@@ -399,9 +401,10 @@ private fun Basliktan(
             Image(
                 painter = painterResource(agacGorseli(durum.agacEvresi)),
                 contentDescription = null,
-                modifier = Modifier.height(AgacBoyu),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(340.dp),
             )
-            SallananYapraklar(modifier = Modifier.height(AgacBoyu).aspectRatio(1f))
+            SallananYapraklar(modifier = Modifier.size(340.dp))
         }
     }
 }
@@ -444,15 +447,15 @@ private fun ZilIkonu(okunmamis: Int, onTikla: () -> Unit) {
 
 /** Ağaç evresi (1..9) → drawable. Evre dışı değer en yakın uca kırpılır. */
 private fun agacGorseli(evre: Int): Int = when (evre.coerceIn(1, 9)) {
-    1 -> R.drawable.tree_phase_1
-    2 -> R.drawable.tree_phase_2
-    3 -> R.drawable.tree_phase_3
-    4 -> R.drawable.tree_phase_4
-    5 -> R.drawable.tree_phase_5
-    6 -> R.drawable.tree_phase_6
-    7 -> R.drawable.tree_phase_7
-    8 -> R.drawable.tree_phase_8
-    else -> R.drawable.tree_phase_9
+    1 -> R.drawable.downscaled_tree_phase_1
+    2 -> R.drawable.downscaled_tree_phase_2
+    3 -> R.drawable.downscaled_tree_phase_3
+    4 -> R.drawable.downscaled_tree_phase_4
+    5 -> R.drawable.downscaled_tree_phase_5
+    6 -> R.drawable.downscaled_tree_phase_6
+    7 -> R.drawable.downscaled_tree_phase_7
+    8 -> R.drawable.downscaled_tree_phase_8
+    else -> R.drawable.downscaled_tree_phase_9
 }
 
 /** Gradyanlı puan kartı — dokununca Ödüller ekranı. */

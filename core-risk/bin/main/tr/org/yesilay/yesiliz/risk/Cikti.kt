@@ -23,6 +23,27 @@ enum class Bant(val etiket: String) {
     }
 }
 
+/**
+ * Günün risk skorunun ne kadar güvenilir olduğu.
+ *
+ * [RiskSonuc.bant] her zaman hesaplanır ama [YETERSIZ] ya da [ESKI] iken
+ * UI onu GÖSTERMEMELİ. "Veri yok" ile "düşük risk" aynı şey değil — aksi
+ * halde uygulamayı yeni kuran, 34 saniyeliğine açıp bırakan bir kullanıcı
+ * ilk günde "AZ RİSKLİ" görür, oysa ölçülebilecek hiçbir şey yok
+ * (`debug.md` K-7 ile aynı hata sınıfı, bu kez alt faktör değil günün
+ * kendisi için).
+ */
+enum class VeriDurumu {
+    /** Günün toplam ölçümü [Sabitler.GUN_ASGARI_DK]'nın altında. */
+    YETERSIZ,
+
+    /** Ölçüm yeterli ve güncel — [RiskSonuc.bant] kullanılabilir. */
+    HESAPLANDI,
+
+    /** Ölçüm yeterliydi ama [Sabitler.VERI_ESKI_ESIK_GUN] günden eski. */
+    ESKI,
+}
+
 /** Trend — bandı DEĞİŞTİRMEZ, gösterilen MESAJI değiştirir (§5.5). */
 enum class Trend(val etiket: String) {
     BELIRSIZ("belirsiz"),
@@ -53,6 +74,8 @@ enum class Trend(val etiket: String) {
  * @param bant eşikten gelen ham bant — histerezis/güvenlik UYGULANMAMIŞ.
  *   Gösterilecek bant için [Bantlama.gunuIsle] kullan.
  * @param surukleyiciler en çok katkı yapan ilk 3 kategori, azalan sırada
+ * @param veriDurumu [bant] güvenilir mi — [VeriDurumu.YETERSIZ]/[VeriDurumu.ESKI]
+ *   iken UI bandı göstermemeli
  */
 data class RiskSonuc(
     val S: Double,
@@ -66,6 +89,7 @@ data class RiskSonuc(
     val R: Double,
     val bant: Bant,
     val surukleyiciler: List<String>,
+    val veriDurumu: VeriDurumu,
 )
 
 /**
