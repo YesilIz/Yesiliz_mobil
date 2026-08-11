@@ -95,6 +95,17 @@ class KullanimOkuyucuTest {
     }
 
     @Test
+    fun sahipBaslangiciPencereBitisindenSonraysaSistemSorgulanmaz() {
+        val bugun = LocalDate.of(2026, 8, 11)
+        val simdi = Instant.parse("2026-08-11T12:00:00Z")
+        val yeniSahip = Instant.parse("2026-08-11T12:00:01Z")
+
+        assertTrue(
+            okuyucu().gununOturumlari(bugun, simdi = simdi, enErken = yeniSahip).isEmpty(),
+        )
+    }
+
+    @Test
     fun androidKategorisiSorgulanabiliyor() {
         // Kendi paketimiz her zaman görünür
         val kategori = okuyucu().androidKategorisi(baglam.packageName)

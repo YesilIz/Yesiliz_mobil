@@ -37,8 +37,13 @@ class KullanimOkuyucu(
      *
      * @param simdi bugünün verisi isteniyorsa pencere burada kesilir
      */
-    fun gununOturumlari(tarih: LocalDate, simdi: Instant = Instant.now()): List<HamOturum> {
-        val pencereBas = tarih.atStartOfDay(zon).toInstant()
+    fun gununOturumlari(
+        tarih: LocalDate,
+        simdi: Instant = Instant.now(),
+        enErken: Instant? = null,
+    ): List<HamOturum> {
+        val gunBaslangici = tarih.atStartOfDay(zon).toInstant()
+        val pencereBas = enErken?.let { maxOf(gunBaslangici, it) } ?: gunBaslangici
         val pencereBit = minOf(tarih.plusDays(1).atStartOfDay(zon).toInstant(), simdi)
         if (!pencereBit.isAfter(pencereBas)) return emptyList()
 

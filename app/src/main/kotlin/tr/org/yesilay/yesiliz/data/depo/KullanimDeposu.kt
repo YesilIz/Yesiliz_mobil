@@ -14,6 +14,7 @@ import tr.org.yesilay.yesiliz.domain.kullanim.YerDegisHesapla
 import tr.org.yesilay.yesiliz.risk.GunlukGirdi
 import tr.org.yesilay.yesiliz.risk.RiskHesapla
 import java.time.LocalDate
+import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,8 +50,9 @@ class KullanimDeposu @Inject constructor(
     suspend fun gunuIsle(
         tarih: LocalDate,
         aktivite: GunlukAktivite = GunlukAktivite(),
+        enErken: Instant? = null,
     ): GunlukCikarim {
-        val oturumlar = okuyucu.gununOturumlari(tarih)
+        val oturumlar = okuyucu.gununOturumlari(tarih, enErken = enErken)
 
         // Sistem paketleri (launcher, SystemUI, Ayarlar) HİÇ saklanmıyor.
         // Risk hesabına zaten girmiyorlar; saklamak hem yer israfı hem de

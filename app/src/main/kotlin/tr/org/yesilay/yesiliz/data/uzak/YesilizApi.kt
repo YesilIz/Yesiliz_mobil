@@ -29,6 +29,9 @@ interface YesilizApi {
     @POST("auth/yenile")
     suspend fun yenile(@Body istek: YenileIstek): JetonlarDto
 
+    @POST("auth/cikis")
+    suspend fun cikis()
+
     @POST("auth/sifre-sifirla")
     suspend fun sifreSifirla(@Body istek: SifreSifirlaIstek): Map<String, String>
 

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.EbeveynDeposu
+import tr.org.yesilay.yesiliz.data.depo.EbeveynOzetSonucu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
@@ -133,11 +134,7 @@ class EbeveynViewModel @Inject constructor(
         ozetHali.value = OzetHali(yukleniyor = true, baslatildi = true)
         viewModelScope.launch {
             val sonuc = ebeveynDeposu.cocukOzeti()
-            ozetHali.value = OzetHali(
-                baslatildi = true,
-                veri = sonuc.veri,
-                hata = sonuc.hata,
-            )
+            ozetHali.value = ozetTamamlandi(sonuc)
         }
     }
 
@@ -164,13 +161,6 @@ class EbeveynViewModel @Inject constructor(
 
     private data class KaldirmaHali(
         val calisiyor: Boolean = false,
-        val hata: String? = null,
-    )
-
-    private data class OzetHali(
-        val yukleniyor: Boolean = true,
-        val baslatildi: Boolean = false,
-        val veri: EbeveynOzetDto? = null,
         val hata: String? = null,
     )
 
@@ -247,3 +237,18 @@ class EbeveynViewModel @Inject constructor(
 
     }
 }
+
+internal data class OzetHali(
+    val yukleniyor: Boolean = true,
+    val baslatildi: Boolean = false,
+    val veri: EbeveynOzetDto? = null,
+    val hata: String? = null,
+)
+
+/** Tamamlanmış ağ sonucu hiçbir zaman yükleme ekranında kalmaz. */
+internal fun ozetTamamlandi(sonuc: EbeveynOzetSonucu): OzetHali = OzetHali(
+    yukleniyor = false,
+    baslatildi = true,
+    veri = sonuc.veri,
+    hata = sonuc.hata,
+)

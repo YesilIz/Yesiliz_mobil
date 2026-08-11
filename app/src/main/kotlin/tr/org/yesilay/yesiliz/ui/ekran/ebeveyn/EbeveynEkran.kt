@@ -118,7 +118,7 @@ fun EbeveynEkran(
         }
     }
 
-    if (!durum.eslesmisMi) {
+    if (eslestirmeAltSayfasiGoster(durum.eslesmisMi, durum.adim)) {
         // Sihirbaz kapatılınca EKRANDAN çıkılıyor. Boş bir `onKapat` ile
         // sayfa gizleniyor ama `!eslesmisMi` hâlâ true olduğu için
         // bileşimde kalıyordu: ekran boşalıyor, görünmez perde dokunuşları
@@ -167,6 +167,11 @@ fun EbeveynEkran(
         }
     }
 }
+
+internal fun eslestirmeAltSayfasiGoster(
+    eslesmisMi: Boolean,
+    adim: EslestirmeAdimi,
+): Boolean = !eslesmisMi || adim == EslestirmeAdimi.BASARILI
 
 /**
  * Eşleştirmeyi kaldırma onayı.

@@ -26,6 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class YerelSahteHesapDeposu @Inject constructor(
     private val tercihler: Tercihler,
+    private val yerelOturumSiniri: YerelOturumSiniri,
 ) : HesapDeposu {
 
     override val oturum: Flow<Oturum> = tercihler.oturum
@@ -43,6 +44,7 @@ class YerelSahteHesapDeposu @Inject constructor(
         // kalıyor (`debug.md` üçüncü tarama A2).
         val yerelKisim = eposta.substringBefore('@')
         val ad = yerelKisim.take(1).buyukHarf() + yerelKisim.drop(1)
+        yerelOturumSiniri.hesabaGec(eposta)
         tercihler.oturumuKaydet(ad = ad, eposta = eposta.trim(), misafir = false)
         return HesapSonuc.Basarili
     }
@@ -52,6 +54,7 @@ class YerelSahteHesapDeposu @Inject constructor(
         HesapDogrula.eposta(eposta)?.let { return HesapSonuc.Hata(HesapAlani.EPOSTA, it) }
         HesapDogrula.sifre(sifre)?.let { return HesapSonuc.Hata(HesapAlani.SIFRE, it) }
 
+        yerelOturumSiniri.hesabaGec(eposta)
         tercihler.oturumuKaydet(ad = ad.trim(), eposta = eposta.trim(), misafir = false)
         return HesapSonuc.Basarili
     }
@@ -62,6 +65,7 @@ class YerelSahteHesapDeposu @Inject constructor(
     }
 
     override suspend fun misafirDevam() {
+        yerelOturumSiniri.misafireGec()
         tercihler.oturumuKaydet(ad = "", eposta = "", misafir = true)
     }
 

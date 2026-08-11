@@ -13,6 +13,14 @@ from app.veritabani import oturum
 
 yonlendirici = APIRouter(prefix="/odul", tags=["odul"])
 
+# Sunucu puan hak edişini henüz bağımsız hesaplamıyor; yine de istemci
+# keyfî bir kimlikle kupon/bağış kaydı oluşturamamalı. Bu sözleşme
+# `OdulViewModel.KADEMELER` ve `docs/spec-puan.md §9.1` ile aynıdır.
+SECILEBILIR_ODULLER = {
+    "kupon_market": {"market_kuponu", "fidan_bagisi"},
+    "kupon_spor": {"kupon_spor_kitap", "fidan_bagisi"},
+}
+
 
 @yonlendirici.post("/sec", response_model=OdulSecimiDto, status_code=status.HTTP_201_CREATED)
 def sec(
@@ -27,6 +35,10 @@ def sec(
     garanti ediyor; burada önce bakılıyor ki ikinci istek 500 yerine
     anlamlı bir 409 dönsün.
     """
+    if istek.secenekId not in SECILEBILIR_ODULLER.get(istek.kademeId, set()):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Geçersiz ödül seçimi")
+
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
     var = db.scalar(
         select(OdulSecimi).where(
             OdulSecimi.kullanici_id == kullanici.id,

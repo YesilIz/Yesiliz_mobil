@@ -392,8 +392,19 @@ interface OdulSecimiDao {
     @Insert
     suspend fun kaydet(kayit: OdulSecimiEntity)
 
+    /**
+     * Yalnızca sunucudan geri yükleme için. Sunucu da ilk seçimi tekil
+     * kısıtla koruduğundan iki cihaz ayrı karar verdiyse uzak kayıt
+     * otoritedir; normal kullanıcı eylemi hâlâ [kaydet] ile değiştirilemez.
+     */
+    @Upsert
+    suspend fun uzaktanKaydet(kayit: OdulSecimiEntity)
+
     @Query("SELECT * FROM odul_secimi ORDER BY kademeId")
     fun hepsiAkisi(): Flow<List<OdulSecimiEntity>>
+
+    @Query("SELECT * FROM odul_secimi ORDER BY kademeId")
+    suspend fun hepsi(): List<OdulSecimiEntity>
 
     @Query("SELECT * FROM odul_secimi WHERE kademeId = :kademeId")
     suspend fun getir(kademeId: String): OdulSecimiEntity?

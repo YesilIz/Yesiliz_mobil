@@ -17,6 +17,7 @@ import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.io.IOException
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,10 +77,10 @@ class YedekliLigDeposu @Inject constructor(
     }
 
     override suspend fun davetKodu(): String =
-        agdanAl({ uzak.davetKodu() }, { yerel.davetKodu() })
+        demoYedegi({ uzak.davetKodu() }, { yerel.davetKodu() })
 
     override suspend fun ligeKatil() {
-        agdanAl({ uzak.ligeKatil() }, { yerel.ligeKatil() })
+        demoYedegi({ uzak.ligeKatil() }, { yerel.ligeKatil() })
     }
 
     override suspend fun davetGonder(kod: String) {
@@ -157,6 +158,18 @@ internal suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T):
     uzak()
 } catch (_: IOException) {
     yerel()
+}
+
+/**
+ * Debug/demo lig girişleri için: misafirin 401'i de yerel demoya döner.
+ * Davet kabulünde kullanılmaz; 400/404 gibi iş hataları orada görünmelidir.
+ */
+internal suspend fun <T> demoYedegi(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
+    uzak()
+} catch (_: IOException) {
+    yerel()
+} catch (hata: HttpException) {
+    if (hata.code() == 401) yerel() else throw hata
 }
 
 /** `flow { }` içinde başka bir akışı yayınlamak için. */

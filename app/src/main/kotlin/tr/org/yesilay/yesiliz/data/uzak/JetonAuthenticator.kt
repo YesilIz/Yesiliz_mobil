@@ -18,10 +18,10 @@ import okhttp3.Route
  *
  * - **Bir kez dene.** `priorResponse` doluysa bu istek zaten bir kez
  *   yenilenip tekrarlanmış demektir; ikinci 401'de pes ediliyor.
- * - **`auth/` yolları hariç.** `backend/app/uclar/hesap.py` yanlış şifrede de
- *   401 veriyor. Bu hariç tutma olmasa yanlış şifre bir yenileme denemesi
- *   tetiklerdi ve §12 K18'in "iş hatası olduğu gibi geçer" sözleşmesi
- *   bozulurdu — kullanıcıya yanlış şifreyle "giriş yaptın" demiş olurduk.
+ * - **Yalnızca açık hesap yolları hariç.** Giriş/kayıt/yenileme gibi
+ *   yolların 401'i iş hatasıdır. Buna karşın `auth/hesap` ve
+ *   `auth/cikis` korumalıdır; erişim jetonu süresi dolunca yenilenmezlerse
+ *   30 dakikadan eski oturum hesap silemez veya güvenli çıkış yapamaz.
  * - **Tek yenileme.** Eşzamanlı iki istek birlikte 401 alırsa yalnızca biri
  *   sunucuya gidiyor; ikincisi ilkinin aldığı jetonu kullanıyor.
  */
@@ -32,7 +32,7 @@ class JetonAuthenticator(
 
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.priorResponse != null) return null
-        if (AUTH_YOLU in response.request.url.encodedPath) return null
+        if (acikHesapYoluMu(response.request.url.encodedPath)) return null
 
         val yeni = tazele(response.request.header(BASLIK)) ?: return null
         return response.request.newBuilder()
@@ -76,9 +76,21 @@ class JetonAuthenticator(
         }
     }
 
-    private companion object {
+    internal companion object {
         const val BASLIK = "Authorization"
         const val SEMA = "Bearer "
-        const val AUTH_YOLU = "auth/"
+        val ACIK_HESAP_YOLLARI = setOf(
+            "/auth/kayit",
+            "/auth/giris",
+            "/auth/yenile",
+            "/auth/sifre-sifirla",
+            "/auth/sifre-yenile",
+        )
     }
+}
+
+/** Yapılandırılan taban adresi `/api/v1/` gibi bir yol taşıyabilir. */
+internal fun acikHesapYoluMu(kodlanmisYol: String): Boolean {
+    val yol = kodlanmisYol.trimEnd('/')
+    return JetonAuthenticator.ACIK_HESAP_YOLLARI.any { yol.endsWith(it) }
 }

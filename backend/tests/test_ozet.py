@@ -122,3 +122,77 @@ def test_haftalik_puan_geri_alinmiyor(istemci, kullanici_kur, db):
 
     lig = istemci.get("/lig", headers=basliklar).json()
     assert lig["siralama"][0]["puan"] == 500
+
+
+def test_senkron_negatif_sonsuz_ve_bir_gunden_fazla_veriyi_reddediyor(
+    istemci, kullanici_kur
+):
+    basliklar, _ = kullanici_kur()
+
+    gecersiz_ozetler = [
+        _ozet("2026-08-10", social=-1),
+        _ozet("2026-08-10", social="Infinity"),
+        {
+            "tarih": "2026-08-10",
+            "socialDk": 800,
+            "entertainmentDk": 800,
+        },
+        {"tarih": "2026-08-10", "gece": 1.01},
+    ]
+
+    for ozet in gecersiz_ozetler:
+        yanit = istemci.post("/ozet", json={"ozetler": [ozet]}, headers=basliklar)
+        assert yanit.status_code == 422
+
+
+def test_senkron_liste_ve_deger_tavanlarini_reddediyor(istemci, kullanici_kur):
+    basliklar, _ = kullanici_kur()
+    sekiz_gun = [_ozet(f"2026-08-{gun:02d}") for gun in range(3, 11)]
+
+    assert istemci.post("/ozet", json={"ozetler": sekiz_gun}, headers=basliklar).status_code == 422
+    assert (
+        istemci.post("/ozet", json={"haftalikPuan": 2001}, headers=basliklar).status_code
+        == 422
+    )
+    assert (
+        istemci.post(
+            "/ozet",
+            json={
+                "riskler": [
+                    {
+                        "tarih": "2026-08-10",
+                        "S": 100,
+                        "R": 101,
+                        "gosterilenBant": "ORTA",
+                        "trend": "SABIT",
+                    }
+                ]
+            },
+            headers=basliklar,
+        ).status_code
+        == 422
+    )
+
+
+def test_senkron_uzak_tarihi_reddediyor(istemci, kullanici_kur):
+    basliklar, _ = kullanici_kur()
+
+    yanit = istemci.post(
+        "/ozet", json={"ozetler": [_ozet("2030-01-01")]}, headers=basliklar
+    )
+
+    assert yanit.status_code == 422
+
+
+def test_ozet_geri_yukleme_tarih_araligini_sinirliyor(istemci, kullanici_kur):
+    basliklar, _ = kullanici_kur()
+
+    ters = istemci.get(
+        "/ozet", params={"bas": "2026-08-10", "bit": "2026-08-01"}, headers=basliklar
+    )
+    cok_genis = istemci.get(
+        "/ozet", params={"bas": "2020-01-01", "bit": "2026-08-01"}, headers=basliklar
+    )
+
+    assert ters.status_code == 422
+    assert cok_genis.status_code == 422

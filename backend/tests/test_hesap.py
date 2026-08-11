@@ -71,6 +71,18 @@ def test_kisa_sifre_reddediliyor(istemci):
     assert yanit.status_code == 422
 
 
+def test_bos_ad_ve_asiri_uzun_giris_sifresi_reddediliyor(istemci):
+    bos_ad = istemci.post(
+        "/auth/kayit", json={"ad": "   ", "eposta": "a@b.com", "sifre": "parola123"}
+    )
+    uzun_sifre = istemci.post(
+        "/auth/giris", json={"eposta": "a@b.com", "sifre": "x" * 129}
+    )
+
+    assert bos_ad.status_code == 422
+    assert uzun_sifre.status_code == 422
+
+
 def test_yenileme_jetonu_tek_kullanimlik(istemci):
     kayit = istemci.post(
         "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
@@ -82,6 +94,24 @@ def test_yenileme_jetonu_tek_kullanimlik(istemci):
     assert ilk.status_code == 200
     # Çalınan jeton ikinci kez kullanılamıyor.
     assert ikinci.status_code == 401
+
+
+def test_cikis_tum_yenileme_jetonlarini_iptal_ediyor(istemci):
+    ilk = istemci.post(
+        "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
+    ).json()
+    # İkinci cihaz/oturum gibi ikinci bir yenileme jetonu oluştur.
+    ikinci = istemci.post(
+        "/auth/giris", json={"eposta": "a@b.com", "sifre": "parola123"}
+    ).json()
+
+    yanit = istemci.post(
+        "/auth/cikis", headers={"Authorization": f"Bearer {ikinci['erisim']}"}
+    )
+
+    assert yanit.status_code == 200
+    assert istemci.post("/auth/yenile", json={"yenileme": ilk["yenileme"]}).status_code == 401
+    assert istemci.post("/auth/yenile", json={"yenileme": ikinci["yenileme"]}).status_code == 401
 
 
 def test_suresi_dolmus_yenileme_reddediliyor(istemci, db):
@@ -218,7 +248,7 @@ def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db
     istemci.post(
         "/odul/sec",
         headers=baslik,
-        json={"kademeId": "ilk", "secenekId": "fidan_bagisi"},
+        json={"kademeId": "kupon_market", "secenekId": "fidan_bagisi"},
     )
     assert db.scalar(select(GunlukOzet)) is not None
     assert db.scalar(select(OdulSecimi)) is not None

@@ -41,6 +41,9 @@ def kod_uret(
 
     a = ayarlar()
 
+    # Paralel kod isteklerinde yalnızca son üretilen kod geçerli kalsın.
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+
     # Aynı kullanıcının bekleyen eski kodları iptal ediliyor: aynı anda iki
     # geçerli kod, hangisinin kullanıldığını belirsizleştirirdi.
     for eski in db.scalars(
@@ -80,7 +83,38 @@ def eslestir(
     if istek.rol not in ROLLER:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rol 'ebeveyn' ya da 'cocuk' olmalı")
 
-    kayit = db.scalar(select(EslestirmeKodu).where(EslestirmeKodu.kod == istek.kod.strip()))
+    ham_kod = istek.kod.strip()
+    ilk_okuma = db.scalar(select(EslestirmeKodu).where(EslestirmeKodu.kod == ham_kod))
+    if ilk_okuma is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kod geçersiz")
+    if ilk_okuma.ureten_id == kullanici.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kendi kodunu giremezsin")
+    if ilk_okuma.ureten_rol == istek.rol:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "İki cihaz da aynı rolde — biri ebeveyn, biri çocuk olmalı",
+        )
+
+    ebeveyn_id = kullanici.id if istek.rol == "ebeveyn" else ilk_okuma.ureten_id
+    cocuk_id = ilk_okuma.ureten_id if istek.rol == "ebeveyn" else kullanici.id
+
+    # Hesap silme ve yeni kod üretimiyle kilit sırası kullanıcılar→kod.
+    # Kilitten sonra kod yeniden okunur; arada silindiyse eski ORM nesnesiyle
+    # bağlantı kurulmaz.
+    kilitlenenler = db.scalars(
+        select(Kullanici.id)
+        .where(Kullanici.id.in_(sorted((ebeveyn_id, cocuk_id))))
+        .order_by(Kullanici.id)
+        .with_for_update()
+    ).all()
+    if len(kilitlenenler) != 2:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kod geçersiz")
+
+    kayit = db.scalar(
+        select(EslestirmeKodu)
+        .where(EslestirmeKodu.kod == ham_kod)
+        .with_for_update()
+    )
     simdi = dt.datetime.now(dt.timezone.utc)
 
     if kayit is None or kayit.kullanildi:
@@ -94,9 +128,6 @@ def eslestir(
             status.HTTP_400_BAD_REQUEST,
             "İki cihaz da aynı rolde — biri ebeveyn, biri çocuk olmalı",
         )
-
-    ebeveyn_id = kullanici.id if istek.rol == "ebeveyn" else kayit.ureten_id
-    cocuk_id = kayit.ureten_id if istek.rol == "ebeveyn" else kullanici.id
 
     # Uygulama tek bir cihaz rolü/bağlantısı saklıyor ve özet ucu tek
     # çocuk döndürüyor. Aynı hesabı ikinci bir bağlantıya eklemek,
@@ -141,6 +172,7 @@ def eslesmeyi_kaldir(
     yerel bayrak ancak bu yanıt geldikten sonra temizlenir; ağ kesintisinde
     diğer cihazın erişimi sürerken "bağ kesildi" denmez.
     """
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
     db.execute(
         delete(EbeveynBaglanti).where(
             or_(

@@ -118,6 +118,14 @@ def katil(
     a = ayarlar()
     hafta = hafta_baslangici()
 
+    # Farklı kullanıcılar aynı anda ilk grubu oluşturursa her biri tek
+    # kişilik ayrı grup açabilirdi. En eski kullanıcı satırı bu kısa
+    # yerleştirme işlemi için kararlı, ortak kilittir.
+    db.scalar(select(Kullanici.id).order_by(Kullanici.id).limit(1).with_for_update())
+    # Aynı hesabın paralel katılma istekleri tekillik kontrolünden aynı
+    # anda geçmesin. Kilit işlem bitene kadar tutulur.
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+
     mevcut = db.scalar(
         select(LigUyelik).where(
             LigUyelik.kullanici_id == kullanici.id, LigUyelik.hafta_baslangic == hafta
@@ -164,6 +172,7 @@ def davet_kodu(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> KodYanit:
     """Kullanıcı başına tek, kalıcı kod. Var olan kod **değiştirilmiyor**."""
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
     kayit = db.scalar(select(DavetKodu).where(DavetKodu.kullanici_id == kullanici.id))
     if kayit is None:
         kayit = DavetKodu(kullanici_id=kullanici.id, kod=_kod_uret(db))
@@ -185,6 +194,16 @@ def davet(
     if kayit.kullanici_id == kullanici.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kendi kodunu kullanamazsın")
 
+    # İki kullanıcı birbirinin kodunu aynı anda girse bile karşılıklı
+    # tekil satırları bir kez kur. Sabit id sırası deadlock'u önler.
+    kilitlenenler = db.scalars(
+        select(Kullanici.id)
+        .where(Kullanici.id.in_(sorted((kullanici.id, kayit.kullanici_id))))
+        .order_by(Kullanici.id)
+        .with_for_update()
+    ).all()
+    if len(kilitlenenler) != 2:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Davet kodu bulunamadı")
     _arkadaslik_kur(db, kullanici.id, kayit.kullanici_id)
     db.commit()
     return arkadaslar(db=db, kullanici=kullanici)
@@ -226,6 +245,7 @@ def _uygun_grup(db: Session, hafta: dt.date, seviye: int, boy: int) -> LigGrup:
         select(LigGrup)
         .where(LigGrup.hafta_baslangic == hafta, LigGrup.seviye == seviye)
         .order_by(LigGrup.id)
+        .with_for_update()
     ).all()
 
     for grup in gruplar:
@@ -235,7 +255,7 @@ def _uygun_grup(db: Session, hafta: dt.date, seviye: int, boy: int) -> LigGrup:
 
     yeni = LigGrup(hafta_baslangic=hafta, seviye=seviye)
     db.add(yeni)
-    db.commit()
+    db.flush()
     db.refresh(yeni)
     return yeni
 

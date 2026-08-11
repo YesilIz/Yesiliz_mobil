@@ -91,7 +91,13 @@ def kayit(istek: KayitIstek, db: Session = Depends(oturum)) -> Jetonlar:
 
 @yonlendirici.post("/giris", response_model=Jetonlar)
 def giris(istek: GirisIstek, db: Session = Depends(oturum)) -> Jetonlar:
-    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == istek.eposta.lower().strip()))
+    # Hesap silme ile giriş yarışırsa, silinmiş kullanıcıya yenileme
+    # jetonu eklenmeye çalışılmasın. Kilit jeton yazılana kadar tutulur.
+    kullanici = db.scalar(
+        select(Kullanici)
+        .where(Kullanici.eposta == istek.eposta.lower().strip())
+        .with_for_update()
+    )
 
     # Kullanıcı yoksa da şifre yanlışsa da AYNI mesaj: hangi e-postaların
     # kayıtlı olduğunu sızdırmamak için.
@@ -103,10 +109,28 @@ def giris(istek: GirisIstek, db: Session = Depends(oturum)) -> Jetonlar:
 
 @yonlendirici.post("/yenile", response_model=Jetonlar)
 def yenile(istek: YenileIstek, db: Session = Depends(oturum)) -> Jetonlar:
+    jeton_ozeti = jeton_ozetle(istek.yenileme)
+    ilk_okuma = db.scalar(
+        select(YenilemeJetonu).where(
+            YenilemeJetonu.jeton == jeton_ozeti,
+            YenilemeJetonu.iptal == False,  # noqa: E712
+        )
+    )
+    if ilk_okuma is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Yenileme jetonu geçersiz")
+
+    # Hesap silme/çıkış ile kilit sırası her zaman kullanıcı→jeton.
+    # Ters sıra, biri kullanıcıyı diğeri jetonu tuttuğunda deadlock
+    # üretebilirdi. Kilitten sonra jeton yeniden okunup doğrulanır.
+    db.scalar(
+        select(Kullanici.id)
+        .where(Kullanici.id == ilk_okuma.kullanici_id)
+        .with_for_update()
+    )
     kayit_ = db.scalar(
         select(YenilemeJetonu)
         .where(
-            YenilemeJetonu.jeton == jeton_ozetle(istek.yenileme),
+            YenilemeJetonu.jeton == jeton_ozeti,
             YenilemeJetonu.iptal == False,  # noqa: E712
         )
         .with_for_update()
@@ -123,6 +147,31 @@ def yenile(istek: YenileIstek, db: Session = Depends(oturum)) -> Jetonlar:
     if kullanici is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
     return _jetonlar(db, kullanici)
+
+
+@yonlendirici.post("/cikis")
+def cikis(
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """
+    Hesabın yenileme oturumlarını sunucuda iptal eder.
+
+    Erişim JWT'si durumsuzdur ve en fazla 30 dakika daha geçerlidir; uzun
+    ömürlü (30 gün) yenileme jetonları ise bu işlemden sonra yeni erişim
+    jetonu üretemez. Tüm oturumları kapatmak, kopyalanmış eski bir cihaz
+    jetonunun kullanıcı "çıkış" dedikten sonra yaşamasını önler.
+    """
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kullanici.id).with_for_update())
+    for jeton in db.scalars(
+        select(YenilemeJetonu).where(
+            YenilemeJetonu.kullanici_id == kullanici.id,
+            YenilemeJetonu.iptal == False,  # noqa: E712
+        )
+    ):
+        jeton.iptal = True
+    db.commit()
+    return {"durum": "cikis"}
 
 
 @yonlendirici.post("/sifre-sifirla", status_code=status.HTTP_202_ACCEPTED)
@@ -146,7 +195,11 @@ def sifre_sifirla(istek: SifreSifirlaIstek, db: Session = Depends(oturum)) -> di
             "Şifre sıfırlama e-postası henüz etkin değil",
         )
 
-    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == istek.eposta.lower().strip()))
+    kullanici = db.scalar(
+        select(Kullanici)
+        .where(Kullanici.eposta == istek.eposta.lower().strip())
+        .with_for_update()
+    )
     if kullanici is None:
         return {"durum": "kabul"}
 
@@ -166,10 +219,26 @@ def sifre_sifirla(istek: SifreSifirlaIstek, db: Session = Depends(oturum)) -> di
 
 @yonlendirici.post("/sifre-yenile")
 def sifre_yenile(istek: SifreYenileIstek, db: Session = Depends(oturum)) -> dict[str, str]:
+    jeton_ozeti = jeton_ozetle(istek.jeton)
+    ilk_okuma = db.scalar(
+        select(SifreSifirlama).where(
+            SifreSifirlama.jeton == jeton_ozeti,
+            SifreSifirlama.kullanildi == False,  # noqa: E712
+        )
+    )
+    if ilk_okuma is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sıfırlama bağlantısı geçersiz")
+
+    # Hesap silmeyle aynı kullanıcı→jeton kilit sırası.
+    db.scalar(
+        select(Kullanici.id)
+        .where(Kullanici.id == ilk_okuma.kullanici_id)
+        .with_for_update()
+    )
     kayit_ = db.scalar(
         select(SifreSifirlama)
         .where(
-            SifreSifirlama.jeton == jeton_ozetle(istek.jeton),
+            SifreSifirlama.jeton == jeton_ozeti,
             SifreSifirlama.kullanildi == False,  # noqa: E712
         )
         .with_for_update()
@@ -220,6 +289,11 @@ def hesabi_sil(
     veriyor ve boş gövde istemci tarafında ayrı bir dönüştürücü istiyor.
     """
     kid = kullanici.id
+
+    # Giriş/senkron/eşleştirme gibi kullanıcıya yazan uçlarla aynı
+    # kilit. Temizlik sürerken yeni bir alt satır eklenip FK hatası ya da
+    # silme sonrasında kalıntı oluşmasın.
+    db.scalar(select(Kullanici.id).where(Kullanici.id == kid).with_for_update())
 
     db.execute(delete(Heartbeat).where(Heartbeat.kullanici_id == kid))
     db.execute(delete(RiskSonuc).where(RiskSonuc.kullanici_id == kid))

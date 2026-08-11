@@ -50,6 +50,26 @@ def test_farkli_kademeler_ayri_secilebiliyor(istemci, kullanici_kur):
     assert yanit.status_code == 201
 
 
+def test_tanimsiz_kademe_ve_kademeye_ait_olmayan_secim_reddediliyor(
+    istemci, kullanici_kur
+):
+    basliklar, _ = kullanici_kur()
+
+    tanimsiz = istemci.post(
+        "/odul/sec",
+        json={"kademeId": "sinirsiz_kupon", "secenekId": "nakit"},
+        headers=basliklar,
+    )
+    yanlis_eslesme = istemci.post(
+        "/odul/sec",
+        json={"kademeId": "kupon_market", "secenekId": "kupon_spor_kitap"},
+        headers=basliklar,
+    )
+
+    assert tanimsiz.status_code == 400
+    assert yanlis_eslesme.status_code == 400
+
+
 def test_secimlerim_listesi(istemci, kullanici_kur):
     basliklar, _ = kullanici_kur()
     istemci.post(

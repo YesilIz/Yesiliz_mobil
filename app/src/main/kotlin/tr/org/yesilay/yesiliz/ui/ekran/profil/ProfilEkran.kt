@@ -98,6 +98,7 @@ import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
+import java.util.Locale
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
@@ -876,7 +877,7 @@ private fun HesabiSilIcerik(
     onUyariyiKapat: () -> Unit,
 ) {
     var girilenMetin by remember { mutableStateOf("") }
-    val onayli = girilenMetin == "SİL"
+    val onayli = hesapSilmeOnayiGecerli(girilenMetin)
 
     Column(
         modifier = Modifier
@@ -954,6 +955,10 @@ private fun HesabiSilIcerik(
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
+
+/** Türkçe klavyede kullanıcıyı büyük harf/İ ayrıntısına zorlamaz. */
+internal fun hesapSilmeOnayiGecerli(metin: String): Boolean =
+    metin.trim().uppercase(Locale.forLanguageTag("tr-TR")) == "SİL"
 
 /** Alt sayfa 28 — Yardım. Statik SSS, backend gerektirmiyor. */
 @Composable

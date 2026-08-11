@@ -1,7 +1,10 @@
 package tr.org.yesilay.yesiliz.data.depo
 
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GirisIstek
@@ -30,6 +33,7 @@ class RetrofitHesapDeposu @Inject constructor(
     private val api: YesilizApi,
     private val jetonDeposu: JetonDeposu,
     private val tercihler: Tercihler,
+    private val yerelOturumSiniri: YerelOturumSiniri,
 ) : HesapDeposu {
 
     override val oturum: Flow<Oturum> = tercihler.oturum
@@ -52,12 +56,29 @@ class RetrofitHesapDeposu @Inject constructor(
     override suspend fun misafirDevam() {
         // Misafir sunucuya hiç uğramıyor: hesabı olmayan kullanıcının
         // sunucuda kaydı da olmamalı.
+        yerelOturumSiniri.misafireGec()
         tercihler.oturumuKaydet(ad = "", eposta = "", misafir = true)
     }
 
     override suspend fun cikisYap() {
-        jetonDeposu.temizle()
-        tercihler.oturumuSil()
+        try {
+            api.cikis()
+        } catch (iptal: CancellationException) {
+            // Yerel oturumu yine kapat; kullanıcının "çıkış" eylemi
+            // yarım kalıp ekranda oturum açık görünmesin.
+            throw iptal
+        } catch (hata: Exception) {
+            // Çevrimdışı çıkış engellenmez. Sunucu jetonu süresi
+            // dolana dek kalabilir; bu nedenle sessizce yutulmaz.
+            Log.w(ETIKET, "sunucu oturumu iptal edilemedi", hata)
+        } finally {
+            // Ağ çağrısı ekran kapanırken iptal edilse de kullanıcının
+            // açık "çıkış" eylemi cihazda yarım kalmasın.
+            withContext(NonCancellable) {
+                jetonDeposu.temizle()
+                tercihler.oturumuSil()
+            }
+        }
     }
 
     override suspend fun hesabiSil(): Boolean {
@@ -73,6 +94,10 @@ class RetrofitHesapDeposu @Inject constructor(
 
     private suspend fun cagir(blok: suspend () -> JetonlarDto): HesapSonuc = try {
         val jetonlar = blok()
+        // Jeton/oturum yeni hesaba yazılmadan önce cihazdaki eski hesap
+        // verisini ayır. Aynı hesaba dönüş ve misafir→hesap dönüşümü
+        // bu sınırda bilinçli olarak korunur.
+        yerelOturumSiniri.hesabaGec(jetonlar.eposta)
         jetonDeposu.kaydet(jetonlar.erisim, jetonlar.yenileme)
         tercihler.oturumuKaydet(ad = jetonlar.ad, eposta = jetonlar.eposta, misafir = false)
         HesapSonuc.Basarili
@@ -85,6 +110,8 @@ class RetrofitHesapDeposu @Inject constructor(
 
     private fun mesaj(hata: HttpException): String = hesapHataMesaji(hata.code())
 }
+
+private const val ETIKET = "HesapDeposu"
 
 private const val KOD_CAKISMA = 409
 private const val KOD_YETKISIZ = 401

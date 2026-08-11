@@ -270,6 +270,69 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: Specific activity/permission/UI paths could throw or misinflate on supported older devices.
 - Status: Fixed. Compatible date conversion and AppOps fallback are used, the theme item moved to `values-v27`, notification send explicitly tolerates revocation, and backup/device-transfer exclusion rules now explicitly protect behavioral data and tokens. `lintDebug` passes with zero errors.
 
+## DBG-030 — Parent summary and pairing success could remain hidden behind stale UI state
+
+- Severity: P1 — major flow deadlock/truthfulness
+- Areas: `EbeveynViewModel`, `EbeveynEkran`
+- Evidence: A successfully constructed parent summary inherited `yukleniyor = true`, so the real 200 response could leave the screen on its spinner forever. Separately, setting `eslesmisMi = true` immediately dismissed the pairing sheet, making its success step unreachable.
+- Expected: Every terminal summary result leaves loading, and a completed pairing visibly confirms success before the user dismisses it.
+- Actual: Valid server outcomes could be invisible.
+- Status: Fixed and physically validated. Terminal state construction explicitly clears loading, and the sheet remains open for the success step. Two pure UI-state regressions pass; the physical phone displayed the authenticated child summary with real dates.
+
+## DBG-031 — Account deletion confirmation rejected a natural Turkish lowercase entry
+
+- Severity: P2 — destructive-account flow accessibility
+- Area: `ProfilEkran`
+- Evidence: The dialog demanded exact uppercase `SİL`, which is brittle on mobile keyboards and rejected the semantically identical Turkish lowercase `sil`.
+- Expected: Ignore surrounding whitespace and apply Turkish-aware case normalization while still requiring the complete confirmation word.
+- Actual: A safe confirmation could be impossible or needlessly difficult depending on keyboard state.
+- Status: Fixed and physically validated. Turkish-locale uppercase normalization accepts only the intended word; two regressions pass and lowercase `sil` completed deletion on the Samsung.
+
+## DBG-032 — Backend accepted impossible summaries and raced unique business operations
+
+- Severity: P1 — remote data and reward integrity
+- Areas: backend schemas; summary, league, reward, parent and account endpoints
+- Evidence: DTOs allowed negative/non-finite minutes, ratios outside 0..1, unbounded date ranges and implausible counters. Several read-before-write operations had database uniqueness but no row serialization, so concurrent requests could surface integrity errors or double-admit a one-time reward.
+- Expected: Reject impossible/unbounded payloads at the API boundary and serialize per-account/group state transitions.
+- Actual: Malformed clients could store corrupt analytics or amplify work; concurrent valid requests could return unstable results.
+- Status: Fixed and live-database validated. Bounded Pydantic contracts, date-window limits, reward-option whitelists and consistently ordered row locks now guard critical transitions. All 96 backend tests pass. Sixteen-way PostgreSQL probes preserved one code, league, summary, heartbeat and reward; only the single reward winner returned 201. A second probe placed eight different simultaneous users into one capacity-appropriate group, admitted exactly one of seven pair-code consumers, and revoked all 12 original/rotated refresh tokens across a logout race. All temporary accounts were removed.
+
+## DBG-033 — Switching accounts exposed the previous local user's behavioral history
+
+- Severity: P0 — cross-account privacy boundary
+- Areas: account repositories, DataStore, Room, UsageStats import and daily worker
+- Evidence: Login/logout changed authentication tokens but left local usage, risk, points, categories and summaries intact. A different person signing in on the same phone could inherit the prior person's dashboard, while a same-day UsageStats rescan could re-import events from before the ownership change even after clearing Room.
+- Expected: Preserve guest data only for intentional guest→account conversion; otherwise erase prior local identity data and never query before the exact ownership boundary.
+- Actual: Sensitive on-device behavioral history crossed account identities.
+- Status: Fixed and device validated. A persisted owner plus exact start instant drives an atomic boundary reset, category reseed and query lower bound. Upgrade migration recovers an existing signed-in/guest owner and treats logged-out legacy data conservatively as unknown. Three JVM and three Room/DataStore device regressions pass, including a query window wholly before the boundary returning empty on API 31/API 36.
+
+## DBG-034 — Offline reward choices were never retried or restored on a new phone
+
+- Severity: P1 — earned-reward durability
+- Areas: `OdulDeposu`, reward DAO and backend reward validation
+- Evidence: The app wrote a choice locally then attempted one POST. A transient failure was only logged; later synchronization never retried it, and server choices were not merged into an empty local database on a new device.
+- Expected: The first irrevocable local choice survives offline operation, retries opportunistically, and an existing server choice restores local state.
+- Actual: The documented K28 reward could disappear across devices or remain permanently absent remotely.
+- Status: Fixed. Reconciliation first upserts authoritative remote selections and then retries locally pending choices. Two repository regressions cover both directions; backend now rejects reward/tier mismatches. The historical A7 limitation is closed.
+
+## DBG-035 — Logout left reusable refresh sessions valid and protected auth routes could not self-refresh
+
+- Severity: P1 — session security/authentication
+- Areas: backend `/auth/cikis`, Android account repository, API interface and authenticator
+- Evidence: Android logout only erased local tokens. Other refresh tokens for the account remained usable for 30 days. Meanwhile the authenticator excluded every path containing `auth/`, inadvertently treating protected `/auth/hesap` and `/auth/cikis` as public and refusing to refresh an expired access token.
+- Expected: Logout revokes all current refresh rows and always clears local state; only login/register/reset/refresh endpoints bypass authentication recovery.
+- Actual: Stolen/second-device refresh tokens survived logout, while legitimate protected account actions could fail on access-token expiry.
+- Status: Fixed. The server revokes all active refresh rows under a user lock; Android calls it and clears local state in a non-cancellable `finally`. Exact normalized public-path matching preserves configured URL prefixes. Backend regression proves two refresh tokens both return 401 after logout; eight authenticator tests pass.
+
+## DBG-036 — Debug demo league stopped falling back when the server returned 401
+
+- Severity: P2 — debug/demo regression
+- Area: `YedekliLigDeposu`
+- Evidence: A fresh physical debug guest reached the development server but lacked credentials, receiving HTTP 401. Fallback was limited to transport exceptions, so the intentionally supported local demo league became inaccessible even though the equivalent offline path worked.
+- Expected: Debug demo-code/join paths fall back for transport or unauthenticated demo use, but retain cancellation and real business-error semantics.
+- Actual: A reachable development server was worse than an unreachable one for the demo flow.
+- Status: Fixed. A narrowly scoped demo fallback accepts only I/O and 401, never coroutine cancellation or 4xx business conflicts. Five focused tests pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
@@ -279,3 +342,4 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Updated connected suites: API 36 passed 42 tests with 4 documented permission-precondition skips; physical API 31 passed all 42 tests with no skip or failure.
 - Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
+- Current forced suites: 30 `core-risk` and 212 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors.

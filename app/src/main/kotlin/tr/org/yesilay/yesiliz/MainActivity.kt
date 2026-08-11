@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
+import tr.org.yesilay.yesiliz.data.depo.YerelOturumSiniri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
@@ -49,6 +50,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var guncelGun: GuncelGun
 
+    @Inject lateinit var yerelOturumSiniri: YerelOturumSiniri
+
     private var hedefRota by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +82,9 @@ class MainActivity : ComponentActivity() {
         // Aynı günde dönülse bile selamlama ve zaman etiketleri tazelenir.
         guncelGun.yenile()
         lifecycleScope.launch {
+            // Eski sürümden gelen cihazlarda yerel davranış verisinin
+            // sahibini UsageStats yeniden okunmadan önce geri doldur.
+            yerelOturumSiniri.baslat()
             gecmisVeriDeposu.hesaplaGerekirse()
             // Donanım adım sayacı yalnızca açılıştan beri biriken kümülatif
             // sayıyı veriyor; güne düşen payı çıkarmak için örneklemek şart

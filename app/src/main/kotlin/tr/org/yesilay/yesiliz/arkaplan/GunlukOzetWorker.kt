@@ -23,6 +23,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.widget.widgetlariTazele
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import java.time.Clock
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -89,6 +90,7 @@ class GunlukOzetWorker @AssistedInject constructor(
             // Telafinin asıl işi, uygulama birkaç gün açılmadığında oluşan
             // BOŞLUKLARI kapatmak (`debug.md` K-4).
             val kurulum = tercihler.anlik().ilkKurulumTarihi
+            val veriBaslangici = tercihler.veriBaslangicAni.first()
 
             // Donanım sayacı özet hesaplanmadan HEMEN ÖNCE örnekleniyor. Sensör
             // yalnızca açılıştan beri biriken kümülatif sayıyı veriyor; son örnek
@@ -103,7 +105,7 @@ class GunlukOzetWorker @AssistedInject constructor(
 
                 val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
                 gunlukZinciriAtomik(db) {
-                    kullanimDeposu.gunuIsle(gun, aktivite)
+                    kullanimDeposu.gunuIsle(gun, aktivite, enErken = veriBaslangici)
                     riskDeposu.gunuHesapla(gun)
                     // Adım/spor/gece değerleri değişti; günün puanı da değişir.
                     puanDeposu.gunuYenidenHesapla(gun)

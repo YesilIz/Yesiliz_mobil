@@ -106,6 +106,7 @@ class OdulDeposuTest {
             override suspend fun kayit(istek: KayitIstek): JetonlarDto = patla()
             override suspend fun giris(istek: GirisIstek): JetonlarDto = patla()
             override suspend fun yenile(istek: YenileIstek): JetonlarDto = patla()
+            override suspend fun cikis() = patla()
             override suspend fun sifreSifirla(istek: SifreSifirlaIstek) = patla()
             override suspend fun hesabiSil() = patla()
             override suspend fun ozetGonder(istek: SenkronIstek): SenkronYanit = patla()
