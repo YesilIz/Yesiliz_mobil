@@ -211,13 +211,13 @@
         <!--
           Ana ekran widget'ları (docs/tasarim-referans.md §2 / 39, 40).
 
-          `exported="true"` zorunlu: widget'ı yerleştiren ve güncelleyen
-          launcher başka bir uygulama. `APPWIDGET_UPDATE` dışında bir eylem
-          dinlenmiyor, yani dışarıdan tetiklenebilecek başka bir yüzey yok.
+          AppWidgetManager sistem güncellemelerini `exported="false"` olan
+          alıcılara da ulaştırır. Alıcıları başka uygulamalara açmamak,
+          sahte güncelleme yayınlarının veri okumasını tetiklemesini önler.
         -->
         <receiver
             android:name=".widget.EkranSuresiWidgetAlicisi"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/uygulama_adi">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -229,7 +229,7 @@
 
         <receiver
             android:name=".widget.GununSorusuWidgetAlicisi"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/uygulama_adi">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
