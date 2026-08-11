@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.ayarlar import ayarlar
 from app.modeller import LigGrup, LigUyelik
-from app.uclar.lig import _kalan_gun, hafta_baslangici
+from app.uclar.lig import _hareket_esikleri, _kalan_gun, hafta_baslangici
 from app.zaman import yerel_bugun
 
 
@@ -38,6 +38,14 @@ def test_katilmamis_kullanici_bos_siralama_goruyor(istemci, kullanici_kur):
 
     assert yanit["katildiMi"] is False
     assert yanit["siralama"] == []
+    assert (yanit["yukselen"], yanit["dusen"]) == (0, 0)
+
+
+def test_henuz_dolmamis_grupta_hareket_kumeleri_cakismiyor():
+    assert _hareket_esikleri(0) == (0, 0)
+    assert _hareket_esikleri(1) == (1, 0)
+    assert _hareket_esikleri(4) == (3, 1)
+    assert _hareket_esikleri(10) == (3, 3)
 
 
 def test_katilinca_siralamada_gorunuyor(istemci, kullanici_kur):
@@ -48,6 +56,7 @@ def test_katilinca_siralamada_gorunuyor(istemci, kullanici_kur):
     assert yanit["katildiMi"] is True
     assert len(yanit["siralama"]) == 1
     assert yanit["siralama"][0]["benMiyim"] is True
+    assert (yanit["yukselen"], yanit["dusen"]) == (1, 0)
 
 
 def test_yeni_kullanici_fidan_liginde(istemci, kullanici_kur):

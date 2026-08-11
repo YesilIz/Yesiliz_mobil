@@ -47,12 +47,19 @@ def hafta_baslangici(gun: dt.date | None = None) -> dt.date:
     return gun - dt.timedelta(days=gun.weekday())
 
 
+def _hareket_esikleri(uye_sayisi: int) -> tuple[int, int]:
+    """Küçük/henüz dolmamış gruplarda yükselen ve düşen kümeleri çakıştırma."""
+    a = ayarlar()
+    yukselen = min(max(a.lig_yukselen, 0), max(uye_sayisi, 0))
+    dusen = min(max(a.lig_dusen, 0), max(uye_sayisi - yukselen, 0))
+    return yukselen, dusen
+
+
 @yonlendirici.get("/lig", response_model=LigYanit)
 def lig(
     db: Session = Depends(oturum),
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> LigYanit:
-    a = ayarlar()
     hafta = hafta_baslangici()
     uyelik = db.scalar(
         select(LigUyelik).where(
@@ -66,8 +73,8 @@ def lig(
         return LigYanit(
             ligAdi=SEVIYELER[0],
             kalanGun=_kalan_gun(hafta),
-            yukselen=a.lig_yukselen,
-            dusen=a.lig_dusen,
+            yukselen=0,
+            dusen=0,
             siralama=[],
             katildiMi=False,
         )
@@ -85,6 +92,7 @@ def lig(
     # her hâlükârda kendi satırını görüyor, yoksa sıralamada nerede
     # olduğunu hiç öğrenemezdi (debug.md Y-5).
     gorunenler = [u for u in uyelikler if u.gorunur or u.kullanici_id == kullanici.id]
+    yukselen, dusen = _hareket_esikleri(len(uyelikler))
 
     siralama = []
     for indeks, u in enumerate(gorunenler, start=1):
@@ -104,8 +112,8 @@ def lig(
     return LigYanit(
         ligAdi=SEVIYELER[min(grup.seviye if grup else 0, len(SEVIYELER) - 1)],
         kalanGun=_kalan_gun(hafta),
-        yukselen=a.lig_yukselen,
-        dusen=a.lig_dusen,
+        yukselen=yukselen,
+        dusen=dusen,
         siralama=siralama,
         katildiMi=True,
         gorunuyorMuyum=uyelik.gorunur,
@@ -315,7 +323,6 @@ def _onceki_seviye(db: Session, kullanici_id: int, hafta: dt.date) -> int:
     Yükselme/düşme **grup değiştiriyor, puan silmiyor**. Düşen kullanıcı da
     kazandığı puanı koruyor; yalnızca bir alt seviyeye geçiyor.
     """
-    a = ayarlar()
     onceki_hafta = hafta - dt.timedelta(days=7)
     onceki = db.scalar(
         select(LigUyelik).where(
@@ -338,9 +345,10 @@ def _onceki_seviye(db: Session, kullanici_id: int, hafta: dt.date) -> int:
         return seviye
 
     sira = idler.index(kullanici_id) + 1
-    if sira <= a.lig_yukselen:
+    yukselen, dusen = _hareket_esikleri(len(idler))
+    if sira <= yukselen:
         return min(seviye + 1, len(SEVIYELER) - 1)
-    if sira > len(idler) - a.lig_dusen:
+    if sira > len(idler) - dusen:
         return max(seviye - 1, 0)
     return seviye
 
