@@ -21,7 +21,6 @@ data class KategoriDurum(
     /** Alt sayfada açık olan uygulama (tasarım 33); `null` = kapalı. */
     val secilenUygulama: UygulamaSatiri? = null,
     val yukleniyor: Boolean = true,
-    val ebeveyneGonderildi: Boolean = false,
 ) {
     /**
      * "Bugünkü ekran süresinin %65'i sosyal medya ve videoda geçti" —

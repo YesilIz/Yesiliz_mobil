@@ -164,5 +164,26 @@ val GECIS_6_7 = object : Migration(6, 7) {
     }
 }
 
+/**
+ * Sürüm 7 → 8 (11 Ağustos 2026).
+ *
+ * Kategori ekranındaki eski düğme sunucuya hiçbir veri göndermeden yerel
+ * olarak “Özet ebeveyn paneline gönderildi” yazıyordu. Uydurma başarı
+ * geçmişte de kalmasın; yalnızca o tür silinir, gerçek bildirimler korunur.
+ */
+val GECIS_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM `bildirim` WHERE `tur` = 'ebeveyn'")
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
-val TUM_GECISLER = arrayOf(GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7)
+val TUM_GECISLER = arrayOf(
+    GECIS_1_2,
+    GECIS_2_3,
+    GECIS_3_4,
+    GECIS_4_5,
+    GECIS_5_6,
+    GECIS_6_7,
+    GECIS_7_8,
+)

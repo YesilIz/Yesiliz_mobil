@@ -60,6 +60,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  * oturumları artık kalıcı; Health Connect'in egzersiz kayıtlarıyla birlikte
  * [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e giriyor
  * (`gorev2.md` §4-§6, `Gecisler.kt` GECIS_6_7).
+ *
+ * **Sürüm 8** (11 Ağu 2026): eski sürümün gerçek bir ağ işlemi olmadan
+ * yazdığı yanıltıcı “ebeveyn paneline gönderildi” bildirimleri temizlendi.
  */
 @Database(
     entities = [
@@ -79,7 +82,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         OdulSecimiEntity::class,
         AktiviteOturumuEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)

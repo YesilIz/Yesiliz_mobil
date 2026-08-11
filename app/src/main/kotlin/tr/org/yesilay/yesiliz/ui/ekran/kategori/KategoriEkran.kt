@@ -120,18 +120,12 @@ fun KategoriEkran(
                     }
                 }
 
-                // Buton yalnızca eşleşmiş kullanıcıda — eşleşme yokken
-                // "ebeveyn paneline gönder" demek olmayan bir bağlantıyı
-                // varmış gibi göstermek olurdu.
+                // Kategori dağılımını gönderen bir API yok. Eski düğme
+                // yalnızca yerel bir “gönderildi” bildirimi yazıp sahte başarı
+                // gösteriyordu; gerçek ebeveyn sınırı açıkça anlatılıyor.
                 if (durum.ebeveynAktifMi) {
-                    BirincilButon(
-                        metin = if (durum.ebeveyneGonderildi) "Gönderildi" else "Ebeveyn paneline gönder",
-                        onTikla = viewModel::ebeveyneGonder,
-                        etkin = !durum.ebeveyneGonderildi,
-                    )
                     Text(
-                        text = "Yalnızca kategori dağılımı paylaşılır; uygulama " +
-                            "adları gönderilmez.",
+                        text = EBEVEYN_KATEGORI_ACIKLAMASI,
                         style = MaterialTheme.typography.labelMedium,
                         color = MetinUcuncul,
                         textAlign = TextAlign.Center,
@@ -148,6 +142,12 @@ fun KategoriEkran(
         }
     }
 }
+
+/** Kategori ekranının gerçek ebeveyn veri sınırı. */
+internal const val EBEVEYN_KATEGORI_ACIKLAMASI =
+    "Bu ekrandaki kategori dağılımı ve uygulama adları ebeveyn paneline " +
+        "gönderilmez. Eşleşmiş ebeveyn, daha önce sunucuyla paylaşılmış günlük " +
+        "toplamları ve yalnızca yeterli veriye dayanan risk durumunu görebilir."
 
 /** Akordiyon: kategori başlığı + açıkken uygulama satırları. */
 @Composable

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.UygulamaAdlari
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
@@ -40,7 +39,6 @@ class KategoriViewModel @Inject constructor(
     private val olayDao: KullanimOlayDao,
     private val kategoriDeposu: KategoriDeposu,
     private val uygulamaAdlari: UygulamaAdlari,
-    private val bildirimDeposu: BildirimDeposu,
     private val tercihler: Tercihler,
     private val riskDao: RiskSonucDao,
     private val guncelGun: GuncelGun,
@@ -163,19 +161,6 @@ class KategoriViewModel @Inject constructor(
             kategoriDeposu.kullaniciSecti(paketAdi, kategori)
             _durum.update { it.copy(secilenUygulama = null) }
             yukle()
-        }
-    }
-
-    /**
-     * Ebeveyn paneline **kategori özeti** gönderir.
-     *
-     * Uygulama adı gitmiyor — `docs/spec-veri.md`: ebeveyne ham veri değil
-     * özet gösterilir. Buton zaten yalnızca eşleşme varken görünüyor.
-     */
-    fun ebeveyneGonder() {
-        viewModelScope.launch {
-            bildirimDeposu.ebeveyneGonderildi()
-            _durum.update { it.copy(ebeveyneGonderildi = true) }
         }
     }
 

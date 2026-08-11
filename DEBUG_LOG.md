@@ -576,6 +576,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A newly installed/briefly measured child device could tell the child there was not enough data while telling the parent “AZ” risk with a fabricated stable comparison.
 - Status: Fixed. The Android uploader fail-closes to `HESAPLANDI` rows and sends the status; the backend schema/model/migration persist it and the parent query requires it. The panel maps bands to understandable labels and treats `BELIRSIZ`/future trends as no comparison. Local PostgreSQL migrated to the new head; 30 focused backend tests and six focused Android tests pass.
 
+## DBG-064 — “Send to parent panel” fabricated success without any network operation
+
+- Severity: P0 — family privacy/trust and false data-transfer claim
+- Areas: app categories, in-app notifications and Room migration
+- Evidence: The paired-child screen offered “Ebeveyn paneline gönder”, but its handler only inserted a local notification whose title claimed the summary was sent. It never called a repository/API, and the parent-summary contract does not contain category distribution at all.
+- Expected: Never claim a sensitive transfer without a real supported operation; disclose the exact parent data boundary, and remove already persisted false claims.
+- Actual: A child could believe app-category data was shared and a parent could wait for data that never arrives; the notification history reinforced both false beliefs.
+- Status: Fixed. The fake action/writer/state were removed. Paired users now see that category distribution/app names are not sent and that parents can see only previously shared daily totals plus sufficiently measured risk. Room 7→8 deletes only the legacy fake `ebeveyn` notification type while retaining real notifications; schema and data migration passed 14 tests on both physical API 31 and emulator API 36, and a JVM copy regression passes.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

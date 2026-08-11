@@ -240,6 +240,35 @@ class GecisTest {
         )
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun gecis7den8eSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 7).close()
+        yardimci.runMigrationsAndValidate(TEST_DB, 8, true, GECIS_7_8)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun gecis7den8eYalnizcaSahteEbeveynBildiriminiTemizler() {
+        yardimci.createDatabase(TEST_DB, 7).apply {
+            execSQL(
+                "INSERT INTO bildirim (tur, baslik, govde, zaman, okundu) VALUES " +
+                    "('ebeveyn', 'Gönderildi', 'Gerçekte gönderilmedi', 1, 0), " +
+                    "('puan', '10 puan', 'Gerçek bildirim', 2, 0)",
+            )
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 8, true, GECIS_7_8)
+
+        db.query("SELECT tur, baslik FROM bildirim ORDER BY zaman").use { imlec ->
+            assertTrue("gerçek bildirim de silinmiş", imlec.moveToFirst())
+            assertEquals("puan", imlec.getString(0))
+            assertEquals("10 puan", imlec.getString(1))
+            assertTrue("sahte bildirim kalmış", imlec.isLast)
+        }
+    }
+
     /**
      * Kapsamlı dolu veritabanı — `gorev2.md` §10 "gerçek kullanıcı geçmişine
      * benzeyen dolu bir veritabanı": üç günlük geçmiş, dört tablo birden

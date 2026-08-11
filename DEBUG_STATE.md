@@ -4,15 +4,15 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Risk sufficiency now enforced end-to-end through parent summaries; preparing final full/device/release validation while continuing review
-LAST_CHECKPOINT: 2026-08-11 05:34:30 +03
+CURRENT_PHASE: Removed a fake parent data-transfer flow and migrated its false history; rebuilding final full/device/release validation
+LAST_CHECKPOINT: 2026-08-11 05:46:30 +03
 CURRENT_BRANCH: fix/turan-debug
 LAST_VALIDATED_COMMIT: 691bf41 (timer/service lifecycle wave; forced suites and two-device connected suite green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
 BUILD_STATUS: PASS — debug/release compile, mission debug assemble and Android lint (zero errors); shrunk signed release assembled and live-smoked
-UNIT_TEST_STATUS: PASS — latest forced full app run: 237 app JVM tests; latest core-risk forced run: 30 tests
-DEVICE_TEST_STATUS: PASS — latest XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error. Real parent summary/unlink and lowercase account deletion passed on the phone; API 36 real account registration and hidden-first-join passed against PostgreSQL.
-BACKEND_TEST_STATUS: PASS — latest full suite: 103 passed; latest parent/summary focus: 30 passed; live PostgreSQL migrated to b271c6d09e44
+UNIT_TEST_STATUS: PASS — latest forced full app run: 248 app JVM tests; latest core-risk forced run: 30 tests
+DEVICE_TEST_STATUS: PASS — latest full XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error. Subsequent Room 7→8 focus passed all 14 migration tests on both devices.
+BACKEND_TEST_STATUS: PASS — latest full suite: 105 passed; live PostgreSQL migrated to b271c6d09e44
 TOP_OPEN_BUGS: Remaining process-death/account/server abuse edges; final two-device suite, exact release rebuild and mission-account/package cleanup
 CURRENT_HYPOTHESES: Authentication rate limiting needs deployment-grade shared state and remains a launch risk; long-lived client tokens would benefit from hardware-backed at-rest protection; connected tests do not exercise every real notification/account UI path
 NEXT_ACTIONS: Commit the deletion/export wave, continue static/adversarial checks, run final forced suites and two-device connected matrix, rebuild/install-smoke the exact signed release, then remove only mission packages and reverse-port artifacts
@@ -56,3 +56,5 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 05:25:30 +03 — Found that insufficient risk measurements were hidden on Home/Risk Detail but still labelled on Statistics/Categories. Unified all four on a fail-closed decoder, hardened restored/future enum values and nightly replay, and passed seven focused regressions plus release compilation. Approximately 1h44m mission time remains.
 - 2026-08-11 05:28:30 +03 — Closed a P0 last-write race in the “Ligde görün” privacy control: profile and daily-worker server writes are process-wide serialized so an older visible request cannot overtake the user's final hidden choice. Deterministic concurrency regression and release compilation pass. Approximately 1h41m mission time remains.
 - 2026-08-11 05:34:30 +03 — Found that risk sufficiency was dropped from the mobile→server contract, allowing a sub-15-minute child's unreliable band to reach a parent. New clients now withhold it, the backend persists/enforces the status through a tested PostgreSQL migration, and the panel no longer calls indeterminate trends stable. Focused suites pass 30 backend + six Android tests. Approximately 1h35m mission time remains.
+- 2026-08-11 05:40:00 +03 — Forced full suites passed 30 core-risk + 248 app JVM + 105 backend with zero lint errors. The final-source connected matrix then passed exactly 48 tests per API 31/API 36 device (44 executed pass + four permission-precondition skips, zero failure/error). Exact signed release was one DEX/8,610,726 bytes, v2/RSA-4096 verified, cleartext-disabled, and cold-started on API 36; later source changes require one final rebuild. Approximately 1h29m mission time remains.
+- 2026-08-11 05:46:30 +03 — Removed a P0 fake “Ebeveyn paneline gönder” action that only wrote a local success notification and had no API. Added the truthful parent data boundary and a Room 7→8 cleanup that deletes only those legacy false notices. All 14 migration tests pass on physical API 31 and emulator API 36. Approximately 1h23m mission time remains.

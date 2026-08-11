@@ -71,12 +71,6 @@ class BildirimDeposu @Inject constructor(
         govde = "Son değerlendirmenin üzerinden $gecenGun gün geçti.",
     )
 
-    suspend fun ebeveyneGonderildi() = yaz(
-        tur = BildirimTuru.EBEVEYN,
-        baslik = "Özet ebeveyn paneline gönderildi",
-        govde = "Yalnızca kategori dağılımı paylaşıldı; uygulama adları gönderilmedi.",
-    )
-
     suspend fun hatirlatma(baslik: String, govde: String) =
         yaz(BildirimTuru.HATIRLATMA, baslik, govde)
 
