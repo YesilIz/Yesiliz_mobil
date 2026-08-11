@@ -147,47 +147,13 @@ fun AnaEkran(
             .fillMaxSize()
             .background(Gradyan.BaslikSonumu),
     ) {
-        // 1. ARKA PLAN: Sabit / Parallax Ağaç ve Üst Başlık Katmanı (En üstten başlayan yumuşak gradyen)
+        // 1. ARKA PLAN: Sabit / Parallax Ağaç Katmanı (En üstten başlayan yumuşak gradyen)
         Column(
             modifier = Modifier
                 .fillMaxWidth(),
         ) {
             Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Olcu.EkranKenari, vertical = Bosluk.M),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
-            ) {
-                KullaniciAvatari(
-                    isim = durum.isim,
-                    zemin = Beyaz.copy(alpha = YariSaydam),
-                    onTikla = onProfil,
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = durum.selamlama,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Beyaz.copy(alpha = AzSaydam),
-                    )
-                    Text(
-                        text = durum.isim,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Beyaz,
-                    )
-                }
-                Cip(
-                    onTikla = onIstatistik,
-                    metin = "${durum.serideGun} gün",
-                    ikon = Icons.Filled.LocalFireDepartment,
-                    zemin = Beyaz.copy(alpha = YariSaydam),
-                    renk = Beyaz,
-                )
-                ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
-            }
+            Spacer(modifier = Modifier.height(68.dp))
 
             // Büyük Hero Ağaç Alanı (Kaydırdıkça Ölçeklenen ve Büyüyen Ağaç)
             Box(
@@ -221,8 +187,8 @@ fun AnaEkran(
                 .fillMaxSize()
                 .verticalScroll(kaydirmaDurumu),
         ) {
-            // İlk açılışta daha büyük olan ağacın ve saksısının tamamen görünmesini sağlayan üst pay
-            Spacer(modifier = Modifier.height(500.dp))
+            // İlk açılışta ağacın ve saksısının tamamen görünmesini sağlayan üst pay
+            Spacer(modifier = Modifier.height(460.dp))
 
             // Puan Kartı ve Özet Şeridi (İlk açılışta ekranda görünen puan ve ekran süresi)
             Column(
@@ -310,6 +276,52 @@ fun AnaEkran(
                         GorevSatiri(gorev = gorev, onTikla = { acikGorev = Gorev.idden(gorev.id) })
                     }
                 }
+            }
+        }
+
+        // 3. ÜST BAŞLIK KATMANI (En üstte duran ve tıklamaları doğrudan alan etkileşimli başlık)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Olcu.EkranKenari, vertical = Bosluk.M),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
+            ) {
+                KullaniciAvatari(
+                    isim = durum.isim,
+                    zemin = Beyaz.copy(alpha = YariSaydam),
+                    onTikla = onProfil,
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onProfil),
+                ) {
+                    Text(
+                        text = durum.selamlama,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Beyaz.copy(alpha = AzSaydam),
+                    )
+                    Text(
+                        text = durum.isim,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Beyaz,
+                    )
+                }
+                Cip(
+                    onTikla = onIstatistik,
+                    metin = "${durum.serideGun} gün",
+                    ikon = Icons.Filled.LocalFireDepartment,
+                    zemin = Beyaz.copy(alpha = YariSaydam),
+                    renk = Beyaz,
+                )
+                ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
             }
         }
     }
