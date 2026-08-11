@@ -4,18 +4,18 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Final forced suites, refreshed two-device matrix, exact signed release and usage-permission recovery are green; completing cleanup and handoff
-LAST_CHECKPOINT: 2026-08-11 06:39:00 +03
+CURRENT_PHASE: Final source, forced suites, signed release, physical smoke and cleanup are green; completing the residual audit through the seven-hour target
+LAST_CHECKPOINT: 2026-08-11 06:54:31 +03
 CURRENT_BRANCH: fix/turan-debug
-LAST_VALIDATED_COMMIT: 08742bd (usage-access recovery restored; refreshed two-device connected matrix green)
+LAST_VALIDATED_COMMIT: d0d7689 (non-overlapping demo-league thresholds; physical fail-closed state and full JVM suite green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
-BUILD_STATUS: PASS — debug/release lint (zero errors) and exact shrunk signed release; release is 8,610,730 bytes, SHA-256 304e4aeaacff25755e22e8ef227362ac490857398765e2f9a6f4af816b754908, one DEX, APK Signature Scheme v2/RSA-4096 verified and API 36 cold-smoked in 585 ms
-UNIT_TEST_STATUS: PASS — latest forced full app run: 261 app JVM tests; latest core-risk forced run: 30 tests, zero failure/skip
+BUILD_STATUS: PASS — release lint (zero issues) and exact shrunk signed release; release is 8,610,730 bytes, SHA-256 73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658, one DEX, APK Signature Scheme v2/RSA-4096 verified; prior exact release API 36 cold-smoke completed in 585 ms
+UNIT_TEST_STATUS: PASS — latest full app run: 263 app JVM tests; latest core-risk forced run: 30 tests, zero failure/skip
 DEVICE_TEST_STATUS: PASS — final XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error
 BACKEND_TEST_STATUS: PASS — final full suite: 106 passed; live PostgreSQL migrated to e39a71c4d206 (head)
 TOP_OPEN_BUGS: No known correctness regression in validated scope. Deployment-grade shared auth/pairing rate limits, client-supplied league points and protected token storage remain explicit launch risks.
 CURRENT_HYPOTHESES: Connected tests do not exercise every production notification/account UI path; external production services and legal consent verification remain outside this local validation boundary
-NEXT_ACTIONS: Finish residual static/adversarial review, confirm database/package/reverse-port hygiene, finalize logs, and keep working through the seven-hour target before handoff
+NEXT_ACTIONS: Finish residual static/adversarial review and final repository hygiene through the seven-hour target, then hand off the verified APK and launch-risk register
 BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf is preserved and excluded from mission changes.
 
 ## Checkpoints
@@ -64,3 +64,4 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 06:25:00 +03 — Final forced suites pass 30 core-risk + 261 app JVM + 105 backend with zero lint errors. Physical API 31 and emulator API 36 each report exactly 48 device tests: 44 executed pass + four documented permission-precondition skips, zero failure/error. The exact signed release is one DEX/8,610,730 bytes, v2/RSA-4096 verified, free of forbidden debug host/package strings and cold-started on API 36 in 776 ms without a focused fatal/security/Room error. Approximately 44 minutes mission time remains.
 - 2026-08-11 06:31:00 +03 — Equalized existing/unknown login computation so identical 401 bodies are no longer undermined by an Argon2 timing shortcut. The new regression and all 106 backend tests pass.
 - 2026-08-11 06:39:00 +03 — Restored the missing post-onboarding usage-access recovery action and live ON_RESUME refresh. Refreshed physical API 31/API 36 results remain exactly 48 tests each (44 pass + four documented skips). The exact final release is 8,610,730 bytes/one DEX, SHA-256 `304e4aeaacff25755e22e8ef227362ac490857398765e2f9a6f4af816b754908`, v2/RSA-4096 verified and cold-started in 585 ms. On API 36 the button opened the system Usage Access list; allow changed the card to “Ölçmeye yeni başladık” and deny restored the warning/action. Approximately 30 minutes mission time remains.
+- 2026-08-11 06:54:31 +03 — Closed the final physical-smoke finding: a ten-person demo league no longer marks overlapping first/last seven positions, and the pre-response UI no longer invents thresholds. Phone validation showed the fail-closed 0/0 state; the repository is guarded at backend-aligned 3/3. All 263 app JVM tests and release lint pass. The final one-DEX v2/RSA-4096 release is 8,610,730 bytes with SHA-256 `73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658`. The temporary mission app was removed, reverse-port state cleared, the original physical installation remained byte/package-state untouched, and PostgreSQL has zero accounts created during the mission at migration head `e39a71c4d206`. Approximately 15 minutes mission time remains.

@@ -666,6 +666,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A user who skipped or revoked the app's essential measurement access could remain permanently at an instruction-only dead end.
 - Status: Fixed and API 36 release-validated. Home now exposes “İzin ayarlarını aç”, resolves the settings Activity before launch, and refreshes AppOps on every resume. The button opened the system Usage Access list; granting changed the card to “Ölçmeye yeni başladık”, and revoking restored the warning/action. The refreshed two-device suite remains green.
 
+## DBG-074 — Ten-person demo league used overlapping promotion/relegation thresholds
+
+- Severity: P1 — competition correctness and UI truthfulness
+- Areas: local/demo league repository and pre-response league UI state
+- Evidence: The ten-person local group labelled both the first seven as promoted and the last seven as relegated. Four positions therefore belonged to both sets; the loading state also invented the same movement thresholds before any server result arrived.
+- Expected: Demo thresholds match the backend's non-overlapping 3/3 defaults, and no threshold is claimed before authoritative data arrives.
+- Actual: The debug/offline experience could show an impossible league outcome, while a slow/failed request briefly displayed fabricated movement rules.
+- Status: Fixed and physical API 31-validated. The sample repository now uses 3/3, the sum is regression-guarded not to exceed the ten-member group, and the pre-response state fails closed at 0/0. On the phone an unavailable league response displayed 0/0 instead of the former 7/7; both focused tests and all 263 app JVM tests pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
@@ -676,3 +685,4 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
 - Current forced suites: 30 `core-risk` and 230 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.
+- Final validation: 30 `core-risk`, 263 app JVM and 106 backend tests passed. Physical API 31 and emulator API 36 each report 48 connected tests: 44 executed pass plus four documented UsageStats-permission precondition skips, with zero failure/error. Release lint reports zero issues. The final signed release is 8,610,730 bytes, one DEX, SHA-256 `73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658`, and verifies with APK Signature Scheme v2/RSA-4096.
