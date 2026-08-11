@@ -7,7 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
+import tr.org.yesilay.yesiliz.ui.tema.Golge
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -112,74 +118,169 @@ fun AnaEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikGorev by remember { mutableStateOf<Gorev?>(null) }
+    val kaydirmaDurumu = rememberScrollState()
 
-    Column(
+    // Kaydırma miktarına göre ağacın ölçeklenmesi (1.0f -> 1.35f) ve parallax hareketi
+    val kaydirmaOrani = (kaydirmaDurumu.value / 600f).coerceIn(0f, 1f)
+    val agacOlcegi = 1.0f + (kaydirmaOrani * 0.35f)
+    val agacKaymaY = kaydirmaDurumu.value * 0.35f
+
+    BoxWithConstraints(
         modifier = modifier
-            .fillMaxWidth()
-            .background(Beyaz)
-            .verticalScroll(rememberScrollState()),
+            .fillMaxSize()
+            .background(Gradyan.BaslikSonumu),
     ) {
-        Basliktan(
-            durum,
-            onBildirimler = onBildirimler,
-            onProfil = onProfil,
-            onIstatistik = onIstatistik,
-        )
-
-        Yigin(
-            modifier = Modifier.padding(
-                start = Olcu.EkranKenari,
-                end = Olcu.EkranKenari,
-                bottom = Olcu.BolumArasi,
-            ),
+        // 1. ARKA PLAN: Sabit / Parallax Ağaç ve Üst Başlık Katmanı (En üstten başlayan yumuşak gradyen)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(),
         ) {
-            PuanKarti(puan = durum.puan, onTikla = onOdul)
+            Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
-            // Veri yoksa uydurma sayı göstermek yerine ne olduğunu söyle.
-            // İzin verilmemişse sebep o; verilmişse henüz özet çıkmadı.
-            if (durum.veriVarMi) {
-                OzetSeridi(durum)
-            } else {
-                Kart {
-                    BosDurum(
-                        baslik = if (durum.izinVarMi) {
-                            "Ölçmeye yeni başladık"
-                        } else {
-                            "Kullanım izni gerekiyor"
-                        },
-                        aciklama = if (durum.izinVarMi) {
-                            "Bugünün özeti hazırlanıyor. Birkaç saat içinde ekran " +
-                                "süren burada görünecek."
-                        } else {
-                            "Ekran süreni görebilmemiz için Ayarlar'dan kullanım " +
-                                "erişimi vermen gerekiyor."
-                        },
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Olcu.EkranKenari, vertical = Bosluk.M),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
+            ) {
+                KullaniciAvatari(
+                    isim = durum.isim,
+                    zemin = Beyaz.copy(alpha = YariSaydam),
+                    onTikla = onProfil,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = durum.selamlama,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Beyaz.copy(alpha = AzSaydam),
+                    )
+                    Text(
+                        text = durum.isim,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Beyaz,
                     )
                 }
-            }
-            if (durum.degerlendirmeYenilensin) {
-                DegerlendirmeKarti(
-                    onYenile = onDegerlendirmeYenile,
-                    onErtele = viewModel::degerlendirmeErtele,
+                Cip(
+                    onTikla = onIstatistik,
+                    metin = "${durum.serideGun} gün",
+                    ikon = Icons.Filled.LocalFireDepartment,
+                    zemin = Beyaz.copy(alpha = YariSaydam),
+                    renk = Beyaz,
                 )
+                ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
             }
 
-            RuhHaliKarti(
-                deger = durum.ruhHali,
-                kaydedildi = durum.ruhHaliKaydedildi,
-                onDegis = viewModel::ruhHaliDegisti,
-                onBirakildi = viewModel::ruhHaliBirakildi,
-            )
-            KesfetIkilisi(onBilgiBankasi = onBilgiBankasi, onKendiniTest = onKendiniTest)
+            // Büyük Hero Ağaç Alanı (Kaydırdıkça Ölçeklenen ve Büyüyen Ağaç)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = agacOlcegi
+                        scaleY = agacOlcegi
+                        translationY = agacKaymaY
+                    },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(agacGorseli(durum.agacEvresi)),
+                        contentDescription = null,
+                        modifier = Modifier.height(320.dp),
+                    )
+                    SallananYapraklar(modifier = Modifier.height(320.dp).aspectRatio(1f))
+                }
+            }
+        }
 
-            Text(
-                text = "Bugünün görevleri",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MetinBirincil,
-            )
-            durum.gorevler.forEach { gorev ->
-                GorevSatiri(gorev = gorev, onTikla = { acikGorev = Gorev.idden(gorev.id) })
+        // 2. KAYDIRILABİLİR İÇERİK KATMANI (Ağacın üstüne kayan yapı)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(kaydirmaDurumu),
+        ) {
+            // İlk açılışta daha büyük olan ağacın ve saksısının tamamen görünmesini sağlayan üst pay
+            Spacer(modifier = Modifier.height(500.dp))
+
+            // Puan Kartı ve Özet Şeridi (İlk açılışta ekranda görünen puan ve ekran süresi)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Olcu.EkranKenari),
+                verticalArrangement = Arrangement.spacedBy(Bosluk.M),
+            ) {
+                PuanKarti(puan = durum.puan, onTikla = onOdul)
+
+                if (durum.veriVarMi) {
+                    OzetSeridi(durum)
+                } else {
+                    Kart {
+                        BosDurum(
+                            baslik = if (durum.izinVarMi) {
+                                "Ölçmeye yeni başladık"
+                            } else {
+                                "Kullanım izni gerekiyor"
+                            },
+                            aciklama = if (durum.izinVarMi) {
+                                "Bugünün özeti hazırlanıyor. Birkaç saat içinde ekran süren burada görünecek."
+                            } else {
+                                "Ekran süreni görebilmemiz için Ayarlar'dan kullanım erişimi vermen gerekiyor."
+                            },
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Bosluk.L))
+
+            // Alttaki Öğeler (Aşağı kaydırdıkça ağacın ve üst kartların üstüne kayan beyaz içerik kartı)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(topStart = Yaricap.AltSayfa, topEnd = Yaricap.AltSayfa),
+                color = Beyaz,
+                shadowElevation = Golge.Kart,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = Olcu.EkranKenari,
+                            end = Olcu.EkranKenari,
+                            top = Olcu.BolumArasi,
+                            bottom = Olcu.BolumArasi,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(Bosluk.M),
+                ) {
+                    if (durum.degerlendirmeYenilensin) {
+                        DegerlendirmeKarti(
+                            onYenile = onDegerlendirmeYenile,
+                            onErtele = viewModel::degerlendirmeErtele,
+                        )
+                    }
+
+                    RuhHaliKarti(
+                        deger = durum.ruhHali,
+                        kaydedildi = durum.ruhHaliKaydedildi,
+                        onDegis = viewModel::ruhHaliDegisti,
+                        onBirakildi = viewModel::ruhHaliBirakildi,
+                    )
+
+                    KesfetIkilisi(onBilgiBankasi = onBilgiBankasi, onKendiniTest = onKendiniTest)
+
+                    Text(
+                        text = "Bugünün görevleri",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MetinBirincil,
+                    )
+                    durum.gorevler.forEach { gorev ->
+                        GorevSatiri(gorev = gorev, onTikla = { acikGorev = Gorev.idden(gorev.id) })
+                    }
+                }
             }
         }
     }
@@ -314,14 +415,17 @@ private fun ZilIkonu(okunmamis: Int, onTikla: () -> Unit) {
     }
 }
 
-/** Ağaç evresi (1..6) → drawable. Evre dışı değer en yakın uca kırpılır. */
-private fun agacGorseli(evre: Int): Int = when (evre.coerceIn(1, 6)) {
-    1 -> R.drawable.agac_evre1_cicek
-    2 -> R.drawable.agac_evre2_narenciye
-    3 -> R.drawable.agac_evre3_pembe
-    4 -> R.drawable.agac_evre4_sari
-    5 -> R.drawable.agac_evre5_erik
-    else -> R.drawable.agac_evre6_elma
+/** Ağaç evresi (1..9) → drawable. Evre dışı değer en yakın uca kırpılır. */
+private fun agacGorseli(evre: Int): Int = when (evre.coerceIn(1, 9)) {
+    1 -> R.drawable.tree_phase_1
+    2 -> R.drawable.tree_phase_2
+    3 -> R.drawable.tree_phase_3
+    4 -> R.drawable.tree_phase_4
+    5 -> R.drawable.tree_phase_5
+    6 -> R.drawable.tree_phase_6
+    7 -> R.drawable.tree_phase_7
+    8 -> R.drawable.tree_phase_8
+    else -> R.drawable.tree_phase_9
 }
 
 /** Gradyanlı puan kartı — dokununca Ödüller ekranı. */

@@ -44,7 +44,7 @@ fun KarsilamaEkran(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                painter = painterResource(R.drawable.agac_evre1_cicek),
+                painter = painterResource(R.drawable.tree_phase_1),
                 contentDescription = null,
                 modifier = Modifier.height(Olcu.AgacBoyu),
             )

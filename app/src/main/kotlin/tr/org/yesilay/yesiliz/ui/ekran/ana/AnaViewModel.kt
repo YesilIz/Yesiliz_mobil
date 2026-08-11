@@ -137,7 +137,7 @@ class AnaViewModel @Inject constructor(
                 selamlama = selamlama(),
                 isim = ara.isim,
                 serideGun = ara.seriGun,
-                agacEvresi = agacEvresi(ara.seriGun),
+                agacEvresi = agacEvresi(ara.toplamPuan),
                 puan = ara.toplamPuan,
                 ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
                 hedefDakika = ara.hedefDk,
@@ -203,19 +203,16 @@ class AnaViewModel @Inject constructor(
         else -> "İyi akşamlar"
     }
 
-    /**
-     * Ağaç evresi **seriden** türüyor, risk bandından değil.
-     *
-     * `spec-puan.md` ilkesi: "durumu değil, çabayı ödüllendir". Ağacı risk
-     * bandına bağlamak kötü bir günde ağacı kurutup kullanıcıyı cezalandırırdı.
-     * Seriye bağlıyken ağaç yalnızca büyüyor.
-     */
-    private fun agacEvresi(seriGun: Int): Int = when {
-        seriGun >= EVRE6_GUN -> 6
-        seriGun >= EVRE5_GUN -> 5
-        seriGun >= EVRE4_GUN -> 4
-        seriGun >= EVRE3_GUN -> 3
-        seriGun >= EVRE2_GUN -> 2
+    /** Ağaç büyüme evresi (1..9) toplam puana göre hesaplanır. */
+    private fun agacEvresi(puan: Int): Int = when {
+        puan >= 10_000 -> 9
+        puan >= 5_000 -> 8
+        puan >= 3_500 -> 7
+        puan >= 2_000 -> 6
+        puan >= 1_000 -> 5
+        puan >= 500 -> 4
+        puan >= 250 -> 3
+        puan >= 100 -> 2
         else -> 1
     }
 

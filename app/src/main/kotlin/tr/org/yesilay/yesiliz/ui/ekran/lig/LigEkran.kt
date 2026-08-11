@@ -245,7 +245,7 @@ private fun BosLig(onKatil: () -> Unit, onArkadasEkle: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.height(Olcu.BolumArasi))
         Image(
-            painter = painterResource(tr.org.yesilay.yesiliz.R.drawable.agac_evre1_cicek),
+            painter = painterResource(tr.org.yesilay.yesiliz.R.drawable.tree_phase_1),
             contentDescription = null,
             modifier = Modifier.height(Olcu.AgacBoyu),
         )
