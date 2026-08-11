@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -48,6 +49,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamOnayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
+import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 
 /**
  * Uygulamanın tek NavHost'u — `docs/tasarim-referans.md §3`.
@@ -155,6 +157,7 @@ fun YesilizGezinme(
             onboardingAkisi(navController)
 
             composable(Rota.ANA) {
+                val baglam = LocalContext.current
                 AnaEkran(
                     onOdul = { navController.navigate(Rota.ODUL) },
                     onNefesBaslat = { navController.navigate(Rota.NEFES) },
@@ -165,6 +168,11 @@ fun YesilizGezinme(
                     onDegerlendirmeYenile = { navController.navigate(Rota.ANKET_YENILE) },
                     onProfil = { navController.navigate(Rota.PROFIL) },
                     onIstatistik = { navController.sekmeyeGit(Sekme.ISTATISTIK) },
+                    onKullanimIzni = {
+                        if (KullanimIzni.ayarEkraniVarMi(baglam)) {
+                            baglam.startActivity(KullanimIzni.ayarIntent())
+                        }
+                    },
                 )
             }
             composable(Rota.BILGI_BANKASI) {

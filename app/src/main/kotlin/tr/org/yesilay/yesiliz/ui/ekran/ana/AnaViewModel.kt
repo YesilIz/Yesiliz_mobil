@@ -85,6 +85,9 @@ class AnaViewModel @Inject constructor(
     /** Hatırlatma kartı "Sonra" ile kapatıldıysa o oturum boyunca gizli. */
     private val degerlendirmeGizlendi = MutableStateFlow(false)
 
+    /** Özel kullanım erişimi sistem ekranından dönünce elle tazelenir. */
+    private val kullanimIzniVar = MutableStateFlow(KullanimIzni.verildiMi(baglam))
+
     val durum: StateFlow<AnaDurum> = guncelGun.akis
         .flatMapLatest { bugun ->
             combine(
@@ -164,11 +167,14 @@ class AnaViewModel @Inject constructor(
                             )
                         },
                         veriVarMi = ara.ozet != null,
-                        izinVarMi = KullanimIzni.verildiMi(baglam),
+                        izinVarMi = false,
                         ebeveynAktifMi = ara.ebeveynAktifMi,
                         okunmamisBildirim = ara.okunmamisBildirim,
                         degerlendirmeYenilensin = ara.degerlendirmeYenilensin,
                     )
+                }
+                .combine(kullanimIzniVar) { anaDurum, izinVarMi ->
+                    anaDurum.copy(izinVarMi = izinVarMi)
                 }
             }
         .stateIn(
@@ -196,6 +202,11 @@ class AnaViewModel @Inject constructor(
 
     fun degerlendirmeErtele() {
         degerlendirmeGizlendi.value = true
+    }
+
+    /** Kullanım erişimi normal izin geri çağrısı üretmediği için ON_RESUME yolu. */
+    fun kullanimIzniniTazele() {
+        kullanimIzniVar.value = KullanimIzni.verildiMi(baglam)
     }
 
     /**

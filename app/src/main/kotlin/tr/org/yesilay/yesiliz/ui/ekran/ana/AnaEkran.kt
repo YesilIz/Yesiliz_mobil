@@ -46,6 +46,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +59,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
@@ -107,11 +111,23 @@ fun AnaEkran(
     onDegerlendirmeYenile: () -> Unit,
     onProfil: () -> Unit,
     onIstatistik: () -> Unit,
+    onKullanimIzni: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AnaViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikGorev by remember { mutableStateOf<Gorev?>(null) }
+
+    // PACKAGE_USAGE_STATS normal izin diyaloğu olmadığı için Ayarlar'dan
+    // dönüşte callback gelmez. Kart/buton aynı anda doğru duruma geçsin.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val gozlemci = LifecycleEventObserver { _, olay ->
+            if (olay == Lifecycle.Event.ON_RESUME) viewModel.kullanimIzniniTazele()
+        }
+        lifecycleOwner.lifecycle.addObserver(gozlemci)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(gozlemci) }
+    }
 
     Column(
         modifier = modifier
@@ -139,21 +155,26 @@ fun AnaEkran(
             // İzin verilmemişse sebep o; verilmişse henüz özet çıkmadı.
             if (durum.veriVarMi) {
                 OzetSeridi(durum)
+            } else if (!durum.izinVarMi) {
+                Kart {
+                    BosDurum(
+                        baslik = "Kullanım izni gerekiyor",
+                        aciklama = "Ekran süreni görebilmemiz için Ayarlar'dan kullanım " +
+                            "erişimi vermen gerekiyor.",
+                        eylem = {
+                            BirincilButon(
+                                metin = "İzin ayarlarını aç",
+                                onTikla = onKullanimIzni,
+                            )
+                        },
+                    )
+                }
             } else {
                 Kart {
                     BosDurum(
-                        baslik = if (durum.izinVarMi) {
-                            "Ölçmeye yeni başladık"
-                        } else {
-                            "Kullanım izni gerekiyor"
-                        },
-                        aciklama = if (durum.izinVarMi) {
-                            "Bugünün özeti hazırlanıyor. Birkaç saat içinde ekran " +
-                                "süren burada görünecek."
-                        } else {
-                            "Ekran süreni görebilmemiz için Ayarlar'dan kullanım " +
-                                "erişimi vermen gerekiyor."
-                        },
+                        baslik = "Ölçmeye yeni başladık",
+                        aciklama = "Bugünün özeti hazırlanıyor. Birkaç saat içinde ekran " +
+                            "süren burada görünecek.",
                     )
                 }
             }
