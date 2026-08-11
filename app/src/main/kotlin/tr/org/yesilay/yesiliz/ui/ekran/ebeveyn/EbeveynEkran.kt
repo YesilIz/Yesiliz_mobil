@@ -492,8 +492,9 @@ private fun CocukEslesmePaneli(onEslesmeyiKaldir: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Ebeveyn cihazına yalnızca haftalık özet bilgilerin gönderilir; " +
-                "ayrıntılı kullanım verilerin paylaşılmaz.",
+            text = "Paylaşım açıksa ebeveyn cihazına haftalık özet bilgilerin ve " +
+                "son paylaşım zamanı gönderilir; ayrıntılı kullanım verilerin " +
+                "paylaşılmaz.",
             style = MaterialTheme.typography.bodyLarge,
             color = MetinIkincil,
             textAlign = TextAlign.Center,

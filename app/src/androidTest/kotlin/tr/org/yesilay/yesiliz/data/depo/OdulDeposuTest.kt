@@ -8,7 +8,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,13 +34,7 @@ import tr.org.yesilay.yesiliz.data.uzak.YenileIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 
-/**
- * `OdulDeposu` — seçim kalıcılığı ve tekrar seçilememe kuralı.
- *
- * Taze [Tercihler] varsayılan olarak `girisYapildiMi = false` döndürüyor
- * (bkz. `Tercihler.oturum`), yani bu testlerde sunucu hiç çağrılmıyor —
- * [sahteApi] her metotta patlıyor, çağrılırsa test bunu yakalar.
- */
+/** Maddi ödül teslimatı etkinleşmeden cihazda da hak kaydı üretilmez. */
 @RunWith(AndroidJUnit4::class)
 class OdulDeposuTest {
 
@@ -69,34 +62,11 @@ class OdulDeposuTest {
     fun kapat() = db.close()
 
     @Test
-    fun ilkSecimKaydediliyor() = runTest {
+    fun teslimatKapaliykenSecimKaydedilmiyor() = runTest {
         val sonuc = depo.sec("kupon_market", "fidan_bagisi")
 
-        assertTrue(sonuc)
-        assertEquals(mapOf("kupon_market" to "fidan_bagisi"), depo.secimlerAkisi.first())
-    }
-
-    @Test
-    fun ayniKademeIcinIkinciSecimReddediliyor() = runTest {
-        depo.sec("kupon_market", "market_kuponu")
-
-        val ikinci = depo.sec("kupon_market", "fidan_bagisi")
-
-        assertFalse(ikinci)
-        // İlk seçim korunuyor, ikinci deneme onu ezmiyor.
-        assertEquals(mapOf("kupon_market" to "market_kuponu"), depo.secimlerAkisi.first())
-    }
-
-    @Test
-    fun farkliKademelerAyriSeciliyor() = runTest {
-        depo.sec("kupon_market", "fidan_bagisi")
-        depo.sec("kupon_spor", "kupon_spor_kitap")
-
-        val secimler = depo.secimlerAkisi.first()
-
-        assertEquals(2, secimler.size)
-        assertEquals("fidan_bagisi", secimler["kupon_market"])
-        assertEquals("kupon_spor_kitap", secimler["kupon_spor"])
+        assertFalse(sonuc)
+        assertEquals(emptyMap<String, String>(), depo.secimlerAkisi.first())
     }
 
     private companion object {

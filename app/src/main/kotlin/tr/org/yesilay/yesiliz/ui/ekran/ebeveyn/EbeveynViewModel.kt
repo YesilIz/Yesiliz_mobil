@@ -202,15 +202,15 @@ class EbeveynViewModel @Inject constructor(
      * Sunucudan gelen özetten türetilen bildirimler.
      *
      * Sunucu bir bildirim listesi göndermiyor — ebeveyne ne söyleneceği
-     * cihazın kararı. Heartbeat kesilmesi `spec-veri.md`'deki "çocuk
-     * uygulamayı silmiş olabilir" uyarısına dönüşüyor.
+     * cihazın kararı. Sinyal kesilmesinin nedeni bilinmediğinden ekran bunu
+     * uygulamanın açılmadığı ya da silindiği şeklinde yorumlamaz.
      */
     private fun bildirimler(ozet: EbeveynOzetDto): List<EbeveynBildirimi> {
         val liste = mutableListOf<EbeveynBildirimi>()
         ozet.sonSinyalSaatOnce?.let { saat ->
             if (saat >= SESSIZLIK_ESIK_SAAT) {
                 liste += EbeveynBildirimi(
-                    "Uygulama ${saat / 24} gündür açılmadı",
+                    sessizlikMesaji(saat),
                     "${saat / 24}g",
                 )
             }
@@ -234,6 +234,10 @@ class EbeveynViewModel @Inject constructor(
 
     }
 }
+
+/** Sinyal kesilmesi; rıza kapama, ağ, silme ve açmama hâllerini ayıramaz. */
+internal fun sessizlikMesaji(saat: Int): String =
+    "Cihazdan ${saat / 24} gündür yeni paylaşım gelmedi"
 
 /** Sunucu enum'unu ebeveyne teknik ya da bilinmeyen bir etiket olarak gösterme. */
 internal fun String?.riskBandiMetni(): String = when (this) {

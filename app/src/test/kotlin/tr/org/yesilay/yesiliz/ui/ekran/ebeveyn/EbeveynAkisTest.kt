@@ -43,4 +43,13 @@ class EbeveynAkisTest {
         assertEquals(null, "YENI".trendMesajiVeyaNull())
         assertEquals("Geçen haftaya göre benzer", "SABIT".trendMesajiVeyaNull())
     }
+
+    @Test
+    fun sessizlikUygulamaAcilmadiDiyeYorumlanmaz() {
+        val mesaj = sessizlikMesaji(72)
+
+        assertTrue(mesaj.contains("yeni paylaşım gelmedi"))
+        assertFalse(mesaj.contains("açılmadı"))
+        assertFalse(mesaj.contains("silindi"))
+    }
 }

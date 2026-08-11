@@ -95,12 +95,20 @@ class SenkronDeposu @Inject constructor(
     /**
      * Cihazın canlı olduğunu bildirir — ebeveyn paneli bunu okuyor.
      *
-     * Giriş yapılmamışsa **hiç denenmiyor**: jetonsuz istek sunucuda 401
-     * üretiyor ve günlüğü kirletiyor.
+     * Yalnızca giriş yapmış, paylaşımı açmış ve ebeveynle eşleşmiş çocuk
+     * cihaz yollar. Canlılık zamanı da ebeveynin görebildiği davranış
+     * metadatasıdır; genel hesap heartbeat'i değildir.
      */
     suspend fun heartbeat() {
         val oturum = tercihler.oturum.first()
-        if (oturum.misafirMi || !oturum.girisYapildiMi) return
+        val gonderilebilir = heartbeatGonderilebilir(
+            girisYapildiMi = oturum.girisYapildiMi,
+            misafirMi = oturum.misafirMi,
+            paylasimAcikMi = tercihler.yesilayPaylasimi.first(),
+            ebeveynEslesmisMi = tercihler.ebeveynEslesmisMi.first(),
+            cihazRolu = tercihler.ebeveynCihazRolu.first(),
+        )
+        if (!gonderilebilir) return
         try {
             api.heartbeat()
         } catch (iptal: CancellationException) {
@@ -199,3 +207,13 @@ private fun RiskSonucEntity.dto() = RiskSonucDto(
 /** Ebeveyn/uzak depoda “veri yok” durumundan risk iddiası üretme. */
 internal fun List<RiskSonucEntity>.paylasilabilirRiskler(): List<RiskSonucEntity> =
     filter { it.veriDurumu == VeriDurumu.HESAPLANDI.name }
+
+/** Canlılık zamanı da davranış metadatasıdır; yalnızca rızalı çocuk yollar. */
+internal fun heartbeatGonderilebilir(
+    girisYapildiMi: Boolean,
+    misafirMi: Boolean,
+    paylasimAcikMi: Boolean,
+    ebeveynEslesmisMi: Boolean,
+    cihazRolu: String?,
+): Boolean = girisYapildiMi && !misafirMi && paylasimAcikMi &&
+    ebeveynEslesmisMi && cihazRolu == "cocuk"
