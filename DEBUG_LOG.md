@@ -531,6 +531,24 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A user could select 09:00 but receive the reminder at 08:00/10:00 after a clock transition, indefinitely.
 - Status: Fixed. WorkManager 2.11's explicit next-schedule override is updated in-place after each worker run and at startup, avoiding cancellation of a running job. Calendar regressions prove the spring DST day targets the real 03:00 instant rather than adding 24 hours and that a passed target rolls to the next local day. Forced suites pass 30 core-risk + 237 app JVM tests and lint has zero errors.
 
+## DBG-059 — Local-only deletion implied that remote account data and parent linkage would also disappear
+
+- Severity: P1 — privacy and destructive-action truthfulness
+- Area: Profile › data deletion
+- Evidence: The action was labelled “Verilerimi sil” and its confirmation list said the parent connection would be deleted, while the implementation only clears this device's Room/DataStore state. The server account, already shared summaries and parent connection remain.
+- Expected: Before confirmation, the scope and remote residue of a destructive action are explicit; full account deletion remains a separate visible route.
+- Actual: A user could reasonably believe all personal data and a family link had been removed when they still existed on the server.
+- Status: Fixed. The action is now “Bu cihazdaki verilerimi sil” and a mandatory warning says the server account, shared summaries and parent connection remain, with the full account-deletion route named. A JVM copy regression guards all four disclosures.
+
+## DBG-060 — Export storage failures escaped the Profile coroutine without a recoverable UI state
+
+- Severity: P2 — reliability and data portability
+- Area: Profile › download history
+- Evidence: Cache directory creation, JSON/CSV writes and FileProvider URI creation can fail, but `gecmisiDisaAktar` invoked the repository without an exception boundary. A full/read-only filesystem or provider error therefore terminated the coroutine and left the sheet with no explanation.
+- Expected: Cancellation remains cancellation; ordinary I/O/provider failures leave the sheet open with a clear retry action.
+- Actual: The promised portable-data action could appear to do nothing and emit an uncaught coroutine exception.
+- Status: Fixed. Export generation now has a cancellation-safe boundary and exposes a visible storage/retry message without closing the sheet. Three focused regressions cover success, failure and cancellation; release Kotlin compilation passes.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

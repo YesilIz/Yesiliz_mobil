@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,7 @@ class ProfilViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val silmeHali = MutableStateFlow(SilmeHali())
+    private val disaAktarmaHatasi = MutableStateFlow(false)
 
     /**
      * Yardım ekranındaki SSS.
@@ -102,6 +104,8 @@ class ProfilViewModel @Inject constructor(
         )
     }.combine(sssAkisi) { durum, sss ->
         durum.copy(sss = sss)
+    }.combine(disaAktarmaHatasi) { durum, hata ->
+        durum.copy(disaAktarmaHatasi = hata)
     }.combine(tercihler.sunucuTabani) { durum, taban ->
         durum.copy(sunucuTabani = taban)
     }.stateIn(
@@ -173,7 +177,13 @@ class ProfilViewModel @Inject constructor(
      * CLAUDE.md §6); burada yalnızca dosyalar üretilip niyet hazırlanıyor.
      */
     fun gecmisiDisaAktar(onHazir: (android.content.Intent) -> Unit) {
-        viewModelScope.launch { onHazir(disaAktarDeposu.disaAktar()) }
+        if (disaAktarmaHatasi.value) disaAktarmaHatasi.value = false
+        viewModelScope.launch {
+            disaAktarmaHatasi.value = !guvenliDisaAktar(
+                uret = disaAktarDeposu::disaAktar,
+                onHazir = onHazir,
+            )
+        }
     }
 
     /**
@@ -275,4 +285,17 @@ class ProfilViewModel @Inject constructor(
         /** Ekran arka plana gidince akışı hemen kesme — dönüşte yeniden kurulmasın. */
         const val AKIS_BEKLEME_MS = 5_000L
     }
+}
+
+/** Dışa aktarım hatası ViewModel coroutine'ini çökertmez; iptal ise aynen yayılır. */
+internal suspend fun <T> guvenliDisaAktar(
+    uret: suspend () -> T,
+    onHazir: (T) -> Unit,
+): Boolean = try {
+    onHazir(uret())
+    true
+} catch (iptal: CancellationException) {
+    throw iptal
+} catch (_: Exception) {
+    false
 }

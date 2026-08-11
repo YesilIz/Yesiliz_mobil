@@ -228,7 +228,7 @@ fun ProfilEkran(
                 KartAyraci()
                 AyarSatiri(
                     Icons.Filled.Delete,
-                    "Verilerimi sil",
+                    "Bu cihazdaki verilerimi sil",
                     onTikla = { verileriSilAcik = true },
                 )
                 KartAyraci()
@@ -373,6 +373,7 @@ fun ProfilEkran(
     if (gecmisiIndirAcik) {
         AltSayfa(onKapat = { gecmisiIndirAcik = false }) {
             GecmisiIndirIcerik(
+                hataVar = durum.disaAktarmaHatasi,
                 onKapat = { gecmisiIndirAcik = false },
                 onDisaAktar = {
                     viewModel.gecmisiDisaAktar { niyet ->
@@ -559,7 +560,11 @@ private fun ToplananVerilerIcerik(onKapat: () -> Unit) {
 
 /** Alt sayfa 24 — Geçmişi indir. PDF üretimi Faz 2, burada yalnızca akış. */
 @Composable
-private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
+private fun GecmisiIndirIcerik(
+    hataVar: Boolean,
+    onKapat: () -> Unit,
+    onDisaAktar: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -595,6 +600,16 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
                 "dahil edilmez.",
             ikon = androidx.compose.material.icons.Icons.Filled.Sync,
         )
+
+        if (hataVar) {
+            Spacer(modifier = Modifier.height(Olcu.Aralik))
+            Text(
+                text = "Dosyalar oluşturulamadı. Telefonunda boş alan olduğunu " +
+                    "kontrol edip yeniden deneyebilirsin.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = KirmiziIstisna,
+            )
+        }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Dosyaları oluştur ve paylaş", onTikla = onDisaAktar)
@@ -785,14 +800,14 @@ private fun VerileriSilIcerik(
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
-            text = "Verilerini kalıcı olarak sil?",
+            text = "Bu cihazdaki verileri sil?",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Bu işlem geri alınamaz. Sildiğinde aşağıdakiler kaybolur:",
+            text = YEREL_VERI_SILME_ACIKLAMASI,
             style = MaterialTheme.typography.bodyLarge,
             color = MetinIkincil,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -809,7 +824,7 @@ private fun VerileriSilIcerik(
             listOf(
                 "Ekran süresi ve hareket geçmişin",
                 "Puanların, rozetlerin ve ödül ilerlemen",
-                "Ebeveyn cihazıyla eşleştirmen",
+                "Bu cihazdaki hedeflerin ve ayarların",
             ).forEach { madde ->
                 MaddeSatiri(madde)
             }
@@ -831,6 +846,12 @@ private fun VerileriSilIcerik(
         MetinBaglanti(metin = "Vazgeç", onTikla = onVazgec)
     }
 }
+
+/** Yerel silmenin sunucudaki veriyi sildiği izlenimini vermeyen zorunlu açıklama. */
+internal const val YEREL_VERI_SILME_ACIKLAMASI =
+    "Bu işlem geri alınamaz ve yalnızca bu cihazı temizler. Sunucudaki hesabın, " +
+        "daha önce paylaştığın özetler ve ebeveyn bağlantın kalır. Onları da kaldırmak " +
+        "için Profil'deki ‘Hesabımı sil’ seçeneğini kullan. Bu cihazdan şunlar silinir:"
 
 /**
  * Silme isteği tamamlanamadı; oturum ve cihaz verisi korundu.

@@ -4,8 +4,8 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Dynamic time-zone and wall-clock scheduling fixed; preparing two-device and exact signed-release validation while continuing adversarial review
-LAST_CHECKPOINT: 2026-08-11 05:09:30 +03
+CURRENT_PHASE: Destructive-action truthfulness and export failure handling fixed; continuing adversarial review before final full/device/release validation
+LAST_CHECKPOINT: 2026-08-11 05:22:30 +03
 CURRENT_BRANCH: fix/turan-debug
 LAST_VALIDATED_COMMIT: 691bf41 (timer/service lifecycle wave; forced suites and two-device connected suite green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
@@ -14,8 +14,8 @@ UNIT_TEST_STATUS: PASS — latest forced full app run: 237 app JVM tests; latest
 DEVICE_TEST_STATUS: PASS — latest XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error. Real parent summary/unlink and lowercase account deletion passed on the phone; API 36 real account registration and hidden-first-join passed against PostgreSQL.
 BACKEND_TEST_STATUS: PASS — latest full suite: 103 passed; live PostgreSQL privacy/concurrency probes passed
 TOP_OPEN_BUGS: Remaining process-death/account/server abuse edges; final two-device suite, exact release rebuild and mission-account/package cleanup
-CURRENT_HYPOTHESES: Authentication rate limiting needs deployment-grade shared state and remains a launch risk; exact signed release must be rebuilt after the latest clock/scheduler changes; connected tests do not exercise every real notification/account UI path
-NEXT_ACTIONS: Commit the clock/scheduler wave, run the two-device connected matrix, rebuild and install-smoke the exact signed release, complete static/adversarial checks, remove only mission packages and reverse-port artifacts
+CURRENT_HYPOTHESES: Authentication rate limiting needs deployment-grade shared state and remains a launch risk; long-lived client tokens would benefit from hardware-backed at-rest protection; connected tests do not exercise every real notification/account UI path
+NEXT_ACTIONS: Commit the deletion/export wave, continue static/adversarial checks, run final forced suites and two-device connected matrix, rebuild/install-smoke the exact signed release, then remove only mission packages and reverse-port artifacts
 BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf is preserved and excluded from mission changes.
 
 ## Checkpoints
@@ -52,3 +52,4 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 04:51:04 +03 — API 36 live UI showed the real “Fidan Ligi”, installed version 0.1.0, corrected YEDAM info and call-only bridge; tapping 115 opened the dialer prefilled with 115 without placing a call. Deleted the temporary authenticated account through the lowercase-confirmation UI, returned to sign-in, and confirmed PostgreSQL contains zero mission accounts. The flow exposed and closed one redundant post-deletion logout/401 sequence. Approximately 2h18m mission time remains.
 - 2026-08-11 04:58:02 +03 — Aligned the parent risk band with its seven-day summary so an arbitrarily old result cannot appear current, and locked release network traffic to the compile-time server even when a debug override remains in restored DataStore. The full suites now pass 234 app JVM and 103 backend tests; release Kotlin compilation succeeds. Approximately 2h11m mission time remains.
 - 2026-08-11 05:09:30 +03 — Replaced process-lifetime time-zone capture with a testable clock that reads the current system zone per operation, and changed nightly/reminder work to recalculate its next real local-time instant after every run/startup so DST and travel cannot permanently shift it. Forced suites pass 30 core-risk + 237 app JVM + 103 backend; lint has zero errors. Approximately 2h00m mission time remains.
+- 2026-08-11 05:22:30 +03 — Corrected the local-only deletion flow so it cannot imply the server account, shared summaries or parent link are erased, and added a cancellation-safe export failure path with a visible retry explanation. Six focused Profile regressions and release Kotlin compilation pass. Approximately 1h47m mission time remains.

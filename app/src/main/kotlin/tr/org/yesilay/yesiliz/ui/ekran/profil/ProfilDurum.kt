@@ -28,6 +28,8 @@ data class ProfilDurum(
      * korunuyor; ekran bunu açıkça bildiriyor.
      */
     val sunucudaKaldiUyarisi: Boolean = false,
+    /** Geçmiş dosyaları cihazda oluşturulamadı; kullanıcı yeniden deneyebilir. */
+    val disaAktarmaHatasi: Boolean = false,
     /** Gerçek bir hesapla giriş yapıldı mı — misafirde "Çıkış yap" yok. */
     val hesapVarMi: Boolean = false,
     val eposta: String = "",
