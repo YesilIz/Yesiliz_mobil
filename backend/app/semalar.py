@@ -100,6 +100,9 @@ class RiskSonucDto(BaseModel):
     R: float = Field(ge=0, le=100, allow_inf_nan=False)
     gosterilenBant: Literal["AZ", "ORTA", "COK"]
     trend: Literal["BELIRSIZ", "IYILESIYOR", "SABIT", "KOTULESIYOR"]
+    # Eski istemciler alanı göndermez; onların daha önceki davranışı
+    # hesaplanmış kabul edilerek sözleşme geriye uyumlu kalır.
+    veriDurumu: Literal["YETERSIZ", "HESAPLANDI", "ESKI"] = "HESAPLANDI"
 
 
 class SenkronIstek(BaseModel):

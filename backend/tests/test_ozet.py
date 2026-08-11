@@ -61,6 +61,31 @@ def test_risk_sonucu_yaziliyor(istemci, kullanici_kur, db):
     satir = db.scalar(select(RiskSonuc))
     assert satir.gosterilen_bant == "ORTA"
     assert satir.r == 55.0
+    assert satir.veri_durumu == "HESAPLANDI"
+
+
+def test_risk_veri_durumu_saklaniyor(istemci, kullanici_kur, db):
+    basliklar, _ = kullanici_kur()
+
+    yanit = istemci.post(
+        "/ozet",
+        json={
+            "riskler": [
+                {
+                    "tarih": "2026-07-30",
+                    "S": 1.0,
+                    "R": 2.0,
+                    "gosterilenBant": "AZ",
+                    "trend": "BELIRSIZ",
+                    "veriDurumu": "YETERSIZ",
+                }
+            ]
+        },
+        headers=basliklar,
+    )
+
+    assert yanit.status_code == 200
+    assert db.scalar(select(RiskSonuc)).veri_durumu == "YETERSIZ"
 
 
 def test_ozet_kullaniciya_kapali(istemci, kullanici_kur):

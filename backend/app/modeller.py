@@ -153,6 +153,7 @@ class RiskSonuc(Taban):
     r: Mapped[float] = mapped_column(Float)
     gosterilen_bant: Mapped[str] = mapped_column(String(10))
     trend: Mapped[str] = mapped_column(String(20))
+    veri_durumu: Mapped[str] = mapped_column(String(20), default="HESAPLANDI")
 
     guncelleme: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=_simdi, onupdate=_simdi

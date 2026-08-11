@@ -152,6 +152,7 @@ def _risk_yaz(db: Session, kullanici_id: int, dto: RiskSonucDto) -> None:
     satir.r = dto.R
     satir.gosterilen_bant = dto.gosterilenBant
     satir.trend = dto.trend
+    satir.veri_durumu = dto.veriDurumu
 
 
 def _haftalik_puan(

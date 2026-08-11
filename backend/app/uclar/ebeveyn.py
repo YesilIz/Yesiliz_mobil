@@ -229,6 +229,7 @@ def ozet(
             RiskSonuc.kullanici_id == cocuk.id,
             RiskSonuc.tarih >= bas,
             RiskSonuc.tarih <= bugun,
+            RiskSonuc.veri_durumu == "HESAPLANDI",
         )
         .order_by(RiskSonuc.tarih.desc())
         .limit(1)

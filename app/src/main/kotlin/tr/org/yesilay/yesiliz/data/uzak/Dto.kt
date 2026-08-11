@@ -67,6 +67,7 @@ data class RiskSonucDto(
     val R: Double,
     val gosterilenBant: String,
     val trend: String,
+    val veriDurumu: String,
 )
 
 @Serializable

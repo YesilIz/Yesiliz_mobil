@@ -567,6 +567,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: Network response timing, rather than the user's final choice, could determine the remote privacy state.
 - Status: Fixed. The singleton synchronization repository now places profile and worker visibility writes behind one cancellation-safe mutex. A deterministic concurrency regression holds the first call open and proves the second cannot begin until it completes; release Kotlin compilation passes.
 
+## DBG-063 — The server discarded risk sufficiency and exposed an unreliable band to parents
+
+- Severity: P0 — family health-data truthfulness and privacy
+- Areas: Android summary contract, backend risk persistence/migration and parent panel
+- Evidence: The local engine deliberately marks days below 15 measured minutes `YETERSIZ`, but `RiskSonucDto` omitted that field and uploaded the computed band anyway. The server model could not distinguish it and the parent endpoint returned the newest row as if reliable. The panel also treated `BELIRSIZ`/unknown trends as “similar” and displayed raw enum labels.
+- Expected: Insufficient local inferences never leave the device or appear to a parent; the server preserves/enforces sufficiency for supported clients, and an indeterminate trend is not called stable.
+- Actual: A newly installed/briefly measured child device could tell the child there was not enough data while telling the parent “AZ” risk with a fabricated stable comparison.
+- Status: Fixed. The Android uploader fail-closes to `HESAPLANDI` rows and sends the status; the backend schema/model/migration persist it and the parent query requires it. The panel maps bands to understandable labels and treats `BELIRSIZ`/future trends as no comparison. Local PostgreSQL migrated to the new head; 30 focused backend tests and six focused Android tests pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

@@ -69,9 +69,12 @@ class EbeveynViewModel @Inject constructor(
             tarihAraligi = ozet?.tarihAraligi() ?: "Son 7 gün",
             ekranCubuklari = ozet?.cubuklar().orEmpty(),
             ekranVurgu = ozet?.let { enYuksek(it.gunlukDakikalar) } ?: -1,
-            bant = ozet?.bant ?: "Henüz hesaplanmadı",
-            bantMesaji = ozet?.trend?.let(::trendMesaji)
-                ?: "Yeterli veri oluştuğunda burada görünür.",
+            bant = ozet?.bant.riskBandiMetni(),
+            bantMesaji = when {
+                ozet?.bant == null -> "Yeterli veri oluştuğunda burada görünür."
+                else -> ozet.trend.trendMesajiVeyaNull()
+                    ?: "Değişimi karşılaştırmak için henüz yeterli geçmiş yok."
+            },
             bildirimler = ozet?.let(::bildirimler).orEmpty(),
         )
     }.stateIn(
@@ -170,12 +173,6 @@ class EbeveynViewModel @Inject constructor(
     private fun enYuksek(dakikalar: List<Int>): Int =
         dakikalar.indices.maxByOrNull { dakikalar[it] } ?: -1
 
-    private fun trendMesaji(trend: String): String = when (trend) {
-        "IYILESIYOR" -> "Geçen haftaya göre iyileşiyor"
-        "KOTULESIYOR" -> "Geçen haftaya göre artış var"
-        else -> "Geçen haftaya göre benzer"
-    }
-
     private fun EbeveynOzetDto.cubuklar(): List<Cubuk> =
         gunlukDakikalar.mapIndexed { i, dakika ->
             val gun = gunlukTarihler.getOrNull(i)
@@ -236,6 +233,22 @@ class EbeveynViewModel @Inject constructor(
         val TARIH_TEK: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uuuu", TURKCE)
 
     }
+}
+
+/** Sunucu enum'unu ebeveyne teknik ya da bilinmeyen bir etiket olarak gösterme. */
+internal fun String?.riskBandiMetni(): String = when (this) {
+    "AZ" -> "Düşük risk"
+    "ORTA" -> "Orta risk"
+    "COK" -> "Yüksek risk"
+    else -> "Henüz hesaplanmadı"
+}
+
+/** `BELIRSIZ` ya da yeni bir değer, gerçekte sabitmiş gibi sunulmaz. */
+internal fun String?.trendMesajiVeyaNull(): String? = when (this) {
+    "IYILESIYOR" -> "Geçen haftaya göre iyileşiyor"
+    "KOTULESIYOR" -> "Geçen haftaya göre artış var"
+    "SABIT" -> "Geçen haftaya göre benzer"
+    else -> null
 }
 
 internal data class OzetHali(

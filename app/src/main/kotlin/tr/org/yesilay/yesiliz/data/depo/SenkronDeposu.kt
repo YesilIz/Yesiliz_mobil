@@ -17,6 +17,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
+import tr.org.yesilay.yesiliz.risk.VeriDurumu
 import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.WeekFields
@@ -71,7 +72,10 @@ class SenkronDeposu @Inject constructor(
             api.ozetGonder(
                 SenkronIstek(
                     ozetler = ozetler.map { it.dto() },
-                    riskler = riskDao.sonGunler(GUN).map { it.dto() },
+                    // Yetersiz ölçümden hesaplanan bant sunucuya hiç
+                    // yayılmaz. Yeni sunucu durum alanını da doğrular;
+                    // bu filtre eski sunuculara karşı da fail-closed'dur.
+                    riskler = riskDao.sonGunler(GUN).paylasilabilirRiskler().map { it.dto() },
                     haftalikPuan = haftalikPuan(),
                     // Eski sunucularla geriye uyum için bu alan özet
                     // senkronunda da taşınır. Güncel istemci değişikliği
@@ -189,4 +193,9 @@ private fun RiskSonucEntity.dto() = RiskSonucDto(
     R = R,
     gosterilenBant = gosterilenBant,
     trend = trend,
+    veriDurumu = veriDurumu,
 )
+
+/** Ebeveyn/uzak depoda “veri yok” durumundan risk iddiası üretme. */
+internal fun List<RiskSonucEntity>.paylasilabilirRiskler(): List<RiskSonucEntity> =
+    filter { it.veriDurumu == VeriDurumu.HESAPLANDI.name }

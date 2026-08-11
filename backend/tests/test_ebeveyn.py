@@ -207,6 +207,33 @@ def test_ozet_yedi_gunden_eski_riski_guncel_gibi_gostermez(istemci, kullanici_ku
     assert ozet["trend"] is None
 
 
+def test_ozet_yetersiz_olcumun_bandini_gostermez(istemci, kullanici_kur):
+    cocuk_basliklar, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
+    bugun = yerel_bugun().isoformat()
+    yanit = istemci.post(
+        "/ozet",
+        json={
+            "riskler": [
+                {
+                    "tarih": bugun,
+                    "S": 1.0,
+                    "R": 2.0,
+                    "gosterilenBant": "AZ",
+                    "trend": "BELIRSIZ",
+                    "veriDurumu": "YETERSIZ",
+                }
+            ]
+        },
+        headers=cocuk_basliklar,
+    )
+    assert yanit.status_code == 200
+
+    ozet = istemci.get("/ebeveyn/ozet", headers=ebeveyn_basliklar).json()
+
+    assert ozet["bant"] is None
+    assert ozet["trend"] is None
+
+
 def test_bir_cihaz_ayni_anda_yalnizca_bir_eslesmede_olabilir(istemci, kullanici_kur):
     _, ebeveyn_basliklar, _, _ = _eslestir(istemci, kullanici_kur)
     ikinci_cocuk, _ = kullanici_kur(ad="Can", eposta="can@b.com")

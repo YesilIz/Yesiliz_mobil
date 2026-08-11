@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.ebeveyn
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tr.org.yesilay.yesiliz.data.depo.EbeveynOzetSonucu
@@ -25,5 +26,21 @@ class EbeveynAkisTest {
         assertTrue(eslestirmeAltSayfasiGoster(true, EslestirmeAdimi.BASARILI))
         assertFalse(eslestirmeAltSayfasiGoster(true, EslestirmeAdimi.ROL_SECIMI))
         assertTrue(eslestirmeAltSayfasiGoster(false, EslestirmeAdimi.ROL_SECIMI))
+    }
+
+    @Test
+    fun riskBandiSunucuEnumuYerineAnlasilirMetinGosterir() {
+        assertEquals("Düşük risk", "AZ".riskBandiMetni())
+        assertEquals("Orta risk", "ORTA".riskBandiMetni())
+        assertEquals("Yüksek risk", "COK".riskBandiMetni())
+        assertEquals("Henüz hesaplanmadı", "BILINMEYEN".riskBandiMetni())
+        assertEquals("Henüz hesaplanmadı", null.riskBandiMetni())
+    }
+
+    @Test
+    fun belirsizVeyaBilinmeyenTrendSabitDiyeSunulmaz() {
+        assertEquals(null, "BELIRSIZ".trendMesajiVeyaNull())
+        assertEquals(null, "YENI".trendMesajiVeyaNull())
+        assertEquals("Geçen haftaya göre benzer", "SABIT".trendMesajiVeyaNull())
     }
 }
