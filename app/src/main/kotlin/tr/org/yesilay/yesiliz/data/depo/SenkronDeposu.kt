@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.data.depo
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import retrofit2.HttpException
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
 import tr.org.yesilay.yesiliz.data.uzak.LigGorunurlukIstek
@@ -68,8 +69,9 @@ class SenkronDeposu @Inject constructor(
                     ozetler = ozetler.map { it.dto() },
                     riskler = riskDao.sonGunler(GUN).map { it.dto() },
                     haftalikPuan = haftalikPuan(),
-                    // "Ligde görün" tercihi burada taşınıyor; ayrı bir uç
-                    // yok (`debug.md` Y-5).
+                    // Eski sunucularla geriye uyum için bu alan özet
+                    // senkronunda da taşınır. Güncel istemci değişikliği
+                    // ayrıca özel görünürlük ucuna anında yollar.
                     ligdeGorunur = tercihler.ligdeGorun.first(),
                 ),
             )
@@ -110,9 +112,16 @@ class SenkronDeposu @Inject constructor(
         val oturum = tercihler.oturum.first()
         if (oturum.misafirMi || !oturum.girisYapildiMi) return false
         return try {
-            api.ligGorunurlugu(
-                LigGorunurlukIstek(gorunur = tercihler.ligdeGorun.first()),
-            )
+            val gorunur = tercihler.ligdeGorun.first()
+            try {
+                api.ligGorunurlugu(LigGorunurlukIstek(gorunur = gorunur))
+            } catch (hata: HttpException) {
+                if (hata.code() != KOD_BULUNAMADI) throw hata
+                // Sunucu ve uygulama aynı anda güncellenmeyebilir. Eski
+                // sunucunun desteklediği özet ucuna yalnızca gizlilik
+                // alanı gider; davranış özeti/puan listeleri boş kalır.
+                api.ozetGonder(SenkronIstek(ligdeGorunur = gorunur))
+            }
             true
         } catch (iptal: CancellationException) {
             throw iptal
@@ -137,6 +146,7 @@ class SenkronDeposu @Inject constructor(
     private companion object {
         /** Gecelik worker'ın telafi penceresiyle aynı. */
         const val GUN = 7
+        const val KOD_BULUNAMADI = 404
         const val ETIKET = "Senkron"
     }
 }

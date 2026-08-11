@@ -4,8 +4,8 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Server health, account error boundaries, league privacy and stale-account write races fixed; continuing authenticated device and adversarial lifecycle audit
-LAST_CHECKPOINT: 2026-08-11 04:33:30 +03
+CURRENT_PHASE: Profile/YEDAM truthfulness and redundant post-deletion auth fixed; committing wave before continued device/adversarial audit
+LAST_CHECKPOINT: 2026-08-11 04:51:04 +03
 CURRENT_BRANCH: fix/turan-debug
 LAST_VALIDATED_COMMIT: 691bf41 (timer/service lifecycle wave; forced suites and two-device connected suite green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
@@ -13,9 +13,9 @@ BUILD_STATUS: PASS — debug/release compile, mission debug assemble and Android
 UNIT_TEST_STATUS: PASS — latest forced full app run: 232 app JVM tests; latest core-risk forced run: 30 tests
 DEVICE_TEST_STATUS: PASS — latest XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error. Real parent summary/unlink and lowercase account deletion passed on the phone; API 36 real account registration and hidden-first-join passed against PostgreSQL.
 BACKEND_TEST_STATUS: PASS — latest full suite: 102 passed; live PostgreSQL privacy/concurrency probes passed
-TOP_OPEN_BUGS: Remaining process-death/account/server edges; final two-device connected suite, exact release rebuild and mission-account/package cleanup
+TOP_OPEN_BUGS: Remaining process-death/account/server edges; device-validate corrected Profile/YEDAM copy; final two-device suite, exact release rebuild and mission-account/package cleanup
 CURRENT_HYPOTHESES: Other foreground/background transitions may retain stale singleton state; exact signed release must be rebuilt after service and API changes; connected tests do not exercise all real notification/account UI paths
-NEXT_ACTIONS: Commit the health/account/privacy wave; continue runtime/static audit; repeat full forced and connected matrices; rebuild/install-smoke exact signed release; remove only mission artifacts and temporary accounts
+NEXT_ACTIONS: Commit the compatibility/profile/support/account-cleanup wave; continue runtime/static audit; repeat full forced and connected matrices; rebuild/install-smoke exact signed release; remove only mission packages and reverse-port artifacts
 BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf is preserved and excluded from mission changes.
 
 ## Checkpoints
@@ -48,3 +48,5 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 03:55:40 +03 — Enabled release-only R8 and resource shrinking after measuring a 24,225,698-byte, four-DEX APK. The signed result is 8,594,218 bytes and one DEX (64.5% smaller); the built-in live-URL/forbidden-host check and APK v2 signature verification pass. API 36 installed the exact release, completed onboarding, opened main tabs and cold-restarted to the persisted dashboard without a focused R8/Hilt/Room crash. Forced suites remain green at 30 core-risk + 222 app JVM + 96 backend; lint has zero errors. Approximately 3h13m mission time remains.
 - 2026-08-11 04:10:33 +03 — Reproduced and fixed focus/walking timer drift through forced device idle, missing breathing keep-screen-on, false early-walk reward text/repeat dead-end, and an API 34+ walking FGS crash when optional activity permission was absent. Forced suites pass at 30 core-risk + 230 app JVM + 96 backend; lint has zero errors. On API 36, breathing set/cleared `KEEP_SCREEN_ON`; focus and walking counters included a 15-second forced deep sleep; walking started with activity permission denied, foregrounded correctly, ended from the real notification with truthful no-points text, stopped its service and reopened at 0:00. Approximately 2h59m mission time remains.
 - 2026-08-11 04:33:30 +03 — Closed Android-facing false health success, unbounded reflected request IDs, account-form crashes on unexpected local writes, privacy-toggle coupling to summary consent/visible first join, and stale authenticated writes racing account deletion. Full backend reaches 102 tests and the app JVM suite 232. API 36 registered a real temporary account against local PostgreSQL, kept summary sharing off, disabled league visibility, joined for the first time and immediately showed/persisted the hidden state without a focused crash. Latest connected XML remains exact at 44 executed passes + 4 documented precondition skips per API 31/API 36 device. Approximately 2h36m mission time remains.
+- 2026-08-11 04:43:00 +03 — Replaced the fabricated Profile league/version labels with live repository/build data and removed a high-risk YEDAM false-success flow that never sent its claimed consent/callback request. Corrected all app-visible 24/7 claims to YEDAM's current published phone hours and made the bridge explicitly call-only/no-data-transfer. Debug/release compilation and all 232 app JVM tests pass. Approximately 2h26m mission time remains.
+- 2026-08-11 04:51:04 +03 — API 36 live UI showed the real “Fidan Ligi”, installed version 0.1.0, corrected YEDAM info and call-only bridge; tapping 115 opened the dialer prefilled with 115 without placing a call. Deleted the temporary authenticated account through the lowercase-confirmation UI, returned to sign-in, and confirmed PostgreSQL contains zero mission accounts. The flow exposed and closed one redundant post-deletion logout/401 sequence. Approximately 2h18m mission time remains.

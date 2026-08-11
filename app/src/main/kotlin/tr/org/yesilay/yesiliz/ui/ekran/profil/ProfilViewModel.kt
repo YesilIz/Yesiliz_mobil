@@ -20,6 +20,7 @@ import tr.org.yesilay.yesiliz.data.depo.SozlesmeDeposu
 import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
+import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import javax.inject.Inject
@@ -27,9 +28,8 @@ import javax.inject.Inject
 /**
  * Profil durumu — gizlilik anahtarları ve hedef DataStore'dan geliyor.
  *
- * İsim ve lig adı hâlâ sabit: hesap sistemi (giriş/kayıt ekranları) ve gerçek
- * lig Faz 2'de backend'le gelecek. Bunlar **bilinçli** sahte veri, ötekiler
- * gerçek.
+ * İsim oturumdan, lig rozeti gerçek lig deposundan gelir. Misafirin adı
+ * olmadığı durumda yalnızca görünür isim sabitine düşülür.
  */
 @HiltViewModel
 class ProfilViewModel @Inject constructor(
@@ -39,6 +39,7 @@ class ProfilViewModel @Inject constructor(
     private val isPlanlayici: IsPlanlayici,
     private val disaAktarDeposu: DisaAktarDeposu,
     private val hesapDeposu: HesapDeposu,
+    ligDeposu: LigDeposu,
     private val senkronDeposu: SenkronDeposu,
     private val sozlesmeDeposu: SozlesmeDeposu,
 ) : ViewModel() {
@@ -77,7 +78,6 @@ class ProfilViewModel @Inject constructor(
         // ekleniyor.
         ProfilDurum(
             isim = SABIT_ISIM,
-            ligAdi = SABIT_LIG,
             yesilayPaylasimi = paylasim,
             ligdeGorun = ligde,
             molaHatirlaticiAcik = molaHatirlatici,
@@ -93,6 +93,8 @@ class ProfilViewModel @Inject constructor(
             hesapVarMi = oturum.girisYapildiMi && !oturum.misafirMi,
             eposta = oturum.eposta,
         )
+    }.combine(ligDeposu.ligAkisi()) { durum, lig ->
+        durum.copy(ligAdi = lig.ligAdi.takeIf { lig.katildiMi }.orEmpty())
     }.combine(silmeHali) { durum, silme ->
         durum.copy(
             siliniyor = silme.calisiyor,
@@ -105,7 +107,7 @@ class ProfilViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
-        initialValue = ProfilDurum(isim = SABIT_ISIM, ligAdi = SABIT_LIG),
+        initialValue = ProfilDurum(isim = SABIT_ISIM),
     )
 
     /**
@@ -269,7 +271,6 @@ class ProfilViewModel @Inject constructor(
     private companion object {
         // Misafirin görünür adı — AnaViewModel ve Ödüller ile aynı.
         const val SABIT_ISIM = "Misafir"
-        const val SABIT_LIG = "Filiz Ligi"
 
         /** Ekran arka plana gidince akışı hemen kesme — dönüşte yeniden kurulmasın. */
         const val AKIS_BEKLEME_MS = 5_000L

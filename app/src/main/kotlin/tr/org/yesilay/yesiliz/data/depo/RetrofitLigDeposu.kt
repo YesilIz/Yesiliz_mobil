@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.map
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.DavetIstek
 import tr.org.yesilay.yesiliz.data.uzak.LigKatilIstek
+import tr.org.yesilay.yesiliz.data.uzak.SenkronIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
@@ -55,9 +56,16 @@ class RetrofitLigDeposu @Inject constructor(
     override suspend fun ligeKatil() {
         // Gizlilik tercihi veri paylaşım rızasından bağımsızdır ve yeni
         // haftanın üyeliği açılırken ilk andan uygulanmalıdır.
-        ozet.value = api.ligeKatil(
-            LigKatilIstek(gorunur = tercihler.ligdeGorun.first()),
-        ).cevir()
+        val gorunur = tercihler.ligdeGorun.first()
+        var yanit = api.ligeKatil(LigKatilIstek(gorunur = gorunur))
+        if (yanit.gorunuyorMuyum != gorunur) {
+            // Yuvarlanan dağıtımda eski sunucu katılım gövdesini yok
+            // sayabilir. Var olan `/ozet` sözleşmesi yalnızca görünürlük
+            // alanıyla çağrılır; özet, risk ve puan gönderilmez.
+            api.ozetGonder(SenkronIstek(ligdeGorunur = gorunur))
+            yanit = api.lig()
+        }
+        ozet.value = yanit.cevir()
     }
 
     /**

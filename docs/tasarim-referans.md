@@ -257,8 +257,8 @@ olarak sil"
 
 ### 27 · YEDAM hakkında *(alt sayfa)*
 Koyu yeşil daire kulaklık ikonu · "YEDAM hakkında" · açıklama (Yeşilay
-Danışmanlık Merkezi) · `YesilNane` zeminli satır "115 — YEDAM Hattı, 7/24
-ücretsiz ve gizli" · 2 gizlilik notu (görüşmeler gizli, uzman psikolog) ·
+Danışmanlık Merkezi) · `YesilNane` zeminli satır "115 — YEDAM Hattı,
+ücretsiz ve gizli" · güncel çalışma saatleri · 2 gizlilik notu (görüşmeler gizli, uzman psikolog) ·
 `Ara` butonu "115'i ara"
 
 > **"YEDAM onayı" (köprü/yönlendirme rıza ekranı) ile karıştırılmaz** — bu

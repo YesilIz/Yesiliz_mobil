@@ -7,7 +7,8 @@ FastAPI + PostgreSQL. CLAUDE.md §5'teki Faz 2 sunucusu.
 ```bash
 cd backend
 docker compose up -d          # PostgreSQL 16 + API (localhost:8000)
-curl localhost:8000/saglik    # {"status":"healthy","database":"connected","version":"0.1.0"}
+curl localhost:8000/health    # {"status":"healthy","database":"connected","version":"0.1.0"}
+curl localhost:8000/saglik    # Android uyumluluk ucu: {"durum":"ayakta"}
 ```
 
 API dokümanı: <http://localhost:8000/docs>
@@ -18,7 +19,7 @@ emülatörde `localhost` cihazın kendisi demek.
 ## Test
 
 ```bash
-docker compose exec api pytest -q     # 82 test
+docker compose exec api pytest -q
 ```
 
 Testler SQLite bellek veritabanında koşuyor — saniyeler sürüyor ve

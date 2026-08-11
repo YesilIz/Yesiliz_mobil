@@ -459,6 +459,42 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A valid logout/deletion race could become an internal error even though no user action was wrong.
 - Status: Fixed. A shared validated user lock now guards summary, heartbeat, league, invite-code, visibility, reward, parent-code/unlink, logout and deletion mutations. A deleted-row regression confirms the stale path returns 401; the full backend suite passes 102 tests.
 
+## DBG-051 — Profile showed a fabricated league membership and stale league name
+
+- Severity: P1 — identity/data truthfulness
+- Area: `ProfilViewModel` and profile header
+- Evidence: The profile always rendered the hard-coded “Filiz Ligi” chip, including before the user joined any league and after the server assigned the first level, “Fidan Ligi”.
+- Expected: The chip is absent without a membership and otherwise reflects the current real league response.
+- Actual: A prominent identity badge contradicted the authenticated league state.
+- Status: Fixed. Profile state now combines the real league repository flow and exposes the server-provided name only when `katildiMi` is true.
+
+## DBG-052 — About screen reported an unrelated hard-coded version
+
+- Severity: P2 — support/diagnostic truthfulness
+- Area: Profile › About
+- Evidence: The UI displayed version `2.4.1` while the installed build declares `0.1.0`.
+- Expected: Support information identifies the actual installed artifact.
+- Actual: A screenshot or user report would point maintainers to a nonexistent release.
+- Status: Fixed. The screen now renders `BuildConfig.VERSION_NAME`.
+
+## DBG-053 — YEDAM flow claimed to send a request it never transmitted and advertised false 24/7 availability
+
+- Severity: P0 — support, privacy and user trust
+- Areas: high-risk YEDAM bridge, Profile/Ebeveyn YEDAM sheets and knowledge-bank copy
+- Evidence: Checking consent only toggled in-memory Compose state; no repository, API or durable record existed. The resulting screen said the approval was saved and that YEDAM would contact the user. Multiple screens also said 115 was open 24/7, contradicting YEDAM's current official phone hours (weekdays 08:30–00:00 and Saturday 08:30–17:30).
+- Expected: Never claim a transfer or callback without a real integration; make the currently available call-only path and its effects explicit, and state accurate availability.
+- Actual: A high-risk user could wait for help that would never arrive or rely on a line being staffed outside its stated hours.
+- Status: Fixed. The fake consent/success state and data list were removed. The bridge says no data or contact request leaves the screen, opens `ACTION_DIAL` for 115 so the user remains in control, and all user-visible YEDAM hours/copy were corrected. Debug and release Kotlin compilation plus all 232 app JVM tests pass.
+
+## DBG-054 — Successful account deletion always made a second unauthorized auth request
+
+- Severity: P2 — account lifecycle/reliability
+- Area: `RetrofitHesapDeposu`
+- Evidence: After `DELETE /auth/hesap` removed the user and all refresh rows, the repository called the normal logout path. That path necessarily sent `/auth/cikis` for a nonexistent account, triggered an unsuccessful refresh attempt and logged an HTTP 401 warning on every successful deletion. The live emulator cleanup reproduced the sequence.
+- Expected: Once deletion succeeds, clear the local tokens/session without addressing the deleted account again; cancellation must not leave the local session half-open.
+- Actual: A successful destructive action generated redundant network traffic and an alarming failure log, obscuring real account problems.
+- Status: Fixed. Logout and deletion share non-cancellable local cleanup, while only an actual logout calls `/auth/cikis`. The temporary mission account was deleted through the UI and a PostgreSQL count confirmed zero remaining `mission.%` accounts.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

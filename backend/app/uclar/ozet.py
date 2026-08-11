@@ -160,8 +160,8 @@ def _haftalik_puan(
     """
     Lig üyeliği varsa haftalık puanı günceller; yoksa sessizce geçer.
 
-    "Ligde görün" tercihi de burada taşınıyor: ayrı bir uç açmak yerine
-    zaten her gece koşan senkrona bindirildi (debug.md Y-5).
+    "Ligde görün" tercihi geriye uyumluluk için burada da taşınır. Güncel
+    istemci değişikliği ayrı `/lig/gorunurluk` ucuna anında gönderir.
     """
     hafta = hafta_baslangici()
     uyelik = db.scalar(

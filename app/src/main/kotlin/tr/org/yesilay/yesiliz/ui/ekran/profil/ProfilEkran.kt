@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
 import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
@@ -180,8 +181,10 @@ fun ProfilEkran(
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )
-                Spacer(modifier = Modifier.height(Bosluk.S))
-                Cip(metin = durum.ligAdi, zemin = YesilNane)
+                if (durum.ligAdi.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(Bosluk.S))
+                    Cip(metin = durum.ligAdi, zemin = YesilNane)
+                }
             }
 
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
@@ -1033,7 +1036,7 @@ private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
     }
 }
 
-/** Alt sayfa 29 — Hakkında. Sürüm sabit — `BuildConfig.VERSION_NAME` Faz 2. */
+/** Alt sayfa 29 — Hakkında. Sürüm, kurulu APK'nın derleme bilgisidir. */
 @Composable
 private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
     Column(
@@ -1069,7 +1072,7 @@ private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
             color = MetinBirincil,
         )
         Text(
-            text = "Sürüm 2.4.1",
+            text = "Sürüm ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinUcuncul,
         )
@@ -1208,7 +1211,7 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(Olcu.Aralik))
             Text(
-                text = "115 — YEDAM Hattı, 7/24 ücretsiz ve gizli",
+                text = "115 — ücretsiz ve gizli YEDAM Hattı",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MetinBirincil,
@@ -1217,12 +1220,18 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
         Text(
-            text = "Görüşmeler gizlidir; kimseyle paylaşılmaz.",
+            text = "Görüşmeler gizlilik ilkesiyle yürütülür.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
         Text(
-            text = "Görüşmeyi uzman psikologlar yürütür.",
+            text = "Görüşmeyi YEDAM uzmanları yürütür.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Text(
+            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
+                "cumartesi 08:30–17:30.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )

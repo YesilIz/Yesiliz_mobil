@@ -77,8 +77,8 @@ data class SenkronIstek(
     /**
      * "Ligde görün" tercihi.
      *
-     * Ayrı bir uç yerine senkrona bindirildi: tercih zaten her gece koşan
-     * bu çağrıyla taşınabiliyor (`debug.md` Y-5).
+     * Geriye uyumluluk için senkron gövdesinde de taşınır. Güncel istemci
+     * değişikliği ayrı görünürlük ucuna anında gönderir.
      */
     val ligdeGorunur: Boolean? = null,
 )

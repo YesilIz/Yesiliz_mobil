@@ -699,19 +699,31 @@ private fun YedamHakkinda(onKapat: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     color = MetinBirincil,
                 )
-                Text(text = "7/24, ücretsiz ve gizli", style = MaterialTheme.typography.bodyMedium, color = MetinIkincil)
+                Text(
+                    text = "Ücretsiz ve gizli",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MetinIkincil,
+                )
             }
         }
         Spacer(modifier = Modifier.height(Bosluk.M))
         Text(
-            text = "Görüşmeler tamamen gizlidir",
+            text = "Görüşmeler gizlilik ilkesiyle yürütülür",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Uzman psikologlarca yürütülür",
+            text = "YEDAM uzmanlarınca yürütülür",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        Text(
+            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
+                "cumartesi 08:30–17:30.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
             modifier = Modifier.fillMaxWidth(),

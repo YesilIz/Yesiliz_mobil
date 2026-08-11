@@ -74,10 +74,7 @@ class RetrofitHesapDeposu @Inject constructor(
         } finally {
             // Ağ çağrısı ekran kapanırken iptal edilse de kullanıcının
             // açık "çıkış" eylemi cihazda yarım kalmasın.
-            withContext(NonCancellable) {
-                jetonDeposu.temizle()
-                tercihler.oturumuSil()
-            }
+            yerelOturumuTemizle()
         }
     }
 
@@ -88,8 +85,17 @@ class RetrofitHesapDeposu @Inject constructor(
         // yerinde duruyor demektir ve kullanıcıya "silindi" denemez.
         val silindi = hesapSilmeIstegi { api.hesabiSil() }
         if (!silindi) return false
-        cikisYap()
+        // DELETE başarılı olduğunda kullanıcı ve bütün yenileme oturumları
+        // artık yoktur. Burada tekrar `/auth/cikis` çağırmak kaçınılmaz
+        // 401 + gereksiz yenileme denemesi üretir. Yalnızca cihazı temizle.
+        yerelOturumuTemizle()
         return true
+    }
+
+    /** Sunucu sonucu alındıktan sonra iptal gelse bile yarım oturum bırakma. */
+    private suspend fun yerelOturumuTemizle() = withContext(NonCancellable) {
+        jetonDeposu.temizle()
+        tercihler.oturumuSil()
     }
 
     private suspend fun cagir(blok: suspend () -> JetonlarDto): HesapSonuc = try {
