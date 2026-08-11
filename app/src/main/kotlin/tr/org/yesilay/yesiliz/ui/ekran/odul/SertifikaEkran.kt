@@ -2,10 +2,8 @@ package tr.org.yesilay.yesiliz.ui.ekran.odul
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,27 +33,19 @@ import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
-import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 
 /**
- * Kazanılmış ödülün sertifikası — tasarım 19'daki "Sertifikayı görüntüle"
- * butonunun hedefi.
+ * Kazanılmış dijital rozet için uygulama içi başarı kartı.
  *
- * **Cihazda üretiliyor.** Sertifika numarası ödül adı + tarihten
- * deterministik türetiliyor; sunucudan gelen bir belge yok çünkü gerçek
- * ödül/bağış sistemi henüz kurulmadı (§12 A4 açık kararı: ödül finansmanı
- * teknik değil, sponsorluk kararı). Bu ekran o karar verildiğinde
- * sunucudan gelen gerçek sertifikayı gösterecek biçime hazır — yalnızca
- * [sertifikaNo] kaynağı değişecek.
+ * Gerçek ödül/bağış sistemi kurulmadığı için bu kart kurum adına düzenlenmiş
+ * belge, bağış makbuzu veya kupon gibi davranmaz.
  */
 @Composable
-fun SertifikaIcerik(
+fun BasariKartiIcerik(
     odulAdi: String,
     kullaniciAdi: String,
-    bagisTarihi: String,
-    sertifikaNo: String,
     onPaylas: () -> Unit,
     onKapat: () -> Unit,
     modifier: Modifier = Modifier,
@@ -91,14 +81,14 @@ fun SertifikaIcerik(
             }
             Spacer(modifier = Modifier.height(Bosluk.S))
             Text(
-                text = "Türkiye Yeşilay Cemiyeti",
+                text = "Yeşilİz",
                 style = MaterialTheme.typography.labelMedium,
                 color = MetinUcuncul,
             )
 
             Spacer(modifier = Modifier.height(Olcu.Aralik))
             Text(
-                text = "Teşekkür belgesi".buyukHarf(),
+                text = "Uygulama içi başarı kartı".buyukHarf(),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = YesilAna,
@@ -114,48 +104,12 @@ fun SertifikaIcerik(
             Spacer(modifier = Modifier.height(Bosluk.S))
             Text(
                 text = "ekranla ilişkisini yeniden kurma yolunda attığı adımlarla " +
-                    "“$odulAdi” ödülünü kazanmıştır.",
+                    "“$odulAdi” uygulama içi başarısına ulaştı.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MetinIkincil,
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(Yaricap.Buton))
-                    .background(Yesil50)
-                    .padding(Olcu.Aralik),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text(
-                        text = "Tarih",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MetinUcuncul,
-                    )
-                    Text(
-                        text = bagisTarihi,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MetinBirincil,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Belge no",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MetinUcuncul,
-                    )
-                    Text(
-                        text = sertifikaNo,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MetinBirincil,
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
@@ -165,13 +119,16 @@ fun SertifikaIcerik(
 
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Bu belge uygulamada üretilmiştir; resmî bir bağış makbuzu " +
-                "değildir.",
+            text = BASARI_KARTI_ACIKLAMASI,
             style = MaterialTheme.typography.labelMedium,
             color = MetinUcuncul,
             textAlign = TextAlign.Center,
         )
     }
 }
+
+internal const val BASARI_KARTI_ACIKLAMASI =
+    "Bu kart yalnızca uygulama içi ilerlemeyi gösterir; kupon, bağış veya " +
+        "resmî belge değildir."
 
 private val CerceveKalinligi = Olcu.ButonKenarligi

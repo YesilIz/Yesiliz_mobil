@@ -69,7 +69,7 @@ class OdulViewModel @Inject constructor(
         }
 
         OdulDurum(
-            // Misafirin adı yok; sertifikada sabite düşülüyor.
+            // Misafirin adı yok; uygulama içi başarı kartında sabite düşülüyor.
             isim = oturum.ad.ifBlank { SABIT_ISIM },
             puan = puan,
             sonrakiEsik = siradaki?.esik ?: ham.maxOf { it.esik },
@@ -105,6 +105,7 @@ class OdulViewModel @Inject constructor(
         val esik: Int,
         val aktifGunKosulu: Int,
         val secenekler: List<SecenekTanimi>,
+        val teslimatEtkinMi: Boolean = true,
     ) {
         fun duruma(puan: Int, aktifGun: Int, secilenId: String?): Odul {
             val hakEdildi = puan >= esik && aktifGun >= aktifGunKosulu
@@ -112,11 +113,12 @@ class OdulViewModel @Inject constructor(
             val secilen = secilenId?.let { id -> secenekler.firstOrNull { it.id == id } }
             val gosterim = secilen ?: secenekler.first()
 
-            val hal = when {
-                !hakEdildi -> OdulHali.KILITLI
-                cokluSecenek && secilen == null -> OdulHali.SECIM_BEKLIYOR
-                else -> OdulHali.KAZANILDI
-            }
+            val hal = odulHaliniBelirle(
+                hakEdildi = hakEdildi,
+                cokluSecenek = cokluSecenek,
+                secimVarMi = secilen != null,
+                teslimatEtkinMi = teslimatEtkinMi,
+            )
 
             return Odul(
                 id = id,
@@ -125,6 +127,7 @@ class OdulViewModel @Inject constructor(
                 ikon = gosterim.ikon,
                 hal = hal,
                 aciklama = gosterim.aciklama,
+                teslimatEtkinMi = teslimatEtkinMi,
                 secenekler = secenekler.map { Secenek(it.id, it.ad, it.ikon, it.aciklama) },
             )
         }
@@ -155,13 +158,13 @@ class OdulViewModel @Inject constructor(
                 id = "fidan",
                 esik = 2_000,
                 aktifGunKosulu = 14,
+                teslimatEtkinMi = false,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Ekran süreni azaltarak kazandığın 2.000 puanla " +
-                            "senin adına 1 fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
@@ -169,20 +172,19 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_market",
                 esik = 5_000,
                 aktifGunKosulu = 30,
+                teslimatEtkinMi = false,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "market_kuponu",
-                        ad = "Yeşilay Market kuponu",
+                        ad = "Planlanan market kuponu",
                         ikon = Icons.Filled.ShoppingBasket,
-                        aciklama = "5.000 puana ulaştığında Yeşilay Market'te " +
-                            "geçerli bir alışveriş kuponu kazanırsın.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Market kuponu yerine, 5.000 puanla senin " +
-                            "adına 1 fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
@@ -190,25 +192,41 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_spor",
                 esik = 10_000,
                 aktifGunKosulu = 45,
+                teslimatEtkinMi = false,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "kupon_spor_kitap",
-                        ad = "Spor / kitap kuponu",
+                        ad = "Planlanan spor / kitap kuponu",
                         ikon = Icons.Filled.SportsScore,
-                        aciklama = "10.000 puana ulaştığında spor veya kitap " +
-                            "alışverişinde geçerli bir kupon kazanırsın.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Kupon yerine, 10.000 puanla senin adına 1 " +
-                            "fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
         )
     }
+}
+
+/** A4 kapanmadan kullanıcıya kupon, bağış veya teslimat sözü verilmez. */
+internal const val MADDI_ODUL_ACIKLAMASI =
+    "Bu ödül için sponsorluk ve teslimat altyapısı henüz etkin değil. " +
+        "Puan eşiği yalnızca ilerleme hedefidir; kupon ya da bağış oluşturmaz."
+
+internal fun odulHaliniBelirle(
+    hakEdildi: Boolean,
+    cokluSecenek: Boolean,
+    secimVarMi: Boolean,
+    teslimatEtkinMi: Boolean,
+): OdulHali = when {
+    hakEdildi && !teslimatEtkinMi -> OdulHali.PLANLANAN
+    !hakEdildi -> OdulHali.KILITLI
+    cokluSecenek && !secimVarMi -> OdulHali.SECIM_BEKLIYOR
+    else -> OdulHali.KAZANILDI
 }
 
 /**
