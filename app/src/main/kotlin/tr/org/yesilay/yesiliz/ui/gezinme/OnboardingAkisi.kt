@@ -147,8 +147,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
                 // (`debug.md` üçüncü tarama A3). Hedef seçilmediği için
                 // `tamamla()` varsayılan hedefi (120 dk) yazar.
                 onAtla = {
-                    vm.tamamla()
-                    girdi.anaSayfayaGec(navController)
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
                 },
                 // Anket atlandıysa kullanım hakkında iddia edilmiyor
                 // (`debug.md` O-2).
@@ -162,8 +161,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
             HedefEkran(
                 durum = durum,
                 onBasla = {
-                    vm.tamamla()
-                    girdi.anaSayfayaGec(navController)
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
                 },
                 onKendiHedefi = { girdi.guvenliGit(navController, Rota.HEDEF_OZEL) },
             )
@@ -177,8 +175,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
                 onHedef = vm::hedefDegisti,
                 onHizli = vm::hizliHedef,
                 onKaydet = {
-                    vm.tamamla()
-                    girdi.anaSayfayaGec(navController)
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
                 },
                 onVazgec = { girdi.guvenliGeri(navController) },
             )

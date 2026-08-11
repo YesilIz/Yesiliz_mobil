@@ -32,6 +32,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 /**
@@ -80,6 +81,7 @@ class YuruyusServisi : Service() {
 
     private val kapsam = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var sayacIsi: Job? = null
+    private val bitirmeKilidi = TekSeferlikIslem()
 
     /** Yürüyüşe başlarkenki adım — fark, yürüyüşün kendi adımı. */
     private var baslangicAdimi: Int? = null
@@ -135,6 +137,10 @@ class YuruyusServisi : Service() {
     }
 
     private fun bitir(puanVer: Boolean) {
+        // Sayaç hedefe ulaştığı anda bildirimdeki "Bitir" de gelebilir.
+        // İki iş aynı oturumu iki kez aktivite tablosuna yazmamalı ve
+        // `puanVerildi` sonucunu son tamamlanan iş rastgele ezmemeli.
+        if (!bitirmeKilidi.sahiplen()) return
         sayacIsi?.cancel()
         kapsam.launch {
             // Gerçek yürünen süre — duraklatılan aralıkları saymaz (sayaç
@@ -268,4 +274,11 @@ class YuruyusServisi : Service() {
             baglam.stopService(Intent(baglam, YuruyusServisi::class.java))
         }
     }
+}
+
+/** Servis komutları farklı Binder/iş parçacığı yollarından yarışabilir. */
+internal class TekSeferlikIslem {
+    private val sahiplenildi = AtomicBoolean(false)
+
+    fun sahiplen(): Boolean = sahiplenildi.compareAndSet(false, true)
 }

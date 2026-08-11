@@ -333,6 +333,42 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A reachable development server was worse than an unreachable one for the demo flow.
 - Status: Fixed. A narrowly scoped demo fallback accepts only I/O and 401, never coroutine cancellation or 4xx business conflicts. Five focused tests pass.
 
+## DBG-037 — Onboarding could navigate away before its completion data was durable
+
+- Severity: P1 — first-run/data persistence
+- Areas: onboarding, assessment refresh and awareness-test ViewModels/navigation
+- Evidence: The completion button launched Room/DataStore/risk writes in `viewModelScope`, then its caller immediately removed the onboarding graph. Clearing the ViewModel could cancel those writes midway. The sibling assessment flows also published success/result state before persistence returned.
+- Expected: Required local writes finish successfully before the UI leaves the flow or exposes its terminal state; rapid taps start only one completion.
+- Actual: A user could reach the dashboard with incomplete setup and see onboarding again after relaunch, or see a completed test whose result was not stored.
+- Status: Fixed and live-UI validated. A shared persistence-before-progress primitive, per-flow active-job guard and completion callback enforce ordering. Tests prove navigation never precedes persistence and persistence failure does not advance. API 36 completed the real skipped-assessment onboarding path, reached the dashboard and retained it.
+
+## DBG-038 — Rapid account-form taps could start duplicate remote operations
+
+- Severity: P1 — account/session race
+- Area: `HesapViewModel`
+- Evidence: Login, registration and reset set `islemde` only inside a newly launched coroutine. Two taps in the same UI frame could both observe idle state and start two server requests; two login successes could rotate/store competing token pairs.
+- Expected: A valid account action claims the in-flight state synchronously and atomically before launching work.
+- Actual: Duplicate registration conflicts, multiple refresh sessions, stale terminal results or repeated navigation were possible.
+- Status: Fixed. A compare-and-set claim admits exactly one action, including guest continuation. Focused regressions prove the first claim succeeds and subsequent simultaneous claims are rejected until terminal state.
+
+## DBG-039 — Walking timer and notification could finish one session twice
+
+- Severity: P1 — activity/points integrity
+- Area: `YuruyusServisi`
+- Evidence: Timer completion and the notification's “Bitir” command can arrive concurrently. Both entered `bitir`, launched persistence work and stopped the service independently; duplicate activity rows and last-writer-wins `puanVerildi` state were possible.
+- Expected: Exactly one caller owns finalization for a service instance.
+- Actual: A boundary-time user action could double-record one walk or overwrite its awarded-points result.
+- Status: Fixed. An atomic one-shot guard precedes all finalization work. A 32-caller concurrency regression admits exactly one owner.
+
+## DBG-040 — Every newly started focus session could immediately mark itself failed
+
+- Severity: P1 — core activity correctness
+- Area: `OdakEkran` lifecycle observer
+- Evidence: Adding a lifecycle observer to an already resumed owner makes Android synchronize the new observer through `ON_RESUME`. The code interpreted any `ON_RESUME` as the user reopening the phone, even though the observer was intentionally attached only after Start.
+- Expected: Observer-state synchronization is ignored; only a resume after a real pause/stop invalidates the focus session.
+- Actual: A session could show “Seans bozuldu” immediately, making the focus reward unobtainable.
+- Status: Fixed and live-UI validated. A small state tracker requires an actual departure before accepting a return. Three JVM regressions cover initial synchronization, repeated departure events and single-consumption. On API 36, Start remained on “Odaklanıyorsun”; Home and return then changed it to “Seans bozuldu” as intended.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

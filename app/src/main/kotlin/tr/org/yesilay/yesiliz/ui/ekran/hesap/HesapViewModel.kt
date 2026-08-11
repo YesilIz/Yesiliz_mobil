@@ -42,6 +42,7 @@ class HesapViewModel @Inject constructor(
 
     fun girisYap(onBasarili: () -> Unit) {
         val d = _durum.value
+        if (d.islemde) return
 
         // Alan doğrulaması AĞDAN ÖNCE. Eskiden bu kontroller yalnızca depo
         // katmanındaydı ve `YedekliHesapDeposu` önce ağı deniyordu: boş bir
@@ -51,14 +52,15 @@ class HesapViewModel @Inject constructor(
         HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
         HesapDogrula.sifre(d.sifre)?.let { return hataYaz(HesapAlani.SIFRE, it) }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
             sonucuIsle(depo.girisYap(d.eposta, d.sifre), onBasarili)
         }
     }
 
     fun kayitOl(onBasarili: () -> Unit) {
         val d = _durum.value
+        if (d.islemde) return
 
         // Alan doğrulamalarının tamamı depoya gitmeden burada (`debug.md`
         // Y-12): hiçbiri sunucu bilgisi istemiyor ve ağ zaman aşımının
@@ -73,18 +75,19 @@ class HesapViewModel @Inject constructor(
             return hataYaz(HesapAlani.KOSULLAR, "Devam etmek için koşulları onaylaman gerekiyor.")
         }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
             sonucuIsle(depo.kayitOl(d.ad, d.eposta, d.sifre), onBasarili)
         }
     }
 
     fun sifreSifirla() {
         val d = _durum.value
+        if (d.islemde) return
         HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
             when (val sonuc = depo.sifreSifirla(d.eposta)) {
                 is HesapSonuc.Basarili ->
                     _durum.update { it.copy(islemde = false, sifirlamaGonderildi = true) }
@@ -94,6 +97,7 @@ class HesapViewModel @Inject constructor(
     }
 
     fun misafirDevam(onBasarili: () -> Unit) {
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
             depo.misafirDevam()
             onBasarili()
@@ -116,5 +120,14 @@ class HesapViewModel @Inject constructor(
 
     private fun guncelle(alan: HesapAlani, donusum: (HesapDurum) -> HesapDurum) {
         _durum.update { donusum(it).copy(hatalar = it.hatalar - alan) }
+    }
+}
+
+/** Hızlı çift dokunuşta yalnızca bir coroutine ağ işlemini sahiplenir. */
+internal fun MutableStateFlow<HesapDurum>.islemiSahiplen(): Boolean {
+    while (true) {
+        val mevcut = value
+        if (mevcut.islemde) return false
+        if (compareAndSet(mevcut, mevcut.copy(islemde = true))) return true
     }
 }

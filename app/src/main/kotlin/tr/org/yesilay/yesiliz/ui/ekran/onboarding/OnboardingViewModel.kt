@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
@@ -16,6 +17,7 @@ import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.risk.RiskHesapla
+import tr.org.yesilay.yesiliz.ui.kalicilastirVeIlerle
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -41,6 +43,7 @@ class OnboardingViewModel @Inject constructor(
 
     private val _durum = MutableStateFlow(OnboardingDurum())
     val durum: StateFlow<OnboardingDurum> = _durum.asStateFlow()
+    private var tamamlamaIsi: Job? = null
 
     fun yasDegisti(delta: Int) {
         _durum.update { it.copy(yas = (it.yas + delta).coerceIn(YAS_ALT, YAS_UST)) }
@@ -85,41 +88,47 @@ class OnboardingViewModel @Inject constructor(
      * "bitti" bayrağı kaydedilir; alpha eğrisi anketsiz kolda kalır, bu doğru
      * davranış.
      */
-    fun tamamla() {
+    fun tamamla(onTamamlandi: () -> Unit) {
+        if (tamamlamaIsi?.isActive == true) return
         val durum = _durum.value
-        viewModelScope.launch {
-            val bugun = LocalDate.now(saat)
-            var anketTarihi: LocalDate? = null
+        tamamlamaIsi = viewModelScope.launch {
+            kalicilastirVeIlerle(
+                kalicilastir = {
+                    val bugun = LocalDate.now(saat)
+                    var anketTarihi: LocalDate? = null
 
-            if (durum.anketTamam) {
-                val hamPuan = durum.hamPuan.toDouble()
-                anketDao.ekle(
-                    AnketYanitEntity(
-                        tarih = bugun,
-                        madde1 = durum.yanitlar[0], madde2 = durum.yanitlar[1],
-                        madde3 = durum.yanitlar[2], madde4 = durum.yanitlar[3],
-                        madde5 = durum.yanitlar[4], madde6 = durum.yanitlar[5],
-                        madde7 = durum.yanitlar[6], madde8 = durum.yanitlar[7],
-                        madde9 = durum.yanitlar[8], madde10 = durum.yanitlar[9],
-                        hamPuan = hamPuan,
-                        rS = RiskHesapla.anketSkoru(hamPuan),
-                    ),
-                )
-                anketTarihi = bugun
-            }
+                    if (durum.anketTamam) {
+                        val hamPuan = durum.hamPuan.toDouble()
+                        anketDao.ekle(
+                            AnketYanitEntity(
+                                tarih = bugun,
+                                madde1 = durum.yanitlar[0], madde2 = durum.yanitlar[1],
+                                madde3 = durum.yanitlar[2], madde4 = durum.yanitlar[3],
+                                madde5 = durum.yanitlar[4], madde6 = durum.yanitlar[5],
+                                madde7 = durum.yanitlar[6], madde8 = durum.yanitlar[7],
+                                madde9 = durum.yanitlar[8], madde10 = durum.yanitlar[9],
+                                hamPuan = hamPuan,
+                                rS = RiskHesapla.anketSkoru(hamPuan),
+                            ),
+                        )
+                        anketTarihi = bugun
+                    }
 
-            tercihler.onboardingiBitir(
-                hedefDk = durum.hedefDakika,
-                anketTarihi = anketTarihi,
+                    tercihler.onboardingiBitir(
+                        hedefDk = durum.hedefDakika,
+                        anketTarihi = anketTarihi,
+                    )
+
+                    // Anket doldurulduysa risk hemen hesaplanmalı — yoksa kullanıcı
+                    // ilk gün boyunca anketini hiç dikkate almamış bir bant görür.
+                    // `AnketYenileViewModel.bitir()` ile aynı ikili; gerekçesi orada.
+                    if (anketTarihi != null) {
+                        riskDeposu.gunuHesapla(bugun)
+                        isPlanlayici.simdiTazele()
+                    }
+                },
+                ilerle = onTamamlandi,
             )
-
-            // Anket doldurulduysa risk hemen hesaplanmalı — yoksa kullanıcı
-            // ilk gün boyunca anketini hiç dikkate almamış bir bant görür.
-            // `AnketYenileViewModel.bitir()` ile aynı ikili; gerekçesi orada.
-            if (anketTarihi != null) {
-                riskDeposu.gunuHesapla(bugun)
-                isPlanlayici.simdiTazele()
-            }
         }
     }
 

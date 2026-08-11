@@ -7,11 +7,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.yerel.dao.FarkindalikTestiDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.FarkindalikTestiEntity
 import tr.org.yesilay.yesiliz.domain.test.FarkindalikTesti
 import tr.org.yesilay.yesiliz.domain.test.TestSecenegi
+import tr.org.yesilay.yesiliz.ui.kalicilastirVeIlerle
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -24,6 +26,7 @@ class TestViewModel @Inject constructor(
 
     private val _durum = MutableStateFlow(TestDurum())
     val durum: StateFlow<TestDurum> = _durum.asStateFlow()
+    private var bitirmeIsi: Job? = null
 
     init {
         viewModelScope.launch {
@@ -49,20 +52,24 @@ class TestViewModel @Inject constructor(
      * genişletmek günlük tavanı (150) ve tüm dengeyi kaydırırdı.
      */
     fun bitir() {
+        if (bitirmeIsi?.isActive == true) return
         val yanitlar = _durum.value.yanitlar.filterNotNull()
         if (yanitlar.size != FarkindalikTesti.SORULAR.size) return
 
         val sonuc = FarkindalikTesti.sonucHesapla(yanitlar)
-        _durum.update { it.copy(sonuc = sonuc) }
-
-        viewModelScope.launch {
-            dao.ekle(
-                FarkindalikTestiEntity(
-                    tarih = LocalDate.now(saat),
-                    yanitlar = yanitlar.map { it.name },
-                    hamPuan = sonuc.hamPuan,
-                    seviye = sonuc.seviye.name,
-                ),
+        bitirmeIsi = viewModelScope.launch {
+            kalicilastirVeIlerle(
+                kalicilastir = {
+                    dao.ekle(
+                        FarkindalikTestiEntity(
+                            tarih = LocalDate.now(saat),
+                            yanitlar = yanitlar.map { it.name },
+                            hamPuan = sonuc.hamPuan,
+                            seviye = sonuc.seviye.name,
+                        ),
+                    )
+                },
+                ilerle = { _durum.update { it.copy(sonuc = sonuc) } },
             )
         }
     }

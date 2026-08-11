@@ -169,7 +169,7 @@ internal suspend fun <T> demoYedegi(uzak: suspend () -> T, yerel: suspend () -> 
 } catch (_: IOException) {
     yerel()
 } catch (hata: HttpException) {
-    if (hata.code() == 401) yerel() else throw hata
+    if (hata.code() == 401 || hata.code() >= 500) yerel() else throw hata
 }
 
 /** `flow { }` içinde başka bir akışı yayınlamak için. */

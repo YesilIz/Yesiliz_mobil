@@ -56,11 +56,23 @@ fun OdakEkran(
     // Seans sürerken ekrana dönülmesi = telefonun açılması.
     val sahip = LocalLifecycleOwner.current
     DisposableEffect(sahip, durum.basladi) {
+        val donusTakibi = OdakDonusTakibi()
         val gozlemci = LifecycleEventObserver { _, olay ->
-            if (olay == Lifecycle.Event.ON_RESUME) viewModel.ekranAcildi()
+            when (olay) {
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP,
+                -> donusTakibi.ayrildi()
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (donusTakibi.dondu()) viewModel.ekranAcildi()
+                }
+
+                else -> Unit
+            }
         }
-        // İlk kompozisyonda ON_RESUME zaten gelmiş oluyor; gözlemci
-        // yalnızca seans BAŞLADIKTAN sonra takılıyor.
+        // Gözlemci seans başladıktan sonra takılıyor. Lifecycle, yeni
+        // gözlemciyi mevcut RESUMED durumuna eşitlemek için ilk ON_RESUME'u
+        // hemen gönderebilir; OdakDonusTakibi bunu gerçek dönüşten ayırır.
         if (durum.basladi) sahip.lifecycle.addObserver(gozlemci)
         onDispose { sahip.lifecycle.removeObserver(gozlemci) }
     }

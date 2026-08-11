@@ -4,18 +4,18 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Parent/privacy, account-boundary, reward recovery and logout revocation fixes complete; continued device/release/adversarial audit
-LAST_CHECKPOINT: 2026-08-11 03:24:58 +03
+CURRENT_PHASE: Persistence, duplicate-action and focus-lifecycle races fixed; continued release/performance and two-device adversarial audit
+LAST_CHECKPOINT: 2026-08-11 03:47:53 +03
 CURRENT_BRANCH: fix/turan-debug
-LAST_VALIDATED_COMMIT: d3589ce (second critical-fix wave; JVM/backend/device tests green)
+LAST_VALIDATED_COMMIT: 4e7ae52 (account/privacy/concurrency wave; JVM/backend/device tests green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
 BUILD_STATUS: PASS — forced debug assemble and Android lint (zero errors)
 UNIT_TEST_STATUS: PASS — latest forced full run: 30 core-risk + 212 app JVM tests
 DEVICE_TEST_STATUS: PASS — latest physical API 31 and emulator API 36 suites each passed all 47 tests with no skip/failure; real parent summary/unlink and lowercase account-deletion confirmation were also exercised on the phone.
 BACKEND_TEST_STATUS: PASS — latest full suite: 96 passed; live PostgreSQL concurrency probe passed and temporary accounts were removed
-TOP_OPEN_BUGS: Remaining untouched high-risk/lifecycle/performance audit; authenticated physical logout refresh-revocation smoke; signed release inspection; mission account/artifact cleanup
-CURRENT_HYPOTHESES: Process-death handling in other in-memory activity state and release shrinking/manifest may still diverge from debug validation; rapid UI actions may expose request duplication
-NEXT_ACTIONS: Commit the validated account/privacy/concurrency wave; finish authenticated physical logout smoke where practical; inspect untouched high-risk paths; run signed release and final broad suites
+TOP_OPEN_BUGS: Release shrinking/size assessment; authenticated physical logout refresh-revocation smoke where practical; untouched high-risk timer/service paths; final mission package/artifact cleanup
+CURRENT_HYPOTHESES: Delay-based timers may drift under longer device sleep and the unshrunk extended icon set may inflate release distribution; remaining service actions may have lifecycle races
+NEXT_ACTIONS: Run the complete JVM/build/backend suites and commit the persistence/action/focus wave; evaluate release shrinking safely on the emulator; repeat both connected-device suites and continue adversarial audit
 BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf is preserved and excluded from mission changes.
 
 ## Checkpoints
@@ -44,3 +44,4 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 01:58:00 +03 — Physically validated retained points, cold relaunch, logout/login, clean Profile→Ana back navigation, real league join/invite, and network loss/recovery. Fixed the newly exposed offline-empty league state so it no longer looks like lost membership or offers no-op actions. Approximately 5h11m mission time remains.
 - 2026-08-11 02:31:48 +03 — Closed concurrent/revoked step sampling, external-route crash, atomic task limits/active-day proofs, remote parent unlink, fake parent identity/data, invalid offline pairing codes, ambiguous multi-pairing, dated parent bars, plaintext reusable server tokens, sticky walk resurrection, overlay revocation, and four minSdk/lint defects. Forced suites pass: 30 core-risk + 200 app JVM + 89 backend; API 36 connected 40 pass/4 documented skips; Android lint has zero errors. Approximately 4h37m mission time remains.
 - 2026-08-11 03:24:58 +03 — Physically verified real parent summary/unlink and account deletion; closed parent loading/success-state defects, Turkish deletion confirmation, cross-account local-data leakage, reward recovery, refresh-token logout revocation, protected-auth refresh routing, debug league fallback, and backend validation/concurrency races. Forced suites pass: 30 core-risk + 212 app JVM + 96 backend; physical API 31 and emulator API 36 each pass all 47 connected tests; lint remains clean. Approximately 3h44m mission time remains.
+- 2026-08-11 03:47:53 +03 — Closed persistence-before-navigation, duplicate account submission, duplicate walking finish and focus-lifecycle races; broadened only debug demo fallback to server 5xx. Focused JVM tests pass. API 36 live UI proved onboarding reaches and persists the dashboard, a newly started focus session stays valid, a real background/return invalidates it, and its counter continues through a short screen-off interval. Preliminary signed release build/signature/manifest/network checks pass. Approximately 3h21m mission time remains.

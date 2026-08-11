@@ -56,6 +56,14 @@ class YedekliDepolarTest {
     }
 
     @Test
+    fun demoKodundaGeciciSunucuHatasiYerelYedegeDoner() = runBlocking {
+        val govde = "{}".toResponseBody("application/json".toMediaType())
+        val sunucuHatasi = HttpException(Response.error<Any>(503, govde))
+
+        assertEquals("yerel-kod", demoYedegi({ throw sunucuHatasi }, { "yerel-kod" }))
+    }
+
+    @Test
     fun demoKodundaIsHatasiYerelBasariyaDonusmez() {
         val govde = "{}".toResponseBody("application/json".toMediaType())
         val cakisma = HttpException(Response.error<Any>(409, govde))
