@@ -585,6 +585,87 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A child could believe app-category data was shared and a parent could wait for data that never arrives; the notification history reinforced both false beliefs.
 - Status: Fixed. The fake action/writer/state were removed. Paired users now see that category distribution/app names are not sent and that parents can see only previously shared daily totals plus sufficiently measured risk. Room 7→8 deletes only the legacy fake `ebeveyn` notification type while retaining real notifications; schema and data migration passed 14 tests on both physical API 31 and emulator API 36, and a JVM copy regression passes.
 
+## DBG-065 — Target screen promised a parent notification that did not exist
+
+- Severity: P1 — family-flow truthfulness
+- Areas: target detail copy and parent-sharing boundary
+- Evidence: The screen said exceeding the daily target would notify a parent, but there was no notification writer or parent API for that event.
+- Expected: Describe only the weekly summary that a paired parent can actually see after the child enables sharing.
+- Actual: A child could expect a safety notification that would never be sent.
+- Status: Fixed. The unsupported notification promise was removed and two focused copy regressions pass.
+
+## DBG-066 — Planned material rewards and an in-app card were presented as delivered/official
+
+- Severity: P0 — reward and document truthfulness
+- Areas: reward catalog, selection state and generated achievement card
+- Evidence: Coupons and donations could appear won/completed although fulfillment is not integrated; the digital badge flow generated an official-looking certificate.
+- Expected: Planned material benefits cannot be selected or called delivered, and an app achievement must not resemble an official document.
+- Actual: The product could make an unsupported financial/charitable promise and imply formal certification.
+- Status: Fixed. Material rewards are visibly `PLANLANAN`, delivery is explicitly unavailable, and the digital item is an app-internal achievement card. Five truthfulness regressions pass.
+
+## DBG-067 — Reward writes could fabricate server-side coupon/donation ownership
+
+- Severity: P0 — entitlement and financial-integrity boundary
+- Areas: Android reward repository and backend `/odul/sec`
+- Evidence: Any authenticated account could POST a reward choice without a server-side points/eligibility proof, while the product has no fulfillment provider.
+- Expected: Unsupported tangible rewards fail closed on both sides and create no selection row.
+- Actual: The database could record an unearned deliverable and the client could later restore it as authoritative.
+- Status: Fixed. Android disables/refuses material fulfillment and no longer POSTs it; the backend returns 503 and writes nothing while retaining read compatibility for historical rows. Focused backend reward/account tests pass.
+
+## DBG-068 — Parent heartbeat bypassed the child's sharing consent
+
+- Severity: P0 — family privacy and interpretation
+- Areas: app startup heartbeat, summary consent and parent silence copy
+- Evidence: An authenticated child emitted last-open time regardless of “Yeşilay ile paylaşım”; the parent UI interpreted silence as “app not opened”.
+- Expected: Device activity leaves only for a paired child who opted into sharing; absence of data must not be assigned a cause.
+- Actual: Turning summary sharing off still disclosed app activity, and a network/consent gap could alarm a parent.
+- Status: Fixed. Heartbeat now requires authenticated non-guest child role, an active pairing and sharing consent. The parent sees only “no new share”, and the child disclosure names the last-share timestamp. Eight focused regressions pass.
+
+## DBG-069 — Credentialed production CORS accepted a wildcard origin
+
+- Severity: P1 — deployment security
+- Area: backend production configuration
+- Evidence: Operator configuration could combine allowed origin `*` with credentials.
+- Expected: Production startup rejects wildcard credentialed origins.
+- Actual: A permissive deployment could unintentionally broaden browser credential exposure.
+- Status: Fixed. Settings validation rejects `*` in production credentialed CORS and the full backend suite passes.
+
+## DBG-070 — Permanent friend invite codes had only four random characters
+
+- Severity: P1 — account/league abuse
+- Areas: Android/backend invite format, persistence and migration
+- Evidence: A permanent unlimited-attempt code had roughly 32^4 possibilities and no expiry; online guessing was practical compared with the account lifetime.
+- Expected: A persistent code has substantially higher entropy and old weak codes are not silently retained.
+- Actual: A guessed code could create an unwanted league friendship.
+- Status: Fixed. Codes now use eight unambiguous base-32 characters (about 1.1 trillion combinations), old codes rotate on owner read, input/format tests were updated, and migration `e39a71c4d206` removes legacy short codes without touching friendships. Local PostgreSQL had zero such rows before migration; 19 backend league tests and eight Android code tests pass.
+
+## DBG-071 — App-widget receivers were unnecessarily exported
+
+- Severity: P1 — Android component exposure
+- Areas: release manifest and both Glance widget receivers
+- Evidence: Both receivers were `exported=true` based on an incorrect assumption that the launcher required it. Android's AppWidget system can deliver its updates to non-exported receivers.
+- Expected: Widget refresh is system-delivered without exposing a broadcast-triggerable data-read surface to arbitrary apps.
+- Actual: Another app could explicitly invoke the receivers and cause unnecessary widget/data work.
+- Status: Fixed. Both receivers are `exported=false`; a manifest regression and the merged/final APK manifests verify the boundary. The final two-device widget-containing suite passes.
+
+## DBG-072 — Unknown login skipped Argon2 and leaked account existence through timing
+
+- Severity: P1 — authentication privacy
+- Area: backend `/auth/giris`
+- Evidence: The endpoint returned the same 401 text for an absent account and a wrong password, but Python short-circuiting skipped the costly Argon2 verification when the account did not exist.
+- Expected: Observable response text and meaningful computation cost are equivalent for existing/unknown e-mails.
+- Actual: Repeated timing measurements could distinguish registered addresses despite the generic message.
+- Status: Fixed. The absent-user path verifies a fixed non-account Argon2id hash with the same parameters and can never authenticate. A regression proves the endpoint enters that verifier with no account; all 106 backend tests pass.
+
+## DBG-073 — Skipping/revoking usage access left no in-app recovery action
+
+- Severity: P1 — core feature availability
+- Areas: Home empty state, usage-access settings and resume refresh
+- Evidence: After onboarding, Home displayed “Kullanım izni gerekiyor” inside a non-clickable card. No main route reopened the special Usage Access settings, and the permission value was only recomputed when unrelated data flows emitted.
+- Expected: The empty state has a direct, safe settings action and reflects allow/revoke immediately on returning.
+- Actual: A user who skipped or revoked the app's essential measurement access could remain permanently at an instruction-only dead end.
+- Status: Fixed and API 36 release-validated. Home now exposes “İzin ayarlarını aç”, resolves the settings Activity before launch, and refreshes AppOps on every resume. The button opened the system Usage Access list; granting changed the card to “Ölçmeye yeni başladık”, and revoking restored the warning/action. The refreshed two-device suite remains green.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

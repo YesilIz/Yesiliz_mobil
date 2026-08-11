@@ -4,18 +4,18 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Removed a fake parent data-transfer flow and migrated its false history; rebuilding final full/device/release validation
-LAST_CHECKPOINT: 2026-08-11 05:46:30 +03
+CURRENT_PHASE: Final forced suites, refreshed two-device matrix, exact signed release and usage-permission recovery are green; completing cleanup and handoff
+LAST_CHECKPOINT: 2026-08-11 06:39:00 +03
 CURRENT_BRANCH: fix/turan-debug
-LAST_VALIDATED_COMMIT: 691bf41 (timer/service lifecycle wave; forced suites and two-device connected suite green)
+LAST_VALIDATED_COMMIT: 08742bd (usage-access recovery restored; refreshed two-device connected matrix green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
-BUILD_STATUS: PASS — debug/release compile, mission debug assemble and Android lint (zero errors); shrunk signed release assembled and live-smoked
-UNIT_TEST_STATUS: PASS — latest forced full app run: 248 app JVM tests; latest core-risk forced run: 30 tests
-DEVICE_TEST_STATUS: PASS — latest full XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error. Subsequent Room 7→8 focus passed all 14 migration tests on both devices.
-BACKEND_TEST_STATUS: PASS — latest full suite: 105 passed; live PostgreSQL migrated to b271c6d09e44
-TOP_OPEN_BUGS: Remaining process-death/account/server abuse edges; final two-device suite, exact release rebuild and mission-account/package cleanup
-CURRENT_HYPOTHESES: Authentication rate limiting needs deployment-grade shared state and remains a launch risk; long-lived client tokens would benefit from hardware-backed at-rest protection; connected tests do not exercise every real notification/account UI path
-NEXT_ACTIONS: Commit the deletion/export wave, continue static/adversarial checks, run final forced suites and two-device connected matrix, rebuild/install-smoke the exact signed release, then remove only mission packages and reverse-port artifacts
+BUILD_STATUS: PASS — debug/release lint (zero errors) and exact shrunk signed release; release is 8,610,730 bytes, SHA-256 304e4aeaacff25755e22e8ef227362ac490857398765e2f9a6f4af816b754908, one DEX, APK Signature Scheme v2/RSA-4096 verified and API 36 cold-smoked in 585 ms
+UNIT_TEST_STATUS: PASS — latest forced full app run: 261 app JVM tests; latest core-risk forced run: 30 tests, zero failure/skip
+DEVICE_TEST_STATUS: PASS — final XML-exact physical API 31 and emulator API 36 suites each report 48 total, 44 executed pass + 4 documented UsageStats-permission precondition skips, zero failure/error
+BACKEND_TEST_STATUS: PASS — final full suite: 106 passed; live PostgreSQL migrated to e39a71c4d206 (head)
+TOP_OPEN_BUGS: No known correctness regression in validated scope. Deployment-grade shared auth/pairing rate limits, client-supplied league points and protected token storage remain explicit launch risks.
+CURRENT_HYPOTHESES: Connected tests do not exercise every production notification/account UI path; external production services and legal consent verification remain outside this local validation boundary
+NEXT_ACTIONS: Finish residual static/adversarial review, confirm database/package/reverse-port hygiene, finalize logs, and keep working through the seven-hour target before handoff
 BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf is preserved and excluded from mission changes.
 
 ## Checkpoints
@@ -58,3 +58,9 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 05:34:30 +03 — Found that risk sufficiency was dropped from the mobile→server contract, allowing a sub-15-minute child's unreliable band to reach a parent. New clients now withhold it, the backend persists/enforces the status through a tested PostgreSQL migration, and the panel no longer calls indeterminate trends stable. Focused suites pass 30 backend + six Android tests. Approximately 1h35m mission time remains.
 - 2026-08-11 05:40:00 +03 — Forced full suites passed 30 core-risk + 248 app JVM + 105 backend with zero lint errors. The final-source connected matrix then passed exactly 48 tests per API 31/API 36 device (44 executed pass + four permission-precondition skips, zero failure/error). Exact signed release was one DEX/8,610,726 bytes, v2/RSA-4096 verified, cleartext-disabled, and cold-started on API 36; later source changes require one final rebuild. Approximately 1h29m mission time remains.
 - 2026-08-11 05:46:30 +03 — Removed a P0 fake “Ebeveyn paneline gönder” action that only wrote a local success notification and had no API. Added the truthful parent data boundary and a Room 7→8 cleanup that deletes only those legacy false notices. All 14 migration tests pass on physical API 31 and emulator API 36. Approximately 1h23m mission time remains.
+- 2026-08-11 05:51:30 +03 — Removed false target-overrun notification copy and material-reward/certificate claims; unsupported coupons/donations now fail closed on both client and server. Focused Android/backend regressions pass.
+- 2026-08-11 06:02:30 +03 — Bound parent heartbeat to explicit child sharing consent, rejected wildcard production CORS with credentials, and replaced permanent four-character friend codes with eight-character high-entropy codes plus a safe migration. Local PostgreSQL reached migration head `e39a71c4d206` with zero legacy invite rows.
+- 2026-08-11 06:18:10 +03 — Closed both app-widget broadcast receivers to external apps following the Android system delivery contract and added a source-manifest regression. The focused test and merged release manifest pass.
+- 2026-08-11 06:25:00 +03 — Final forced suites pass 30 core-risk + 261 app JVM + 105 backend with zero lint errors. Physical API 31 and emulator API 36 each report exactly 48 device tests: 44 executed pass + four documented permission-precondition skips, zero failure/error. The exact signed release is one DEX/8,610,730 bytes, v2/RSA-4096 verified, free of forbidden debug host/package strings and cold-started on API 36 in 776 ms without a focused fatal/security/Room error. Approximately 44 minutes mission time remains.
+- 2026-08-11 06:31:00 +03 — Equalized existing/unknown login computation so identical 401 bodies are no longer undermined by an Argon2 timing shortcut. The new regression and all 106 backend tests pass.
+- 2026-08-11 06:39:00 +03 — Restored the missing post-onboarding usage-access recovery action and live ON_RESUME refresh. Refreshed physical API 31/API 36 results remain exactly 48 tests each (44 pass + four documented skips). The exact final release is 8,610,730 bytes/one DEX, SHA-256 `304e4aeaacff25755e22e8ef227362ac490857398765e2f9a6f4af816b754908`, v2/RSA-4096 verified and cold-started in 585 ms. On API 36 the button opened the system Usage Access list; allow changed the card to “Ölçmeye yeni başladık” and deny restored the warning/action. Approximately 30 minutes mission time remains.
