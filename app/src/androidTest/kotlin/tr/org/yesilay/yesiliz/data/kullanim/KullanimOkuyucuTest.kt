@@ -15,6 +15,7 @@ import org.junit.runner.RunWith
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -50,7 +51,7 @@ class KullanimOkuyucuTest {
     @After
     fun kapat() = db.close()
 
-    private fun okuyucu() = KullanimOkuyucu.olustur(baglam, zon)
+    private fun okuyucu() = KullanimOkuyucu.olustur(baglam, Clock.system(zon))
 
     // -----------------------------------------------------------------
     @Test
@@ -95,6 +96,17 @@ class KullanimOkuyucuTest {
     }
 
     @Test
+    fun sahipBaslangiciPencereBitisindenSonraysaSistemSorgulanmaz() {
+        val bugun = LocalDate.of(2026, 8, 11)
+        val simdi = Instant.parse("2026-08-11T12:00:00Z")
+        val yeniSahip = Instant.parse("2026-08-11T12:00:01Z")
+
+        assertTrue(
+            okuyucu().gununOturumlari(bugun, simdi = simdi, enErken = yeniSahip).isEmpty(),
+        )
+    }
+
+    @Test
     fun androidKategorisiSorgulanabiliyor() {
         // Kendi paketimiz her zaman görünür
         val kategori = okuyucu().androidKategorisi(baglam.packageName)
@@ -116,7 +128,7 @@ class KullanimOkuyucuTest {
             kategoriDeposu = kategoriDeposu,
             olayDao = db.kullanimOlayDao(),
             ozetDao = db.gunlukOzetDao(),
-            zon = zon,
+            saat = Clock.system(zon),
         )
 
         val bugun = LocalDate.now(zon)
@@ -143,7 +155,7 @@ class KullanimOkuyucuTest {
         val kategoriDeposu = KategoriDeposu.olustur(baglam, db.kategoriEslemeDao())
         kategoriDeposu.seedEt()
         val depo = KullanimDeposu(
-            okuyucu(), kategoriDeposu, db.kullanimOlayDao(), db.gunlukOzetDao(), zon,
+            okuyucu(), kategoriDeposu, db.kullanimOlayDao(), db.gunlukOzetDao(), Clock.system(zon),
         )
 
         val bugun = LocalDate.now(zon)

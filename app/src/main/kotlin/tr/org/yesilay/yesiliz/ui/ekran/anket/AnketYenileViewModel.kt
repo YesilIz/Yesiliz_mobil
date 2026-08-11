@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
@@ -14,6 +15,7 @@ import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.risk.RiskHesapla
+import tr.org.yesilay.yesiliz.ui.kalicilastirVeIlerle
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -46,6 +48,7 @@ class AnketYenileViewModel @Inject constructor(
 
     private val _durum = MutableStateFlow(AnketYenileDurum())
     val durum: StateFlow<AnketYenileDurum> = _durum.asStateFlow()
+    private var bitirmeIsi: Job? = null
 
     init {
         viewModelScope.launch {
@@ -84,39 +87,46 @@ class AnketYenileViewModel @Inject constructor(
      * "10 madde zorunlu, ortalama ile doldurma YOK".
      */
     fun bitir() {
+        if (bitirmeIsi?.isActive == true) return
         val yanitlar = _durum.value.yanitlar
         if (yanitlar.any { it == 0 }) return
 
         val hamPuan = yanitlar.sum()
         val bugun = LocalDate.now(saat)
 
-        _durum.update { it.copy(bitti = true, hamPuan = hamPuan) }
+        bitirmeIsi = viewModelScope.launch {
+            kalicilastirVeIlerle(
+                kalicilastir = {
+                    dao.ekle(
+                        AnketYanitEntity(
+                            tarih = bugun,
+                            madde1 = yanitlar[0], madde2 = yanitlar[1], madde3 = yanitlar[2],
+                            madde4 = yanitlar[3], madde5 = yanitlar[4], madde6 = yanitlar[5],
+                            madde7 = yanitlar[6], madde8 = yanitlar[7], madde9 = yanitlar[8],
+                            madde10 = yanitlar[9],
+                            hamPuan = hamPuan.toDouble(),
+                            rS = RiskHesapla.anketSkoru(hamPuan.toDouble()),
+                        ),
+                    )
+                    tercihler.anketTarihiniKaydet(bugun)
 
-        viewModelScope.launch {
-            dao.ekle(
-                AnketYanitEntity(
-                    tarih = bugun,
-                    madde1 = yanitlar[0], madde2 = yanitlar[1], madde3 = yanitlar[2],
-                    madde4 = yanitlar[3], madde5 = yanitlar[4], madde6 = yanitlar[5],
-                    madde7 = yanitlar[6], madde8 = yanitlar[7], madde9 = yanitlar[8],
-                    madde10 = yanitlar[9],
-                    hamPuan = hamPuan.toDouble(),
-                    rS = RiskHesapla.anketSkoru(hamPuan.toDouble()),
-                ),
+                    // Yeni anket puanı ancak `risk_sonuc`'a yazılınca ekranlara
+                    // ulaşıyor. İkisi birlikte gerekiyor:
+                    //  - `gunuHesapla` bugünün özeti VARSA anında günceller
+                    //  - `simdiTazele` özet henüz yoksa onu da kurar.
+                    riskDeposu.gunuHesapla(bugun)
+                    isPlanlayici.simdiTazele()
+                },
+                ilerle = {
+                    _durum.update { durum ->
+                        durum.copy(
+                            bitti = true,
+                            hamPuan = hamPuan,
+                            gecmis = durum.gecmis + (bugun to hamPuan.toDouble()),
+                        )
+                    }
+                },
             )
-            tercihler.anketTarihiniKaydet(bugun)
-            _durum.update { durum ->
-                durum.copy(gecmis = durum.gecmis + (bugun to hamPuan.toDouble()))
-            }
-
-            // Yeni anket puanı ancak `risk_sonuc`'a yazılınca ekranlara
-            // ulaşıyor. İkisi birlikte gerekiyor:
-            //  - `gunuHesapla` bugünün özeti VARSA anında günceller
-            //  - `simdiTazele` özet henüz yoksa onu da kurar (kullanım
-            //    izni verilmiş cihazda; `AcilisViewModel` açılışta aynısını
-            //    yapıyor). Aynı günü iki kez hesaplamak idempotent.
-            riskDeposu.gunuHesapla(bugun)
-            isPlanlayici.simdiTazele()
         }
     }
 }

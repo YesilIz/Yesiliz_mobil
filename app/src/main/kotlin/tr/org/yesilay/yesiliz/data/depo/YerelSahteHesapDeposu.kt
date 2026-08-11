@@ -7,6 +7,7 @@ import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDogrula
 import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
+import tr.org.yesilay.yesiliz.ui.buyukHarf
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +17,7 @@ import javax.inject.Singleton
  * **Şifre hiçbir yere yazılmıyor.** Yalnızca doğrulanıyor ve unutuluyor;
  * yerelde saklamak, güvenli olmayan bir kimlik doğrulamayı güvenliymiş gibi
  * göstermek olurdu. Saklanan tek şey ad ve e-posta — ekranlardaki
- * `SABIT_ISIM = "Turan"` bunun yerine geçiyor.
+ * `SABIT_ISIM = "Misafir"` bunun yerine geçiyor.
  *
  * `sifreSifirla` gerçek bir e-posta göndermiyor; ekran bunu kullanıcıya
  * açıkça söylüyor. Faz 2'de `RetrofitHesapDeposu` bağlanınca ekran
@@ -25,6 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class YerelSahteHesapDeposu @Inject constructor(
     private val tercihler: Tercihler,
+    private val yerelOturumSiniri: YerelOturumSiniri,
 ) : HesapDeposu {
 
     override val oturum: Flow<Oturum> = tercihler.oturum
@@ -35,7 +37,14 @@ class YerelSahteHesapDeposu @Inject constructor(
 
         // Sunucu yok: e-postanın yerel kısmı ad olarak kullanılıyor.
         // Faz 2'de sunucudan gerçek ad gelecek.
-        val ad = eposta.substringBefore('@').replaceFirstChar { it.uppercase() }
+        //
+        // `replaceFirstChar { it.uppercase() }` Locale.ROOT kullanıyordu:
+        // "irem@…" → "Irem" (yanlış), Türkçede "İrem" olmalı. Yalnızca ilk
+        // harf `buyukHarf()` ile Türkçe-doğru büyütülüyor, gerisi aynen
+        // kalıyor (`debug.md` üçüncü tarama A2).
+        val yerelKisim = eposta.substringBefore('@')
+        val ad = yerelKisim.take(1).buyukHarf() + yerelKisim.drop(1)
+        yerelOturumSiniri.hesabaGec(eposta)
         tercihler.oturumuKaydet(ad = ad, eposta = eposta.trim(), misafir = false)
         return HesapSonuc.Basarili
     }
@@ -45,6 +54,7 @@ class YerelSahteHesapDeposu @Inject constructor(
         HesapDogrula.eposta(eposta)?.let { return HesapSonuc.Hata(HesapAlani.EPOSTA, it) }
         HesapDogrula.sifre(sifre)?.let { return HesapSonuc.Hata(HesapAlani.SIFRE, it) }
 
+        yerelOturumSiniri.hesabaGec(eposta)
         tercihler.oturumuKaydet(ad = ad.trim(), eposta = eposta.trim(), misafir = false)
         return HesapSonuc.Basarili
     }
@@ -55,6 +65,7 @@ class YerelSahteHesapDeposu @Inject constructor(
     }
 
     override suspend fun misafirDevam() {
+        yerelOturumSiniri.misafireGec()
         tercihler.oturumuKaydet(ad = "", eposta = "", misafir = true)
     }
 

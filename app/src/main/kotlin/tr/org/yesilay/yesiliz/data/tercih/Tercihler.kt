@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import java.time.LocalDate
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -218,6 +219,27 @@ class Tercihler @Inject constructor(
         }
     }
 
+    /**
+     * Room'daki cihaz verisinin sahibi. Oturum kapanınca bilinçli olarak
+     * silinmez: aynı hesap geri gelirse geçmiş korunur; farklı hesap
+     * gelirse [tr.org.yesilay.yesiliz.data.depo.YerelOturumSiniri]
+     * eski kullanıcının verisini temizler.
+     */
+    val veriSahibi: Flow<String?> = depo.data.map { it[VERI_SAHIBI] }
+
+    /** Bu sahibin UsageStats olaylarının okunabileceği en erken an. */
+    val veriBaslangicAni: Flow<Instant?> = depo.data.map { p ->
+        p[VERI_BASLANGIC_ANI]?.let(Instant::ofEpochMilli)
+    }
+
+    suspend fun veriSahibiniKaydet(sahip: String) {
+        depo.edit { it[VERI_SAHIBI] = sahip }
+    }
+
+    suspend fun veriBaslangiciniKaydet(an: Instant) {
+        depo.edit { it[VERI_BASLANGIC_ANI] = an.toEpochMilli() }
+    }
+
     suspend fun ligeKatildiIsaretle() {
         depo.edit { it[LIGE_KATILDI] = true }
     }
@@ -262,10 +284,18 @@ class Tercihler @Inject constructor(
      * değiştirilebiliyor (`debug.md` O-14).
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
-        p[SUNUCU_TABANI]?.takeIf { it.isNotBlank() } ?: VARSAYILAN_SUNUCU
+        etkinSunucuTabani(
+            debugMi = BuildConfig.DEBUG,
+            saklanan = p[SUNUCU_TABANI],
+            varsayilan = VARSAYILAN_SUNUCU,
+        )
     }
 
     suspend fun sunucuTabaniniKaydet(adres: String) {
+        // Geliştirici adresi yalnızca debug aracıdır. Eski/test bir
+        // kurulumdan kalmış değer yayın istemcisinin token veya özetlerini
+        // başka bir sunucuya yönlendirememeli.
+        if (!BuildConfig.DEBUG) return
         depo.edit { p ->
             // Sondaki eğik çizgi Retrofit ve OkHttp için şart; kullanıcıya
             // yazdırmak yerine burada tamamlanıyor.
@@ -319,6 +349,8 @@ class Tercihler @Inject constructor(
         private val HESAP_MISAFIR = booleanPreferencesKey("hesap_misafir")
         private val HESAP_AD = stringPreferencesKey("hesap_ad")
         private val HESAP_EPOSTA = stringPreferencesKey("hesap_eposta")
+        private val VERI_SAHIBI = stringPreferencesKey("yerel_veri_sahibi")
+        private val VERI_BASLANGIC_ANI = longPreferencesKey("yerel_veri_baslangic_ani")
         private val DAVET_KODU = stringPreferencesKey("davet_kodu")
         private val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
         private val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
@@ -336,4 +368,15 @@ class Tercihler @Inject constructor(
         /** Hedef henüz belirlenmediyse — onboarding'i atlayan kullanıcı. */
         const val VARSAYILAN_HEDEF = 240
     }
+}
+
+/** Yayın istemcisi kalıcı bir debug sunucu geçersiz kılmasını asla kullanmaz. */
+internal fun etkinSunucuTabani(
+    debugMi: Boolean,
+    saklanan: String?,
+    varsayilan: String,
+): String = if (debugMi) {
+    saklanan?.takeIf { it.isNotBlank() } ?: varsayilan
+} else {
+    varsayilan
 }

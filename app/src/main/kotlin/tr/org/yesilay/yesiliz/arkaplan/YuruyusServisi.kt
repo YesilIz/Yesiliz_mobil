@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.MainActivity
 import tr.org.yesilay.yesiliz.R
+import tr.org.yesilay.yesiliz.data.depo.AktiviteOturumuDeposu
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.YuruyusOturumDeposu
@@ -27,9 +28,13 @@ import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusHesapla
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
+import tr.org.yesilay.yesiliz.zaman.GecenSureHesapla
+import tr.org.yesilay.yesiliz.zaman.GecenSureSaati
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 /**
@@ -72,10 +77,17 @@ class YuruyusServisi : Service() {
 
     @Inject lateinit var adimDeposu: AdimDeposu
 
+    @Inject lateinit var aktiviteOturumuDeposu: AktiviteOturumuDeposu
+
     @Inject lateinit var saat: Clock
+
+    @Inject lateinit var gecenSureSaati: GecenSureSaati
 
     private val kapsam = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var sayacIsi: Job? = null
+    private val bitirmeKilidi = TekSeferlikIslem()
+    private var calismaBaslangicMs: Long? = null
+    private var calismaTabaniSaniye = 0
 
     /** Yürüyüşe başlarkenki adım — fark, yürüyüşün kendi adımı. */
     private var baslangicAdimi: Int? = null
@@ -85,10 +97,12 @@ class YuruyusServisi : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             EYLEM_DURAKLAT -> {
+                calisanSureyiYaz()
                 sayacIsi?.cancel()
+                calismaBaslangicMs = null
                 oturumDeposu.duraklat()
                 bildirimiTazele()
-                return START_STICKY
+                return START_NOT_STICKY
             }
 
             EYLEM_BITIR -> {
@@ -98,48 +112,100 @@ class YuruyusServisi : Service() {
         }
 
         kanaliKur()
+        // İlk foreground bildirimi de gerçeği söylesin. Durumu
+        // `startForeground` sonrasında değiştirirsek ilk 10 saniye
+        // "Yürüyüş duraklatıldı" yazıyordu.
+        if (!oturumDeposu.oturum.value.calisiyor) oturumDeposu.surdur()
         startForeground(BILDIRIM_ID, bildirim())
         if (sayacIsi?.isActive != true) baslat()
-        return START_STICKY
+        // Devam eden sayaç henüz diske yazılmıyor. START_STICKY ile
+        // süreç ölümünden sonra boş Intent alan yeni servis, bellekteki
+        // sıfırlanmış depoyu "sürdürüp" kullanıcı istemeden yeni bir
+        // yürüyüş başlatıyordu. Geri yüklenebilir oturum yoksa doğru
+        // davranış yeniden doğmamaktır.
+        return START_NOT_STICKY
     }
 
     private fun baslat() {
-        if (!oturumDeposu.oturum.value.calisiyor) oturumDeposu.surdur()
+        calismaTabaniSaniye = oturumDeposu.oturum.value.gecenSaniye
+        calismaBaslangicMs = gecenSureSaati.simdiMs()
 
         sayacIsi = kapsam.launch {
             if (baslangicAdimi == null) baslangicAdimi = adimOku()
-            var gecen = oturumDeposu.oturum.value.gecenSaniye
+            var onceki = oturumDeposu.oturum.value.gecenSaniye
 
             while (isActive) {
                 delay(SANIYE_MS)
-                gecen++
-                val adim = if (gecen % ADIM_ARALIK_SN == 0) adimFarki() else null
+                val gecen = calisanSureyiYaz()
+                // Derin uyku sonrası bir tik birden fazla saniyeyi atlayabilir;
+                // modül eşitliği yerine aralık sınırı geçildi mi bak.
+                val adim = if (gecen / ADIM_ARALIK_SN > onceki / ADIM_ARALIK_SN) {
+                    adimFarki()
+                } else {
+                    null
+                }
                 oturumDeposu.tikla(gecen, adim)
 
-                if (gecen % BILDIRIM_ARALIK_SN == 0) bildirimiTazele()
+                if (gecen / BILDIRIM_ARALIK_SN > onceki / BILDIRIM_ARALIK_SN) {
+                    bildirimiTazele()
+                }
                 if (YuruyusHesapla.ilerleme(gecen).tamamlandiMi) {
                     bitir(puanVer = true)
                     break
                 }
+                onceki = gecen
             }
         }
     }
 
+    /** Aktif parçayı cihaz uykusunu da içeren monoton saatten kurar. */
+    private fun calisanSureyiYaz(): Int {
+        val baslangic = calismaBaslangicMs ?: return oturumDeposu.oturum.value.gecenSaniye
+        val parca = GecenSureHesapla.saniye(baslangic, gecenSureSaati.simdiMs())
+        val gecen = (calismaTabaniSaniye.toLong() + parca)
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+            .toInt()
+        oturumDeposu.tikla(gecen, adim = null)
+        return gecen
+    }
+
     private fun bitir(puanVer: Boolean) {
+        // Sayaç hedefe ulaştığı anda bildirimdeki "Bitir" de gelebilir.
+        // İki iş aynı oturumu iki kez aktivite tablosuna yazmamalı ve
+        // `puanVerildi` sonucunu son tamamlanan iş rastgele ezmemeli.
+        if (!bitirmeKilidi.sahiplen()) return
+        val gecenSaniye = calisanSureyiYaz()
+        val hedefTamamlandi = puanVer || YuruyusHesapla.ilerleme(gecenSaniye).tamamlandiMi
+        calismaBaslangicMs = null
         sayacIsi?.cancel()
         kapsam.launch {
+            // Gerçek yürünen süre — duraklatılan aralıkları saymaz (sayaç
+            // yalnızca çalışırken artıyor). Hedefe ulaşılmasa bile (`puanVer
+            // = false`, kullanıcı elle bitirdi) yürünen süre gerçek: spor
+            // dakikasına yansımalı (`gorev2.md` §5). Aralık "şimdi"den geriye
+            // doğru kuruluyor — gerçek başlangıç zamanını tutmak, duraklatma
+            // sırasında geçen zamanı da (yanlışlıkla) süreye katardı.
+            if (gecenSaniye > 0) {
+                val bitis = Instant.now(saat)
+                aktiviteOturumuDeposu.kaydet(bitis.minusSeconds(gecenSaniye.toLong()), bitis)
+            }
+
             var yazildi = false
-            if (puanVer) {
+            if (hedefTamamlandi) {
                 val bugun = LocalDate.now(saat)
                 yazildi = puanDeposu.gorevTamamla(Gorev.YURUYUS, bugun)
                 if (yazildi) bildirimDeposu.gorevTamamlandi(Gorev.YURUYUS)
             }
-            oturumDeposu.tamamlandi(yazildi)
+            oturumDeposu.tamamlandi(hedefTamamlandi = hedefTamamlandi, puanVerildi = yazildi)
             stopSelf()
         }
     }
 
     override fun onDestroy() {
+        if (oturumDeposu.oturum.value.calisiyor) {
+            calisanSureyiYaz()
+            oturumDeposu.duraklat()
+        }
         sayacIsi?.cancel()
         kapsam.cancel()
         super.onDestroy()
@@ -247,4 +313,11 @@ class YuruyusServisi : Service() {
             baglam.stopService(Intent(baglam, YuruyusServisi::class.java))
         }
     }
+}
+
+/** Servis komutları farklı Binder/iş parçacığı yollarından yarışabilir. */
+internal class TekSeferlikIslem {
+    private val sahiplenildi = AtomicBoolean(false)
+
+    fun sahiplen(): Boolean = sahiplenildi.compareAndSet(false, true)
 }

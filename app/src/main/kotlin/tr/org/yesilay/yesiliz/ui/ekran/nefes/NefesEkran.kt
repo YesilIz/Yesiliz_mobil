@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.ui.EkranAcikTut
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
@@ -75,6 +76,7 @@ fun NefesEkran(
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val faz = NefesFazi.entries[durum.ilerleme.fazIndeksi]
+    EkranAcikTut(aktif = durum.oynatiliyor && !durum.tamamlandi)
 
     // Nefes al/tut'ta daire büyür, nefes ver/tut'ta küçülür — süre tempoyla eşleniyor.
     val genisMi = faz == NefesFazi.NEFES_AL || faz == NefesFazi.TUT_1

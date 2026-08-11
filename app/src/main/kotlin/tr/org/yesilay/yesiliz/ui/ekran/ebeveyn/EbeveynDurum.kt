@@ -15,9 +15,9 @@ enum class EslestirmeAdimi { ROL_SECIMI, KOD, BASARILI }
  * Ebeveyn paneli durumu — `docs/tasarim-referans.md §2 / 13, 20-22, 27`.
  *
  * [eslesmisMi] false iken sihirbaz (ekran 20-22) gösteriliyor, true iken
- * gerçek panel (ekran 13). Çocuğun verisi MVP'de **mock** — gerçek
- * `EbeveynBaglantiEntity` yok (CLAUDE.md §6, Faz 2'ye ertelendi). Eşleşme
- * durumu `Tercihler`'den geliyor, çocuk verisi sabit örnek.
+ * gerçek panel (ekran 13). Eşleşme durumu `Tercihler`'den, paneldeki
+ * özet ise sunucudan gelir. Sunucuya ulaşılamadığında gerçekmiş gibi
+ * örnek çocuk/veri gösterilmez; yeniden deneme durumu sunulur.
  */
 data class EbeveynDurum(
     val eslesmisMi: Boolean = false,
@@ -26,17 +26,23 @@ data class EbeveynDurum(
     val adim: EslestirmeAdimi = EslestirmeAdimi.ROL_SECIMI,
     val secilenRol: CihazRolu = CihazRolu.EBEVEYN,
     val uretilenKod: String = "",
+    val kodYukleniyor: Boolean = false,
+    val kodSunucudanMi: Boolean = false,
     /** Sunucudan gelen eşleştirme hatası; `null` iken hata yok. */
     val eslestirmeHatasi: String? = null,
-    // --- mock çocuk paneli (ekran 13) ---
-    val cocukAdi: String = "Elif",
-    val cocukYasi: Int = 14,
-    val ekranSuresiOrtalama: String = "3s 40dk",
-    val tarihAraligi: String = "22–28 Tem, 2026",
+    val eslesmeKaldiriliyor: Boolean = false,
+    val eslesmeKaldirmaHatasi: String? = null,
+    // --- gerçek çocuk paneli (ekran 13) ---
+    val ozetYukleniyor: Boolean = true,
+    val ozetHatasi: String? = null,
+    val cocukAdi: String = "",
+    val cocukYasi: Int? = null,
+    val ekranSuresiOrtalama: String = "",
+    val tarihAraligi: String = "Son 7 gün",
     val ekranCubuklari: List<Cubuk> = emptyList(),
     val ekranVurgu: Int = -1,
-    val bant: String = "ORTA",
-    val bantMesaji: String = "Geçen haftaya göre iyileşiyor",
+    val bant: String = "Henüz hesaplanmadı",
+    val bantMesaji: String = "Yeterli veri oluştuğunda burada görünür.",
     val bildirimler: List<EbeveynBildirimi> = emptyList(),
 )
 

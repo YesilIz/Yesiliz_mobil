@@ -67,6 +67,7 @@ data class RiskSonucDto(
     val R: Double,
     val gosterilenBant: String,
     val trend: String,
+    val veriDurumu: String,
 )
 
 @Serializable
@@ -77,8 +78,8 @@ data class SenkronIstek(
     /**
      * "Ligde görün" tercihi.
      *
-     * Ayrı bir uç yerine senkrona bindirildi: tercih zaten her gece koşan
-     * bu çağrıyla taşınabiliyor (`debug.md` Y-5).
+     * Geriye uyumluluk için senkron gövdesinde de taşınır. Güncel istemci
+     * değişikliği ayrı görünürlük ucuna anında gönderir.
      */
     val ligdeGorunur: Boolean? = null,
 )
@@ -110,6 +111,12 @@ data class LigYanit(
 )
 
 @Serializable
+data class LigKatilIstek(val gorunur: Boolean)
+
+@Serializable
+data class LigGorunurlukIstek(val gorunur: Boolean)
+
+@Serializable
 data class ArkadasDto(val isim: String, val davetBekliyorMu: Boolean)
 
 @Serializable
@@ -137,6 +144,7 @@ data class EslestirIstek(val kod: String, val rol: String)
 @Serializable
 data class EbeveynOzetDto(
     val cocukAdi: String,
+    val gunlukTarihler: List<String> = emptyList(),
     val gunlukDakikalar: List<Int>,
     val ortalamaDk: Int,
     val bant: String? = null,

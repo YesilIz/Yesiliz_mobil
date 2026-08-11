@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
+import java.io.IOException
+import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import javax.inject.Inject
 
@@ -119,8 +123,65 @@ class ArkadasEkleViewModel @Inject constructor(
         }
     }
 
+    fun davetKodunuDegistir(kod: String) {
+        _durum.update {
+            it.copy(
+                girilenKod = kod.uppercase().take(DAVET_KODU_AZAMI),
+                kodHatasi = null,
+                kodlaEklendi = false,
+            )
+        }
+    }
+
+    /** Paylaşılan gerçek kodu backend'de karşılıklı arkadaşlığa çevirir. */
+    fun kodlaArkadasEkle() {
+        if (_durum.value.kodIslemde) return
+        val kod = _durum.value.girilenKod.trim().uppercase()
+        val dogrulamaHatasi = davetKodunuDogrula(kod, _durum.value.davetKodu)
+        if (dogrulamaHatasi != null) {
+            _durum.update { it.copy(kodHatasi = dogrulamaHatasi) }
+            return
+        }
+
+        _durum.update { it.copy(kodIslemde = true, kodHatasi = null, kodlaEklendi = false) }
+        viewModelScope.launch {
+            try {
+                depo.davetGonder(kod)
+                _durum.update {
+                    it.copy(kodIslemde = false, kodlaEklendi = true, girilenKod = "")
+                }
+            } catch (iptal: CancellationException) {
+                throw iptal
+            } catch (hata: Exception) {
+                _durum.update {
+                    it.copy(kodIslemde = false, kodHatasi = davetHatasi(hata))
+                }
+            }
+        }
+    }
+
+    private fun davetHatasi(hata: Exception): String = when {
+        hata is HttpException && hata.code() == 404 -> "Bu davet kodu bulunamadı."
+        hata is HttpException && hata.code() == 400 -> "Bu kod kendi hesabına ait ya da kullanılamıyor."
+        hata is HttpException && hata.code() == 401 -> "Davet eklemek için yeniden giriş yapmalısın."
+        hata is IOException -> "Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene."
+        else -> "Arkadaş eklenemedi. Biraz sonra tekrar deneyebilirsin."
+    }
+
     /** Panoya kopyalama Composable'da; burada yalnızca geri bildirim. */
     fun kopyalandiIsaretle() {
         _durum.update { it.copy(kopyalandi = true) }
     }
+
+    private companion object {
+        const val DAVET_KODU_AZAMI = 4 + DavetKodu.UZUNLUK
+    }
+}
+
+/** Davet kodu biçimi ve kendi-kodunu-kullanma tuzağı için saf doğrulama. */
+internal fun davetKodunuDogrula(kod: String, kendiKodu: String): String? = when {
+    !DavetKodu.gecerliMi(kod) -> "Kod ${DavetKodu.ORNEK} biçiminde olmalı."
+    kod.trim().uppercase() == kendiKodu.trim().uppercase() ->
+        "Kendi davet kodunu kullanamazsın."
+    else -> null
 }

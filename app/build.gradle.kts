@@ -1,6 +1,14 @@
 // `java.util.Properties` açıkça import ediliyor: Kotlin DSL'de `java`
 // Gradle'ın kendi uzantısına bağlanıyor ve paket adını gölgeliyor.
 import java.util.Properties
+import java.util.zip.ZipFile
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.TaskAction
 
 // AGP 9'da Kotlin desteği eklentinin İÇİNDE — `org.jetbrains.kotlin.android`
 // artık uygulanmıyor, uygulanırsa çakışıyor. Kotlin ayarları `android { }`
@@ -109,7 +117,11 @@ android {
             // Bulunamazsa imzasız kalıyor; aşağıdaki `assembleRelease`
             // kontrolü bunu derleme sonunda söylüyor.
             signingConfig = signingConfigs.findByName("release")
-            isMinifyEnabled = false
+            // Material'in geniş ikon paketi ve yalnızca debug/opsiyonel
+            // kollarda kalan kod yayın APK'sına taşınmasın. R8 + kaynak
+            // küçültme release'e özeldir; debug tanılanabilir kalır.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -181,6 +193,101 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
         }
     }
 
+// gorev2.md §11 "Release APK içeriğini kontrol eden otomatik bir test
+// eklenmeli ve yasaklı debug adreslerinin bulunmadığı doğrulanmalıdır."
+//
+// `android-ağ-güvenliği` CI'ı (`.github/workflows/android-ag-guvenligi.yml`)
+// KAYNAK düzeyinde bakıyor — `.kt` dosyalarında "10.0.2.2" string sabiti
+// arıyor. Bu görev daha güçlü bir garanti: gerçekten üretilmiş **APK
+// dosyasının içine** (dex + kaynaklar) bakıyor, üçüncü parti bir
+// bağımlılığın ya da üretilen kodun sızdırdığı bir durumu da yakalar.
+// `assembleRelease` her koştuğunda otomatik tetikleniyor (aşağıda
+// `finalizedBy`) — elle çağrılması gereken bir nöbetçi nöbet tutmaz.
+abstract class ReleaseApkAgGuvenligiDenetimi : DefaultTask() {
+
+    @get:InputDirectory
+    abstract val apkDizini: DirectoryProperty
+
+    /** Bulunursa derleme düşer — emülatör adresi ya da benzeri. */
+    @get:Input
+    abstract val yasakliDesenler: ListProperty<String>
+
+    /** Bulunmazsa derleme düşer — gerçek HTTPS adresinin gömüldüğünün kanıtı. */
+    @get:Input
+    abstract val zorunluDesen: Property<String>
+
+    @TaskAction
+    fun denetle() {
+        val apkler = apkDizini.get().asFile.listFiles { f -> f.extension == "apk" }.orEmpty()
+        if (apkler.isEmpty()) {
+            throw org.gradle.api.GradleException(
+                "Denetlenecek release APK bulunamadı: ${apkDizini.get().asFile}",
+            )
+        }
+
+        val yasakli = yasakliDesenler.get()
+        val zorunlu = zorunluDesen.get()
+
+        apkler.forEach { apk ->
+            var zorunluBulundu = false
+            ZipFile(apk).use { zip ->
+                zip.entries().asSequence().filterNot { it.isDirectory }.forEach { girdi ->
+                    val icerik = String(zip.getInputStream(girdi).readBytes(), Charsets.ISO_8859_1)
+                    yasakli.forEach { desen ->
+                        if (icerik.contains(desen)) {
+                            throw org.gradle.api.GradleException(
+                                "Release APK'da yasaklı desen bulundu: '$desen' → " +
+                                    "${apk.name}!${girdi.name}. Bu adres yalnızca " +
+                                    "emülatörde/debug'da anlamlı, app/src/debug altına " +
+                                    "taşınmalı (CLAUDE.md §9).",
+                            )
+                        }
+                    }
+                    if (!zorunluBulundu && icerik.contains(zorunlu)) zorunluBulundu = true
+                }
+            }
+            if (!zorunluBulundu) {
+                throw org.gradle.api.GradleException(
+                    "Release APK'da beklenen canlı sunucu adresi ('$zorunlu') " +
+                        "bulunamadı → ${apk.name}. BuildConfig.API_TABANI yanlış " +
+                        "gömülmüş olabilir.",
+                )
+            }
+        }
+        logger.lifecycle(
+            "Release APK ağ güvenliği denetimi geçti: ${apkler.size} APK, " +
+                "yasaklı desen yok, canlı adres gömülü.",
+        )
+    }
+}
+
+// Config-cache güvenli: `canliSunucu` yerel değere alınıp task'a Provider
+// olarak veriliyor, task action'ı build script nesnesine dokunmuyor
+// (aynı gerekçe, satır ~160'taki `assembleRelease` doFirst bloğu).
+tasks.register<ReleaseApkAgGuvenligiDenetimi>("dogrulaReleaseApk") {
+    group = "verification"
+    description = "Release APK'da emülatör adresi/şifresiz HTTP yok, canlı HTTPS adresi gömülü mü denetler (gorev2.md §11)."
+    dependsOn("assembleRelease")
+    apkDizini.set(layout.buildDirectory.dir("outputs/apk/release"))
+    yasakliDesenler.set(listOf("10.0.2.2"))
+    zorunluDesen.set(canliSunucu)
+}
+
+// `dependsOn` tek yönlü: `dogrulaReleaseApk` çağrılınca APK üretiliyor ama
+// `assembleRelease` tek başına koştuğunda denetim ÇALIŞMIYORDU — CI de
+// hiçbir yerde task'ı adıyla çağırmıyor, yani nöbetçi hiç nöbet tutmuyordu.
+// `finalizedBy` bağı tersini kuruyor: release APK üretilen her yolda denetim
+// koşuyor ve düşerse derleme düşüyor.
+// `tasks.named` burada çalışmıyor: AGP `assembleRelease`'i bu script
+// değerlendirilirken henüz kaydetmemiş oluyor ("Task with name
+// 'assembleRelease' not found"). Yukarıdaki HTTPS kapısıyla aynı desen —
+// `matching { }.configureEach` görev eklendiğinde bağlanıyor.
+// Yalnızca `assembleRelease`: `bundleRelease` AAB üretiyor, denetimin
+// baktığı `outputs/apk/release` dizinine dokunmuyor.
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy("dogrulaReleaseApk")
+}
+
 // Room şemasını JSON olarak dışa aktar.
 // DB.md bu dosyadan ÜRETİLİYOR (tools/db_dokuman_uret.py) — şema değişince
 // doküman da değişsin, elle yazılan şema dokümanı er geç yalan söyler.
@@ -239,7 +346,11 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.serialization)
     implementation(libs.okhttp)
-    debugImplementation(libs.okhttp.logging)
+    // `implementation`, `debugImplementation` değil: AgModulu (src/main) her
+    // iki derleme türünde de HttpLoggingInterceptor'ı kullanabilmeli.
+    // Release'de gerçek loglama BuildConfig.DEBUG kontrolüyle kapalı kalıyor
+    // — sınıf sınıf yolunda olsa da hiçbir şey loglamıyor.
+    implementation(libs.okhttp.logging)
 
     // Adım + egzersiz süresi → aktivite sönümlemesi (%15 tavan, spec-risk §4.4).
     // Cihazda Health Connect yoksa okuyucu sessizce sıfır döndürüyor.
@@ -249,6 +360,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(project(":core-risk"))
+    testImplementation(libs.coroutines.test)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.junit)

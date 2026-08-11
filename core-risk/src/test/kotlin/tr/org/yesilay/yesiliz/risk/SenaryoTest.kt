@@ -199,5 +199,103 @@ class SenaryoTest {
         assertEquals(0.0, sonuc.rB, 0.0)
         assertEquals(Bant.AZ, sonuc.bant)
         assertTrue(sonuc.surukleyiciler.isEmpty())
+        // Hiç veri yok — `AZ RİSKLİ` iddiası UI'da GÖSTERİLMEMELİ (gorev2.md §8/§9).
+        assertEquals(VeriDurumu.YETERSIZ, sonuc.veriDurumu)
+    }
+
+    // -----------------------------------------------------------------
+    // VeriDurumu — gorev2.md §8/§9: yetersiz veri düşük risk sayılmaz,
+    // eski hesap güncelmiş gibi gösterilmez.
+    // -----------------------------------------------------------------
+    @Test
+    fun `yalnizca 34 saniyelik gece kullanimi yetersiz sayilir`() {
+        // 34 saniye ~= 0.57 dk, tamamı gece penceresine düşüyor.
+        val sonuc = RiskHesapla.hesapla(
+            GunlukGirdi(
+                kategoriDakika = mapOf("social" to 34.0 / 60.0),
+                oruntu = mapOf("gece" to 1.0),
+            ),
+        )
+        // K-7/Y-3 ile aynı hata sınıfı: az veriden "gece kullanımı yüksek,
+        // risk düşük" gibi iki yanlış iddia birden çıkmamalı.
+        assertEquals(VeriDurumu.YETERSIZ, sonuc.veriDurumu)
+    }
+
+    @Test
+    fun `cok kisa toplam kullanim yetersiz sayilir`() {
+        val sonuc = RiskHesapla.hesapla(GunlukGirdi(mapOf("social" to 5.0)))
+        assertEquals(VeriDurumu.YETERSIZ, sonuc.veriDurumu)
+    }
+
+    @Test
+    fun `yeterli surede dusuk gece kullanimi hesaplanir`() {
+        val sonuc = RiskHesapla.hesapla(
+            GunlukGirdi(
+                kategoriDakika = mapOf("social" to 60.0),
+                oruntu = mapOf("gece" to 0.05),
+            ),
+        )
+        assertEquals(VeriDurumu.HESAPLANDI, sonuc.veriDurumu)
+    }
+
+    @Test
+    fun `yeterli surede yuksek gece kullanimi hesaplanir`() {
+        val sonuc = RiskHesapla.hesapla(
+            GunlukGirdi(
+                kategoriDakika = mapOf("social" to 60.0),
+                oruntu = mapOf("gece" to 0.9),
+            ),
+        )
+        assertEquals(VeriDurumu.HESAPLANDI, sonuc.veriDurumu)
+    }
+
+    @Test
+    fun `eski ve guncelligini kaybetmis veri ESKI sayilir`() {
+        val gun = GunlukGirdi(mapOf("social" to 60.0))
+        val guncel = RiskHesapla.hesapla(gun, gunGecmisi = Sabitler.VERI_ESKI_ESIK_GUN)
+        val eski = RiskHesapla.hesapla(gun, gunGecmisi = Sabitler.VERI_ESKI_ESIK_GUN + 1)
+
+        assertEquals("eşiğin tam değeri henüz eski sayılmamalı", VeriDurumu.HESAPLANDI, guncel.veriDurumu)
+        assertEquals(VeriDurumu.ESKI, eski.veriDurumu)
+    }
+
+    @Test
+    fun `yetersiz veri esikten once kontrol edilir`() {
+        // Hem yetersiz hem eski bir gün: "hangi ölçüm hiç yok" sorusu temel,
+        // eskilik ancak elde gerçek bir ölçüm varken anlamlı.
+        val sonuc = RiskHesapla.hesapla(
+            GunlukGirdi(mapOf("social" to 1.0)),
+            gunGecmisi = 30,
+        )
+        assertEquals(VeriDurumu.YETERSIZ, sonuc.veriDurumu)
+    }
+
+    // -----------------------------------------------------------------
+    // Sınır değerler — gorev2.md §9: eşiğin hemen altı, tam değeri, hemen üstü
+    // -----------------------------------------------------------------
+    @Test
+    fun `gun asgari dk sinirinda tam deger yeterli sayilir`() {
+        val altinda = RiskHesapla.hesapla(
+            GunlukGirdi(mapOf("social" to Sabitler.GUN_ASGARI_DK - 0.01)),
+        )
+        val tam = RiskHesapla.hesapla(GunlukGirdi(mapOf("social" to Sabitler.GUN_ASGARI_DK)))
+        val ustunde = RiskHesapla.hesapla(
+            GunlukGirdi(mapOf("social" to Sabitler.GUN_ASGARI_DK + 0.01)),
+        )
+
+        assertEquals(VeriDurumu.YETERSIZ, altinda.veriDurumu)
+        assertEquals(VeriDurumu.HESAPLANDI, tam.veriDurumu)
+        assertEquals(VeriDurumu.HESAPLANDI, ustunde.veriDurumu)
+    }
+
+    @Test
+    fun `bant esiklerinde sinir hemen alti tam ve hemen ustu`() {
+        assertEquals(Bant.AZ, Bantlama.esiktenBant(Sabitler.BANT_AZ_UST - 0.01))
+        assertEquals(Bant.ORTA, Bantlama.esiktenBant(Sabitler.BANT_AZ_UST))
+        assertEquals(Bant.ORTA, Bantlama.esiktenBant(Sabitler.BANT_AZ_UST + 0.01))
+
+        assertEquals(Bant.ORTA, Bantlama.esiktenBant(Sabitler.BANT_ORTA_UST - 0.01))
+        assertEquals(Bant.COK, Bantlama.esiktenBant(Sabitler.BANT_ORTA_UST))
+        assertEquals(Bant.COK, Bantlama.esiktenBant(Sabitler.BANT_ORTA_UST + 0.01))
     }
 }

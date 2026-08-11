@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.AktiviteOturumuEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.AnketYanitEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.ArkadasEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
@@ -27,7 +28,7 @@ interface KullanimOlayDao {
     @Insert
     suspend fun ekle(olaylar: List<KullanimOlayEntity>)
 
-    @Query("SELECT * FROM kullanim_olay WHERE tarih = :tarih ORDER BY baslangic")
+    @Query("SELECT * FROM kullanim_olay WHERE tarih = :tarih ORDER BY baslangic, bitis, paketAdi, id")
     suspend fun gunun(tarih: LocalDate): List<KullanimOlayEntity>
 
     @Query("SELECT COUNT(*) FROM kullanim_olay WHERE tarih = :tarih")
@@ -103,6 +104,10 @@ interface GunlukOzetDao {
     @Query("SELECT * FROM gunluk_ozet WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih ASC")
     fun araliktakilerAkisi(bas: LocalDate, bit: LocalDate): Flow<List<GunlukOzetEntity>>
 
+    /** Çok günlü hesaplar için aynı pencerenin tek seferlik okuması. */
+    @Query("SELECT * FROM gunluk_ozet WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih ASC")
+    suspend fun araliktakiler(bas: LocalDate, bit: LocalDate): List<GunlukOzetEntity>
+
     /** Bir günün özeti — Ana Sayfa canlı okuma. */
     @Query("SELECT * FROM gunluk_ozet WHERE tarih = :tarih")
     fun gununAkisi(tarih: LocalDate): Flow<GunlukOzetEntity?>
@@ -142,6 +147,10 @@ interface RiskSonucDao {
         """,
     )
     suspend fun oncekiler(tarih: LocalDate, gun: Int): List<RiskSonucEntity>
+
+    /** Worker telafisi: risk çıktısı gerçekten yazılmış günler. */
+    @Query("SELECT tarih FROM risk_sonuc WHERE tarih BETWEEN :bas AND :bit")
+    suspend fun islenmisGunler(bas: LocalDate, bit: LocalDate): List<LocalDate>
 }
 
 @Dao
@@ -170,7 +179,7 @@ interface AnketYanitDao {
 
 @Dao
 interface KategoriEslemeDao {
-    @Query("SELECT * FROM kategori_esleme")
+    @Query("SELECT * FROM kategori_esleme ORDER BY paketAdi")
     suspend fun hepsi(): List<KategoriEslemeEntity>
 
     @Query("SELECT * FROM kategori_esleme WHERE paketAdi = :paketAdi")
@@ -195,7 +204,28 @@ interface GorevTamamlamaDao {
     @Insert
     suspend fun ekle(kayit: GorevTamamlamaEntity)
 
-    @Query("SELECT * FROM gorev_tamamlama WHERE tarih = :tarih")
+    /**
+     * Günlük limit denetimi ve ekleme TEK SQLite ifadesidir. Ayrı
+     * `COUNT` + `INSERT`, widget/servis/ekran aynı anda tamamladığında iki
+     * çağrının da limiti geçmiş sanıp fazladan puan yazmasına izin verirdi.
+     *
+     * @return eklenen satırın kimliği; limit doluysa `-1`.
+     */
+    @Query(
+        "INSERT INTO gorev_tamamlama (tarih, gorevId, puan, dogrulamaTuru) " +
+            "SELECT :tarih, :gorevId, :puan, :dogrulamaTuru " +
+            "WHERE (SELECT COUNT(*) FROM gorev_tamamlama " +
+            "WHERE tarih = :tarih AND gorevId = :gorevId) < :limit",
+    )
+    suspend fun limitAltindaEkle(
+        tarih: LocalDate,
+        gorevId: String,
+        puan: Int,
+        dogrulamaTuru: String,
+        limit: Int,
+    ): Long
+
+    @Query("SELECT * FROM gorev_tamamlama WHERE tarih = :tarih ORDER BY id")
     suspend fun gunun(tarih: LocalDate): List<GorevTamamlamaEntity>
 
     @Query("SELECT COALESCE(SUM(puan), 0) FROM gorev_tamamlama WHERE tarih = :tarih")
@@ -205,7 +235,7 @@ interface GorevTamamlamaDao {
     @Query("SELECT COUNT(*) FROM gorev_tamamlama WHERE tarih = :tarih AND gorevId = :gorevId")
     suspend fun gununSayisi(tarih: LocalDate, gorevId: String): Int
 
-    @Query("SELECT * FROM gorev_tamamlama WHERE tarih = :tarih")
+    @Query("SELECT * FROM gorev_tamamlama WHERE tarih = :tarih ORDER BY id")
     fun gununAkisi(tarih: LocalDate): Flow<List<GorevTamamlamaEntity>>
 
     /** Puan geçmişi alt sayfası — son kayıtlar, yeniden eskiye. */
@@ -213,7 +243,7 @@ interface GorevTamamlamaDao {
     fun sonKayitlarAkisi(adet: Int): Flow<List<GorevTamamlamaEntity>>
 
     /** Dışa aktarım — tüm görev geçmişi (DisaAktarDeposu). */
-    @Query("SELECT * FROM gorev_tamamlama ORDER BY tarih")
+    @Query("SELECT * FROM gorev_tamamlama ORDER BY tarih, id")
     suspend fun hepsi(): List<GorevTamamlamaEntity>
 }
 
@@ -243,8 +273,19 @@ interface PuanGunlukDao {
     )
     suspend fun oncekiAktifGun(tarih: LocalDate): PuanGunlukEntity?
 
-    /** Ödüller ekranının "aktif gün" sayacı — ödül kademelerinin ek koşulu. */
-    @Query("SELECT COUNT(*) FROM puan_gunluk WHERE puanNet > 0")
+    /**
+     * Ödüller ekranının "aktif gün" sayacı.
+     *
+     * `docs/spec-puan.md §9.1`: en az bir tamamlanmış görev **ve** gerçek
+     * kullanım ölçümü. Yalnızca `puanNet > 0`, kullanım izni olmayan birinin
+     * her gün tek beyanla maddi ödülün gün koşulunu ilerletmesine yol açardı.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM puan_gunluk p WHERE p.puanNet > 0 " +
+            "AND EXISTS (SELECT 1 FROM gorev_tamamlama g WHERE g.tarih = p.tarih) " +
+            "AND EXISTS (SELECT 1 FROM gunluk_ozet o " +
+            "WHERE o.tarih = p.tarih AND o.olayVarMi = 1)",
+    )
     fun aktifGunAkisi(): Flow<Int>
 
     /** Ana Sayfa'daki seri çipi. */
@@ -254,6 +295,10 @@ interface PuanGunlukDao {
     /** Lig sıralamasının girdisi — haftalık toplam (SenkronDeposu). */
     @Query("SELECT COALESCE(SUM(puanNet), 0) FROM puan_gunluk WHERE tarih BETWEEN :bas AND :bit")
     suspend fun aralikToplami(bas: LocalDate, bit: LocalDate): Int
+
+    /** Worker telafisi: puan çıktısı gerçekten yazılmış günler. */
+    @Query("SELECT tarih FROM puan_gunluk WHERE tarih BETWEEN :bas AND :bit")
+    suspend fun islenmisGunler(bas: LocalDate, bit: LocalDate): List<LocalDate>
 }
 
 @Dao
@@ -291,7 +336,7 @@ interface FarkindalikTestiDao {
     @Query("SELECT * FROM farkindalik_testi ORDER BY tarih DESC, id DESC LIMIT 1")
     fun sonuncuAkisi(): Flow<FarkindalikTestiEntity?>
 
-    @Query("SELECT * FROM farkindalik_testi ORDER BY tarih")
+    @Query("SELECT * FROM farkindalik_testi ORDER BY tarih, id")
     fun hepsiAkisi(): Flow<List<FarkindalikTestiEntity>>
 }
 
@@ -300,7 +345,7 @@ interface BildirimDao {
     @Insert
     suspend fun ekle(bildirim: BildirimEntity)
 
-    @Query("SELECT * FROM bildirim ORDER BY zaman DESC LIMIT :adet")
+    @Query("SELECT * FROM bildirim ORDER BY zaman DESC, id DESC LIMIT :adet")
     fun sonlarAkisi(adet: Int): Flow<List<BildirimEntity>>
 
     @Query("SELECT COUNT(*) FROM bildirim WHERE okundu = 0")
@@ -326,7 +371,7 @@ interface ArkadasDao {
     @Upsert
     suspend fun kaydet(arkadas: ArkadasEntity)
 
-    @Query("SELECT * FROM arkadas ORDER BY eklenmeTarihi DESC")
+    @Query("SELECT * FROM arkadas ORDER BY eklenmeTarihi DESC, isim ASC")
     fun hepsiAkisi(): Flow<List<ArkadasEntity>>
 
     @Query("SELECT COUNT(*) FROM arkadas")
@@ -347,8 +392,19 @@ interface OdulSecimiDao {
     @Insert
     suspend fun kaydet(kayit: OdulSecimiEntity)
 
-    @Query("SELECT * FROM odul_secimi")
+    /**
+     * Yalnızca sunucudan geri yükleme için. Sunucu da ilk seçimi tekil
+     * kısıtla koruduğundan iki cihaz ayrı karar verdiyse uzak kayıt
+     * otoritedir; normal kullanıcı eylemi hâlâ [kaydet] ile değiştirilemez.
+     */
+    @Upsert
+    suspend fun uzaktanKaydet(kayit: OdulSecimiEntity)
+
+    @Query("SELECT * FROM odul_secimi ORDER BY kademeId")
     fun hepsiAkisi(): Flow<List<OdulSecimiEntity>>
+
+    @Query("SELECT * FROM odul_secimi ORDER BY kademeId")
+    suspend fun hepsi(): List<OdulSecimiEntity>
 
     @Query("SELECT * FROM odul_secimi WHERE kademeId = :kademeId")
     suspend fun getir(kademeId: String): OdulSecimiEntity?
@@ -364,5 +420,17 @@ interface AdimSayacDao {
 
     /** Sayaç birikimi geçmişe dönük anlam taşımıyor; eskiler temizlenir. */
     @Query("DELETE FROM adim_sayac WHERE tarih < :tarih")
+    suspend fun eskileriSil(tarih: LocalDate): Int
+}
+
+@Dao
+interface AktiviteOturumuDao {
+    @Insert
+    suspend fun ekle(oturum: AktiviteOturumuEntity)
+
+    @Query("SELECT * FROM aktivite_oturumu WHERE tarih = :tarih ORDER BY baslangic, bitis, id")
+    suspend fun gununOturumlari(tarih: LocalDate): List<AktiviteOturumuEntity>
+
+    @Query("DELETE FROM aktivite_oturumu WHERE tarih < :tarih")
     suspend fun eskileriSil(tarih: LocalDate): Int
 }

@@ -10,10 +10,19 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import Arkadaslik, DavetKodu, Kullanici, LigGrup, LigUyelik
-from app.semalar import ArkadasDto, DavetIstek, KodYanit, LigSatiriDto, LigYanit
+from app.semalar import (
+    ArkadasDto,
+    DavetIstek,
+    KodYanit,
+    LigGorunurlukIstek,
+    LigKatilIstek,
+    LigSatiriDto,
+    LigYanit,
+)
 from app.veritabani import oturum
+from app.zaman import yerel_bugun
 
 yonlendirici = APIRouter(tags=["lig"])
 
@@ -24,6 +33,7 @@ SEVIYELER = ["Fidan Ligi", "Filiz Ligi", "Ağaç Ligi", "Koru Ligi", "Orman Ligi
 # I, O, 0, 1 yok: kod sesli paylaşılıyor ve bu karakterler ayırt edilemiyor.
 _ALFABE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _ONEK = "YSZ"
+_DAVET_GOVDE_UZUNLUGU = 8
 
 
 def hafta_baslangici(gun: dt.date | None = None) -> dt.date:
@@ -33,8 +43,16 @@ def hafta_baslangici(gun: dt.date | None = None) -> dt.date:
     `Aralik.HAFTA` (İstatistik) ve `BildirimGrupla` ile aynı tanım —
     ISO haftası, pazartesi başlangıçlı.
     """
-    gun = gun or dt.date.today()
+    gun = gun or yerel_bugun()
     return gun - dt.timedelta(days=gun.weekday())
+
+
+def _hareket_esikleri(uye_sayisi: int) -> tuple[int, int]:
+    """Küçük/henüz dolmamış gruplarda yükselen ve düşen kümeleri çakıştırma."""
+    a = ayarlar()
+    yukselen = min(max(a.lig_yukselen, 0), max(uye_sayisi, 0))
+    dusen = min(max(a.lig_dusen, 0), max(uye_sayisi - yukselen, 0))
+    return yukselen, dusen
 
 
 @yonlendirici.get("/lig", response_model=LigYanit)
@@ -42,7 +60,6 @@ def lig(
     db: Session = Depends(oturum),
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> LigYanit:
-    a = ayarlar()
     hafta = hafta_baslangici()
     uyelik = db.scalar(
         select(LigUyelik).where(
@@ -56,8 +73,8 @@ def lig(
         return LigYanit(
             ligAdi=SEVIYELER[0],
             kalanGun=_kalan_gun(hafta),
-            yukselen=a.lig_yukselen,
-            dusen=a.lig_dusen,
+            yukselen=0,
+            dusen=0,
             siralama=[],
             katildiMi=False,
         )
@@ -75,6 +92,7 @@ def lig(
     # her hâlükârda kendi satırını görüyor, yoksa sıralamada nerede
     # olduğunu hiç öğrenemezdi (debug.md Y-5).
     gorunenler = [u for u in uyelikler if u.gorunur or u.kullanici_id == kullanici.id]
+    yukselen, dusen = _hareket_esikleri(len(uyelikler))
 
     siralama = []
     for indeks, u in enumerate(gorunenler, start=1):
@@ -94,8 +112,8 @@ def lig(
     return LigYanit(
         ligAdi=SEVIYELER[min(grup.seviye if grup else 0, len(SEVIYELER) - 1)],
         kalanGun=_kalan_gun(hafta),
-        yukselen=a.lig_yukselen,
-        dusen=a.lig_dusen,
+        yukselen=yukselen,
+        dusen=dusen,
         siralama=siralama,
         katildiMi=True,
         gorunuyorMuyum=uyelik.gorunur,
@@ -106,6 +124,7 @@ def lig(
 def katil(
     db: Session = Depends(oturum),
     kullanici: Kullanici = Depends(mevcut_kullanici),
+    istek: LigKatilIstek | None = None,
 ) -> LigYanit:
     """
     Uygun gruba yerleştirir; yer yoksa yeni grup açar.
@@ -116,6 +135,14 @@ def katil(
     """
     a = ayarlar()
     hafta = hafta_baslangici()
+
+    # Farklı kullanıcılar aynı anda ilk grubu oluşturursa her biri tek
+    # kişilik ayrı grup açabilirdi. En eski kullanıcı satırı bu kısa
+    # yerleştirme işlemi için kararlı, ortak kilittir.
+    db.scalar(select(Kullanici.id).order_by(Kullanici.id).limit(1).with_for_update())
+    # Aynı hesabın paralel katılma istekleri tekillik kontrolünden aynı
+    # anda geçmesin. Kilit işlem bitene kadar tutulur.
+    kullaniciyi_kilitle(db, kullanici.id)
 
     mevcut = db.scalar(
         select(LigUyelik).where(
@@ -131,11 +158,44 @@ def katil(
                 grup_id=grup.id,
                 hafta_baslangic=hafta,
                 haftalik_puan=0,
+                # Yeni istemci yerel gizlilik tercihini katılım anında
+                # gönderiyor. Gövdesiz eski istemci için geriye uyumlu
+                # varsayılan görünürdür.
+                gorunur=istek.gorunur if istek is not None else True,
             )
         )
         db.commit()
+    elif istek is not None and mevcut.gorunur != istek.gorunur:
+        # Aynı ucu yeniden çağırmak üyelik açmaz ama cihazdaki güncel
+        # tercihi geri yükleyebilir.
+        mevcut.gorunur = istek.gorunur
+        db.commit()
 
     return lig(db=db, kullanici=kullanici)
+
+
+@yonlendirici.post("/lig/gorunurluk")
+def gorunurluk(
+    istek: LigGorunurlukIstek,
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """Lig gizliliğini davranış verisi paylaşımından bağımsız kaydeder.
+
+    Üyelik yoksa işlem idempotenttir. Uygulama gelecekteki katılımda aynı
+    tercihi `/lig/katil` gövdesiyle yeniden yollar.
+    """
+    kullaniciyi_kilitle(db, kullanici.id)
+    uyelik = db.scalar(
+        select(LigUyelik).where(
+            LigUyelik.kullanici_id == kullanici.id,
+            LigUyelik.hafta_baslangic == hafta_baslangici(),
+        )
+    )
+    if uyelik is not None:
+        uyelik.gorunur = istek.gorunur
+    db.commit()
+    return {"durum": "guncellendi"}
 
 
 @yonlendirici.get("/arkadas", response_model=list[ArkadasDto])
@@ -144,7 +204,9 @@ def arkadaslar(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> list[ArkadasDto]:
     satirlar = db.scalars(
-        select(Arkadaslik).where(Arkadaslik.kullanici_id == kullanici.id)
+        select(Arkadaslik)
+        .where(Arkadaslik.kullanici_id == kullanici.id)
+        .order_by(Arkadaslik.olusturma.desc(), Arkadaslik.id.desc())
     ).all()
 
     sonuc = []
@@ -161,10 +223,16 @@ def davet_kodu(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> KodYanit:
     """Kullanıcı başına tek, kalıcı kod. Var olan kod **değiştirilmiyor**."""
+    kullaniciyi_kilitle(db, kullanici.id)
     kayit = db.scalar(select(DavetKodu).where(DavetKodu.kullanici_id == kullanici.id))
     if kayit is None:
         kayit = DavetKodu(kullanici_id=kullanici.id, kod=_kod_uret(db))
         db.add(kayit)
+        db.commit()
+    elif len(kayit.kod) != len(_ONEK) + 1 + _DAVET_GOVDE_UZUNLUGU:
+        # Alembic göçü eski kısa kodları siliyor; savunma katmanı olarak
+        # göç atlanmış bir ortamda da sahip ilk okumada kodunu döndürür.
+        kayit.kod = _kod_uret(db)
         db.commit()
     return KodYanit(kod=kayit.kod)
 
@@ -182,6 +250,16 @@ def davet(
     if kayit.kullanici_id == kullanici.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kendi kodunu kullanamazsın")
 
+    # İki kullanıcı birbirinin kodunu aynı anda girse bile karşılıklı
+    # tekil satırları bir kez kur. Sabit id sırası deadlock'u önler.
+    kilitlenenler = db.scalars(
+        select(Kullanici.id)
+        .where(Kullanici.id.in_(sorted((kullanici.id, kayit.kullanici_id))))
+        .order_by(Kullanici.id)
+        .with_for_update()
+    ).all()
+    if len(kilitlenenler) != 2:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Davet kodu bulunamadı")
     _arkadaslik_kur(db, kullanici.id, kayit.kullanici_id)
     db.commit()
     return arkadaslar(db=db, kullanici=kullanici)
@@ -220,7 +298,10 @@ def _arkadas_idleri(db: Session, kullanici_id: int) -> set[int]:
 def _uygun_grup(db: Session, hafta: dt.date, seviye: int, boy: int) -> LigGrup:
     """Aynı seviyede yeri olan ilk grup; yoksa yeni grup."""
     gruplar = db.scalars(
-        select(LigGrup).where(LigGrup.hafta_baslangic == hafta, LigGrup.seviye == seviye)
+        select(LigGrup)
+        .where(LigGrup.hafta_baslangic == hafta, LigGrup.seviye == seviye)
+        .order_by(LigGrup.id)
+        .with_for_update()
     ).all()
 
     for grup in gruplar:
@@ -230,7 +311,7 @@ def _uygun_grup(db: Session, hafta: dt.date, seviye: int, boy: int) -> LigGrup:
 
     yeni = LigGrup(hafta_baslangic=hafta, seviye=seviye)
     db.add(yeni)
-    db.commit()
+    db.flush()
     db.refresh(yeni)
     return yeni
 
@@ -242,7 +323,6 @@ def _onceki_seviye(db: Session, kullanici_id: int, hafta: dt.date) -> int:
     Yükselme/düşme **grup değiştiriyor, puan silmiyor**. Düşen kullanıcı da
     kazandığı puanı koruyor; yalnızca bir alt seviyeye geçiyor.
     """
-    a = ayarlar()
     onceki_hafta = hafta - dt.timedelta(days=7)
     onceki = db.scalar(
         select(LigUyelik).where(
@@ -265,22 +345,23 @@ def _onceki_seviye(db: Session, kullanici_id: int, hafta: dt.date) -> int:
         return seviye
 
     sira = idler.index(kullanici_id) + 1
-    if sira <= a.lig_yukselen:
+    yukselen, dusen = _hareket_esikleri(len(idler))
+    if sira <= yukselen:
         return min(seviye + 1, len(SEVIYELER) - 1)
-    if sira > len(idler) - a.lig_dusen:
+    if sira > len(idler) - dusen:
         return max(seviye - 1, 0)
     return seviye
 
 
-def _kalan_gun(hafta: dt.date) -> int:
+def _kalan_gun(hafta: dt.date, bugun: dt.date | None = None) -> int:
     bitis = hafta + dt.timedelta(days=7)
-    return max((bitis - dt.date.today()).days, 0)
+    return max((bitis - (bugun or yerel_bugun())).days, 0)
 
 
 def _kod_uret(db: Session) -> str:
-    """Çakışma olmayana kadar dene — alfabe 32^4 ≈ 1M olasılık."""
+    """Çakışma olmayana kadar dene — alfabe 32^8 ≈ 1,1T olasılık."""
     for _ in range(20):
-        govde = "".join(secrets.choice(_ALFABE) for _ in range(4))
+        govde = "".join(secrets.choice(_ALFABE) for _ in range(_DAVET_GOVDE_UZUNLUGU))
         kod = f"{_ONEK}-{govde}"
         if db.scalar(select(DavetKodu).where(DavetKodu.kod == kod)) is None:
             return kod

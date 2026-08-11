@@ -10,8 +10,8 @@ import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 data class LigDurum(
     val ligAdi: String = "",
     val kalanGun: Int = 0,
-    val yukselen: Int = 7,
-    val dusen: Int = 7,
+    val yukselen: Int = 0,
+    val dusen: Int = 0,
     val siralama: List<LigSatiriModel> = emptyList(),
     /**
      * false ise **boş durum** (37) gösteriliyor: kullanıcı ne lige katılmış
@@ -40,6 +40,10 @@ data class LigSatiriModel(
 /** Arkadaş ekle ekranı — tasarım 36. */
 data class ArkadasEkleDurum(
     val davetKodu: String = "",
+    val girilenKod: String = "",
+    val kodHatasi: String? = null,
+    val kodIslemde: Boolean = false,
+    val kodlaEklendi: Boolean = false,
     val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
     /**

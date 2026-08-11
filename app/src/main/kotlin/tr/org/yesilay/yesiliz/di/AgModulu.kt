@@ -6,13 +6,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
+import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import tr.org.yesilay.yesiliz.BuildConfig
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.JetonAuthenticator
@@ -28,11 +31,11 @@ import javax.inject.Singleton
 /**
  * Ağ katmanı — Faz 2 backend'i (`backend/`).
  *
- * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`),
- * varsayılanı build türünden geliyor (`BuildConfig.API_TABANI`): release'de
- * gerçek HTTPS alan adı, debug'da emülatörün `10.0.2.2`'si. Adres ayrıca
- * Profil › Geliştirici'den değiştirilebiliyor — gerçek cihazda geliştirme
- * makinesinin LAN adresine bağlanabilmek için (`debug.md` O-14).
+ * **Sunucu adresi çalışma zamanında okunuyor** (`Tercihler.sunucuTabani`).
+ * Debug'da Profil › Geliştirici'den değiştirilebilir; release'de kalıcı
+ * geçersiz kılmalar yok sayılır ve yalnızca `BuildConfig.API_TABANI`
+ * kullanılır. Böylece test kurulumundan kalmış bir adres yayın trafiğini
+ * başka bir sunucuya taşıyamaz.
  *
  * Zaman aşımları **kısa** (5 sn): backend kapalıyken kullanıcı 30 saniye
  * boş ekrana bakmasın, `Yedekli*Deposu` hızlıca yerel veriye düşsün.
@@ -44,6 +47,10 @@ object AgModulu {
     /**
      * Retrofit'in derleme anında bir taban adrese ihtiyacı var; gerçek
      * adres [tabanDegistirici] tarafından her istekte yazılıyor.
+     *
+     * `Tercihler.VARSAYILAN_SUNUCU` artık `BuildConfig.API_TABANI`'den
+     * geldiği için burası da `const` olamıyor — Kotlin `const val`
+     * yalnızca derleme zamanı sabitlerini kabul ediyor.
      */
     private val YER_TUTUCU_TABAN = Tercihler.VARSAYILAN_SUNUCU
 
@@ -106,11 +113,7 @@ object AgModulu {
         if (taban == null) {
             zincir.proceed(istek)
         } else {
-            val yeniUrl = istek.url.newBuilder()
-                .scheme(taban.scheme)
-                .host(taban.host)
-                .port(taban.port)
-                .build()
+            val yeniUrl = tabaniUygula(istek.url, taban)
             zincir.proceed(istek.newBuilder().url(yeniUrl).build())
         }
     }
@@ -134,7 +137,7 @@ object AgModulu {
             zincir.proceed(istek)
         }
 
-        return OkHttpClient.Builder()
+        val olusturucu = OkHttpClient.Builder()
             // Adres değiştirici kimlikten ÖNCE: yeniden yazılan URL'ye
             // Authorization başlığı eklensin.
             .addInterceptor(tabanDegistirici(tercihler))
@@ -145,7 +148,17 @@ object AgModulu {
             .authenticator(authenticator)
             .connectTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .readTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
-            .build()
+
+        // Debug günlüğü yalnızca yöntem/URL/yanıt kodu yazar. BODY düzeyi
+        // giriş-kayıt şifrelerini ve yanıttaki erişim/yenileme jetonlarını;
+        // HEADERS düzeyi de Authorization başlığını logcat'e sızdırır.
+        // Hata türünü (401 mi, 500 mü, zaman aşımı mı) BASIC düzeyiyle de
+        // ayırt edebiliyoruz. Release'de interceptor hiç eklenmiyor.
+        if (BuildConfig.DEBUG) {
+            olusturucu.addInterceptor(guvenliHttpGunlugu())
+        }
+
+        return olusturucu.build()
     }
 
     @Provides
@@ -157,3 +170,33 @@ object AgModulu {
         .build()
         .create(YesilizApi::class.java)
 }
+
+/**
+ * Retrofit'in ürettiği uç yolunu kullanıcının seçtiği tabana ekler.
+ *
+ * Yalnızca scheme/host/port değiştirmek `https://ornek/api/` gibi ters
+ * vekil alt yollarını sessizce atıyordu ve istek `/api/auth/giris` yerine
+ * `/auth/giris`e gidiyordu. Sorgu da istekten korunur; tabandaki olası bir
+ * sorgu parçası API isteğine taşınmaz.
+ */
+internal fun tabaniUygula(istek: HttpUrl, taban: HttpUrl): HttpUrl =
+    taban.newBuilder()
+        .addEncodedPathSegments(istek.encodedPath.trimStart('/'))
+        .encodedQuery(istek.encodedQuery)
+        .fragment(istek.fragment)
+        .build()
+
+/**
+ * Debug ağ günlüğünün güvenlik sınırı.
+ *
+ * Başlıklar BASIC düzeyinde yazılmıyor; yine de ileride seviye değiştirilse
+ * bile iki yeniden kullanılabilir kimlik bilgisini redaksiyon listesinde
+ * tutuyoruz. Düz metin JSON şifresi alan bazlı güvenle maskelenemediği için
+ * gövde günlüğüne hiçbir koşulda geçilmiyor.
+ */
+internal fun guvenliHttpGunlugu(): HttpLoggingInterceptor =
+    HttpLoggingInterceptor().apply {
+        redactHeader("Authorization")
+        redactHeader("Cookie")
+        level = HttpLoggingInterceptor.Level.BASIC
+    }

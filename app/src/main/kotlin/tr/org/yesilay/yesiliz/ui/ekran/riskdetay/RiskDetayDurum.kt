@@ -24,6 +24,14 @@ data class RiskDetayDurum(
     val oran: Float = 0f,
     val faktorler: List<EtkileyenFaktor> = emptyList(),
     val oneriler: List<OnerilenEylem> = emptyList(),
+    /**
+     * [bant] `null` iken gösterilen boş durum metni — hiç veri yokken ile
+     * ölçüm yetersizken/eskiyken aynı ekran, farklı gerekçe (`gorev2.md`
+     * §8, `RiskDetayViewModel`).
+     */
+    val bosDurumBaslik: String = "Henüz yeterli veri yok",
+    val bosDurumAciklama: String = "Birkaç günlük kullanım biriktiğinde risk " +
+        "analizin burada görünecek.",
 )
 
 data class OnerilenEylem(

@@ -10,8 +10,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
+import tr.org.yesilay.yesiliz.data.saglik.AdimKaynagi
+import tr.org.yesilay.yesiliz.data.saglik.AdimSayacOkuyucu
+import tr.org.yesilay.yesiliz.data.zaman.DegiskenSistemSaati
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.AktiviteOturumuDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.AnketYanitDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.ArkadasDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.BildirimDao
@@ -26,7 +30,6 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.UykuBeyaniDao
 import java.time.Clock
-import java.time.ZoneId
 import javax.inject.Singleton
 
 /**
@@ -34,22 +37,11 @@ import javax.inject.Singleton
  *
  * Depo sınıflarının kendisi `@Inject constructor` ile işaretli; burada
  * yalnızca **Hilt'in kendi başına üretemeyeceği** tipler sağlanıyor:
- * Room, DAO'lar, sistem servisleri ve `ZoneId`.
+ * Room, DAO'lar ve sistem servisleri.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object VeriModulu {
-
-    /**
-     * Kullanıcının zaman dilimi.
-     *
-     * Sabit değil, çağrı anında okunmuyor — enjekte ediliyor ki testler
-     * belirlenimci olsun (`KullanimOkuyucu` ve `OruntuCikar` gün sınırlarını
-     * buna göre kuruyor).
-     */
-    @Provides
-    @Singleton
-    fun zon(): ZoneId = ZoneId.systemDefault()
 
     /**
      * Saat de enjekte ediliyor — `LocalDate.now()` çıplak çağrısı testte
@@ -58,7 +50,7 @@ object VeriModulu {
      */
     @Provides
     @Singleton
-    fun saat(zon: ZoneId): Clock = Clock.system(zon)
+    fun saat(): Clock = DegiskenSistemSaati()
 
     @Provides
     @Singleton
@@ -107,11 +99,21 @@ object VeriModulu {
     fun odulSecimiDao(db: YesilizDb): OdulSecimiDao = db.odulSecimiDao()
 
     @Provides
+    fun aktiviteOturumuDao(db: YesilizDb): AktiviteOturumuDao = db.aktiviteOturumuDao()
+
+    /**
+     * `AdimDeposu` sahte bir kaynakla test edilebilsin diye somut sınıf
+     * yerine arayüz istiyor (`AdimDeposuTest`, `gorev2.md` §3).
+     */
+    @Provides
+    fun adimKaynagi(okuyucu: AdimSayacOkuyucu): AdimKaynagi = okuyucu
+
+    @Provides
     @Singleton
     fun kullanimOkuyucu(
         @ApplicationContext baglam: Context,
-        zon: ZoneId,
-    ): KullanimOkuyucu = KullanimOkuyucu.olustur(baglam, zon)
+        saat: Clock,
+    ): KullanimOkuyucu = KullanimOkuyucu.olustur(baglam, saat)
 
     /**
      * Kategori tablosu `assets/kategori_tablosu.json`'dan okunuyor.

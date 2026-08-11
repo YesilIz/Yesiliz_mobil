@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Yesiliz" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/yesil_50</item>
+        <item name="android:statusBarColor">@color/yesil_50</item>
+        <item name="android:navigationBarColor">@color/yesil_50</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

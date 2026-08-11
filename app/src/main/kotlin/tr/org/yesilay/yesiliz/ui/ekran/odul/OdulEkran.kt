@@ -52,6 +52,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.IlerlemeCubugu
+import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.SecenekKarti
 import tr.org.yesilay.yesiliz.ui.bilesen.YaprakZemini
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -85,7 +86,7 @@ fun OdulEkran(
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     var acikOdul by remember { mutableStateOf<Odul?>(null) }
     var secimOdulu by remember { mutableStateOf<Odul?>(null) }
-    var sertifikaOdulu by remember { mutableStateOf<Odul?>(null) }
+    var basariKartiOdulu by remember { mutableStateOf<Odul?>(null) }
     var gecmisAcik by remember { mutableStateOf(false) }
     val baglam = androidx.compose.ui.platform.LocalContext.current
 
@@ -126,9 +127,9 @@ fun OdulEkran(
                 odul = odul,
                 puan = durum.puan,
                 onKapat = { acikOdul = null },
-                onSertifika = {
+                onBasariKarti = {
                     acikOdul = null
-                    sertifikaOdulu = odul
+                    basariKartiOdulu = odul
                 },
             )
         }
@@ -146,13 +147,11 @@ fun OdulEkran(
         }
     }
 
-    sertifikaOdulu?.let { odul ->
-        AltSayfa(onKapat = { sertifikaOdulu = null }) {
-            SertifikaIcerik(
+    basariKartiOdulu?.let { odul ->
+        AltSayfa(onKapat = { basariKartiOdulu = null }) {
+            BasariKartiIcerik(
                 odulAdi = odul.ad,
                 kullaniciAdi = durum.isim,
-                bagisTarihi = odul.bagisTarihi.orEmpty(),
-                sertifikaNo = odul.sertifikaNo.orEmpty(),
                 onPaylas = {
                     baglam.startActivity(
                         android.content.Intent.createChooser(
@@ -160,15 +159,15 @@ fun OdulEkran(
                                 type = "text/plain"
                                 putExtra(
                                     android.content.Intent.EXTRA_TEXT,
-                                    "Yeşilİz'de \"${odul.ad}\" ödülünü kazandım. " +
-                                        "Belge no: ${odul.sertifikaNo.orEmpty()}",
+                                    "Yeşilİz'de \"${odul.ad}\" uygulama içi " +
+                                        "başarısına ulaştım.",
                                 )
                             },
-                            "Sertifikanı paylaş",
+                            "Başarı kartını paylaş",
                         ),
                     )
                 },
-                onKapat = { sertifikaOdulu = null },
+                onKapat = { basariKartiOdulu = null },
             )
         }
     }
@@ -255,7 +254,7 @@ private fun OdulBasamagi(
                     sekil = CircleShape,
                 )
 
-                OdulHali.AKTIF, OdulHali.SECIM_BEKLIYOR -> Box(
+                OdulHali.PLANLANAN, OdulHali.AKTIF, OdulHali.SECIM_BEKLIYOR -> Box(
                     modifier = Modifier
                         .size(Olcu.IkonRozeti)
                         .clip(CircleShape)
@@ -321,6 +320,7 @@ private fun OdulBasamagi(
             )
             when (odul.hal) {
                 OdulHali.KAZANILDI -> TamamlandiSatiri()
+                OdulHali.PLANLANAN -> PlanlananSatiri()
                 OdulHali.SECIM_BEKLIYOR -> SecimBekliyorSatiri()
                 OdulHali.AKTIF -> {
                     Spacer(modifier = Modifier.height(Bosluk.S))
@@ -358,6 +358,16 @@ private fun TamamlandiSatiri() {
             color = YesilAna,
         )
     }
+}
+
+@Composable
+private fun PlanlananSatiri() {
+    Text(
+        text = "Puan hedefi tamamlandı · teslimat etkin değil",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MetinIkincil,
+    )
 }
 
 /** Kademe kazanıldı ama birden çok seçenek var, kullanıcı henüz seçmedi. */
@@ -427,7 +437,7 @@ private fun OdulDetayi(
     odul: Odul,
     puan: Int,
     onKapat: () -> Unit,
-    onSertifika: () -> Unit,
+    onBasariKarti: () -> Unit,
 ) {
     val kazanildi = odul.hal == OdulHali.KAZANILDI
 
@@ -476,21 +486,17 @@ private fun OdulDetayi(
         Spacer(modifier = Modifier.height(Olcu.BolumArasi))
 
         if (kazanildi) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(Yaricap.Buton))
-                    .background(Yesil50)
-                    .padding(Olcu.Aralik),
-            ) {
-                odul.bagisTarihi?.let { DetaySatiri("Bağış tarihi", it) }
-                odul.sertifikaNo?.let {
-                    Spacer(modifier = Modifier.height(Bosluk.S))
-                    DetaySatiri("Sertifika no", it)
-                }
-            }
+            BirincilButon(metin = "Başarı kartını görüntüle", onTikla = onBasariKarti)
+        } else if (odul.hal == OdulHali.PLANLANAN) {
+            Text(
+                text = "Puan hedefini tamamladın. Bu sürüm gerçek kupon, bağış " +
+                    "veya resmî belge üretmez.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MetinIkincil,
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BirincilButon(metin = "Sertifikayı görüntüle", onTikla = onSertifika)
+            IkincilButon(metin = "Kapat", onTikla = onKapat)
         } else {
             val oran = (puan.toFloat() / odul.esik).coerceIn(0f, 1f)
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -519,24 +525,6 @@ private fun OdulDetayi(
             Spacer(modifier = Modifier.height(Olcu.Aralik))
             BirincilButon(metin = "Puan kazanmaya devam et", onTikla = onKapat)
         }
-    }
-}
-
-@Composable
-private fun DetaySatiri(etiket: String, deger: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = etiket,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MetinIkincil,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = deger,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MetinBirincil,
-        )
     }
 }
 

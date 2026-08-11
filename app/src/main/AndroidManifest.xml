@@ -41,11 +41,12 @@
       telefonu cebine koyuyor, ekran kapanıyor, sayaç duruyor. Ekranı 15
       dakika açık tutarak yürümek uygulamanın kendi mesajıyla da çelişiyor.
 
-      FOREGROUND_SERVICE_HEALTH, egzersiz oturumunun doğru sınıfı ve
-      Android 14+ tiplenmiş servis şartını karşılıyor. Servis yalnızca
-      oturum sürerken yaşıyor, tamamlanınca kendini durduruyor.
+      Servisin asıl işi kullanıcının başlattığı 15 dakikalık dijital
+      esenlik sayacıdır; hareket/sağlık verisi toplamak zorunlu değildir.
+      Bu nedenle Android 14+ tipi `specialUse`: `health` tipi, isteğe bağlı
+      ACTIVITY_RECOGNITION izni verilmemişse startForeground anında uygulamayı
+      SecurityException ile çökertiyor. Adım izni yoksa yalnızca adım gizlenir.
     -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <!--
@@ -125,6 +126,8 @@
     <application
         android:name=".YesilizApp"
         android:allowBackup="false"
+        android:fullBackupContent="@xml/yedekleme_kurallari"
+        android:dataExtractionRules="@xml/veri_aktarma_kurallari"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/uygulama_adi"
         android:roundIcon="@mipmap/ic_launcher"
@@ -216,13 +219,13 @@
         <!--
           Ana ekran widget'ları (docs/tasarim-referans.md §2 / 39, 40).
 
-          `exported="true"` zorunlu: widget'ı yerleştiren ve güncelleyen
-          launcher başka bir uygulama. `APPWIDGET_UPDATE` dışında bir eylem
-          dinlenmiyor, yani dışarıdan tetiklenebilecek başka bir yüzey yok.
+          AppWidgetManager sistem güncellemelerini `exported="false"` olan
+          alıcılara da ulaştırır. Alıcıları başka uygulamalara açmamak,
+          sahte güncelleme yayınlarının veri okumasını tetiklemesini önler.
         -->
         <receiver
             android:name=".widget.EkranSuresiWidgetAlicisi"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/uygulama_adi">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -234,7 +237,7 @@
 
         <receiver
             android:name=".widget.GununSorusuWidgetAlicisi"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/uygulama_adi">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -268,7 +271,11 @@
         <service
             android:name=".arkaplan.YuruyusServisi"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started 15-minute digital-wellbeing walking timer; optional step data is omitted when permission is absent." />
+        </service>
     </application>
 
 </manifest>

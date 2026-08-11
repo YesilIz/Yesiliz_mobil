@@ -36,7 +36,8 @@ class YuruyusViewModel @Inject constructor(
                 kalanMetni = YuruyusHesapla.sayacMetni(ilerleme.kalanSaniye),
                 oran = ilerleme.oran,
                 kazanilanPuan = ilerleme.kazanilanPuan,
-                tamamlandiMi = ilerleme.tamamlandiMi || oturum.tamamlandi,
+                tamamlandiMi = oturum.tamamlandi,
+                hedefTamamlandiMi = oturum.hedefTamamlandi,
                 adim = oturum.adim,
                 puanVerildiMi = oturum.puanVerildi,
             )

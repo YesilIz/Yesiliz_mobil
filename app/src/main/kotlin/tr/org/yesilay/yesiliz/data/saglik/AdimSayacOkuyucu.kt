@@ -43,10 +43,21 @@ import kotlin.coroutines.resume
  *
  * Okunan tek şey bir tam sayı. Konum, hız, hareket izi yok (CLAUDE.md §4).
  */
+/**
+ * [AdimSayacOkuyucu]'nun soyutlaması — `AdimDeposu`'nun testinde sensöre
+ * ihtiyaç duymadan sahte bir kaynak takılabilsin diye (`gorev2.md` §3:
+ * izin kaldırma/verme, yeniden başlatma gibi senaryolar gerçek sensör
+ * olmadan da test edilebilmeli).
+ */
+interface AdimKaynagi {
+    fun kullanilabilir(): Boolean
+    suspend fun anlikSayac(): Long?
+}
+
 @Singleton
 class AdimSayacOkuyucu @Inject constructor(
     @ApplicationContext private val baglam: Context,
-) {
+) : AdimKaynagi {
 
     private val yonetici: SensorManager? =
         ContextCompat.getSystemService(baglam, SensorManager::class.java)
@@ -72,7 +83,7 @@ class AdimSayacOkuyucu @Inject constructor(
             true
         }
 
-    fun kullanilabilir(): Boolean = cihazDestekliyor() && izinVarMi()
+    override fun kullanilabilir(): Boolean = cihazDestekliyor() && izinVarMi()
 
     /**
      * Sayacın o anki ham değeri; okunamazsa `null`.
@@ -82,7 +93,7 @@ class AdimSayacOkuyucu @Inject constructor(
      * var — bazı cihazlarda ilk olay gecikebiliyor ve süresiz askıda kalan
      * bir çağrı gecelik işi bloke ederdi.
      */
-    suspend fun anlikSayac(): Long? {
+    override suspend fun anlikSayac(): Long? {
         val yonetici = yonetici ?: return null
         val sensor = sensor ?: return null
         if (!izinVarMi()) return null

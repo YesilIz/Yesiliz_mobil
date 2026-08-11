@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
@@ -36,16 +37,30 @@ class AcilisViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
+     * Hesap akışının bitince onboarding'e mi, mevcut profile mi döneceğinin
+     * tek doğruluk kaynağı. Oturum durumu bu karar için yeterli değil: çıkış
+     * ve yeniden giriş sırasında değişiyor, onboarding tamamlanma durumu ise
+     * cihazdaki kurulum/veri sürekliliğini temsil ediyor.
+     */
+    val onboardingBitti: StateFlow<Boolean?> = tercihler.onboardingBitti
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = null,
+        )
+
+    /**
      * Açılış rotası: hesap → onboarding → ana.
      *
      * Hesap ekranı yalnızca **ilk açılışta** görünüyor; misafir seçen
      * kullanıcıya bir daha sorulmuyor (`Oturum.karsilamaGerekliMi`).
      */
     val baslangicRotasi: StateFlow<String?> = combine(
-        tercihler.onboardingBitti,
+        onboardingBitti,
         tercihler.oturum,
     ) { onboardingBitti, oturum ->
         when {
+            onboardingBitti == null -> null
             oturum.karsilamaGerekliMi -> Rota.GIRIS
             onboardingBitti -> Rota.ANA
             else -> Rota.ONBOARDING
@@ -61,6 +76,9 @@ class AcilisViewModel @Inject constructor(
         isPlanlayici.gecelikPlanla()
 
         viewModelScope.launch {
+            // Uygulama sürüm/DST/saat dilimi değişiminden sonra ilk kez
+            // açıldığında eski 24 saatlik periyodu hemen duvar saatine bağla.
+            isPlanlayici.hatirlatmayiPlanla(tercihler.bildirimSaatleri.first())
             kategoriDeposu.seedEt()
             // Güvenli varsayılan: izin bu anda verilmemiş olabilir, gerçek sayı
             // `GecmisVeriDeposu.hesaplaGerekirse` tarafından izin onaylandıktan

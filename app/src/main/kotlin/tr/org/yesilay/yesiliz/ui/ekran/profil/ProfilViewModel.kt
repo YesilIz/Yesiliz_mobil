@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import tr.org.yesilay.yesiliz.data.depo.SozlesmeDeposu
 import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
 import tr.org.yesilay.yesiliz.data.depo.VeriYonetimiDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
+import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import javax.inject.Inject
@@ -27,9 +29,8 @@ import javax.inject.Inject
 /**
  * Profil durumu — gizlilik anahtarları ve hedef DataStore'dan geliyor.
  *
- * İsim ve lig adı hâlâ sabit: hesap sistemi (giriş/kayıt ekranları) ve gerçek
- * lig Faz 2'de backend'le gelecek. Bunlar **bilinçli** sahte veri, ötekiler
- * gerçek.
+ * İsim oturumdan, lig rozeti gerçek lig deposundan gelir. Misafirin adı
+ * olmadığı durumda yalnızca görünür isim sabitine düşülür.
  */
 @HiltViewModel
 class ProfilViewModel @Inject constructor(
@@ -39,11 +40,13 @@ class ProfilViewModel @Inject constructor(
     private val isPlanlayici: IsPlanlayici,
     private val disaAktarDeposu: DisaAktarDeposu,
     private val hesapDeposu: HesapDeposu,
+    ligDeposu: LigDeposu,
     private val senkronDeposu: SenkronDeposu,
     private val sozlesmeDeposu: SozlesmeDeposu,
 ) : ViewModel() {
 
     private val silmeHali = MutableStateFlow(SilmeHali())
+    private val disaAktarmaHatasi = MutableStateFlow(false)
 
     /**
      * Yardım ekranındaki SSS.
@@ -77,7 +80,6 @@ class ProfilViewModel @Inject constructor(
         // ekleniyor.
         ProfilDurum(
             isim = SABIT_ISIM,
-            ligAdi = SABIT_LIG,
             yesilayPaylasimi = paylasim,
             ligdeGorun = ligde,
             molaHatirlaticiAcik = molaHatirlatici,
@@ -93,6 +95,8 @@ class ProfilViewModel @Inject constructor(
             hesapVarMi = oturum.girisYapildiMi && !oturum.misafirMi,
             eposta = oturum.eposta,
         )
+    }.combine(ligDeposu.ligAkisi()) { durum, lig ->
+        durum.copy(ligAdi = lig.ligAdi.takeIf { lig.katildiMi }.orEmpty())
     }.combine(silmeHali) { durum, silme ->
         durum.copy(
             siliniyor = silme.calisiyor,
@@ -100,12 +104,14 @@ class ProfilViewModel @Inject constructor(
         )
     }.combine(sssAkisi) { durum, sss ->
         durum.copy(sss = sss)
+    }.combine(disaAktarmaHatasi) { durum, hata ->
+        durum.copy(disaAktarmaHatasi = hata)
     }.combine(tercihler.sunucuTabani) { durum, taban ->
         durum.copy(sunucuTabani = taban)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
-        initialValue = ProfilDurum(isim = SABIT_ISIM, ligAdi = SABIT_LIG),
+        initialValue = ProfilDurum(isim = SABIT_ISIM),
     )
 
     /**
@@ -129,12 +135,14 @@ class ProfilViewModel @Inject constructor(
      * Kaydetmenin yanında senkron da tetikleniyor: tercih sunucuda tutulan
      * lig üyeliğine yazılıyor ve gecelik worker'ı beklemek, kullanıcının
      * anahtarı kapattıktan sonra saatlerce ligde görünmeye devam etmesi
-     * demekti. Tercih zaten hiç tüketilmiyordu (`debug.md` Y-5).
+     * demekti. Bu çağrı özet paylaşımı rızasından özellikle bağımsızdır;
+     * aksi hâlde varsayılan kapalı rıza, gizlilik anahtarını da etkisiz
+     * bırakırdı.
      */
     fun ligdeGorun(acik: Boolean) {
         viewModelScope.launch {
             tercihler.ligdeGorunAyarla(acik)
-            senkronDeposu.senkronEt()
+            senkronDeposu.ligGorunurlugunuSenkronEt()
         }
     }
 
@@ -169,7 +177,13 @@ class ProfilViewModel @Inject constructor(
      * CLAUDE.md §6); burada yalnızca dosyalar üretilip niyet hazırlanıyor.
      */
     fun gecmisiDisaAktar(onHazir: (android.content.Intent) -> Unit) {
-        viewModelScope.launch { onHazir(disaAktarDeposu.disaAktar()) }
+        if (disaAktarmaHatasi.value) disaAktarmaHatasi.value = false
+        viewModelScope.launch {
+            disaAktarmaHatasi.value = !guvenliDisaAktar(
+                uret = disaAktarDeposu::disaAktar,
+                onHazir = onHazir,
+            )
+        }
     }
 
     /**
@@ -233,18 +247,17 @@ class ProfilViewModel @Inject constructor(
         }
     }
 
-    /** Uyarı okunduktan sonra kullanıcı yine de çıkmak isterse. */
+    /** Başarısızlık uyarısını kapatır; oturumu kapatmadan yeniden denetir. */
     fun uyariyiKapat() {
         silmeHali.value = SilmeHali()
-        viewModelScope.launch { _silindi.send(Unit) }
     }
 
     /**
      * Ortak silme sarmalayıcısı.
      *
      * Blok `false` dönerse (sunucudaki hesap silinemedi) ekrandan
-     * **çıkılmıyor**: önce uyarı gösteriliyor. Sessizce çıkmak, silinmemiş
-     * bir hesabı silinmiş göstermek olurdu.
+     * **çıkılmıyor** ve oturum/veri korunuyor. Kullanıcı kimliğini
+     * kaybetmeden aynı isteği yeniden gönderebilir.
      */
     private fun sil(blok: suspend () -> Boolean) {
         if (silmeHali.value.calisiyor) return
@@ -266,11 +279,23 @@ class ProfilViewModel @Inject constructor(
     )
 
     private companion object {
-        // Hesap sistemi Faz 2 — o zamana kadar sabit.
-        const val SABIT_ISIM = "Turan"
-        const val SABIT_LIG = "Filiz Ligi"
+        // Misafirin görünür adı — AnaViewModel ve Ödüller ile aynı.
+        const val SABIT_ISIM = "Misafir"
 
         /** Ekran arka plana gidince akışı hemen kesme — dönüşte yeniden kurulmasın. */
         const val AKIS_BEKLEME_MS = 5_000L
     }
+}
+
+/** Dışa aktarım hatası ViewModel coroutine'ini çökertmez; iptal ise aynen yayılır. */
+internal suspend fun <T> guvenliDisaAktar(
+    uret: suspend () -> T,
+    onHazir: (T) -> Unit,
+): Boolean = try {
+    onHazir(uret())
+    true
+} catch (iptal: CancellationException) {
+    throw iptal
+} catch (_: Exception) {
+    false
 }

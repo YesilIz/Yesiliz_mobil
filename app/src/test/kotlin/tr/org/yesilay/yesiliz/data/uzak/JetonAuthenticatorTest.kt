@@ -127,7 +127,7 @@ class JetonAuthenticatorTest {
      * bozulur — kullanıcıya yanlış şifreyle "giriş yaptın" demiş olurduk.
      */
     @Test
-    fun TUZAK_authYollarindaYenilemeDENENMEZ() {
+    fun TUZAK_acikAuthYollarindaYenilemeDENENMEZ() {
         val yenileyici = SahteYenileyici(
             YenilemeSonuc.Basarili(
                 JetonlarDto(erisim = YENI, yenileme = "y2", ad = "Ada", eposta = "a@b.c"),
@@ -135,13 +135,30 @@ class JetonAuthenticatorTest {
         )
         val kaynak = SahteKaynak()
 
-        listOf("auth/giris", "auth/kayit", "auth/yenile").forEach { yol ->
+        listOf("auth/giris", "auth/kayit", "auth/yenile", "api/v1/auth/giris").forEach { yol ->
             val istek = authenticator(yenileyici, kaynak).authenticate(null, yanit(yol = yol))
             assertNull("$yol için yenileme denenmemeli", istek)
         }
 
         assertEquals("sunucuya hiç yenileme gitmemeli", 0, yenileyici.cagriSayisi)
         assertFalse("oturum kapatılmamalı", kaynak.kapatildiMi)
+    }
+
+    @Test
+    fun korumaliHesapSilmeVeCikisYollariJetonYeniler() {
+        listOf("auth/hesap", "auth/cikis", "api/v1/auth/hesap").forEach { yol ->
+            val yenileyici = SahteYenileyici(
+                YenilemeSonuc.Basarili(
+                    JetonlarDto(erisim = YENI, yenileme = "y2", ad = "Ada", eposta = "a@b.c"),
+                ),
+            )
+            val kaynak = SahteKaynak()
+
+            val istek = authenticator(yenileyici, kaynak).authenticate(null, yanit(yol = yol))
+
+            assertEquals("$yol yeni jetonla tekrarlanmalı", "Bearer $YENI", istek?.header("Authorization"))
+            assertEquals("$yol bir kez yenilemeli", 1, yenileyici.cagriSayisi)
+        }
     }
 
     /** İkinci 401'de pes edilmeli, yoksa istek sonsuza dek döner. */

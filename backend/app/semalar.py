@@ -9,8 +9,9 @@ gerekmiyor ve alan eklerken tek yerde unutma riski azalıyor.
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # --- hesap ---
@@ -20,14 +21,19 @@ class KayitIstek(BaseModel):
     eposta: EmailStr
     sifre: str = Field(min_length=8, max_length=128)
 
+    @field_validator("ad", mode="before")
+    @classmethod
+    def adi_temizle(cls, deger: object) -> object:
+        return deger.strip() if isinstance(deger, str) else deger
+
 
 class GirisIstek(BaseModel):
     eposta: EmailStr
-    sifre: str
+    sifre: str = Field(min_length=1, max_length=128)
 
 
 class YenileIstek(BaseModel):
-    yenileme: str
+    yenileme: str = Field(min_length=1, max_length=256)
 
 
 class SifreSifirlaIstek(BaseModel):
@@ -35,7 +41,7 @@ class SifreSifirlaIstek(BaseModel):
 
 
 class SifreYenileIstek(BaseModel):
-    jeton: str
+    jeton: str = Field(min_length=1, max_length=256)
     yeniSifre: str = Field(min_length=8, max_length=128)
 
 
@@ -50,38 +56,62 @@ class Jetonlar(BaseModel):
 
 class GunlukOzetDto(BaseModel):
     tarih: dt.date
-    socialDk: float = 0.0
-    entertainmentDk: float = 0.0
-    gamesDk: float = 0.0
-    communicationDk: float = 0.0
-    productivityDk: float = 0.0
-    educationDk: float = 0.0
-    healthDk: float = 0.0
-    otherDk: float = 0.0
-    gece: float = 0.0
-    oturum: float = 0.0
-    acilis: float = 0.0
-    sabah: float = 0.0
-    uykuOncesi: float = 0.0
-    yerDegis: float = 0.0
-    adim: float = 0.0
-    sporDk: float = 0.0
-    S: float = 0.0
+    socialDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    entertainmentDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    gamesDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    communicationDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    productivityDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    educationDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    healthDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    otherDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    # Risk motorunun örüntü girdileri cihaz modelinde 0..1 oranıdır.
+    gece: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    oturum: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    acilis: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    sabah: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    uykuOncesi: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    yerDegis: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    adim: float = Field(default=0.0, ge=0, le=500_000, allow_inf_nan=False)
+    sporDk: float = Field(default=0.0, ge=0, le=1440, allow_inf_nan=False)
+    S: float = Field(default=0.0, ge=0, le=5000, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def toplam_ekran_bir_gunu_asamaz(self) -> GunlukOzetDto:
+        toplam = sum(
+            (
+                self.socialDk,
+                self.entertainmentDk,
+                self.gamesDk,
+                self.communicationDk,
+                self.productivityDk,
+                self.educationDk,
+                self.healthDk,
+                self.otherDk,
+            )
+        )
+        if toplam > 1440.001:
+            raise ValueError("Kategori dakikaları toplamı bir günü aşamaz")
+        return self
 
 
 class RiskSonucDto(BaseModel):
     tarih: dt.date
-    S: float
-    R: float
-    gosterilenBant: str
-    trend: str
+    S: float = Field(ge=0, le=5000, allow_inf_nan=False)
+    R: float = Field(ge=0, le=100, allow_inf_nan=False)
+    gosterilenBant: Literal["AZ", "ORTA", "COK"]
+    trend: Literal["BELIRSIZ", "IYILESIYOR", "SABIT", "KOTULESIYOR"]
+    # Eski istemciler alanı göndermez; onların daha önceki davranışı
+    # hesaplanmış kabul edilerek sözleşme geriye uyumlu kalır.
+    veriDurumu: Literal["YETERSIZ", "HESAPLANDI", "ESKI"] = "HESAPLANDI"
 
 
 class SenkronIstek(BaseModel):
-    ozetler: list[GunlukOzetDto] = []
-    riskler: list[RiskSonucDto] = []
+    # Cihaz worker'ı yalnızca son yedi günü yollar. Liste tavanı,
+    # kimliği doğrulanmış olsa bile tek istekle kaynak tüketimini sınırlar.
+    ozetler: list[GunlukOzetDto] = Field(default_factory=list, max_length=7)
+    riskler: list[RiskSonucDto] = Field(default_factory=list, max_length=7)
     # Cihazın o günkü toplam puanı — lig sıralaması bunun üzerinden.
-    haftalikPuan: int = 0
+    haftalikPuan: int = Field(default=0, ge=0, le=2000)
     # "Ligde görün" tercihi. None = değiştirme (eski istemciler).
     ligdeGorunur: bool | None = None
 
@@ -120,11 +150,21 @@ class ArkadasDto(BaseModel):
 
 
 class DavetIstek(BaseModel):
-    kod: str
+    kod: str = Field(min_length=1, max_length=16)
 
 
 class KodYanit(BaseModel):
     kod: str
+
+
+class LigKatilIstek(BaseModel):
+    """Yeni üyeliğin gizlilik tercihi; eski istemcide gövde olmayabilir."""
+
+    gorunur: bool = True
+
+
+class LigGorunurlukIstek(BaseModel):
+    gorunur: bool
 
 
 # --- ödül ---
@@ -143,12 +183,12 @@ class OdulSecimiDto(BaseModel):
 
 class EslestirmeKoduIstek(BaseModel):
     # `ebeveyn` | `cocuk`
-    rol: str
+    rol: str = Field(min_length=1, max_length=10)
 
 
 class EslestirIstek(BaseModel):
-    kod: str
-    rol: str
+    kod: str = Field(min_length=1, max_length=16)
+    rol: str = Field(min_length=1, max_length=10)
 
 
 class EbeveynOzetYanit(BaseModel):
@@ -160,6 +200,7 @@ class EbeveynOzetYanit(BaseModel):
     """
 
     cocukAdi: str
+    gunlukTarihler: list[dt.date]
     gunlukDakikalar: list[int]
     ortalamaDk: int
     bant: str | None

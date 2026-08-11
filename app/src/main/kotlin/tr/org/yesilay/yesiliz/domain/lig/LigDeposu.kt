@@ -27,8 +27,8 @@ interface LigDeposu {
     /** Boş durumdaki "Lige katıl" — mevcut sıralamaya dahil eder. */
     suspend fun ligeKatil()
 
-    /** Önerilen kişilerden birine davet gönderir. */
-    suspend fun davetGonder(isim: String)
+    /** Başka bir kullanıcının davet kodunu kabul eder; debug örneklerinde isim alabilir. */
+    suspend fun davetGonder(kod: String)
 
     /** Henüz eklenmemiş öneri listesi. */
     suspend fun onerilenler(): List<OnerilenKisi>

@@ -25,7 +25,7 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil50
  * Hap şeklinde etiket.
  *
  * Tasarımda üç yerde: "Başlangıç değerlendirmen hazır", "14 yaşında",
- * "↑ İlk 7 yükselir", "Filiz Ligi". Hepsi aynı ölçü, farklı zemin.
+ * "↑ İlk 3 yükselir", "Filiz Ligi". Hepsi aynı ölçü, farklı zemin.
  */
 @Composable
 fun Cip(

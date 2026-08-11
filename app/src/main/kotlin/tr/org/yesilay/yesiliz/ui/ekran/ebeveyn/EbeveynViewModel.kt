@@ -10,8 +10,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.EbeveynDeposu
+import tr.org.yesilay.yesiliz.data.depo.EbeveynOzetSonucu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
+import tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.Cubuk
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -19,12 +24,8 @@ import javax.inject.Inject
  *
  * **Artık gerçek backend'e bağlı** (`backend/app/uclar/ebeveyn.py`):
  * eşleştirme kodu sunucuda üretilip doğrulanıyor, çocuğun haftalık özeti
- * sunucudan geliyor. Sunucuya ulaşılamazsa [EbeveynDeposu] eski mock
- * davranışına düşüyor — demo günü backend kapalıyken akış kesilmesin
- * (`Yedekli*Deposu` ile aynı gerekçe).
- *
- * Ekran ve `EbeveynDurum` **hiç değişmedi**; mock sabitleri yalnızca
- * çevrimdışı yedek olarak duruyor.
+ * sunucudan geliyor. Kimlik ve mahremiyet belirleyen bu ekranda ağ hatası
+ * gerçekmiş gibi sabit bir çocuk profiline dönüştürülmez.
  */
 @HiltViewModel
 class EbeveynViewModel @Inject constructor(
@@ -32,35 +33,49 @@ class EbeveynViewModel @Inject constructor(
     private val ebeveynDeposu: EbeveynDeposu,
 ) : ViewModel() {
 
-    /** Sunucudan gelen özet; `null` iken mock yedeğe düşülüyor. */
-    private val uzakOzet = MutableStateFlow<tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto?>(null)
+    private val ozetHali = MutableStateFlow(OzetHali())
     private val eslestirmeHatasi = MutableStateFlow<String?>(null)
+    private val kaldirmaHali = MutableStateFlow(KaldirmaHali())
 
     private val sihirbaz = MutableStateFlow(SihirbazHali())
+
+    private val hataVeKaldirma = combine(eslestirmeHatasi, kaldirmaHali) { hata, kaldirma ->
+        hata to kaldirma
+    }
 
     val durum: StateFlow<EbeveynDurum> = combine(
         tercihler.ebeveynEslesmisMi,
         tercihler.ebeveynCihazRolu,
         sihirbaz,
-        uzakOzet,
-        eslestirmeHatasi,
-    ) { eslesmisMi, rol, sihirbazHali, ozet, hata ->
+        ozetHali,
+        hataVeKaldirma,
+    ) { eslesmisMi, rol, sihirbazHali, guncelOzetHali, (hata, kaldirma) ->
+        val ozet = guncelOzetHali.veri
         EbeveynDurum(
             eslesmisMi = eslesmisMi,
             cihazRolu = rol,
             adim = sihirbazHali.adim,
             secilenRol = sihirbazHali.secilenRol,
             uretilenKod = sihirbazHali.uretilenKod,
+            kodYukleniyor = sihirbazHali.kodYukleniyor,
+            kodSunucudanMi = sihirbazHali.kodSunucudanMi,
             eslestirmeHatasi = hata,
-            cocukAdi = ozet?.cocukAdi ?: MOCK_COCUK_ADI,
-            cocukYasi = MOCK_COCUK_YASI,
-            ekranSuresiOrtalama = ozet?.let { sureMetni(it.ortalamaDk) } ?: MOCK_EKRAN_ORTALAMA,
-            tarihAraligi = MOCK_TARIH_ARALIGI,
-            ekranCubuklari = ozet?.cubuklar() ?: MOCK_CUBUKLAR,
-            ekranVurgu = ozet?.let { enYuksek(it.gunlukDakikalar) } ?: MOCK_VURGU,
-            bant = ozet?.bant ?: MOCK_BANT,
-            bantMesaji = ozet?.trend?.let(::trendMesaji) ?: MOCK_BANT_MESAJI,
-            bildirimler = ozet?.let(::bildirimler) ?: MOCK_BILDIRIMLER,
+            eslesmeKaldiriliyor = kaldirma.calisiyor,
+            eslesmeKaldirmaHatasi = kaldirma.hata,
+            ozetYukleniyor = guncelOzetHali.yukleniyor,
+            ozetHatasi = guncelOzetHali.hata,
+            cocukAdi = ozet?.cocukAdi.orEmpty(),
+            ekranSuresiOrtalama = ozet?.let { sureMetni(it.ortalamaDk) }.orEmpty(),
+            tarihAraligi = ozet?.tarihAraligi() ?: "Son 7 gün",
+            ekranCubuklari = ozet?.cubuklar().orEmpty(),
+            ekranVurgu = ozet?.let { enYuksek(it.gunlukDakikalar) } ?: -1,
+            bant = ozet?.bant.riskBandiMetni(),
+            bantMesaji = when {
+                ozet?.bant == null -> "Yeterli veri oluştuğunda burada görünür."
+                else -> ozet.trend.trendMesajiVeyaNull()
+                    ?: "Değişimi karşılaştırmak için henüz yeterli geçmiş yok."
+            },
+            bildirimler = ozet?.let(::bildirimler).orEmpty(),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -74,9 +89,25 @@ class EbeveynViewModel @Inject constructor(
 
     fun rolOnayla() {
         sihirbaz.value = sihirbaz.value.copy(adim = EslestirmeAdimi.KOD)
+        kodUret()
+    }
+
+    fun kodUret() {
+        if (sihirbaz.value.kodYukleniyor) return
+        eslestirmeHatasi.value = null
+        sihirbaz.value = sihirbaz.value.copy(
+            uretilenKod = "",
+            kodYukleniyor = true,
+            kodSunucudanMi = false,
+        )
         viewModelScope.launch {
-            val (kod, _) = ebeveynDeposu.kodUret(sihirbaz.value.secilenRol.deger)
-            sihirbaz.value = sihirbaz.value.copy(uretilenKod = kod)
+            val sonuc = ebeveynDeposu.kodUret(sihirbaz.value.secilenRol.deger)
+            sihirbaz.value = sihirbaz.value.copy(
+                uretilenKod = sonuc.kod,
+                kodYukleniyor = false,
+                kodSunucudanMi = sonuc.hata == null,
+            )
+            eslestirmeHatasi.value = sonuc.hata
         }
     }
 
@@ -93,7 +124,7 @@ class EbeveynViewModel @Inject constructor(
             val hata = ebeveynDeposu.eslestir(girilenKod, sihirbaz.value.secilenRol.deger)
             if (hata == null) {
                 sihirbaz.value = sihirbaz.value.copy(adim = EslestirmeAdimi.BASARILI)
-                ozetiTazele()
+                if (sihirbaz.value.secilenRol == CihazRolu.EBEVEYN) ozetiTazele()
             } else {
                 eslestirmeHatasi.value = hata
             }
@@ -102,7 +133,12 @@ class EbeveynViewModel @Inject constructor(
 
     /** Panel açıldığında çocuğun özetini çeker. */
     fun ozetiTazele() {
-        viewModelScope.launch { uzakOzet.value = ebeveynDeposu.cocukOzeti() }
+        if (ozetHali.value.baslatildi && ozetHali.value.yukleniyor) return
+        ozetHali.value = OzetHali(yukleniyor = true, baslatildi = true)
+        viewModelScope.launch {
+            val sonuc = ebeveynDeposu.cocukOzeti()
+            ozetHali.value = ozetTamamlandi(sonuc)
+        }
     }
 
     fun sihirbaziKapat() {
@@ -110,13 +146,25 @@ class EbeveynViewModel @Inject constructor(
     }
 
     fun eslesmeyiKaldir() {
-        viewModelScope.launch { tercihler.ebeveynEslesmeyiKaldir() }
+        if (kaldirmaHali.value.calisiyor) return
+        kaldirmaHali.value = KaldirmaHali(calisiyor = true)
+        viewModelScope.launch {
+            val hata = ebeveynDeposu.eslesmeyiKaldir()
+            kaldirmaHali.value = KaldirmaHali(hata = hata)
+        }
     }
 
     private data class SihirbazHali(
         val adim: EslestirmeAdimi = EslestirmeAdimi.ROL_SECIMI,
         val secilenRol: CihazRolu = CihazRolu.EBEVEYN,
         val uretilenKod: String = "",
+        val kodYukleniyor: Boolean = false,
+        val kodSunucudanMi: Boolean = false,
+    )
+
+    private data class KaldirmaHali(
+        val calisiyor: Boolean = false,
+        val hata: String? = null,
     )
 
     /** `240` → `4s 0dk`. */
@@ -125,28 +173,44 @@ class EbeveynViewModel @Inject constructor(
     private fun enYuksek(dakikalar: List<Int>): Int =
         dakikalar.indices.maxByOrNull { dakikalar[it] } ?: -1
 
-    private fun trendMesaji(trend: String): String = when (trend) {
-        "IYILESIYOR" -> "Geçen haftaya göre iyileşiyor"
-        "KOTULESIYOR" -> "Geçen haftaya göre artış var"
-        else -> "Geçen haftaya göre benzer"
-    }
+    private fun EbeveynOzetDto.cubuklar(): List<Cubuk> =
+        gunlukDakikalar.mapIndexed { i, dakika ->
+            val gun = gunlukTarihler.getOrNull(i)
+                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                ?.dayOfWeek
+                ?.value
+                ?.let { GUN_ADLARI[it - 1] }
+                ?: GUN_ADLARI[i % GUN_ADLARI.size]
+            Cubuk(gun, dakika.toFloat())
+        }
 
-    private fun tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto.cubuklar(): List<Cubuk> =
-        gunlukDakikalar.mapIndexed { i, dakika -> Cubuk(GUN_ADLARI[i % GUN_ADLARI.size], dakika.toFloat()) }
+    private fun EbeveynOzetDto.tarihAraligi(): String {
+        val tarihler = gunlukTarihler.mapNotNull {
+            runCatching { LocalDate.parse(it) }.getOrNull()
+        }
+        if (tarihler.isEmpty()) return "Son 7 gün"
+        val ilk = tarihler.first()
+        val son = tarihler.last()
+        return if (ilk == son) {
+            son.format(TARIH_TEK)
+        } else {
+            "${ilk.format(TARIH_KISA)} – ${son.format(TARIH_TEK)}"
+        }
+    }
 
     /**
      * Sunucudan gelen özetten türetilen bildirimler.
      *
      * Sunucu bir bildirim listesi göndermiyor — ebeveyne ne söyleneceği
-     * cihazın kararı. Heartbeat kesilmesi `spec-veri.md`'deki "çocuk
-     * uygulamayı silmiş olabilir" uyarısına dönüşüyor.
+     * cihazın kararı. Sinyal kesilmesinin nedeni bilinmediğinden ekran bunu
+     * uygulamanın açılmadığı ya da silindiği şeklinde yorumlamaz.
      */
-    private fun bildirimler(ozet: tr.org.yesilay.yesiliz.data.uzak.EbeveynOzetDto): List<EbeveynBildirimi> {
+    private fun bildirimler(ozet: EbeveynOzetDto): List<EbeveynBildirimi> {
         val liste = mutableListOf<EbeveynBildirimi>()
         ozet.sonSinyalSaatOnce?.let { saat ->
             if (saat >= SESSIZLIK_ESIK_SAAT) {
                 liste += EbeveynBildirimi(
-                    "Uygulama ${saat / 24} gündür açılmadı",
+                    sessizlikMesaji(saat),
                     "${saat / 24}g",
                 )
             }
@@ -164,27 +228,44 @@ class EbeveynViewModel @Inject constructor(
         const val SESSIZLIK_ESIK_SAAT = 48
 
         val GUN_ADLARI = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+        val TURKCE = Locale.forLanguageTag("tr-TR")
+        val TARIH_KISA: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM", TURKCE)
+        val TARIH_TEK: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uuuu", TURKCE)
 
-        // --- mock çocuk paneli — bkz. sınıf dokümanı ---
-        const val MOCK_COCUK_ADI = "Elif"
-        const val MOCK_COCUK_YASI = 14
-        const val MOCK_EKRAN_ORTALAMA = "3s 40dk"
-        const val MOCK_TARIH_ARALIGI = "22–28 Tem, 2026"
-        const val MOCK_VURGU = 4
-        const val MOCK_BANT = "ORTA"
-        const val MOCK_BANT_MESAJI = "Geçen haftaya göre iyileşiyor"
-        val MOCK_CUBUKLAR = listOf(
-            Cubuk("Pzt", 210f),
-            Cubuk("Sal", 195f),
-            Cubuk("Çar", 240f),
-            Cubuk("Per", 180f),
-            Cubuk("Cum", 220f),
-            Cubuk("Cmt", 260f),
-            Cubuk("Paz", 205f),
-        )
-        val MOCK_BILDIRIMLER = listOf(
-            EbeveynBildirimi("Uygulama 2 gündür açılmadı", "2g"),
-            EbeveynBildirimi("Haftalık hedefe ulaştı", "1g"),
-        )
     }
 }
+
+/** Sinyal kesilmesi; rıza kapama, ağ, silme ve açmama hâllerini ayıramaz. */
+internal fun sessizlikMesaji(saat: Int): String =
+    "Cihazdan ${saat / 24} gündür yeni paylaşım gelmedi"
+
+/** Sunucu enum'unu ebeveyne teknik ya da bilinmeyen bir etiket olarak gösterme. */
+internal fun String?.riskBandiMetni(): String = when (this) {
+    "AZ" -> "Düşük risk"
+    "ORTA" -> "Orta risk"
+    "COK" -> "Yüksek risk"
+    else -> "Henüz hesaplanmadı"
+}
+
+/** `BELIRSIZ` ya da yeni bir değer, gerçekte sabitmiş gibi sunulmaz. */
+internal fun String?.trendMesajiVeyaNull(): String? = when (this) {
+    "IYILESIYOR" -> "Geçen haftaya göre iyileşiyor"
+    "KOTULESIYOR" -> "Geçen haftaya göre artış var"
+    "SABIT" -> "Geçen haftaya göre benzer"
+    else -> null
+}
+
+internal data class OzetHali(
+    val yukleniyor: Boolean = true,
+    val baslatildi: Boolean = false,
+    val veri: EbeveynOzetDto? = null,
+    val hata: String? = null,
+)
+
+/** Tamamlanmış ağ sonucu hiçbir zaman yükleme ekranında kalmaz. */
+internal fun ozetTamamlandi(sonuc: EbeveynOzetSonucu): OzetHali = OzetHali(
+    yukleniyor = false,
+    baslatildi = true,
+    veri = sonuc.veri,
+    hata = sonuc.hata,
+)

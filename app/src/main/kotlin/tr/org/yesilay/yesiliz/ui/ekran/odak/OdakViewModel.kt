@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.zaman.GecenSureHesapla
+import tr.org.yesilay.yesiliz.zaman.GecenSureSaati
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -33,13 +35,16 @@ import javax.inject.Inject
 class OdakViewModel @Inject constructor(
     private val puanDeposu: PuanDeposu,
     private val saat: Clock,
+    private val gecenSureSaati: GecenSureSaati,
 ) : ViewModel() {
 
     private val _durum = MutableStateFlow(OdakDurum())
     val durum: StateFlow<OdakDurum> = _durum.asStateFlow()
 
     private var gecenSaniye = 0
+    private var baslangicMs = 0L
     private var sayacIsi: Job? = null
+    private var bitirmeIsi: Job? = null
 
     /** Seans başlamadan önce süre değiştirilebiliyor. */
     fun sureDegistir() {
@@ -53,6 +58,7 @@ class OdakViewModel @Inject constructor(
     fun basla() {
         if (_durum.value.basladi) return
         gecenSaniye = 0
+        baslangicMs = gecenSureSaati.simdiMs()
         _durum.update {
             it.copy(basladi = true, ekranAcildi = false, bitti = false, puanYazildi = false)
         }
@@ -60,10 +66,16 @@ class OdakViewModel @Inject constructor(
             val toplam = _durum.value.sureDk * 60
             while (gecenSaniye < toplam) {
                 delay(1_000)
-                gecenSaniye++
+                // `delay`, ekran kapalıyken Android tarafından ertelenebilir.
+                // Tik saymak yerine derin uykuyu da içeren monoton saatten
+                // gerçek geçen süreyi yeniden kur.
+                gecenSaniye = GecenSureHesapla.saniye(
+                    baslangicMs = baslangicMs,
+                    simdiMs = gecenSureSaati.simdiMs(),
+                )
                 _durum.update { it.copy(ilerleme = OdakHesapla.ilerleme(gecenSaniye, toplam)) }
             }
-            bitir()
+            tamamla()
         }
     }
 
@@ -76,14 +88,33 @@ class OdakViewModel @Inject constructor(
      */
     fun ekranAcildi() {
         if (!_durum.value.basladi || _durum.value.bitti) return
-        _durum.update { it.copy(ekranAcildi = true) }
+        val toplam = _durum.value.sureDk * 60
+        val simdiMs = gecenSureSaati.simdiMs()
+        gecenSaniye = GecenSureHesapla.saniye(baslangicMs, simdiMs)
+        _durum.update { it.copy(ilerleme = OdakHesapla.ilerleme(gecenSaniye, toplam)) }
+
+        // Telefon ancak süre dolduktan sonra açıldıysa bu başarılı
+        // seansı bozmaz. Uyku sırasında ertelenen sayaç callback'i henüz
+        // çalışmamış olsa bile burada tamamlanır.
+        if (GecenSureHesapla.dolduMu(baslangicMs, simdiMs, toplam)) {
+            tamamla()
+        } else {
+            _durum.update { it.copy(ekranAcildi = true) }
+        }
     }
 
     /** Kullanıcı seansı elle bırakıyor. */
     fun vazgec() {
         sayacIsi?.cancel()
+        bitirmeIsi?.cancel()
         gecenSaniye = 0
         _durum.value = OdakDurum(sureDk = _durum.value.sureDk)
+    }
+
+    private fun tamamla() {
+        if (_durum.value.bitti || bitirmeIsi?.isActive == true) return
+        sayacIsi?.cancel()
+        bitirmeIsi = viewModelScope.launch { bitir() }
     }
 
     private suspend fun bitir() {

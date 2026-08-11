@@ -33,9 +33,10 @@ interface HesapDeposu {
      * Hesabı sunucudan da kalıcı siler ve oturumu kapatır.
      *
      * @return sunucudaki kaydın gerçekten silinip silinmediği. `false`
-     *   dönerse cihaz temizlendi ama sunucuda kopya kaldı — ekran bunu
-     *   kullanıcıya söylemek zorunda, yoksa "kalıcı sil" yalan olur.
-     *   Misafir kullanıcıda sunucuda kayıt hiç yok, `true` dönüyor.
+     *   dönerse hem oturum hem cihaz verisi korunur; ekran yeniden deneme
+     *   sunar. Kimliği silip uzak hesabı bırakırsak kullanıcı aynı silme
+     *   isteğini doğrulanmış olarak yeniden gönderemez. Misafir kullanıcıda
+     *   sunucuda kayıt hiç yok, `true` dönüyor.
      */
     suspend fun hesabiSil(): Boolean
 }

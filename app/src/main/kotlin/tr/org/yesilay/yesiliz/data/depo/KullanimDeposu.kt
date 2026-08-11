@@ -10,10 +10,12 @@ import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.domain.kullanim.GunlukCikarim
 import tr.org.yesilay.yesiliz.domain.kullanim.KullanimOlay
 import tr.org.yesilay.yesiliz.domain.kullanim.OruntuCikar
+import tr.org.yesilay.yesiliz.domain.kullanim.YerDegisHesapla
 import tr.org.yesilay.yesiliz.risk.GunlukGirdi
 import tr.org.yesilay.yesiliz.risk.RiskHesapla
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.Instant
+import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,7 +37,7 @@ class KullanimDeposu @Inject constructor(
     private val kategoriDeposu: KategoriDeposu,
     private val olayDao: KullanimOlayDao,
     private val ozetDao: GunlukOzetDao,
-    private val zon: ZoneId,
+    private val saat: Clock,
 ) {
 
     /**
@@ -48,8 +50,9 @@ class KullanimDeposu @Inject constructor(
     suspend fun gunuIsle(
         tarih: LocalDate,
         aktivite: GunlukAktivite = GunlukAktivite(),
+        enErken: Instant? = null,
     ): GunlukCikarim {
-        val oturumlar = okuyucu.gununOturumlari(tarih)
+        val oturumlar = okuyucu.gununOturumlari(tarih, enErken = enErken)
 
         // Sistem paketleri (launcher, SystemUI, Ayarlar) HİÇ saklanmıyor.
         // Risk hesabına zaten girmiyorlar; saklamak hem yer israfı hem de
@@ -73,12 +76,25 @@ class KullanimDeposu @Inject constructor(
             },
         )
 
-        val cikarim = OruntuCikar.cikar(olaylar, tarih, zon)
+        val cikarim = OruntuCikar.cikar(olaylar, tarih, saat.zone)
+        val gecmis = ozetDao.araliktakiler(
+            tarih.minusDays(YER_DEGIS_GUN - 1L),
+            tarih.minusDays(1),
+        )
+        val yerDegis = yerDegisDegeri(gecmis, cikarim.toplamDk, aktivite.adim)
         // Satır boş günde de yazılıyor (telefonsuz geçen gerçek bir gün de
         // kayıt), ama `olayVarMi` ile işaretleniyor: satırın varlığı veri
         // olduğu anlamına gelmiyordu ve puan/seri/alpha bunu "veri var"
         // sanıyordu (`debug.md` K-4, K-5).
-        ozetDao.kaydet(ozetKur(tarih, cikarim, aktivite, olayVarMi = olaylar.isNotEmpty()))
+        ozetDao.kaydet(
+            ozetKur(
+                tarih = tarih,
+                c = cikarim,
+                aktivite = aktivite,
+                olayVarMi = olaylar.isNotEmpty(),
+                yerDegis = yerDegis,
+            ),
+        )
         return cikarim
     }
 
@@ -115,16 +131,18 @@ class KullanimDeposu @Inject constructor(
         c: GunlukCikarim,
         aktivite: GunlukAktivite,
         olayVarMi: Boolean,
+        yerDegis: Double,
     ): GunlukOzetEntity {
+        val oruntu = c.oruntu + ("yer_degis" to yerDegis)
         val girdi = GunlukGirdi(
             kategoriDakika = c.kategoriDakika,
-            oruntu = c.oruntu,
+            oruntu = oruntu,
             adim = aktivite.adim,
             sporDk = aktivite.sporDk,
         )
         val araUrun = RiskHesapla.araUrunler(girdi)
         fun dk(k: Kategori) = c.kategoriDakika[k.anahtar] ?: 0.0
-        fun o(ad: String) = c.oruntu[ad] ?: 0.0
+        fun o(ad: String) = oruntu[ad] ?: 0.0
 
         return GunlukOzetEntity(
             tarih = tarih,
@@ -155,7 +173,25 @@ class KullanimDeposu @Inject constructor(
             olayVarMi = olayVarMi,
         )
     }
+
+    private companion object {
+        const val YER_DEGIS_GUN = 7L
+    }
 }
+
+/** Son yedi günlük ekran/adım dizisini gerçek çok-günlü örüntüye bağlar. */
+internal fun yerDegisDegeri(
+    gecmis: List<GunlukOzetEntity>,
+    bugunEkranDk: Double,
+    bugunAdim: Double,
+): Double = YerDegisHesapla.hesapla(
+    ekranDk = gecmis.map { it.toplamEkranDk() } + bugunEkranDk,
+    adim = gecmis.map { it.adim } + bugunAdim,
+)
+
+private fun GunlukOzetEntity.toplamEkranDk(): Double =
+    socialDk + entertainmentDk + gamesDk + communicationDk +
+        productivityDk + educationDk + healthDk + otherDk
 
 /**
  * O güne ait aktivite — Health Connect'ten gelir.

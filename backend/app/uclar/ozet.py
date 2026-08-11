@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import GunlukOzet, Heartbeat, Kullanici, LigUyelik, RiskSonuc
 from app.semalar import GunlukOzetDto, RiskSonucDto, SenkronIstek, SenkronYanit
 from app.uclar.lig import hafta_baslangici
@@ -30,6 +30,9 @@ def senkron(
     satır açılmıyor. Cihaz gecelik worker'da geriye dönük 7 günü de
     gönderiyor (`GunlukOzetWorker.TELAFI_GUN`), o yüzden tekrar kaçınılmaz.
     """
+    kullaniciyi_kilitle(db, kullanici.id)
+    _senkron_tarihlerini_dogrula(istek)
+
     for dto in istek.ozetler:
         _ozet_yaz(db, kullanici.id, dto)
     for dto in istek.riskler:
@@ -50,6 +53,11 @@ def ozetleri_getir(
     kullanici: Kullanici = Depends(mevcut_kullanici),
 ) -> list[GunlukOzetDto]:
     """Cihaz değişince geçmişi geri yükleme."""
+    if bas > bit:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Başlangıç bitişten sonra olamaz")
+    if (bit - bas).days > 366:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Tarih aralığı en fazla 366 gün")
+
     satirlar = db.scalars(
         select(GunlukOzet)
         .where(
@@ -95,6 +103,7 @@ def heartbeat(
     `docs/spec-veri.md`: çocuk uygulamayı silerse ebeveyne bildirim, doğrudan
     silme tespitiyle değil **sinyal kesilmesiyle** anlaşılıyor.
     """
+    kullaniciyi_kilitle(db, kullanici.id)
     _heartbeat(db, kullanici.id)
     db.commit()
     return {"durum": "tamam"}
@@ -143,6 +152,7 @@ def _risk_yaz(db: Session, kullanici_id: int, dto: RiskSonucDto) -> None:
     satir.r = dto.R
     satir.gosterilen_bant = dto.gosterilenBant
     satir.trend = dto.trend
+    satir.veri_durumu = dto.veriDurumu
 
 
 def _haftalik_puan(
@@ -151,8 +161,8 @@ def _haftalik_puan(
     """
     Lig üyeliği varsa haftalık puanı günceller; yoksa sessizce geçer.
 
-    "Ligde görün" tercihi de burada taşınıyor: ayrı bir uç açmak yerine
-    zaten her gece koşan senkrona bindirildi (debug.md Y-5).
+    "Ligde görün" tercihi geriye uyumluluk için burada da taşınır. Güncel
+    istemci değişikliği ayrı `/lig/gorunurluk` ucuna anında gönderir.
     """
     hafta = hafta_baslangici()
     uyelik = db.scalar(
@@ -176,3 +186,20 @@ def _heartbeat(db: Session, kullanici_id: int) -> None:
         db.add(Heartbeat(kullanici_id=kullanici_id, son_sinyal=simdi))
     else:
         kayit.son_sinyal = simdi
+
+
+
+
+def _senkron_tarihlerini_dogrula(istek: SenkronIstek) -> None:
+    """Bozuk cihaz saatinin ebeveyn özetini gelecekteki veriyle zehirlemesini önler."""
+    from app.zaman import yerel_bugun
+
+    bugun = yerel_bugun()
+    en_eski = bugun - dt.timedelta(days=31)
+    en_yeni = bugun + dt.timedelta(days=1)
+    tarihler = [dto.tarih for dto in istek.ozetler] + [dto.tarih for dto in istek.riskler]
+    if any(tarih < en_eski or tarih > en_yeni for tarih in tarihler):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Senkron tarihi izin verilen pencerenin dışında",
+        )

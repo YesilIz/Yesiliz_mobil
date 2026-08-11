@@ -57,7 +57,7 @@ class Kullanici(Taban):
 
 
 class YenilemeJetonu(Taban):
-    """Uzun ömürlü yenileme jetonu — iptal edilebilsin diye tabloda."""
+    """Uzun ömürlü yenileme jetonunun SHA-256 özeti ve iptal hali."""
 
     __tablename__ = "yenileme_jetonu"
 
@@ -69,7 +69,7 @@ class YenilemeJetonu(Taban):
 
 
 class SifreSifirlama(Taban):
-    """Tek kullanımlık sıfırlama jetonu."""
+    """Tek kullanımlık sıfırlama jetonunun SHA-256 özeti."""
 
     __tablename__ = "sifre_sifirlama"
 
@@ -153,6 +153,7 @@ class RiskSonuc(Taban):
     r: Mapped[float] = mapped_column(Float)
     gosterilen_bant: Mapped[str] = mapped_column(String(10))
     trend: Mapped[str] = mapped_column(String(20))
+    veri_durumu: Mapped[str] = mapped_column(String(20), default="HESAPLANDI")
 
     guncelleme: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=_simdi, onupdate=_simdi
@@ -242,7 +243,10 @@ class EslestirmeKodu(Taban):
 
 class EbeveynBaglanti(Taban):
     __tablename__ = "ebeveyn_baglanti"
-    __table_args__ = (UniqueConstraint("ebeveyn_id", "cocuk_id", name="uq_ebeveyn_cocuk"),)
+    __table_args__ = (
+        UniqueConstraint("ebeveyn_id", name="uq_ebeveyn_tek_cocuk"),
+        UniqueConstraint("cocuk_id", name="uq_cocuk_tek_ebeveyn"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ebeveyn_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)

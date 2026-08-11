@@ -139,7 +139,16 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
             val durum by vm.durum.collectAsStateWithLifecycle()
             IlkSonucEkran(
                 onPlanimiGor = { girdi.guvenliGit(navController, Rota.HEDEF) },
-                onAtla = { girdi.anaSayfayaGec(navController) },
+                // `vm.tamamla()` eksikti: `onboardingBitti` yalnızca burada
+                // yazılıyor, HEDEF/HEDEF_OZEL'deki gibi. Eksik olunca
+                // kullanıcı ana sayfayı görüyordu ama uygulama kapanıp
+                // açılınca `onboardingBitti == false` görülüp onboarding
+                // baştan başlıyordu — "Atla" sonsuz döngüsü
+                // (`debug.md` üçüncü tarama A3). Hedef seçilmediği için
+                // `tamamla()` varsayılan hedefi (120 dk) yazar.
+                onAtla = {
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
+                },
                 // Anket atlandıysa kullanım hakkında iddia edilmiyor
                 // (`debug.md` O-2).
                 anketDolduruldu = durum.anketTamam,
@@ -152,8 +161,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
             HedefEkran(
                 durum = durum,
                 onBasla = {
-                    vm.tamamla()
-                    girdi.anaSayfayaGec(navController)
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
                 },
                 onKendiHedefi = { girdi.guvenliGit(navController, Rota.HEDEF_OZEL) },
             )
@@ -167,8 +175,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
                 onHedef = vm::hedefDegisti,
                 onHizli = vm::hizliHedef,
                 onKaydet = {
-                    vm.tamamla()
-                    girdi.anaSayfayaGec(navController)
+                    vm.tamamla { girdi.anaSayfayaGec(navController) }
                 },
                 onVazgec = { girdi.guvenliGeri(navController) },
             )

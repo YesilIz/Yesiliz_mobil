@@ -62,10 +62,16 @@ object RiskHesapla {
         )
     }
 
+    /**
+     * @param gunGecmisi bu günün hesabının kaç gün önce yapıldığı — bugün
+     *   işleniyorsa 0. [VeriDurumu.ESKI]'yi belirler (§4.8 A-yeni,
+     *   `gorev2.md` §8 "STALE_DATA").
+     */
     fun hesapla(
         gun: GunlukGirdi,
         anket: AnketGirdi? = null,
         d: Int = 0,
+        gunGecmisi: Int = 0,
     ): RiskSonuc {
         val (bTuketim, bIslevsel, P, _, D, S) = araUrunler(gun)
 
@@ -95,7 +101,22 @@ object RiskHesapla {
             R = R,
             bant = Bantlama.esiktenBant(R),
             surukleyiciler = surukleyiciler(gun.kategoriDakika),
+            veriDurumu = veriDurumu(gun, gunGecmisi),
         )
+    }
+
+    /**
+     * §4.8 (yeni) — [bant] her zaman hesaplanır ama günün ölçümü asgarinin
+     * altındaysa ya da hesap günler önceyse iddia edilmemeli.
+     *
+     * Yetersizlik önce kontrol edilir: hem yetersiz hem eski bir gün için
+     * "hangi ölçüm hiç yok" sorusu daha temel — eskilik ancak elde gerçek
+     * bir ölçüm varken anlamlı.
+     */
+    private fun veriDurumu(gun: GunlukGirdi, gunGecmisi: Int): VeriDurumu = when {
+        gun.toplamDk < Sabitler.GUN_ASGARI_DK -> VeriDurumu.YETERSIZ
+        gunGecmisi > Sabitler.VERI_ESKI_ESIK_GUN -> VeriDurumu.ESKI
+        else -> VeriDurumu.HESAPLANDI
     }
 
     /** Tabloda olmayan kategori [Sabitler.VARSAYILAN_AGIRLIK] alır. */

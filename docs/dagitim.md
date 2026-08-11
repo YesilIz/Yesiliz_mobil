@@ -21,6 +21,7 @@ adları değiştirilemiyor.
 | `JWT_SECRET` | `YESILIZ_JWT_ANAHTARI` | üretimde **evet** | Jeton imza anahtarı, ≥ 32 karakter |
 | `ALLOWED_ORIGINS` | `YESILIZ_IZINLI_KAYNAKLAR` | hayır | Virgülle ayrılmış CORS listesi (web paneli için) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `YESILIZ_ERISIM_DAKIKA` | hayır | Erişim jetonu ömrü, varsayılan 30 |
+| — | `YESILIZ_SAAT_DILIMI` | hayır | Lig haftası ve ebeveyn "bugün" penceresi; varsayılan `Europe/Istanbul` |
 | `PORT` | — | hayır | Sağlayıcı enjekte ediyor; yerelde 8000 |
 
 Örnek dosya: `backend/.env.ornek`. Anahtar üretmek için:
@@ -212,7 +213,21 @@ keytool -genkeypair -keystore app/yesiliz-release.jks -alias yesiliz \
 
 ### Release APK doğrulaması
 
-Sürüm çıkarken bir kez:
+**Otomatik (`gorev2.md` §11):**
+
+```bash
+./gradlew :app:dogrulaReleaseApk
+```
+
+`app/build.gradle.kts`'teki `ReleaseApkAgGuvenligiDenetimi` task'ı —
+`assembleRelease`'e bağlı, üretilen APK'nın **her dosyasını** (dex +
+kaynaklar) açıp `"10.0.2.2"` arıyor (bulunursa derleme düşer) ve canlı
+HTTPS adresinin gerçekten gömüldüğünü doğruluyor (bulunmazsa derleme
+düşer). `android-ağ-güvenliği` CI'ı kaynak düzeyinde aynı şeye bakıyor;
+bu, gerçekten üretilmiş APK'ya bakan daha güçlü garanti — üçüncü parti
+bir bağımlılığın sızdırdığı bir durumu da yakalar.
+
+**Elle (araçtan şüphe edilirse):**
 
 ```bash
 ./gradlew :app:assembleRelease

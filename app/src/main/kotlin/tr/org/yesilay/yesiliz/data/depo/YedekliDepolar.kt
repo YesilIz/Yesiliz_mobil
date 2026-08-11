@@ -12,10 +12,12 @@ import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
 import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
+import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.io.IOException
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -66,21 +68,29 @@ class YedekliLigDeposu @Inject constructor(
         val kaynak = try {
             uzak.tazele()
             uzak.arkadaslarAkisi()
-        } catch (_: Exception) {
+        } catch (_: IOException) {
+            yerel.arkadaslarAkisi()
+        } catch (_: retrofit2.HttpException) {
             yerel.arkadaslarAkisi()
         }
         emitAll(kaynak)
     }
 
     override suspend fun davetKodu(): String =
-        agdanAl({ uzak.davetKodu() }, { yerel.davetKodu() })
+        demoYedegi({ uzak.davetKodu() }, { yerel.davetKodu() })
 
     override suspend fun ligeKatil() {
-        agdanAl({ uzak.ligeKatil() }, { yerel.ligeKatil() })
+        demoYedegi({ uzak.ligeKatil() }, { yerel.ligeKatil() })
     }
 
-    override suspend fun davetGonder(isim: String) {
-        agdanAl({ uzak.davetGonder(isim) }, { yerel.davetGonder(isim) })
+    override suspend fun davetGonder(kod: String) {
+        // Örnek kişi çipleri yalnızca debug deposunda var ve isim taşır;
+        // bunları gerçek sunucunun kod ucuna yollamak daima 404 üretirdi.
+        if (!DavetKodu.gecerliMi(kod)) {
+            yerel.davetGonder(kod)
+            return
+        }
+        agdanAl({ uzak.davetGonder(kod) }, { yerel.davetGonder(kod) })
     }
 
     override suspend fun onerilenler(): List<OnerilenKisi> =
@@ -118,7 +128,7 @@ class YedekliHesapDeposu @Inject constructor(
     override suspend fun cikisYap() {
         // Jetonları da temizlemek için uzak depo çağrılıyor; o da yerel
         // tercihleri siliyor.
-        runCatching { uzak.cikisYap() }.onFailure { yerel.cikisYap() }
+        uzak.cikisYap()
     }
 
     /**
@@ -130,8 +140,8 @@ class YedekliHesapDeposu @Inject constructor(
         val misafir = yerel.oturum.first().misafirMi
         if (misafir) return yerel.hesabiSil()
 
-        val silindi = runCatching { uzak.hesabiSil() }.getOrDefault(false)
-        yerel.hesabiSil()
+        val silindi = uzak.hesabiSil()
+        if (silindi) yerel.hesabiSil()
         return silindi
     }
 
@@ -143,11 +153,23 @@ class YedekliHesapDeposu @Inject constructor(
     }
 }
 
-/** Ağ hatasında yedeği çalıştıran ortak yardımcı. */
-private suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
+/** Yalnızca bağlantı hatasında yedeği çalıştıran ortak yardımcı. */
+internal suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
     uzak()
-} catch (_: Exception) {
+} catch (_: IOException) {
     yerel()
+}
+
+/**
+ * Debug/demo lig girişleri için: misafirin 401'i de yerel demoya döner.
+ * Davet kabulünde kullanılmaz; 400/404 gibi iş hataları orada görünmelidir.
+ */
+internal suspend fun <T> demoYedegi(uzak: suspend () -> T, yerel: suspend () -> T): T = try {
+    uzak()
+} catch (_: IOException) {
+    yerel()
+} catch (hata: HttpException) {
+    if (hata.code() == 401 || hata.code() >= 500) yerel() else throw hata
 }
 
 /** `flow { }` içinde başka bir akışı yayınlamak için. */

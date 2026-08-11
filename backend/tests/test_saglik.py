@@ -34,6 +34,14 @@ def test_saglik_ucu_duruyor(istemci):
     assert istemci.get("/saglik").json() == {"durum": "ayakta"}
 
 
+def test_saglik_veritabani_dusunce_503(istemci, monkeypatch):
+    """Cihaz web sürecini değil, kullanabileceği sunucuyu görmeli."""
+    monkeypatch.setattr(main, "_veritabani_ayakta", lambda: False)
+    yanit = istemci.get("/saglik")
+    assert yanit.status_code == 503
+    assert yanit.json() == {"durum": "erisim_yok"}
+
+
 def test_istek_kimligi_yaniti_isaretliyor(istemci):
     yanit = istemci.get("/saglik")
     assert yanit.headers["X-Istek-Id"]
@@ -43,3 +51,12 @@ def test_verilen_istek_kimligi_korunuyor(istemci):
     """Zincirdeki tek bir isteği baştan sona izleyebilmek için."""
     yanit = istemci.get("/saglik", headers={"X-Istek-Id": "abc123"})
     assert yanit.headers["X-Istek-Id"] == "abc123"
+
+
+def test_gecersiz_istek_kimligi_yansitilmiyor(istemci):
+    uzun = "a" * 4_096
+    yanit = istemci.get("/saglik", headers={"X-Istek-Id": uzun})
+
+    uretilen = yanit.headers["X-Istek-Id"]
+    assert uretilen != uzun
+    assert 1 <= len(uretilen) <= 64

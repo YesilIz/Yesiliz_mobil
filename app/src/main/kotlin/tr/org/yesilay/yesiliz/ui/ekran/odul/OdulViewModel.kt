@@ -24,9 +24,10 @@ import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.OdulDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
+import tr.org.yesilay.yesiliz.data.depo.MADDI_ODUL_TESLIMATI_ETKIN
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
-import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -47,16 +48,18 @@ class OdulViewModel @Inject constructor(
     private val puanDeposu: PuanDeposu,
     private val odulDeposu: OdulDeposu,
     tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
-    private val saat: Clock,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
     val durum: StateFlow<OdulDurum> = combine(
         puanDeposu.toplamPuan,
         puanDeposu.aktifGunSayisi,
-        puanDeposu.sonKayitlar(),
+        combine(puanDeposu.sonKayitlar(), guncelGun.akis) { kayitlar, bugun ->
+            kayitlar.map { it.kaydaCevir(bugun) }
+        },
         odulDeposu.secimlerAkisi,
         tercihler.oturum,
-    ) { puan, aktifGun, kayitlar, secimler, oturum ->
+    ) { puan, aktifGun, gecmis, secimler, oturum ->
         val ham = KADEMELER.map { it.duruma(puan, aktifGun, secimler[it.id]) }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
         // gösterilen, kullanıcının hedeflediği ödül bu. Seçim bekleyen bir
@@ -67,12 +70,12 @@ class OdulViewModel @Inject constructor(
         }
 
         OdulDurum(
-            // Misafirin adı yok; sertifikada sabite düşülüyor.
+            // Misafirin adı yok; uygulama içi başarı kartında sabite düşülüyor.
             isim = oturum.ad.ifBlank { SABIT_ISIM },
             puan = puan,
             sonrakiEsik = siradaki?.esik ?: ham.maxOf { it.esik },
             basamaklar = basamaklar.sortedByDescending { it.esik },
-            gecmis = kayitlar.map { it.kaydaCevir(LocalDate.now(saat)) },
+            gecmis = gecmis,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -103,6 +106,7 @@ class OdulViewModel @Inject constructor(
         val esik: Int,
         val aktifGunKosulu: Int,
         val secenekler: List<SecenekTanimi>,
+        val teslimatEtkinMi: Boolean = true,
     ) {
         fun duruma(puan: Int, aktifGun: Int, secilenId: String?): Odul {
             val hakEdildi = puan >= esik && aktifGun >= aktifGunKosulu
@@ -110,11 +114,12 @@ class OdulViewModel @Inject constructor(
             val secilen = secilenId?.let { id -> secenekler.firstOrNull { it.id == id } }
             val gosterim = secilen ?: secenekler.first()
 
-            val hal = when {
-                !hakEdildi -> OdulHali.KILITLI
-                cokluSecenek && secilen == null -> OdulHali.SECIM_BEKLIYOR
-                else -> OdulHali.KAZANILDI
-            }
+            val hal = odulHaliniBelirle(
+                hakEdildi = hakEdildi,
+                cokluSecenek = cokluSecenek,
+                secimVarMi = secilen != null,
+                teslimatEtkinMi = teslimatEtkinMi,
+            )
 
             return Odul(
                 id = id,
@@ -123,14 +128,15 @@ class OdulViewModel @Inject constructor(
                 ikon = gosterim.ikon,
                 hal = hal,
                 aciklama = gosterim.aciklama,
+                teslimatEtkinMi = teslimatEtkinMi,
                 secenekler = secenekler.map { Secenek(it.id, it.ad, it.ikon, it.aciklama) },
             )
         }
     }
 
     private companion object {
-        /** Hesap sistemi öncesi ad — AnaViewModel ve Profil ile aynı. */
-        const val SABIT_ISIM = "Turan"
+        /** Misafirin görünür adı — AnaViewModel ve Profil ile aynı. */
+        const val SABIT_ISIM = "Misafir"
 
         const val AKIS_BEKLEME_MS = 5_000L
 
@@ -153,13 +159,13 @@ class OdulViewModel @Inject constructor(
                 id = "fidan",
                 esik = 2_000,
                 aktifGunKosulu = 14,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Ekran süreni azaltarak kazandığın 2.000 puanla " +
-                            "senin adına 1 fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
@@ -167,20 +173,19 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_market",
                 esik = 5_000,
                 aktifGunKosulu = 30,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "market_kuponu",
-                        ad = "Yeşilay Market kuponu",
+                        ad = "Planlanan market kuponu",
                         ikon = Icons.Filled.ShoppingBasket,
-                        aciklama = "5.000 puana ulaştığında Yeşilay Market'te " +
-                            "geçerli bir alışveriş kuponu kazanırsın.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Market kuponu yerine, 5.000 puanla senin " +
-                            "adına 1 fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
@@ -188,25 +193,41 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_spor",
                 esik = 10_000,
                 aktifGunKosulu = 45,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "kupon_spor_kitap",
-                        ad = "Spor / kitap kuponu",
+                        ad = "Planlanan spor / kitap kuponu",
                         ikon = Icons.Filled.SportsScore,
-                        aciklama = "10.000 puana ulaştığında spor veya kitap " +
-                            "alışverişinde geçerli bir kupon kazanırsın.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                     SecenekTanimi(
                         id = "fidan_bagisi",
-                        ad = "Adına fidan bağışı",
+                        ad = "Planlanan fidan desteği",
                         ikon = Icons.Filled.Park,
-                        aciklama = "Kupon yerine, 10.000 puanla senin adına 1 " +
-                            "fidan toprakla buluşur.",
+                        aciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
                 ),
             ),
         )
     }
+}
+
+/** A4 kapanmadan kullanıcıya kupon, bağış veya teslimat sözü verilmez. */
+internal const val MADDI_ODUL_ACIKLAMASI =
+    "Bu ödül için sponsorluk ve teslimat altyapısı henüz etkin değil. " +
+        "Puan eşiği yalnızca ilerleme hedefidir; kupon ya da bağış oluşturmaz."
+
+internal fun odulHaliniBelirle(
+    hakEdildi: Boolean,
+    cokluSecenek: Boolean,
+    secimVarMi: Boolean,
+    teslimatEtkinMi: Boolean,
+): OdulHali = when {
+    hakEdildi && !teslimatEtkinMi -> OdulHali.PLANLANAN
+    !hakEdildi -> OdulHali.KILITLI
+    cokluSecenek && !secimVarMi -> OdulHali.SECIM_BEKLIYOR
+    else -> OdulHali.KAZANILDI
 }
 
 /**
@@ -231,4 +252,3 @@ private fun zamanMetni(tarih: LocalDate, bugun: LocalDate): String =
         1 -> "Dün"
         else -> "$gun gün önce"
     }
-

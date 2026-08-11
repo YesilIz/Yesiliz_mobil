@@ -29,6 +29,9 @@ interface YesilizApi {
     @POST("auth/yenile")
     suspend fun yenile(@Body istek: YenileIstek): JetonlarDto
 
+    @POST("auth/cikis")
+    suspend fun cikis()
+
     @POST("auth/sifre-sifirla")
     suspend fun sifreSifirla(@Body istek: SifreSifirlaIstek): Map<String, String>
 
@@ -61,7 +64,10 @@ interface YesilizApi {
     suspend fun lig(): LigYanit
 
     @POST("lig/katil")
-    suspend fun ligeKatil(): LigYanit
+    suspend fun ligeKatil(@Body istek: LigKatilIstek): LigYanit
+
+    @POST("lig/gorunurluk")
+    suspend fun ligGorunurlugu(@Body istek: LigGorunurlukIstek): Map<String, String>
 
     @GET("arkadas")
     suspend fun arkadaslar(): List<ArkadasDto>
@@ -87,6 +93,9 @@ interface YesilizApi {
 
     @POST("ebeveyn/eslestir")
     suspend fun eslestir(@Body istek: EslestirIstek): Map<String, String>
+
+    @DELETE("ebeveyn/eslesme")
+    suspend fun eslesmeyiKaldir(): Map<String, String>
 
     @GET("ebeveyn/ozet")
     suspend fun ebeveynOzeti(): EbeveynOzetDto

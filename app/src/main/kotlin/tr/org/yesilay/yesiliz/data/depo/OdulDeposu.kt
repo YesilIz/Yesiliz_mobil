@@ -1,9 +1,15 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.OdulSecimIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
@@ -39,14 +45,24 @@ class OdulDeposu @Inject constructor(
     private val tercihler: Tercihler,
     private val saat: Clock,
 ) {
+    private val uzlastirmaKilidi = Mutex()
 
     private companion object {
         const val ETIKET = "OdulDeposu"
     }
 
-    /** Kademe id → seçilen seçenek id. */
-    val secimlerAkisi: Flow<Map<String, String>> = dao.hepsiAkisi().map { liste ->
-        liste.associate { it.kademeId to it.secenekId }
+    /**
+     * Kademe id → seçilen seçenek id.
+     *
+     * Yerel değer hemen yayınlanır; aynı anda sunucuyla uzlaştırılır.
+     * Böylece önceki `sec` çağrısı ağda düşmüşse yeniden denenir,
+     * yeni telefonda ise sunucudaki kalıcı seçim geri gelir.
+     */
+    val secimlerAkisi: Flow<Map<String, String>> = channelFlow {
+        launch { sunucuylaUzlastir() }
+        dao.hepsiAkisi().map { liste ->
+            liste.associate { it.kademeId to it.secenekId }
+        }.collect { send(it) }
     }
 
     /**
@@ -56,6 +72,7 @@ class OdulDeposu @Inject constructor(
      *   seçim varsa false (arayan yeniden sormamalı — seçim değişmiyor)
      */
     suspend fun sec(kademeId: String, secenekId: String): Boolean {
+        if (!MADDI_ODUL_TESLIMATI_ETKIN) return false
         if (dao.getir(kademeId) != null) return false
 
         dao.kaydet(OdulSecimiEntity(kademeId, secenekId, LocalDate.now(saat)))
@@ -64,16 +81,73 @@ class OdulDeposu @Inject constructor(
         if (!oturum.misafirMi && oturum.girisYapildiMi) {
             // Sunucuya ulaşılamazsa (ağ hatası ya da 409 — başka bir cihazdan
             // zaten seçilmiş) yerel kayıt yine de kalıcı; kullanıcı ödülünü
-            // kaybetmiyor. **Yeniden deneme yok:** çağrı bir kez gidiyor,
-            // düşerse sunucudaki kopya eksik kalıyor. Telefon değişince
-            // `GET /odul/secimlerim` o seçimi geri getiremez — açık iş.
-            //
+            // kaybetmiyor. Sonraki ödül akışı uzlaştırmayı yeniden dener.
             // Hata yutulmuyor, iz bırakıyor (CLAUDE.md §9): sessiz
             // `runCatching`, sunucu tarafındaki eksikliği sınırsız süre
             // saklardı.
-            runCatching { api.odulSec(OdulSecimIstek(kademeId, secenekId)) }
-                .onFailure { Log.w(ETIKET, "ödül seçimi sunucuya yazılamadı: $kademeId", it) }
+            try {
+                api.odulSec(OdulSecimIstek(kademeId, secenekId))
+            } catch (iptal: CancellationException) {
+                throw iptal
+            } catch (hata: Exception) {
+                Log.w(ETIKET, "ödül seçimi sunucuya yazılamadı: $kademeId", hata)
+            }
         }
         return true
     }
+
+    private suspend fun sunucuylaUzlastir(): Unit = uzlastirmaKilidi.withLock {
+        val oturum = tercihler.oturum.first()
+        if (oturum.misafirMi || !oturum.girisYapildiMi) return@withLock
+
+        try {
+            val yerel = dao.hepsi()
+            val uzak = api.odulSecimlerim()
+            val plan = odulUzlastirmaPlani(
+                yerel = yerel.associate { it.kademeId to it.secenekId },
+                uzak = uzak.associate { it.kademeId to it.secenekId },
+            )
+
+            // Sunucudaki ilk seçim otoritedir; yeni kurulumda geri yüklenir,
+            // iki cihaz farklı seçmişse yerel kopya sunucuyla hizalanır.
+            plan.yereleYaz.forEach { (kademeId, secenekId) ->
+                dao.uzaktanKaydet(
+                    OdulSecimiEntity(
+                        kademeId = kademeId,
+                        secenekId = secenekId,
+                        tarih = LocalDate.now(saat),
+                    ),
+                )
+            }
+
+            // Önceki bir ağ hatasında yalnızca cihazda kalmış seçimleri
+            // yeniden gönder. Sunucuda olan kademeye ikinci kez dokunulmaz.
+            if (MADDI_ODUL_TESLIMATI_ETKIN) {
+                plan.sunucuyaYaz.forEach { (kademeId, secenekId) ->
+                    api.odulSec(OdulSecimIstek(kademeId, secenekId))
+                }
+            }
+        } catch (iptal: CancellationException) {
+            throw iptal
+        } catch (hata: Exception) {
+            Log.w(ETIKET, "ödül seçimleri sunucuyla uzlaştırılamadı", hata)
+        }
+    }
 }
+
+/** Sponsorluk/teslimat ve sunucu hak-ediş doğrulaması birlikte açılmalı. */
+internal const val MADDI_ODUL_TESLIMATI_ETKIN = false
+
+internal data class OdulUzlastirmaPlani(
+    val yereleYaz: Map<String, String>,
+    val sunucuyaYaz: Map<String, String>,
+)
+
+/** Sunucudaki ilk seçim kazanır; yalnızca uzakta eksik yerel kayıt yeniden gider. */
+internal fun odulUzlastirmaPlani(
+    yerel: Map<String, String>,
+    uzak: Map<String, String>,
+): OdulUzlastirmaPlani = OdulUzlastirmaPlani(
+    yereleYaz = uzak,
+    sunucuyaYaz = yerel.filterKeys { it !in uzak },
+)

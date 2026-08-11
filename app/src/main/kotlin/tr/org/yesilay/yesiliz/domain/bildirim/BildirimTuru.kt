@@ -30,7 +30,10 @@ enum class BildirimTuru(val anahtar: String) {
     /** 4 hafta doldu, değerlendirme yenilenebilir. */
     DEGERLENDIRME("degerlendirme"),
 
-    /** Ebeveyn paneline özet gönderildi. */
+    /**
+     * Eski sürümün sahte “gönderildi” kaydını okuyabilmek için korunur.
+     * Yeni kayıt üretilmez; 7→8 geçişi var olanları temizler.
+     */
     EBEVEYN("ebeveyn"),
     ;
 

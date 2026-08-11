@@ -8,6 +8,8 @@ data class YuruyusDurum(
     val oran: Float = 0f,
     val kazanilanPuan: Int = 0,
     val tamamlandiMi: Boolean = false,
+    /** Oturum bittiğinde hedefe gerçekten ulaşıldı mı. */
+    val hedefTamamlandiMi: Boolean = false,
     /** Health Connect'ten okunabilen adım — yoksa `null`, ekranda gizli. */
     val adim: Int? = null,
     /** Puan yazıldıysa tekrar yazılmaz. */

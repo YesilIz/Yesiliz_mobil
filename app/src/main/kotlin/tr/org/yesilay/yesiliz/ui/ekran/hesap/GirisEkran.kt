@@ -1,11 +1,13 @@
 package tr.org.yesilay.yesiliz.ui.ekran.hesap
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,11 +28,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani as Alan
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
@@ -164,6 +169,16 @@ fun GirisEkran(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            Image(
+                painter = painterResource(R.drawable.giris_guvenlik_banner),
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(GuvenlikBanneriOrani)
+                    .clip(RoundedCornerShape(Yaricap.Kart)),
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -181,3 +196,6 @@ fun GirisEkran(
         Spacer(modifier = Modifier.height(Olcu.BolumArasi))
     }
 }
+
+/** `giris_guvenlik_banner.png` kaynak boyutu 2469×951 — genişlik/yükseklik oranı. */
+private const val GuvenlikBanneriOrani = 2469f / 951f

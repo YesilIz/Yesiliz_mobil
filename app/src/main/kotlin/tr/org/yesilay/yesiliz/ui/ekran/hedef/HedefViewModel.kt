@@ -3,29 +3,29 @@ package tr.org.yesilay.yesiliz.ui.ekran.hedef
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
-import java.time.Clock
-import java.time.LocalDate
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HedefViewModel @Inject constructor(
     private val tercihler: Tercihler,
     ozetDao: GunlukOzetDao,
-    saat: Clock,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
-
-    private val bugun: LocalDate = LocalDate.now(saat)
 
     /** Kullanıcının ekrandaki seçimi; `null` iken kayıtlı hedef gösteriliyor. */
     private val secilen = MutableStateFlow<Int?>(null)
@@ -34,7 +34,7 @@ class HedefViewModel @Inject constructor(
     val durum: StateFlow<HedefDurum> = combine(
         tercihler.gunlukHedefDk,
         tercihler.ebeveynEslesmisMi,
-        ozetDao.gununAkisi(bugun),
+        guncelGun.akis.flatMapLatest(ozetDao::gununAkisi),
         secilen,
         kaydedildi,
     ) { hedef, ebeveyn, ozet, secim, kayit ->

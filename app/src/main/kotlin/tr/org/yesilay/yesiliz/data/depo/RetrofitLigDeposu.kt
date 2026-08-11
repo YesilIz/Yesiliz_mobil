@@ -2,8 +2,12 @@ package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.DavetIstek
+import tr.org.yesilay.yesiliz.data.uzak.LigKatilIstek
+import tr.org.yesilay.yesiliz.data.uzak.SenkronIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
@@ -24,6 +28,7 @@ import javax.inject.Singleton
 @Singleton
 class RetrofitLigDeposu @Inject constructor(
     private val api: YesilizApi,
+    private val tercihler: Tercihler,
 ) : LigDeposu {
 
     private val ozet = MutableStateFlow<LigOzeti?>(null)
@@ -49,7 +54,18 @@ class RetrofitLigDeposu @Inject constructor(
     override suspend fun davetKodu(): String = api.davetKodu().kod
 
     override suspend fun ligeKatil() {
-        ozet.value = api.ligeKatil().cevir()
+        // Gizlilik tercihi veri paylaşım rızasından bağımsızdır ve yeni
+        // haftanın üyeliği açılırken ilk andan uygulanmalıdır.
+        val gorunur = tercihler.ligdeGorun.first()
+        var yanit = api.ligeKatil(LigKatilIstek(gorunur = gorunur))
+        if (yanit.gorunuyorMuyum != gorunur) {
+            // Yuvarlanan dağıtımda eski sunucu katılım gövdesini yok
+            // sayabilir. Var olan `/ozet` sözleşmesi yalnızca görünürlük
+            // alanıyla çağrılır; özet, risk ve puan gönderilmez.
+            api.ozetGonder(SenkronIstek(ligdeGorunur = gorunur))
+            yanit = api.lig()
+        }
+        ozet.value = yanit.cevir()
     }
 
     /**
@@ -59,8 +75,8 @@ class RetrofitLigDeposu @Inject constructor(
      * `ArkadasEkleEkran`'daki "Ekle" butonu öneri listesinden geldiği için
      * yalnızca yerel depoda anlamlı; gerçek akış "davet kodu paylaş".
      */
-    override suspend fun davetGonder(isim: String) {
-        arkadaslar.value = api.davetGonder(DavetIstek(isim))
+    override suspend fun davetGonder(kod: String) {
+        arkadaslar.value = api.davetGonder(DavetIstek(kod.trim().uppercase()))
             .map { Arkadas(it.isim, it.davetBekliyorMu) }
     }
 

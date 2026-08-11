@@ -1,8 +1,10 @@
 package tr.org.yesilay.yesiliz.ui.ekran.hesap
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,6 +44,7 @@ class HesapViewModel @Inject constructor(
 
     fun girisYap(onBasarili: () -> Unit) {
         val d = _durum.value
+        if (d.islemde) return
 
         // Alan doğrulaması AĞDAN ÖNCE. Eskiden bu kontroller yalnızca depo
         // katmanındaydı ve `YedekliHesapDeposu` önce ağı deniyordu: boş bir
@@ -51,14 +54,18 @@ class HesapViewModel @Inject constructor(
         HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
         HesapDogrula.sifre(d.sifre)?.let { return hataYaz(HesapAlani.SIFRE, it) }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
-            sonucuIsle(depo.girisYap(d.eposta, d.sifre), onBasarili)
+            sonucuIsle(
+                guvenliHesapIstegi { depo.girisYap(d.eposta, d.sifre) },
+                onBasarili,
+            )
         }
     }
 
     fun kayitOl(onBasarili: () -> Unit) {
         val d = _durum.value
+        if (d.islemde) return
 
         // Alan doğrulamalarının tamamı depoya gitmeden burada (`debug.md`
         // Y-12): hiçbiri sunucu bilgisi istemiyor ve ağ zaman aşımının
@@ -73,19 +80,23 @@ class HesapViewModel @Inject constructor(
             return hataYaz(HesapAlani.KOSULLAR, "Devam etmek için koşulları onaylaman gerekiyor.")
         }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
-            sonucuIsle(depo.kayitOl(d.ad, d.eposta, d.sifre), onBasarili)
+            sonucuIsle(
+                guvenliHesapIstegi { depo.kayitOl(d.ad, d.eposta, d.sifre) },
+                onBasarili,
+            )
         }
     }
 
     fun sifreSifirla() {
         val d = _durum.value
+        if (d.islemde) return
         HesapDogrula.eposta(d.eposta)?.let { return hataYaz(HesapAlani.EPOSTA, it) }
 
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            _durum.update { it.copy(islemde = true) }
-            when (val sonuc = depo.sifreSifirla(d.eposta)) {
+            when (val sonuc = guvenliHesapIstegi { depo.sifreSifirla(d.eposta) }) {
                 is HesapSonuc.Basarili ->
                     _durum.update { it.copy(islemde = false, sifirlamaGonderildi = true) }
                 is HesapSonuc.Hata -> hataYaz(sonuc.alan, sonuc.mesaj)
@@ -94,11 +105,33 @@ class HesapViewModel @Inject constructor(
     }
 
     fun misafirDevam(onBasarili: () -> Unit) {
+        if (!_durum.islemiSahiplen()) return
         viewModelScope.launch {
-            depo.misafirDevam()
-            onBasarili()
+            sonucuIsle(
+                guvenliHesapIstegi {
+                    depo.misafirDevam()
+                    HesapSonuc.Basarili
+                },
+                onBasarili,
+            )
         }
     }
+
+    /**
+     * Depolar beklenen HTTP/ağ hatalarını sonuç nesnesine çeviriyor. Yerel
+     * DataStore/Room yazması gibi beklenmeyen bir hata ise eskiden
+     * `viewModelScope`'tan dışarı fırlayıp süreci kapatıyor, `islemde`
+     * bayrağını da sonsuza dek açık bırakıyordu. İptal gerçek bir yaşam
+     * döngüsü sinyalidir; onu hata diye göstermeden aynen geçiriyoruz.
+     */
+    private suspend fun guvenliHesapIstegi(
+        istek: suspend () -> HesapSonuc,
+    ): HesapSonuc = hesapIsteginiKoru(
+        beklenmeyenHata = { hata ->
+            Log.e(ETIKET, "hesap işlemi beklenmedik biçimde tamamlanamadı", hata)
+        },
+        istek = istek,
+    )
 
     private fun sonucuIsle(sonuc: HesapSonuc, onBasarili: () -> Unit) {
         when (sonuc) {
@@ -118,3 +151,30 @@ class HesapViewModel @Inject constructor(
         _durum.update { donusum(it).copy(hatalar = it.hatalar - alan) }
     }
 }
+
+/** Hızlı çift dokunuşta yalnızca bir coroutine ağ işlemini sahiplenir. */
+internal fun MutableStateFlow<HesapDurum>.islemiSahiplen(): Boolean {
+    while (true) {
+        val mevcut = value
+        if (mevcut.islemde) return false
+        if (compareAndSet(mevcut, mevcut.copy(islemde = true))) return true
+    }
+}
+
+/** Beklenmeyen depo hatasını çökmek yerine yeniden denenebilir ekran hatasına çevirir. */
+internal suspend fun hesapIsteginiKoru(
+    beklenmeyenHata: (Throwable) -> Unit = {},
+    istek: suspend () -> HesapSonuc,
+): HesapSonuc = try {
+    istek()
+} catch (iptal: CancellationException) {
+    throw iptal
+} catch (hata: Exception) {
+    beklenmeyenHata(hata)
+    HesapSonuc.Hata(
+        HesapAlani.GENEL,
+        "İşlem tamamlanamadı. Biraz sonra tekrar deneyebilirsin.",
+    )
+}
+
+private const val ETIKET = "HesapViewModel"

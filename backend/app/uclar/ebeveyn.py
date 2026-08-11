@@ -6,11 +6,12 @@ import datetime as dt
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
-from app.guvenlik import mevcut_kullanici
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import (
     EbeveynBaglanti,
     EslestirmeKodu,
@@ -21,6 +22,7 @@ from app.modeller import (
 )
 from app.semalar import EbeveynOzetYanit, EslestirIstek, EslestirmeKoduIstek, KodYanit
 from app.veritabani import oturum
+from app.zaman import yerel_bugun
 
 yonlendirici = APIRouter(prefix="/ebeveyn", tags=["ebeveyn"])
 
@@ -38,6 +40,9 @@ def kod_uret(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rol 'ebeveyn' ya da 'cocuk' olmalı")
 
     a = ayarlar()
+
+    # Paralel kod isteklerinde yalnızca son üretilen kod geçerli kalsın.
+    kullaniciyi_kilitle(db, kullanici.id)
 
     # Aynı kullanıcının bekleyen eski kodları iptal ediliyor: aynı anda iki
     # geçerli kod, hangisinin kullanıldığını belirsizleştirirdi.
@@ -78,7 +83,38 @@ def eslestir(
     if istek.rol not in ROLLER:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rol 'ebeveyn' ya da 'cocuk' olmalı")
 
-    kayit = db.scalar(select(EslestirmeKodu).where(EslestirmeKodu.kod == istek.kod.strip()))
+    ham_kod = istek.kod.strip()
+    ilk_okuma = db.scalar(select(EslestirmeKodu).where(EslestirmeKodu.kod == ham_kod))
+    if ilk_okuma is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kod geçersiz")
+    if ilk_okuma.ureten_id == kullanici.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kendi kodunu giremezsin")
+    if ilk_okuma.ureten_rol == istek.rol:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "İki cihaz da aynı rolde — biri ebeveyn, biri çocuk olmalı",
+        )
+
+    ebeveyn_id = kullanici.id if istek.rol == "ebeveyn" else ilk_okuma.ureten_id
+    cocuk_id = ilk_okuma.ureten_id if istek.rol == "ebeveyn" else kullanici.id
+
+    # Hesap silme ve yeni kod üretimiyle kilit sırası kullanıcılar→kod.
+    # Kilitten sonra kod yeniden okunur; arada silindiyse eski ORM nesnesiyle
+    # bağlantı kurulmaz.
+    kilitlenenler = db.scalars(
+        select(Kullanici.id)
+        .where(Kullanici.id.in_(sorted((ebeveyn_id, cocuk_id))))
+        .order_by(Kullanici.id)
+        .with_for_update()
+    ).all()
+    if len(kilitlenenler) != 2:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kod geçersiz")
+
+    kayit = db.scalar(
+        select(EslestirmeKodu)
+        .where(EslestirmeKodu.kod == ham_kod)
+        .with_for_update()
+    )
     simdi = dt.datetime.now(dt.timezone.utc)
 
     if kayit is None or kayit.kullanildi:
@@ -93,20 +129,60 @@ def eslestir(
             "İki cihaz da aynı rolde — biri ebeveyn, biri çocuk olmalı",
         )
 
-    ebeveyn_id = kullanici.id if istek.rol == "ebeveyn" else kayit.ureten_id
-    cocuk_id = kayit.ureten_id if istek.rol == "ebeveyn" else kullanici.id
-
+    # Uygulama tek bir cihaz rolü/bağlantısı saklıyor ve özet ucu tek
+    # çocuk döndürüyor. Aynı hesabı ikinci bir bağlantıya eklemek,
+    # hangi çocuğun gösterildiğini belirsiz ve kaldırma sonucunu sürprizli
+    # yapardı. Katılımcılardan herhangi biri zaten bağlıysa reddet.
     var = db.scalar(
         select(EbeveynBaglanti).where(
-            EbeveynBaglanti.ebeveyn_id == ebeveyn_id, EbeveynBaglanti.cocuk_id == cocuk_id
+            or_(
+                EbeveynBaglanti.ebeveyn_id.in_((ebeveyn_id, cocuk_id)),
+                EbeveynBaglanti.cocuk_id.in_((ebeveyn_id, cocuk_id)),
+            )
         )
     )
-    if var is None:
-        db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn_id, cocuk_id=cocuk_id))
+    if var is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cihazlardan biri zaten eşleştirilmiş")
+
+    db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn_id, cocuk_id=cocuk_id))
 
     kayit.kullanildi = True
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as hata:
+        # Ayrı istekler aynı anda ön kontrolden geçerse son söz veritabanı
+        # tekillik kısıtınındır.
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cihazlardan biri zaten eşleştirilmiş",
+        ) from hata
     return {"durum": "eslesti"}
+
+
+@yonlendirici.delete("/eslesme")
+def eslesmeyi_kaldir(
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """
+    Ebeveyn–çocuk bağını iki taraftan herhangi biri için kaldırır.
+
+    İşlem idempotenttir: bağ zaten yoksa da başarı döner. Cihazdaki
+    yerel bayrak ancak bu yanıt geldikten sonra temizlenir; ağ kesintisinde
+    diğer cihazın erişimi sürerken "bağ kesildi" denmez.
+    """
+    kullaniciyi_kilitle(db, kullanici.id)
+    db.execute(
+        delete(EbeveynBaglanti).where(
+            or_(
+                EbeveynBaglanti.ebeveyn_id == kullanici.id,
+                EbeveynBaglanti.cocuk_id == kullanici.id,
+            )
+        )
+    )
+    db.commit()
+    return {"durum": "kaldirildi"}
 
 
 @yonlendirici.get("/ozet", response_model=EbeveynOzetYanit)
@@ -132,7 +208,7 @@ def ozet(
     if cocuk is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Çocuk hesabı bulunamadı")
 
-    bugun = dt.date.today()
+    bugun = yerel_bugun()
     bas = bugun - dt.timedelta(days=6)
     ozetler = db.scalars(
         select(GunlukOzet)
@@ -149,13 +225,19 @@ def ozet(
 
     son_risk = db.scalar(
         select(RiskSonuc)
-        .where(RiskSonuc.kullanici_id == cocuk.id)
+        .where(
+            RiskSonuc.kullanici_id == cocuk.id,
+            RiskSonuc.tarih >= bas,
+            RiskSonuc.tarih <= bugun,
+            RiskSonuc.veri_durumu == "HESAPLANDI",
+        )
         .order_by(RiskSonuc.tarih.desc())
         .limit(1)
     )
 
     return EbeveynOzetYanit(
         cocukAdi=cocuk.ad,
+        gunlukTarihler=[o.tarih for o in ozetler],
         gunlukDakikalar=dakikalar,
         ortalamaDk=ortalama,
         bant=son_risk.gosterilen_bant if son_risk else None,

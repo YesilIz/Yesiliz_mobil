@@ -56,11 +56,23 @@ fun OdakEkran(
     // Seans sürerken ekrana dönülmesi = telefonun açılması.
     val sahip = LocalLifecycleOwner.current
     DisposableEffect(sahip, durum.basladi) {
+        val donusTakibi = OdakDonusTakibi()
         val gozlemci = LifecycleEventObserver { _, olay ->
-            if (olay == Lifecycle.Event.ON_RESUME) viewModel.ekranAcildi()
+            when (olay) {
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP,
+                -> donusTakibi.ayrildi()
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (donusTakibi.dondu()) viewModel.ekranAcildi()
+                }
+
+                else -> Unit
+            }
         }
-        // İlk kompozisyonda ON_RESUME zaten gelmiş oluyor; gözlemci
-        // yalnızca seans BAŞLADIKTAN sonra takılıyor.
+        // Gözlemci seans başladıktan sonra takılıyor. Lifecycle, yeni
+        // gözlemciyi mevcut RESUMED durumuna eşitlemek için ilk ON_RESUME'u
+        // hemen gönderebilir; OdakDonusTakibi bunu gerçek dönüşten ayırır.
         if (durum.basladi) sahip.lifecycle.addObserver(gozlemci)
         onDispose { sahip.lifecycle.removeObserver(gozlemci) }
     }
@@ -92,7 +104,7 @@ fun OdakEkran(
 private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Unit) {
     Text(
         text = "Telefonu bırak",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
     )
@@ -119,7 +131,7 @@ private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Uni
 private fun Suruyor(durum: OdakDurum, onVazgec: () -> Unit) {
     Text(
         text = if (durum.ekranAcildi) "Seans bozuldu" else "Odaklanıyorsun",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
     )
@@ -148,7 +160,7 @@ private fun Sonuc(durum: OdakDurum, onTekrar: () -> Unit, onGeri: () -> Unit) {
     val basarili = OdakHesapla.basariliMi(true, durum.ekranAcildi)
     Text(
         text = if (basarili) "Seansı tamamladın" else "Bu sefer olmadı",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MetinBirincil,
         textAlign = TextAlign.Center,
@@ -188,7 +200,7 @@ private fun HalkaIcerik(ana: String, alt: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = ana,
-            style = MaterialTheme.typography.displayLarge,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )

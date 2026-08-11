@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * seçeneği var (örn. "Market kuponu" / "Fidan bağışı") ve kullanıcı henüz
  * birini seçmedi. Seçim yapılınca [KAZANILDI]'ya döner.
  */
-enum class OdulHali { KAZANILDI, AKTIF, SECIM_BEKLIYOR, KILITLI }
+enum class OdulHali { KAZANILDI, PLANLANAN, AKTIF, SECIM_BEKLIYOR, KILITLI }
 
 /**
  * Ödüller ekranı — `docs/tasarim-referans.md §2 / 11`.
@@ -18,7 +18,7 @@ enum class OdulHali { KAZANILDI, AKTIF, SECIM_BEKLIYOR, KILITLI }
  * 10.000, en altta 500) — kullanıcı nereden geldiğini görüyor.
  */
 data class OdulDurum(
-    /** Sertifikada görünen ad — hesap oturumundan geliyor. */
+    /** Uygulama içi başarı kartında görünen ad — hesap oturumundan geliyor. */
     val isim: String = "",
     val puan: Int = 0,
     val sonrakiEsik: Int = 0,
@@ -35,8 +35,8 @@ data class Odul(
     val ikon: ImageVector,
     val hal: OdulHali,
     val aciklama: String,
-    val bagisTarihi: String? = null,
-    val sertifikaNo: String? = null,
+    /** Gerçek teslimat/bağış sistemi bu ödül için devrede mi? */
+    val teslimatEtkinMi: Boolean = true,
     /**
      * Kademenin sunduğu seçenekler. Tek elemanlıysa (ya da boşsa) seçim
      * ekranı hiç açılmıyor — bugüne kadarki otomatik davranış. Birden

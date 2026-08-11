@@ -227,12 +227,7 @@ private fun HizliCip(
     }
 }
 
-/**
- * Bilgi şeridi.
- *
- * Ebeveyn cümlesi **yalnızca eşleştirme varken** — eşleşmemiş kullanıcıya
- * "ebeveynine bildirilir" demek, olmayan bir gözetim hissi yaratırdı.
- */
+/** Bilgi şeridi. */
 @Composable
 private fun BilgiSeridi(ebeveynAktifMi: Boolean) {
     Row(
@@ -250,17 +245,25 @@ private fun BilgiSeridi(ebeveynAktifMi: Boolean) {
         )
         Spacer(modifier = Modifier.width(Olcu.Aralik))
         Text(
-            text = if (ebeveynAktifMi) {
-                "Hedefini aştığında ebeveynine bilgilendirme gönderilir. " +
-                    "Değişiklikler yarından itibaren geçerli olur."
-            } else {
-                "Değişiklikler yarından itibaren geçerli olur."
-            },
+            text = hedefBilgiMetni(ebeveynAktifMi),
             style = MaterialTheme.typography.bodyMedium,
             color = MetinBirincil,
         )
     }
 }
+
+/**
+ * Sunucu hedef aşım bildirimi göndermiyor. Eşleşmiş ebeveyn yalnızca kullanıcı
+ * paylaşımı açtıysa oluşan haftalık özeti panelden okuyabiliyor; şerit gerçek
+ * ürün davranışından daha güçlü bir gözetim güvencesi vermemeli.
+ */
+internal fun hedefBilgiMetni(ebeveynAktifMi: Boolean): String =
+    if (ebeveynAktifMi) {
+        "Paylaşım açıksa, eşleşmiş ebeveyn haftalık özetini panelden görebilir. " +
+            "Değişiklikler yarından itibaren geçerli olur."
+    } else {
+        "Değişiklikler yarından itibaren geçerli olur."
+    }
 
 /** "4 saat 45 dakika" — şeritteki uzun biçim. */
 private fun uzunSure(dakika: Int): String {

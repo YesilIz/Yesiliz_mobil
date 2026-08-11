@@ -44,8 +44,15 @@ class YuruyusOturumDeposu @Inject constructor() {
         _oturum.update { it.copy(calisiyor = true) }
     }
 
-    fun tamamlandi(puanVerildi: Boolean) {
-        _oturum.update { it.copy(calisiyor = false, tamamlandi = true, puanVerildi = puanVerildi) }
+    fun tamamlandi(hedefTamamlandi: Boolean, puanVerildi: Boolean) {
+        _oturum.update {
+            it.copy(
+                calisiyor = false,
+                tamamlandi = true,
+                hedefTamamlandi = hedefTamamlandi,
+                puanVerildi = puanVerildi,
+            )
+        }
     }
 
     fun sifirla() {
@@ -62,5 +69,6 @@ data class YuruyusOturum(
     val gecenSaniye: Int = 0,
     val adim: Int? = null,
     val tamamlandi: Boolean = false,
+    val hedefTamamlandi: Boolean = false,
     val puanVerildi: Boolean = false,
 )

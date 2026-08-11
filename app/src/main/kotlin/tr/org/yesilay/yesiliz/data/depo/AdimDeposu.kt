@@ -1,9 +1,12 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.data.saglik.AdimDurumu
-import tr.org.yesilay.yesiliz.data.saglik.AdimSayacOkuyucu
+import tr.org.yesilay.yesiliz.data.saglik.AdimKaynagi
 import tr.org.yesilay.yesiliz.data.saglik.adimBirikimGuncelle
 import tr.org.yesilay.yesiliz.data.yerel.dao.AdimSayacDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.AdimSayacEntity
@@ -35,21 +38,40 @@ import javax.inject.Singleton
 @Singleton
 class AdimDeposu @Inject constructor(
     private val dao: AdimSayacDao,
-    private val okuyucu: AdimSayacOkuyucu,
+    private val okuyucu: AdimKaynagi,
     private val saat: Clock,
 ) {
+
+    /**
+     * Ana ekran, gece işi ve yürüyüş servisi aynı anda örnekleyebilir.
+     * Sayaç okuma → son satırı okuma → yeni toplamı yazma tek zincir
+     * olmalı; iki zincir yarışırsa daha eski sayaç sonradan yazılıp
+     * günlük toplam geçici olarak gerileyebilirdi.
+     */
+    private val orneklemeKilidi = Mutex()
 
     /**
      * Sayacı okuyup bugünün birikimine işler. Sensör yoksa, izin yoksa ya da
      * okuma başarısızsa sessizce hiçbir şey yapmıyor — çağıranların hepsi
      * "olursa iyi" konumunda.
      */
-    suspend fun ornekle() = withContext(Dispatchers.IO) {
-        val sayac = okuyucu.anlikSayac() ?: return@withContext
-        val bugun = LocalDate.now(saat)
-        val onceki = dao.gunun(bugun)?.let { AdimDurumu(it.toplam, it.sonSayac) }
-        val yeni = adimBirikimGuncelle(onceki, sayac)
-        dao.kaydet(AdimSayacEntity(bugun, yeni.toplam, yeni.sonSayac))
+    suspend fun ornekle() = orneklemeKilidi.withLock {
+        withContext(Dispatchers.IO) {
+            val sayac = try {
+                okuyucu.anlikSayac()
+            } catch (iptal: CancellationException) {
+                throw iptal
+            } catch (_: SecurityException) {
+                // İzin, `izinVarMi` kontrolü ile SensorManager kaydı arasında
+                // sistem Ayarları'ndan geri alınabilir. Bu beklenen yarış mevcut
+                // satırı bozmamalı ve ana ekran işini düşürmemeli.
+                null
+            } ?: return@withContext
+            val bugun = LocalDate.now(saat)
+            val onceki = dao.gunun(bugun)?.let { AdimDurumu(it.toplam, it.sonSayac) }
+            val yeni = adimBirikimGuncelle(onceki, sayac)
+            dao.kaydet(AdimSayacEntity(bugun, yeni.toplam, yeni.sonSayac))
+        }
     }
 
     /** O günün biriktirilmiş adımı; kayıt yoksa sıfır. */

@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -14,10 +15,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
+import tr.org.yesilay.yesiliz.data.yerel.entity.trendVeyaNull
+import tr.org.yesilay.yesiliz.data.yerel.entity.veriDurumuVeyaYetersiz
+import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.risk.EtkileyenFaktor
+import tr.org.yesilay.yesiliz.risk.Sabitler
 import tr.org.yesilay.yesiliz.risk.Trend
+import tr.org.yesilay.yesiliz.risk.VeriDurumu
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
@@ -33,30 +41,51 @@ import javax.inject.Inject
 class RiskDetayViewModel @Inject constructor(
     riskDao: RiskSonucDao,
     private val riskDeposu: RiskDeposu,
+    guncelGun: GuncelGun,
 ) : ViewModel() {
 
-    val durum: StateFlow<RiskDetayDurum> = riskDao.sonuncuAkisi()
-        .flatMapLatest { risk ->
+    val durum: StateFlow<RiskDetayDurum> = combine(
+        riskDao.sonuncuAkisi(),
+        guncelGun.akis,
+    ) { risk, bugun -> risk to bugun }
+        .flatMapLatest { (risk, bugun) ->
             if (risk == null) {
                 flowOf(RiskDetayDurum(veriVarMi = false))
             } else {
                 faktorlerAkisi(risk.tarih).map { faktorler ->
-                    val bant = Bant.valueOf(risk.gosterilenBant)
-                    RiskDetayDurum(
-                        veriVarMi = true,
-                        bant = bant,
-                        bantEtiketiKisa = bantKisaEtiket(bant),
-                        aciklama = aciklama(bant),
-                        trendMesaji = trendMesaji(Trend.valueOf(risk.trend)),
-                        oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
-                        faktorler = faktorler,
-                        // YEDAM teklifi yalnızca yüksek bantta.
-                        oneriler = if (bant == Bant.COK) {
-                            VarsayilanOneriler + YedamOnerisi
-                        } else {
-                            VarsayilanOneriler
-                        },
-                    )
+                    when (etkinVeriDurumu(risk.veriDurumu, risk.tarih, bugun)) {
+                        // Yetersiz/eski ölçüme dayanan bir bant, "veri yok"
+                        // ekranından daha yanıltıcı olurdu — 34 saniyelik
+                        // kullanımı olan biri "AZ RİSKLİ" görmemeli
+                        // (`gorev2.md` §8, aynı sınıf hata: debug.md K-7).
+                        VeriDurumu.YETERSIZ -> RiskDetayDurum(veriVarMi = true)
+                        VeriDurumu.ESKI -> RiskDetayDurum(
+                            veriVarMi = true,
+                            bosDurumBaslik = "Risk analizin güncellenmeyi bekliyor",
+                            bosDurumAciklama = "Uygulamayı son açtığından beri birkaç " +
+                                "gün geçti; yeni bir analiz için uygulamayı kullanmaya " +
+                                "devam et.",
+                        )
+                        VeriDurumu.HESAPLANDI -> {
+                            val bant = risk.gosterilebilirBant()
+                                ?: return@map RiskDetayDurum(veriVarMi = true)
+                            RiskDetayDurum(
+                                veriVarMi = true,
+                                bant = bant,
+                                bantEtiketiKisa = bantKisaEtiket(bant),
+                                aciklama = aciklama(bant),
+                                trendMesaji = trendMesaji(risk.trend.trendVeyaNull()),
+                                oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
+                                faktorler = faktorler,
+                                // YEDAM teklifi yalnızca yüksek bantta.
+                                oneriler = if (bant == Bant.COK) {
+                                    VarsayilanOneriler + YedamOnerisi
+                                } else {
+                                    VarsayilanOneriler
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -65,6 +94,26 @@ class RiskDetayViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
             initialValue = RiskDetayDurum(),
         )
+
+    /**
+     * [risk_sonuc.veriDurumu] hesap ANINDA yazıldı ([VeriDurumu.ESKI] hiç
+     * üretmez — `RiskDeposu` her günü kendi tarihi için taze hesaplıyor).
+     * Eskilik GÖSTERİM anında türetiliyor: son satır bugünden
+     * [Sabitler.VERI_ESKI_ESIK_GUN] günden fazla eskiyse, kullanıcı
+     * uygulamayı birkaç gündür açmamış demektir ve o bant artık güncel
+     * değildir.
+     */
+    private fun etkinVeriDurumu(
+        kayitliDurum: String,
+        tarih: LocalDate,
+        bugun: LocalDate,
+    ): VeriDurumu {
+        if (kayitliDurum.veriDurumuVeyaYetersiz() != VeriDurumu.HESAPLANDI) {
+            return VeriDurumu.YETERSIZ
+        }
+        val gunGecmisi = ChronoUnit.DAYS.between(tarih, bugun)
+        return if (gunGecmisi > Sabitler.VERI_ESKI_ESIK_GUN) VeriDurumu.ESKI else VeriDurumu.HESAPLANDI
+    }
 
     private fun faktorlerAkisi(tarih: LocalDate): Flow<List<EtkileyenFaktor>> = flow {
         emit(riskDeposu.etkileyenFaktorler(tarih) ?: emptyList())
@@ -91,11 +140,12 @@ class RiskDetayViewModel @Inject constructor(
                 "belirgin alanlar olduğunu gösteriyor."
     }
 
-    private fun trendMesaji(trend: Trend): String? = when (trend) {
+    private fun trendMesaji(trend: Trend?): String? = when (trend) {
         Trend.IYILESIYOR -> "Geçen aya göre iyileşiyor"
         Trend.KOTULESIYOR -> "Geçen aya göre kötüleşiyor"
         Trend.SABIT -> "Geçen aya göre aynı seviyede"
         Trend.BELIRSIZ -> null
+        null -> null
     }
 
     private companion object {

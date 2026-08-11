@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import datetime as dt
+from types import SimpleNamespace
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.modeller import GunlukOzet, Kullanici, SifreSifirlama, YenilemeJetonu
+from app.guvenlik import jeton_ozetle, kullaniciyi_kilitle
+from app.modeller import GunlukOzet, Kullanici, OdulSecimi, SifreSifirlama, YenilemeJetonu
+from app.uclar import hesap
 
 
 def test_kayit_jeton_donduruyor(istemci):
@@ -62,10 +67,41 @@ def test_olmayan_kullanici_ile_yanlis_sifre_ayni_mesaji_veriyor(istemci):
     assert yok.json()["detail"] == yanlis.json()["detail"]
 
 
+def test_olmayan_kullanici_da_argon2_dogrulamasindan_geciyor(istemci, monkeypatch):
+    """Aynı yanıtın yanında hesaplama yolu da zamanlama sızıntısı vermemeli."""
+    gorulen_ozetler: list[str | None] = []
+
+    def izle(ozet: str | None, _sifre: str) -> bool:
+        gorulen_ozetler.append(ozet)
+        return False
+
+    monkeypatch.setattr(hesap, "sifre_dogrula", izle)
+
+    yanit = istemci.post(
+        "/auth/giris",
+        json={"eposta": "olmayan@example.com", "sifre": "parola123"},
+    )
+
+    assert yanit.status_code == 401
+    assert gorulen_ozetler == [None]
+
+
 def test_kisa_sifre_reddediliyor(istemci):
     yanit = istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "kisa"})
 
     assert yanit.status_code == 422
+
+
+def test_bos_ad_ve_asiri_uzun_giris_sifresi_reddediliyor(istemci):
+    bos_ad = istemci.post(
+        "/auth/kayit", json={"ad": "   ", "eposta": "a@b.com", "sifre": "parola123"}
+    )
+    uzun_sifre = istemci.post(
+        "/auth/giris", json={"eposta": "a@b.com", "sifre": "x" * 129}
+    )
+
+    assert bos_ad.status_code == 422
+    assert uzun_sifre.status_code == 422
 
 
 def test_yenileme_jetonu_tek_kullanimlik(istemci):
@@ -81,12 +117,34 @@ def test_yenileme_jetonu_tek_kullanimlik(istemci):
     assert ikinci.status_code == 401
 
 
+def test_cikis_tum_yenileme_jetonlarini_iptal_ediyor(istemci):
+    ilk = istemci.post(
+        "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
+    ).json()
+    # İkinci cihaz/oturum gibi ikinci bir yenileme jetonu oluştur.
+    ikinci = istemci.post(
+        "/auth/giris", json={"eposta": "a@b.com", "sifre": "parola123"}
+    ).json()
+
+    yanit = istemci.post(
+        "/auth/cikis", headers={"Authorization": f"Bearer {ikinci['erisim']}"}
+    )
+
+    assert yanit.status_code == 200
+    assert istemci.post("/auth/yenile", json={"yenileme": ilk["yenileme"]}).status_code == 401
+    assert istemci.post("/auth/yenile", json={"yenileme": ikinci["yenileme"]}).status_code == 401
+
+
 def test_suresi_dolmus_yenileme_reddediliyor(istemci, db):
     kayit = istemci.post(
         "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
     ).json()
 
-    jeton = db.scalar(select(YenilemeJetonu).where(YenilemeJetonu.jeton == kayit["yenileme"]))
+    jeton = db.scalar(
+        select(YenilemeJetonu).where(
+            YenilemeJetonu.jeton == jeton_ozetle(kayit["yenileme"])
+        )
+    )
     jeton.son_gecerlilik = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)
     db.commit()
 
@@ -110,13 +168,34 @@ def test_sifre_sifirlama_kayitsiz_epostada_da_202(istemci):
     assert yanit.status_code == 202
 
 
-def test_sifre_yenileme_akisi(istemci, db):
+def test_sifre_sifirlama_uretimde_eposta_yokken_basari_taklidi_yapmiyor(
+    istemci, db, monkeypatch
+):
+    istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
+    monkeypatch.setattr(
+        hesap,
+        "ayarlar",
+        lambda: SimpleNamespace(uretim_mi=True, sifirlama_saat=1),
+    )
+
+    yanit = istemci.post("/auth/sifre-sifirla", json={"eposta": "a@b.com"})
+
+    assert yanit.status_code == 503
+    assert db.scalar(select(SifreSifirlama)) is None
+
+
+def test_sifre_yenileme_akisi(istemci, db, monkeypatch):
+    ham_jeton = "sifirlama-icin-yalnizca-test-jetonu"
+    uretilenler = iter(("kayit-yenileme-test-jetonu", ham_jeton, "giris-yenileme-test-jetonu"))
+    monkeypatch.setattr(hesap, "rastgele_jeton", lambda: next(uretilenler))
     istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
     istemci.post("/auth/sifre-sifirla", json={"eposta": "a@b.com"})
 
     kayit = db.scalar(select(SifreSifirlama))
+    assert kayit.jeton == jeton_ozetle(ham_jeton)
+    assert kayit.jeton != ham_jeton
     yanit = istemci.post(
-        "/auth/sifre-yenile", json={"jeton": kayit.jeton, "yeniSifre": "yeniparola1"}
+        "/auth/sifre-yenile", json={"jeton": ham_jeton, "yeniSifre": "yeniparola1"}
     )
 
     assert yanit.status_code == 200
@@ -124,29 +203,47 @@ def test_sifre_yenileme_akisi(istemci, db):
     assert istemci.post("/auth/giris", json={"eposta": "a@b.com", "sifre": "parola123"}).status_code == 401
 
 
-def test_sifirlama_jetonu_tek_kullanimlik(istemci, db):
+def test_sifirlama_jetonu_tek_kullanimlik(istemci, db, monkeypatch):
+    ham_jeton = "tek-kullanim-icin-test-jetonu"
+    uretilenler = iter(("kayit-yenileme-test-jetonu", ham_jeton))
+    monkeypatch.setattr(hesap, "rastgele_jeton", lambda: next(uretilenler))
     istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
     istemci.post("/auth/sifre-sifirla", json={"eposta": "a@b.com"})
-    kayit = db.scalar(select(SifreSifirlama))
 
-    istemci.post("/auth/sifre-yenile", json={"jeton": kayit.jeton, "yeniSifre": "yeniparola1"})
+    istemci.post("/auth/sifre-yenile", json={"jeton": ham_jeton, "yeniSifre": "yeniparola1"})
     ikinci = istemci.post(
-        "/auth/sifre-yenile", json={"jeton": kayit.jeton, "yeniSifre": "baskasi123"}
+        "/auth/sifre-yenile", json={"jeton": ham_jeton, "yeniSifre": "baskasi123"}
     )
 
     assert ikinci.status_code == 400
 
 
-def test_sifre_degisince_oturumlar_kapaniyor(istemci, db):
+def test_sifre_degisince_oturumlar_kapaniyor(istemci, db, monkeypatch):
+    uretilenler = iter(("ilk-yenileme-test-jetonu", "sifirlama-test-jetonu"))
+    monkeypatch.setattr(hesap, "rastgele_jeton", lambda: next(uretilenler))
     kayit = istemci.post(
         "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
     ).json()
     istemci.post("/auth/sifre-sifirla", json={"eposta": "a@b.com"})
     sifirlama = db.scalar(select(SifreSifirlama))
-    istemci.post("/auth/sifre-yenile", json={"jeton": sifirlama.jeton, "yeniSifre": "yeniparola1"})
+    assert sifirlama.jeton == jeton_ozetle("sifirlama-test-jetonu")
+    istemci.post(
+        "/auth/sifre-yenile",
+        json={"jeton": "sifirlama-test-jetonu", "yeniSifre": "yeniparola1"},
+    )
 
     # Hesabı ele geçiren birinin elindeki yenileme jetonu da geçersizleşmeli.
     assert istemci.post("/auth/yenile", json={"yenileme": kayit["yenileme"]}).status_code == 401
+
+
+def test_yenileme_jetonu_veritabaninda_duz_metin_degil(istemci, db):
+    yanit = istemci.post(
+        "/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"}
+    ).json()
+
+    saklanan = db.scalar(select(YenilemeJetonu)).jeton
+    assert saklanan == jeton_ozetle(yanit["yenileme"])
+    assert saklanan != yanit["yenileme"]
 
 
 def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db):
@@ -169,13 +266,24 @@ def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db
             "haftalikPuan": 100,
         },
     )
+    kullanici = db.scalar(select(Kullanici))
+    db.add(
+        OdulSecimi(
+            kullanici_id=kullanici.id,
+            kademe_id="kupon_market",
+            secenek_id="fidan_bagisi",
+        )
+    )
+    db.commit()
     assert db.scalar(select(GunlukOzet)) is not None
+    assert db.scalar(select(OdulSecimi)) is not None
 
     yanit = istemci.delete("/auth/hesap", headers=baslik)
 
     assert yanit.status_code == 200
     assert db.scalar(select(Kullanici)) is None
     assert db.scalar(select(GunlukOzet)) is None
+    assert db.scalar(select(OdulSecimi)) is None
     # Yenileme jetonu da gitmeli: kalsaydı silinen hesaba jeton üretilebilirdi.
     assert db.scalar(select(YenilemeJetonu)) is None
 
@@ -192,3 +300,22 @@ def test_silinen_hesabin_jetonu_artik_calismiyor(istemci, kullanici_kur):
 
     # Erişim jetonu hâlâ süresi içinde ama kullanıcı yok — 401 dönmeli.
     assert istemci.get("/ozet", headers=baslik).status_code == 401
+
+
+def test_yazma_kilidi_arada_silinen_hesabi_401_ile_reddeder(db):
+    """Eski kimlik nesnesiyle FK yazıp 500 üretmek yerine oturum kapanır."""
+    kullanici = Kullanici(
+        ad="Yarış",
+        eposta="yaris@example.com",
+        sifre_ozet="testte-dogrulanmayacak",
+    )
+    db.add(kullanici)
+    db.commit()
+    kullanici_id = kullanici.id
+    db.delete(kullanici)
+    db.commit()
+
+    with pytest.raises(HTTPException) as yakalanan:
+        kullaniciyi_kilitle(db, kullanici_id)
+
+    assert yakalanan.value.status_code == 401

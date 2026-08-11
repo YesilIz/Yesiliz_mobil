@@ -8,5 +8,12 @@
                 <action android:name="tr.org.yesilay.yesiliz.SAGLIK_TANI" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".data.saglik.AdimTaniAlicisi"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="tr.org.yesilay.yesiliz.ADIM_TANI" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

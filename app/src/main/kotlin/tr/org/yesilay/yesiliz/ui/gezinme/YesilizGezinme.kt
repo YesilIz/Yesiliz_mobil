@@ -6,7 +6,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -47,6 +49,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamOnayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
+import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 
 /**
  * Uygulamanın tek NavHost'u — `docs/tasarim-referans.md §3`.
@@ -63,11 +66,18 @@ fun YesilizGezinme(
     onHedefRotaTuketildi: () -> Unit = {},
 ) {
     val baslangic by acilisViewModel.baslangicRotasi.collectAsStateWithLifecycle()
+    val onboardingBitti by acilisViewModel.onboardingBitti.collectAsStateWithLifecycle()
 
     // Bayrak DataStore'dan okunana kadar NavHost KURULMUYOR. Varsayılan bir
     // rotayla kurup sonra atlamak, onboarding'i bitirmiş kullanıcıya bir kare
     // boyunca karşılama ekranını gösterirdi.
-    val baslangicRotasi = baslangic ?: return
+    val okunmusBaslangic = baslangic ?: return
+
+    // NavHost'un startDestination'ı yalnızca bu süreç açılırken seçilir.
+    // Oturum açma/kapama DataStore akışını değiştirir; bunu doğrudan burada
+    // kullanmak gezinme grafiğini işlem ortasında yeniden kurup seçtiğimiz
+    // hedefi Ana Sayfa ile eziyordu.
+    val baslangicRotasi = rememberSaveable { okunmusBaslangic }
 
     // Nudge overlay'in "Nefes egzersizi yapmak ister misin? → Evet" derin
     // bağlantısı — `MainActivity`'nin dışarıdan aldığı Intent'i tüketir.
@@ -115,27 +125,24 @@ fun YesilizGezinme(
             // Hesap akışı — uygulama akışının dışında, yalnızca ilk açılışta.
             composable(Rota.GIRIS) {
                 GirisEkran(
-                    onBasarili = { navController.hesaptanCik(Rota.ONBOARDING) },
+                    onBasarili = { navController.hesapBasarili(onboardingBitti == true) },
                     onKayit = { navController.navigate(Rota.KAYIT) },
                     onSifremiUnuttum = { navController.navigate(Rota.SIFRE) },
                 )
             }
             composable(Rota.KAYIT) {
                 KayitEkran(
-                    onBasarili = {
-                        // Profil'den gelen misafir onboarding'i zaten
-                        // bitirmiş; onu baştan geçirmek yerine geri
-                        // dönülüyor. İlk kurulumda akış onboarding'e devam
-                        // ediyor.
-                        if (navController.previousBackStackEntry
-                                ?.destination?.route == Rota.PROFIL
-                        ) {
-                            navController.popBackStack()
-                        } else {
-                            navController.hesaptanCik(Rota.ONBOARDING)
+                    onBasarili = { navController.hesapBasarili(onboardingBitti == true) },
+                    // Kayıt ekranı iki yerden açılıyor: Giriş ekranından
+                    // ("Kayıt ol") ve Profil'den ("Hesap oluştur", misafir
+                    // akışı). İlkinde Giriş geri yığınında var, `popBackStack`
+                    // yeterli. İkincisinde yok — `popBackStack` sessizce
+                    // `false` dönüyordu ve "Giriş yap" hiçbir şey yapmıyordu.
+                    onGiris = {
+                        if (!navController.popBackStack(Rota.GIRIS, inclusive = false)) {
+                            navController.navigate(Rota.GIRIS)
                         }
                     },
-                    onGiris = { navController.popBackStack(Rota.GIRIS, inclusive = false) },
                     onGeri = { navController.popBackStack() },
                     onSozlesme = { id -> navController.navigate(Rota.sozlesme(id)) },
                 )
@@ -150,6 +157,7 @@ fun YesilizGezinme(
             onboardingAkisi(navController)
 
             composable(Rota.ANA) {
+                val baglam = LocalContext.current
                 AnaEkran(
                     onOdul = { navController.navigate(Rota.ODUL) },
                     onNefesBaslat = { navController.navigate(Rota.NEFES) },
@@ -160,6 +168,11 @@ fun YesilizGezinme(
                     onDegerlendirmeYenile = { navController.navigate(Rota.ANKET_YENILE) },
                     onProfil = { navController.navigate(Rota.PROFIL) },
                     onIstatistik = { navController.sekmeyeGit(Sekme.ISTATISTIK) },
+                    onKullanimIzni = {
+                        if (KullanimIzni.ayarEkraniVarMi(baglam)) {
+                            baglam.startActivity(KullanimIzni.ayarIntent())
+                        }
+                    },
                 )
             }
             composable(Rota.BILGI_BANKASI) {
@@ -217,6 +230,7 @@ fun YesilizGezinme(
                     // (`debug.md` O-8).
                     acilacakSayfa = girdiP.arguments
                         ?.getString(Rota.PROFIL_SAYFA_ARG),
+                    onGeri = { navController.popBackStack() },
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
                     onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },
@@ -312,17 +326,29 @@ fun YesilizGezinme(
  * ile her sekme kendi kaydırma konumunu koruyor.
  */
 /**
- * Hesap akışından çıkış.
+ * Hesap oluşturma/giriş iki bağlamda kullanılıyor.
  *
- * `popUpTo(GIRIS, inclusive)` şart: geri tuşuyla giriş ekranına dönmek,
- * onboarding'i yarıda bırakıp kimliksiz bir duruma düşürürdü.
+ * İlk kurulum henüz tamamlanmadıysa onboarding devam eder. Tamamlanmış
+ * misafir profilden hesabını yükseltiyorsa mevcut kurulum ve veriler
+ * korunur; yığın Ana Sayfa'ya kadar temizlenip Profil'e dönülür.
  */
-private fun NavHostController.hesaptanCik(hedef: String) {
-    navigate(hedef) {
-        popUpTo(Rota.GIRIS) { inclusive = true }
+private fun NavHostController.hesapBasarili(onboardingBitti: Boolean) {
+    val hedefler = hesapSonrasiYigin(onboardingBitti)
+
+    // Ana rota daha önce `bastanBasla()` ile temizlenmiş olabilir; bu nedenle
+    // var olmayan ANA'ya `popUpTo` güvenilir değil. Yığını karardan başlayarak
+    // açıkça yeniden kur: Profil'den geri Giriş'e değil Ana Sayfa'ya döner.
+    navigate(hedefler.first()) {
+        popUpTo(0) { inclusive = true }
         launchSingleTop = true
     }
+    hedefler.drop(1).forEach { hedef ->
+        navigate(hedef) { launchSingleTop = true }
+    }
 }
+
+internal fun hesapSonrasiYigin(onboardingBitti: Boolean): List<String> =
+    if (onboardingBitti) listOf(Rota.ANA, Rota.PROFIL) else listOf(Rota.ONBOARDING)
 
 /**
  * "Verilerimi/Hesabımı sil" sonrası sıfırdan başlatma.

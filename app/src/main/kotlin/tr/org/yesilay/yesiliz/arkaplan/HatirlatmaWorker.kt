@@ -36,6 +36,7 @@ class HatirlatmaWorker @AssistedInject constructor(
     @Assisted parametreler: WorkerParameters,
     private val tercihler: Tercihler,
     private val bildirimDeposu: BildirimDeposu,
+    private val isPlanlayici: IsPlanlayici,
 ) : CoroutineWorker(baglam, parametreler) {
 
     override suspend fun doWork(): Result {
@@ -55,6 +56,10 @@ class HatirlatmaWorker @AssistedInject constructor(
         bildirimDeposu.hatirlatma(baslik, govde)
         sistemBildirimiGonder(baslik, govde, aksamMi)
 
+        // 24 saatlik geçen-süre periyodu DST veya saat dilimi değişiminde
+        // duvar saatinden kaymasın; sonraki takvim anını her koşuda yenile.
+        isPlanlayici.hatirlatmayiPlanla(saatler)
+
         return Result.success()
     }
 
@@ -71,9 +76,13 @@ class HatirlatmaWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .build()
 
-        runCatching {
+        try {
             NotificationManagerCompat.from(baglam)
                 .notify(if (aksamMi) AKSAM_ID else SABAH_ID, bildirim)
+        } catch (_: SecurityException) {
+            // İzin, yukarıdaki kontrolden bildirimin gönderilmesine kadar
+            // olan dar aralıkta geri alınabilir. Uygulama içi kayıt zaten
+            // yazıldı; worker'ı düşürmek veya sonsuz denemek gereksiz.
         }
     }
 

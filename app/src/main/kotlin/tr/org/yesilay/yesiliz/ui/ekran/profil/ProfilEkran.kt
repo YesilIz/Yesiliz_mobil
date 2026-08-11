@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
 import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
 import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
@@ -98,6 +99,7 @@ import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
+import java.util.Locale
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
@@ -117,6 +119,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilEkran(
+    onGeri: () -> Unit,
     onEbeveyn: () -> Unit,
     onGunlukHedef: () -> Unit,
     onKategoriler: () -> Unit,
@@ -156,7 +159,7 @@ fun ProfilEkran(
     }
     val bildirimIzni = bildirimIzniIstegi()
 
-    YesilBaslikliEkran(baslik = "Profil", modifier = modifier) {
+    YesilBaslikliEkran(baslik = "Profil", onGeri = onGeri, modifier = modifier) {
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()),
         ) {
@@ -178,8 +181,10 @@ fun ProfilEkran(
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )
-                Spacer(modifier = Modifier.height(Bosluk.S))
-                Cip(metin = durum.ligAdi, zemin = YesilNane)
+                if (durum.ligAdi.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(Bosluk.S))
+                    Cip(metin = durum.ligAdi, zemin = YesilNane)
+                }
             }
 
             Spacer(modifier = Modifier.height(Olcu.BolumArasi))
@@ -223,7 +228,7 @@ fun ProfilEkran(
                 KartAyraci()
                 AyarSatiri(
                     Icons.Filled.Delete,
-                    "Verilerimi sil",
+                    "Bu cihazdaki verilerimi sil",
                     onTikla = { verileriSilAcik = true },
                 )
                 KartAyraci()
@@ -368,6 +373,7 @@ fun ProfilEkran(
     if (gecmisiIndirAcik) {
         AltSayfa(onKapat = { gecmisiIndirAcik = false }) {
             GecmisiIndirIcerik(
+                hataVar = durum.disaAktarmaHatasi,
                 onKapat = { gecmisiIndirAcik = false },
                 onDisaAktar = {
                     viewModel.gecmisiDisaAktar { niyet ->
@@ -554,7 +560,11 @@ private fun ToplananVerilerIcerik(onKapat: () -> Unit) {
 
 /** Alt sayfa 24 — Geçmişi indir. PDF üretimi Faz 2, burada yalnızca akış. */
 @Composable
-private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
+private fun GecmisiIndirIcerik(
+    hataVar: Boolean,
+    onKapat: () -> Unit,
+    onDisaAktar: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -590,6 +600,16 @@ private fun GecmisiIndirIcerik(onKapat: () -> Unit, onDisaAktar: () -> Unit) {
                 "dahil edilmez.",
             ikon = androidx.compose.material.icons.Icons.Filled.Sync,
         )
+
+        if (hataVar) {
+            Spacer(modifier = Modifier.height(Olcu.Aralik))
+            Text(
+                text = "Dosyalar oluşturulamadı. Telefonunda boş alan olduğunu " +
+                    "kontrol edip yeniden deneyebilirsin.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = KirmiziIstisna,
+            )
+        }
 
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Dosyaları oluştur ve paylaş", onTikla = onDisaAktar)
@@ -780,14 +800,14 @@ private fun VerileriSilIcerik(
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(
-            text = "Verilerini kalıcı olarak sil?",
+            text = "Bu cihazdaki verileri sil?",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Bu işlem geri alınamaz. Sildiğinde aşağıdakiler kaybolur:",
+            text = YEREL_VERI_SILME_ACIKLAMASI,
             style = MaterialTheme.typography.bodyLarge,
             color = MetinIkincil,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -804,7 +824,7 @@ private fun VerileriSilIcerik(
             listOf(
                 "Ekran süresi ve hareket geçmişin",
                 "Puanların, rozetlerin ve ödül ilerlemen",
-                "Ebeveyn cihazıyla eşleştirmen",
+                "Bu cihazdaki hedeflerin ve ayarların",
             ).forEach { madde ->
                 MaddeSatiri(madde)
             }
@@ -827,11 +847,17 @@ private fun VerileriSilIcerik(
     }
 }
 
+/** Yerel silmenin sunucudaki veriyi sildiği izlenimini vermeyen zorunlu açıklama. */
+internal const val YEREL_VERI_SILME_ACIKLAMASI =
+    "Bu işlem geri alınamaz ve yalnızca bu cihazı temizler. Sunucudaki hesabın, " +
+        "daha önce paylaştığın özetler ve ebeveyn bağlantın kalır. Onları da kaldırmak " +
+        "için Profil'deki ‘Hesabımı sil’ seçeneğini kullan. Bu cihazdan şunlar silinir:"
+
 /**
- * Silme bitti ama sunucudaki kopya duruyor.
+ * Silme isteği tamamlanamadı; oturum ve cihaz verisi korundu.
  *
- * Kullanıcıyı sessizce dışarı atmak yerine bunu söylüyoruz: "kalıcı sil"
- * dedikten sonra sunucuda veri kalmışsa bilmeye hakkı var (`debug.md` K-2).
+ * Kullanıcının doğrulanmış isteği yeniden gönderebilmesi için kimliği
+ * silmiyoruz ve durumu açıkça söylüyoruz.
  */
 @Composable
 private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
@@ -843,21 +869,20 @@ private fun SunucudaKaldiUyarisi(onKapat: () -> Unit) {
             .padding(Olcu.Aralik),
     ) {
         Text(
-            text = "Cihazındaki her şey silindi.",
+            text = "Hesap silinemedi.",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MetinBirincil,
         )
         Spacer(modifier = Modifier.height(Bosluk.Xs))
         Text(
-            text = "Sunucuya şu an ulaşılamadığı için oradaki kaydın " +
-                "silinemedi. Bağlantın olduğunda tekrar giriş yapıp " +
-                "silme işlemini yenileyebilirsin.",
+            text = "Cihazındaki veriler ve oturumun korunuyor. Bağlantını " +
+                "kontrol edip silme işlemini yeniden deneyebilirsin.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        TehlikeliButon(metin = "Anladım", onTikla = onKapat)
+        TehlikeliButon(metin = "Tekrar dene", onTikla = onKapat)
     }
 }
 
@@ -876,7 +901,7 @@ private fun HesabiSilIcerik(
     onUyariyiKapat: () -> Unit,
 ) {
     var girilenMetin by remember { mutableStateOf("") }
-    val onayli = girilenMetin == "SİL"
+    val onayli = hesapSilmeOnayiGecerli(girilenMetin)
 
     Column(
         modifier = Modifier
@@ -955,6 +980,10 @@ private fun HesabiSilIcerik(
     }
 }
 
+/** Türkçe klavyede kullanıcıyı büyük harf/İ ayrıntısına zorlamaz. */
+internal fun hesapSilmeOnayiGecerli(metin: String): Boolean =
+    metin.trim().uppercase(Locale.forLanguageTag("tr-TR")) == "SİL"
+
 /** Alt sayfa 28 — Yardım. Statik SSS, backend gerektirmiyor. */
 @Composable
 private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
@@ -1028,7 +1057,7 @@ private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
     }
 }
 
-/** Alt sayfa 29 — Hakkında. Sürüm sabit — `BuildConfig.VERSION_NAME` Faz 2. */
+/** Alt sayfa 29 — Hakkında. Sürüm, kurulu APK'nın derleme bilgisidir. */
 @Composable
 private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
     Column(
@@ -1064,7 +1093,7 @@ private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
             color = MetinBirincil,
         )
         Text(
-            text = "Sürüm 2.4.1",
+            text = "Sürüm ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinUcuncul,
         )
@@ -1203,7 +1232,7 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(Olcu.Aralik))
             Text(
-                text = "115 — YEDAM Hattı, 7/24 ücretsiz ve gizli",
+                text = "115 — ücretsiz ve gizli YEDAM Hattı",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MetinBirincil,
@@ -1212,12 +1241,18 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
         Text(
-            text = "Görüşmeler gizlidir; kimseyle paylaşılmaz.",
+            text = "Görüşmeler gizlilik ilkesiyle yürütülür.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
         Text(
-            text = "Görüşmeyi uzman psikologlar yürütür.",
+            text = "Görüşmeyi YEDAM uzmanları yürütür.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Text(
+            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
+                "cumartesi 08:30–17:30.",
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )

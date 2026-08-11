@@ -4,10 +4,11 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
+import tr.org.yesilay.yesiliz.data.zaman.DegiskenSistemSaati
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 
 /**
  * `UsageStatsManager` sarmalayıcısı — sistemden ham olay okur.
@@ -25,7 +26,7 @@ import java.time.ZoneId
 class KullanimOkuyucu(
     private val usageStatsManager: UsageStatsManager,
     private val packageManager: PackageManager,
-    private val zon: ZoneId,
+    private val saat: Clock,
     private val kendiPaketAdi: String,
 ) {
 
@@ -37,8 +38,14 @@ class KullanimOkuyucu(
      *
      * @param simdi bugünün verisi isteniyorsa pencere burada kesilir
      */
-    fun gununOturumlari(tarih: LocalDate, simdi: Instant = Instant.now()): List<HamOturum> {
-        val pencereBas = tarih.atStartOfDay(zon).toInstant()
+    fun gununOturumlari(
+        tarih: LocalDate,
+        simdi: Instant = Instant.now(),
+        enErken: Instant? = null,
+    ): List<HamOturum> {
+        val zon = saat.zone
+        val gunBaslangici = tarih.atStartOfDay(zon).toInstant()
+        val pencereBas = enErken?.let { maxOf(gunBaslangici, it) } ?: gunBaslangici
         val pencereBit = minOf(tarih.plusDays(1).atStartOfDay(zon).toInstant(), simdi)
         if (!pencereBit.isAfter(pencereBas)) return emptyList()
 
@@ -67,8 +74,9 @@ class KullanimOkuyucu(
      * @param gunLimiti kaç gün geriye gidileceği
      * @return en yeniden en eskiye, her günün toplam ön plan süresi (ms)
      */
-    fun gunlukToplamSureler(dahilDegilTarih: LocalDate, gunLimiti: Int): List<Long> =
-        (1..gunLimiti).map { geriGun ->
+    fun gunlukToplamSureler(dahilDegilTarih: LocalDate, gunLimiti: Int): List<Long> {
+        val zon = saat.zone
+        return (1..gunLimiti).map { geriGun ->
             val gun = dahilDegilTarih.minusDays(geriGun.toLong())
             val pencereBas = gun.atStartOfDay(zon).toInstant().toEpochMilli()
             val pencereBit = gun.plusDays(1).atStartOfDay(zon).toInstant().toEpochMilli()
@@ -77,6 +85,7 @@ class KullanimOkuyucu(
                 .filter { it.packageName != kendiPaketAdi }
                 .sumOf { it.totalTimeInForeground }
         }
+    }
 
     /**
      * Son [pencere] içindeki ham olaylar — nudge'ın canlı tetikleyicisi için.
@@ -137,12 +146,12 @@ class KullanimOkuyucu(
     }
 
     companion object {
-        fun olustur(baglam: Context, zon: ZoneId = ZoneId.systemDefault()): KullanimOkuyucu =
+        fun olustur(baglam: Context, saat: Clock = DegiskenSistemSaati()): KullanimOkuyucu =
             KullanimOkuyucu(
                 usageStatsManager = baglam.getSystemService(Context.USAGE_STATS_SERVICE)
                     as UsageStatsManager,
                 packageManager = baglam.packageManager,
-                zon = zon,
+                saat = saat,
                 kendiPaketAdi = baglam.packageName,
             )
     }
