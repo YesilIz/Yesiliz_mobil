@@ -72,6 +72,7 @@ class OdulDeposu @Inject constructor(
      *   seçim varsa false (arayan yeniden sormamalı — seçim değişmiyor)
      */
     suspend fun sec(kademeId: String, secenekId: String): Boolean {
+        if (!MADDI_ODUL_TESLIMATI_ETKIN) return false
         if (dao.getir(kademeId) != null) return false
 
         dao.kaydet(OdulSecimiEntity(kademeId, secenekId, LocalDate.now(saat)))
@@ -121,8 +122,10 @@ class OdulDeposu @Inject constructor(
 
             // Önceki bir ağ hatasında yalnızca cihazda kalmış seçimleri
             // yeniden gönder. Sunucuda olan kademeye ikinci kez dokunulmaz.
-            plan.sunucuyaYaz.forEach { (kademeId, secenekId) ->
-                api.odulSec(OdulSecimIstek(kademeId, secenekId))
+            if (MADDI_ODUL_TESLIMATI_ETKIN) {
+                plan.sunucuyaYaz.forEach { (kademeId, secenekId) ->
+                    api.odulSec(OdulSecimIstek(kademeId, secenekId))
+                }
             }
         } catch (iptal: CancellationException) {
             throw iptal
@@ -131,6 +134,9 @@ class OdulDeposu @Inject constructor(
         }
     }
 }
+
+/** Sponsorluk/teslimat ve sunucu hak-ediş doğrulaması birlikte açılmalı. */
+internal const val MADDI_ODUL_TESLIMATI_ETKIN = false
 
 internal data class OdulUzlastirmaPlani(
     val yereleYaz: Map<String, String>,

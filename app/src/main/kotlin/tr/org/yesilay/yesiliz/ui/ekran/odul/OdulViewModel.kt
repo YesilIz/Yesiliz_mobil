@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.OdulDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
+import tr.org.yesilay.yesiliz.data.depo.MADDI_ODUL_TESLIMATI_ETKIN
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
@@ -158,7 +159,7 @@ class OdulViewModel @Inject constructor(
                 id = "fidan",
                 esik = 2_000,
                 aktifGunKosulu = 14,
-                teslimatEtkinMi = false,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "fidan_bagisi",
@@ -172,7 +173,7 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_market",
                 esik = 5_000,
                 aktifGunKosulu = 30,
-                teslimatEtkinMi = false,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "market_kuponu",
@@ -192,7 +193,7 @@ class OdulViewModel @Inject constructor(
                 id = "kupon_spor",
                 esik = 10_000,
                 aktifGunKosulu = 45,
-                teslimatEtkinMi = false,
+                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "kupon_spor_kitap",

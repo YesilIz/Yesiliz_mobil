@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
+from app.guvenlik import mevcut_kullanici
 from app.modeller import Kullanici, OdulSecimi
 from app.semalar import OdulSecimIstek, OdulSecimiDto
 from app.veritabani import oturum
@@ -21,6 +21,10 @@ SECILEBILIR_ODULLER = {
     "kupon_spor": {"kupon_spor_kitap", "fidan_bagisi"},
 }
 
+# A4 (sponsorluk/teslimat) açık ve sunucu puan hak edişini bağımsız
+# doğrulamıyor. Bu kapı açılmadan istemciden maddi hak kaydı kabul edilmez.
+MADDI_ODUL_TESLIMATI_ETKIN = False
+
 
 @yonlendirici.post("/sec", response_model=OdulSecimiDto, status_code=status.HTTP_201_CREATED)
 def sec(
@@ -31,14 +35,18 @@ def sec(
     """
     Bir kademe için seçim **bir kez** yapılır.
 
-    Tekil kısıt (`kullanici_id`, `kademe_id`) bunu veritabanı seviyesinde
-    garanti ediyor; burada önce bakılıyor ki ikinci istek 500 yerine
-    anlamlı bir 409 dönsün.
+    Maddi ödül teslimatı ve sunucu tarafı hak-ediş doğrulaması birlikte
+    devreye alınana kadar geçerli görünen seçimler de fail-closed reddedilir.
     """
     if istek.secenekId not in SECILEBILIR_ODULLER.get(istek.kademeId, set()):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Geçersiz ödül seçimi")
 
-    kullaniciyi_kilitle(db, kullanici.id)
+    if not MADDI_ODUL_TESLIMATI_ETKIN:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Maddi ödül teslimatı henüz etkin değil",
+        )
+
     var = db.scalar(
         select(OdulSecimi).where(
             OdulSecimi.kullanici_id == kullanici.id,

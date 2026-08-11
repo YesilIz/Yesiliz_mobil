@@ -4,8 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tr.org.yesilay.yesiliz.data.depo.MADDI_ODUL_TESLIMATI_ETKIN
 
 class OdulDogrulukTest {
+
+    @Test
+    fun `maddi odul teslimat kapisi fail closed`() {
+        assertFalse(MADDI_ODUL_TESLIMATI_ETKIN)
+    }
 
     @Test
     fun `teslimat altyapisi olmayan maddi odul kazanildi sayilmaz`() {

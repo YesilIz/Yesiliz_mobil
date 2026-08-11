@@ -247,11 +247,15 @@ def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db
             "haftalikPuan": 100,
         },
     )
-    istemci.post(
-        "/odul/sec",
-        headers=baslik,
-        json={"kademeId": "kupon_market", "secenekId": "fidan_bagisi"},
+    kullanici = db.scalar(select(Kullanici))
+    db.add(
+        OdulSecimi(
+            kullanici_id=kullanici.id,
+            kademe_id="kupon_market",
+            secenek_id="fidan_bagisi",
+        )
     )
+    db.commit()
     assert db.scalar(select(GunlukOzet)) is not None
     assert db.scalar(select(OdulSecimi)) is not None
 
