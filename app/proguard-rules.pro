@@ -1,2 +1,3 @@
-# Prototip boyunca minify kapalı (app/build.gradle.kts).
-# Yarışma sonrası release hazırlığında buraya kural eklenecek.
+# Uygulama-ozel yansima kullanan sinif yok. Room, Hilt, Retrofit,
+# kotlinx-serialization ve WorkManager gerekli kurallari kendi kutuphane
+# paketlerinde tasiyor. Release emülator duman testi bu varsayimi dogrular.

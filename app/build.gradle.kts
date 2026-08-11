@@ -117,7 +117,11 @@ android {
             // Bulunamazsa imzasız kalıyor; aşağıdaki `assembleRelease`
             // kontrolü bunu derleme sonunda söylüyor.
             signingConfig = signingConfigs.findByName("release")
-            isMinifyEnabled = false
+            // Material'in geniş ikon paketi ve yalnızca debug/opsiyonel
+            // kollarda kalan kod yayın APK'sına taşınmasın. R8 + kaynak
+            // küçültme release'e özeldir; debug tanılanabilir kalır.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

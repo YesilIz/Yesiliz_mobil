@@ -369,6 +369,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: A session could show “Seans bozuldu” immediately, making the focus reward unobtainable.
 - Status: Fixed and live-UI validated. A small state tracker requires an actual departure before accepting a return. Three JVM regressions cover initial synchronization, repeated departure events and single-consumption. On API 36, Start remained on “Odaklanıyorsun”; Home and return then changed it to “Seans bozuldu” as intended.
 
+## DBG-041 — Release shipped the full extended icon graph and four DEX files
+
+- Severity: P2 — download/startup footprint
+- Area: release build configuration
+- Evidence: The signed non-minified APK measured 24,225,698 bytes and carried four DEX files; the app directly uses a bounded subset of Material extended icons. Release already declared the optimized ProGuard baseline but explicitly disabled minification.
+- Expected: Production removes unreachable application/library code and unused resources while debug remains readable.
+- Actual: Every install/download paid for a large unreachable graph; the oversized DEX set also increased class-loading and distribution overhead.
+- Status: Fixed and exact-release validated. Release-only R8 plus resource shrinking produces an 8,594,218-byte, single-DEX signed APK, a 64.5% reduction. The live-HTTPS/forbidden-host build guard, v2 signature verification and lint-vital pass. API 36 installed this artifact, completed onboarding, exercised the main tabs and cold-restarted through Hilt, Room, DataStore and WorkManager without a focused shrinker/runtime failure.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
@@ -378,4 +387,4 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Updated connected suites: API 36 passed 42 tests with 4 documented permission-precondition skips; physical API 31 passed all 42 tests with no skip or failure.
 - Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
-- Current forced suites: 30 `core-risk` and 212 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors.
+- Current forced suites: 30 `core-risk` and 222 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.
