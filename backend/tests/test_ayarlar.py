@@ -89,6 +89,13 @@ def test_izinli_kaynak_yoksa_liste_bos():
     assert _ayar().izinli_kaynak_listesi == []
 
 
+def test_uretim_cors_jokeriyle_baslamiyor():
+    with pytest.raises(YapilandirmaHatasi) as hata:
+        _ayar(YESILIZ_IZINLI_KAYNAKLAR="*").dogrula()
+
+    assert "ALLOWED_ORIGINS" in str(hata.value)
+
+
 def test_standart_isimler_ortamdan_okunuyor(monkeypatch):
     """
     Sağlayıcı `DATABASE_URL`'i kendisi enjekte ediyor ve adı değiştirilemiyor.

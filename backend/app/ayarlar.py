@@ -203,6 +203,14 @@ class Ayarlar(BaseSettings):
                 "adresi olmalı (CLAUDE.md §5)."
             )
 
+        # `allow_credentials=True` ile joker kaynak kullanmak, gelecekteki
+        # tarayıcı panelini herhangi bir sitenin kimlikli isteğine açar.
+        if "*" in self.izinli_kaynak_listesi:
+            sorunlar.append(
+                "Üretimde ALLOWED_ORIGINS joker (*) olamaz; izin verilen "
+                "panel kaynaklarını açıkça yazın."
+            )
+
         if sorunlar:
             raise YapilandirmaHatasi(
                 "Üretim yapılandırması eksik ya da güvensiz:\n- "
