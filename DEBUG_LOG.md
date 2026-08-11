@@ -558,6 +558,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: The same underlying day could truthfully say “not enough data” in one place and “low/medium/high risk” in another.
 - Status: Fixed. Home, Statistics, Categories and Risk Detail now use one guarded entity decoder; unknown statuses/bands hide the claim, unknown trends hide only the trend, and nightly hysteresis skips an unrecognized historical candidate. Seven focused decoder/replay regressions and release Kotlin compilation pass.
 
+## DBG-062 — Rapid league-privacy changes could finish on the server in the wrong order
+
+- Severity: P0 — privacy-control race
+- Areas: Profile › “Ligde görün” and daily synchronization
+- Evidence: Every toggle launched an independent coroutine and the daily worker could call the same endpoint concurrently. If a slow older “visible” request completed after a newer “hidden” request, the local switch stayed off while the server exposed the member.
+- Expected: Visibility writes from the whole process are serialized so the last local preference is also the last server write.
+- Actual: Network response timing, rather than the user's final choice, could determine the remote privacy state.
+- Status: Fixed. The singleton synchronization repository now places profile and worker visibility writes behind one cancellation-safe mutex. A deterministic concurrency regression holds the first call open and proves the second cannot begin until it completes; release Kotlin compilation passes.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

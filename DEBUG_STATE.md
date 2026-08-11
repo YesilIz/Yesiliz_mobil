@@ -4,8 +4,8 @@ MISSION_START: 2026-08-11 00:09:10 +03 (Europe/Istanbul)
 MISSION_START_EPOCH: 1786396150
 TARGET_END: 2026-08-11 07:09:10 +03 (Europe/Istanbul)
 TARGET_END_EPOCH: 1786421350
-CURRENT_PHASE: Risk labels now fail closed across every screen; continuing adversarial review before final full/device/release validation
-LAST_CHECKPOINT: 2026-08-11 05:25:30 +03
+CURRENT_PHASE: League privacy writes serialized across UI and worker; continuing adversarial review before final full/device/release validation
+LAST_CHECKPOINT: 2026-08-11 05:28:30 +03
 CURRENT_BRANCH: fix/turan-debug
 LAST_VALIDATED_COMMIT: 691bf41 (timer/service lifecycle wave; forced suites and two-device connected suite green)
 CURRENT_DEVICE: Samsung SM-A217F (serial RF8NA115KCD), Android 12 / API 31, 720x1600 @280dpi; API 36 emulator also connected
@@ -54,3 +54,4 @@ BLOCKERS: None. Pre-existing user deletion of Dökümanlar/Yesiliz_Kapsam_ve_Sin
 - 2026-08-11 05:09:30 +03 — Replaced process-lifetime time-zone capture with a testable clock that reads the current system zone per operation, and changed nightly/reminder work to recalculate its next real local-time instant after every run/startup so DST and travel cannot permanently shift it. Forced suites pass 30 core-risk + 237 app JVM + 103 backend; lint has zero errors. Approximately 2h00m mission time remains.
 - 2026-08-11 05:22:30 +03 — Corrected the local-only deletion flow so it cannot imply the server account, shared summaries or parent link are erased, and added a cancellation-safe export failure path with a visible retry explanation. Six focused Profile regressions and release Kotlin compilation pass. Approximately 1h47m mission time remains.
 - 2026-08-11 05:25:30 +03 — Found that insufficient risk measurements were hidden on Home/Risk Detail but still labelled on Statistics/Categories. Unified all four on a fail-closed decoder, hardened restored/future enum values and nightly replay, and passed seven focused regressions plus release compilation. Approximately 1h44m mission time remains.
+- 2026-08-11 05:28:30 +03 — Closed a P0 last-write race in the “Ligde görün” privacy control: profile and daily-worker server writes are process-wide serialized so an older visible request cannot overtake the user's final hidden choice. Deterministic concurrency regression and release compilation pass. Approximately 1h41m mission time remains.

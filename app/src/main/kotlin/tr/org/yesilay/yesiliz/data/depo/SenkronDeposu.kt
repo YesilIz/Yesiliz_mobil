@@ -3,6 +3,8 @@ package tr.org.yesilay.yesiliz.data.depo
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import retrofit2.HttpException
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
@@ -46,6 +48,8 @@ class SenkronDeposu @Inject constructor(
     private val puanDao: PuanGunlukDao,
     private val saat: Clock,
 ) {
+    /** Profil dokunuşları ve worker aynı gizlilik isteğini birbirinin önüne geçiremez. */
+    private val ligGorunurlukSirasi = SenkronSirasi()
 
     /**
      * Son [GUN] günü gönderir.
@@ -108,10 +112,10 @@ class SenkronDeposu @Inject constructor(
      * istediğine dair açık ayarıdır. Hata halinde günlük worker yeniden
      * dener, profil akışı da kullanıcı değiştirir değiştirmez çağırır.
      */
-    suspend fun ligGorunurlugunuSenkronEt(): Boolean {
+    suspend fun ligGorunurlugunuSenkronEt(): Boolean = ligGorunurlukSirasi.sirala {
         val oturum = tercihler.oturum.first()
-        if (oturum.misafirMi || !oturum.girisYapildiMi) return false
-        return try {
+        if (oturum.misafirMi || !oturum.girisYapildiMi) return@sirala false
+        try {
             val gorunur = tercihler.ligdeGorun.first()
             try {
                 api.ligGorunurlugu(LigGorunurlukIstek(gorunur = gorunur))
@@ -149,6 +153,13 @@ class SenkronDeposu @Inject constructor(
         const val KOD_BULUNAMADI = 404
         const val ETIKET = "Senkron"
     }
+}
+
+/** Aynı sunucu tercihini değiştiren isteklerin cevap sırasını korur. */
+internal class SenkronSirasi {
+    private val kilit = Mutex()
+
+    suspend fun <T> sirala(blok: suspend () -> T): T = kilit.withLock { blok() }
 }
 
 private fun GunlukOzetEntity.dto() = GunlukOzetDto(
