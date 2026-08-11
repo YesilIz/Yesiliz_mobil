@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
+import tr.org.yesilay.yesiliz.data.yerel.entity.trendVeyaNull
+import tr.org.yesilay.yesiliz.data.yerel.entity.veriDurumuVeyaYetersiz
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.risk.EtkileyenFaktor
@@ -64,13 +67,14 @@ class RiskDetayViewModel @Inject constructor(
                                 "devam et.",
                         )
                         VeriDurumu.HESAPLANDI -> {
-                            val bant = Bant.valueOf(risk.gosterilenBant)
+                            val bant = risk.gosterilebilirBant()
+                                ?: return@map RiskDetayDurum(veriVarMi = true)
                             RiskDetayDurum(
                                 veriVarMi = true,
                                 bant = bant,
                                 bantEtiketiKisa = bantKisaEtiket(bant),
                                 aciklama = aciklama(bant),
-                                trendMesaji = trendMesaji(Trend.valueOf(risk.trend)),
+                                trendMesaji = trendMesaji(risk.trend.trendVeyaNull()),
                                 oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
                                 faktorler = faktorler,
                                 // YEDAM teklifi yalnızca yüksek bantta.
@@ -104,7 +108,9 @@ class RiskDetayViewModel @Inject constructor(
         tarih: LocalDate,
         bugun: LocalDate,
     ): VeriDurumu {
-        if (VeriDurumu.valueOf(kayitliDurum) == VeriDurumu.YETERSIZ) return VeriDurumu.YETERSIZ
+        if (kayitliDurum.veriDurumuVeyaYetersiz() != VeriDurumu.HESAPLANDI) {
+            return VeriDurumu.YETERSIZ
+        }
         val gunGecmisi = ChronoUnit.DAYS.between(tarih, bugun)
         return if (gunGecmisi > Sabitler.VERI_ESKI_ESIK_GUN) VeriDurumu.ESKI else VeriDurumu.HESAPLANDI
     }
@@ -134,11 +140,12 @@ class RiskDetayViewModel @Inject constructor(
                 "belirgin alanlar olduğunu gösteriyor."
     }
 
-    private fun trendMesaji(trend: Trend): String? = when (trend) {
+    private fun trendMesaji(trend: Trend?): String? = when (trend) {
         Trend.IYILESIYOR -> "Geçen aya göre iyileşiyor"
         Trend.KOTULESIYOR -> "Geçen aya göre kötüleşiyor"
         Trend.SABIT -> "Geçen aya göre aynı seviyede"
         Trend.BELIRSIZ -> null
+        null -> null
     }
 
     private companion object {

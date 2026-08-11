@@ -32,6 +32,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.risk.Bant
@@ -100,8 +101,7 @@ class AnaViewModel @Inject constructor(
                     // ile aynı kuralı izliyor. `ESKI` burada süzülmüyor:
                     // kart zaten "son bilinen" bandı gösteriyor, risk
                     // detayının aksine güncellik iddiası taşımıyor.
-                    bant = risk?.takeIf { it.veriDurumu != VeriDurumu.YETERSIZ.name }
-                        ?.let { Bant.valueOf(it.gosterilenBant) },
+                    bant = risk?.gosterilebilirBant(),
                     toplamPuan = toplamPuan,
                     seriGun = gunlukPuan?.seriGun ?: 0,
                     hedefDk = hedef,

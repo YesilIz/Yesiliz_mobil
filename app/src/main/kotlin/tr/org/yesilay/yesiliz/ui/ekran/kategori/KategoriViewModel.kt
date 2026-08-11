@@ -16,6 +16,7 @@ import tr.org.yesilay.yesiliz.data.kullanim.UygulamaAdlari
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
+import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.risk.Bant
@@ -96,7 +97,7 @@ class KategoriViewModel @Inject constructor(
                 gruplar = gruplar.mapIndexed { i, grup -> grup.copy(acik = i == 0) },
                 toplamDk = gorunur.sumOf { satir -> satir.dakika },
                 riskBandi = riskDao.sonGunler(1).firstOrNull()
-                    ?.let { risk -> Bant.valueOf(risk.gosterilenBant) },
+                    ?.gosterilebilirBant(),
                 ebeveynAktifMi = tercihler.ebeveynEslesmisMi.first(),
                 kategorisizler = kategorisizleriBul(esleyici, sureler.keys),
                 yukleniyor = false,

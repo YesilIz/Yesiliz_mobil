@@ -549,6 +549,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: The promised portable-data action could appear to do nothing and emit an uncaught coroutine exception.
 - Status: Fixed. Export generation now has a cancellation-safe boundary and exposes a visible storage/retry message without closing the sheet. Three focused regressions cover success, failure and cancellation; release Kotlin compilation passes.
 
+## DBG-061 — Insufficient measurements still produced a risk label on two screens
+
+- Severity: P1 — health-data truthfulness and resilience
+- Areas: Statistics, app categories and persisted risk decoding
+- Evidence: `RiskSonucEntity` explicitly says a `YETERSIZ` result must never expose its computed band. The Home and Risk Detail screens enforced that rule, but Statistics and Categories directly decoded and rendered `gosterilenBant`. Every screen also used strict enum decoding in at least one path, so one unknown/restored/future value could terminate its state flow or nightly replay.
+- Expected: Every consumer shares one fail-closed visibility rule; insufficient or unrecognized data never creates a risk/trend claim and never crashes a screen.
+- Actual: The same underlying day could truthfully say “not enough data” in one place and “low/medium/high risk” in another.
+- Status: Fixed. Home, Statistics, Categories and Risk Detail now use one guarded entity decoder; unknown statuses/bands hide the claim, unknown trends hide only the trend, and nightly hysteresis skips an unrecognized historical candidate. Seven focused decoder/replay regressions and release Kotlin compilation pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.

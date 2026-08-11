@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.risk.Bant
@@ -69,7 +70,7 @@ class IstatistikViewModel @Inject constructor(
         }
         .combine(secilenIndeks) { durum, indeks -> secimiUygula(durum, indeks) }
         .combine(riskDao.sonuncuAkisi()) { durum, risk ->
-            durum.copy(riskBandi = risk?.let { Bant.valueOf(it.gosterilenBant) })
+            durum.copy(riskBandi = risk?.gosterilebilirBant())
         }
         .stateIn(
             scope = viewModelScope,

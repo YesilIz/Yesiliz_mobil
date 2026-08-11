@@ -6,6 +6,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.adayBantVeyaNull
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.risk.Alpha
 import tr.org.yesilay.yesiliz.risk.AnketGirdi
@@ -111,7 +112,7 @@ class RiskDeposu @Inject constructor(
     private suspend fun takipciyiKur(tarih: LocalDate): BantTakipci {
         val takipci = BantTakipci()
         riskDao.oncekiler(tarih, GECMIS_PENCERE_GUN).forEach {
-            takipci.guncelle(Bant.valueOf(it.adayBant))
+            it.adayBantVeyaNull()?.let(takipci::guncelle)
         }
         return takipci
     }
