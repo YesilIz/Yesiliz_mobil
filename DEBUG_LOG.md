@@ -378,6 +378,42 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: Every install/download paid for a large unreachable graph; the oversized DEX set also increased class-loading and distribution overhead.
 - Status: Fixed and exact-release validated. Release-only R8 plus resource shrinking produces an 8,594,218-byte, single-DEX signed APK, a 64.5% reduction. The live-HTTPS/forbidden-host build guard, v2 signature verification and lint-vital pass. API 36 installed this artifact, completed onboarding, exercised the main tabs and cold-restarted through Hilt, Room, DataStore and WorkManager without a focused shrinker/runtime failure.
 
+## DBG-042 — Focus and walking timers lost time while Android was asleep
+
+- Severity: P1 — core activity correctness
+- Areas: focus ViewModel and walking foreground service
+- Evidence: Both paths treated each resumed one-second coroutine delay as exactly one elapsed second. Android may defer those callbacks in device idle/deep sleep. Focus explicitly requires the screen to remain off, while walking is designed for a pocketed phone, so the affected state is their primary use case. A delayed focus callback also let `ON_RESUME` mark the session failed before recognizing that its deadline had already passed.
+- Expected: Elapsed active time comes from a monotonic clock that includes device sleep; focus return after the deadline completes successfully, while return before it still invalidates the session. Walking pauses exclude only the paused segment.
+- Actual: A 15/25-minute activity could take materially longer or become impossible under normal sleep behavior.
+- Status: Fixed and forced-idle validated. Both paths reconstruct time from `SystemClock.elapsedRealtime`; walking retains a fresh monotonic base for each resumed segment and catches skipped sampling/notification boundaries. Pure tests cover sub-second, deep-sleep jump and defensive negative input. API 36 forced deep idle for 15 seconds; focus advanced from 24:57 to 24:21 and walking from 0:05 to 0:40, including command overhead rather than losing the sleep interval.
+
+## DBG-043 — The breathing session allowed the display to sleep mid-exercise
+
+- Severity: P2 — activity usability/timer continuity
+- Area: `NefesEkran`
+- Evidence: `EkranAcikTut` documents breathing as a consumer, but only the eye-break screen invoked it. The two-minute breathing session therefore relied on the user's screen-timeout setting and a delay-based main-thread timer.
+- Expected: The visible guided animation keeps the display awake only while actively playing and releases the flag when paused, complete or disposed.
+- Actual: Short display timeouts could blank the breathing guide before completion.
+- Status: Fixed and device validated. The breathing screen now owns the existing scoped keep-screen-on helper while playing. API 36 window state showed `KEEP_SCREEN_ON`; pausing changed the control to “Oynat” and removed the flag.
+
+## DBG-044 — Early walking finish falsely claimed a reward and blocked the next walk
+
+- Severity: P1 — points truthfulness/core repeat flow
+- Areas: walking service/session state/ViewModel/screen
+- Evidence: Notification “Bitir” always set generic `tamamlandi=true` but never awarded points when early. The UI derived a partial-looking point value and unconditionally said it had been added. The result button only navigated away, leaving the singleton completed forever in the same process; reopening could not start a new walk.
+- Expected: Session completion, target completion and actual daily point insertion are separate facts; early finish says no point, a repeated daily reward says already obtained, and dismissing the result resets the next session.
+- Actual: The app could make a false reward claim and strand the walking feature until process restart.
+- Status: Fixed and live-notification validated. The state model separates all three outcomes and result copy branches truthfully; the result button resets before navigating. Unit regressions cover early, completed-with-daily-limit and actually-awarded states. The API 36 notification action showed “puan yazılmadı”, stopped the service and the next entry opened at 0:00.
+
+## DBG-045 — Walking crashed on Android 14+ when optional activity permission was denied
+
+- Severity: P0 — deterministic core-flow crash
+- Area: walking foreground-service manifest declaration
+- Evidence: On API 36 with `ACTIVITY_RECOGNITION` deliberately absent, pressing Start threw `SecurityException` from `startForeground`: a `health` FGS requires one of the platform's health/activity runtime permissions. The app treats step permission as optional and hides the step count when absent, so the timer itself had no legitimate permission precondition. Android then restarted the crashing service and repeated the failure.
+- Expected: The user-started 15-minute digital-wellbeing timer runs without optional step/Health Connect grants; absent permission removes only step data.
+- Actual: The whole app process crashed on the supported modern Android path.
+- Status: Fixed and API 36 validated. The timer now uses the declared `specialUse` subtype with an explicit Play-facing explanation; optional `ACTIVITY_RECOGNITION` remains solely for sensor data. With that permission still denied, the service started as a typed foreground service, counted, survived forced deep sleep, and stopped cleanly with no focused fatal/security log. Lint passes.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
@@ -387,4 +423,4 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Updated connected suites: API 36 passed 42 tests with 4 documented permission-precondition skips; physical API 31 passed all 42 tests with no skip or failure.
 - Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
-- Current forced suites: 30 `core-risk` and 222 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.
+- Current forced suites: 30 `core-risk` and 230 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.

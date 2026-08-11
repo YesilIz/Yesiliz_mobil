@@ -33,11 +33,12 @@
       telefonu cebine koyuyor, ekran kapanıyor, sayaç duruyor. Ekranı 15
       dakika açık tutarak yürümek uygulamanın kendi mesajıyla da çelişiyor.
 
-      FOREGROUND_SERVICE_HEALTH, egzersiz oturumunun doğru sınıfı ve
-      Android 14+ tiplenmiş servis şartını karşılıyor. Servis yalnızca
-      oturum sürerken yaşıyor, tamamlanınca kendini durduruyor.
+      Servisin asıl işi kullanıcının başlattığı 15 dakikalık dijital
+      esenlik sayacıdır; hareket/sağlık verisi toplamak zorunlu değildir.
+      Bu nedenle Android 14+ tipi `specialUse`: `health` tipi, isteğe bağlı
+      ACTIVITY_RECOGNITION izni verilmemişse startForeground anında uygulamayı
+      SecurityException ile çökertiyor. Adım izni yoksa yalnızca adım gizlenir.
     -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <!--
@@ -262,7 +263,11 @@
         <service
             android:name=".arkaplan.YuruyusServisi"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started 15-minute digital-wellbeing walking timer; optional step data is omitted when permission is absent." />
+        </service>
     </application>
 
 </manifest>

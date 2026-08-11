@@ -154,19 +154,29 @@ fun YuruyusEkran(
         if (durum.tamamlandiMi) {
             Kart {
                 Text(
-                    text = "Yürüyüşü tamamladın",
+                    text = if (durum.hedefTamamlandiMi) {
+                        "Yürüyüşü tamamladın"
+                    } else {
+                        "Yürüyüş sona erdi"
+                    },
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )
                 Text(
-                    text = "+${durum.kazanilanPuan} puan hesabına eklendi.",
+                    text = yuruyusSonucMetni(durum),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MetinIkincil,
                 )
             }
             Spacer(modifier = Modifier.height(Olcu.Aralik))
-            BirincilButon(metin = "Bitir", onTikla = onKapat)
+            BirincilButon(
+                metin = "Bitir",
+                onTikla = {
+                    viewModel.sifirla()
+                    onKapat()
+                },
+            )
         } else {
             Text(
                 text = "Sayaç arka planda da ilerliyor. Telefonu cebine koyup " +
@@ -208,4 +218,12 @@ fun YuruyusEkran(
 
         Spacer(modifier = Modifier.height(Olcu.BolumArasi))
     }
+}
+
+internal fun yuruyusSonucMetni(durum: YuruyusDurum): String = when {
+    !durum.hedefTamamlandiMi ->
+        "Bu oturum hedefe ulaşmadan bitti; puan yazılmadı. İstediğin zaman tekrar deneyebilirsin."
+
+    durum.puanVerildiMi -> "+${durum.kazanilanPuan} puan hesabına eklendi."
+    else -> "Bugünün yürüyüş puanı zaten alınmış; bu oturum yine de kaydedildi."
 }
