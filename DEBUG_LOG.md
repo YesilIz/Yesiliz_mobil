@@ -675,6 +675,15 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Actual: The debug/offline experience could show an impossible league outcome, while a slow/failed request briefly displayed fabricated movement rules.
 - Status: Fixed and physical API 31-validated. The sample repository now uses 3/3, the sum is regression-guarded not to exceed the ten-member group, and the pre-response state fails closed at 0/0. On the phone an unavailable league response displayed 0/0 instead of the former 7/7; both focused tests and all 263 app JVM tests pass.
 
+## DBG-075 — Partially filled server leagues could still overlap movement sets
+
+- Severity: P1 — competition correctness and server/client contract truthfulness
+- Areas: backend league response and week-to-week movement
+- Evidence: The server returned fixed 3/3 thresholds even when a new group contained fewer than six members. Its movement code checked promotion first, so a one-person group labelled that same user among both the first and last three while actually promoting them.
+- Expected: The advertised thresholds and movement algorithm use one member-count-aware rule whose promoted/relegated sets cannot overlap.
+- Actual: Early-week or low-volume groups could receive an impossible rule label that disagreed with the server's branch priority.
+- Status: Fixed. A shared helper gives promotion priority and caps relegation to the remaining members: 0→0/0, 1→1/0, 4→3/1 and 10→3/3. Both the API response and next-week movement use it; 20 focused league tests and all 107 backend tests pass.
+
 ## Baseline validation
 
 - Forced JVM/build run: 30 `core-risk` tests passed, 170 app JVM tests passed, debug APK assembled.
@@ -685,4 +694,4 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Physical live-backend flow: guest registration, retained local points, logout/login, league join, real invite-code acceptance, network loss, and network recovery all completed without a crash; the original installed package remained untouched.
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
 - Current forced suites: 30 `core-risk` and 230 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.
-- Final validation: 30 `core-risk`, 263 app JVM and 106 backend tests passed. Physical API 31 and emulator API 36 each report 48 connected tests: 44 executed pass plus four documented UsageStats-permission precondition skips, with zero failure/error. Release lint reports zero issues. The final signed release is 8,610,730 bytes, one DEX, SHA-256 `73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658`, and verifies with APK Signature Scheme v2/RSA-4096.
+- Final validation: 30 `core-risk`, 263 app JVM and 107 backend tests passed. Physical API 31 and emulator API 36 each report 48 connected tests: 44 executed pass plus four documented UsageStats-permission precondition skips, with zero failure/error. Release lint reports zero issues. The final signed release is 8,610,730 bytes, one DEX, SHA-256 `73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658`, and verifies with APK Signature Scheme v2/RSA-4096.
