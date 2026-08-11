@@ -22,6 +22,16 @@ from app.veritabani import oturum
 # OWASP'ın güncel önerisi.
 _ozetleyici = PasswordHasher()
 
+# Girişte bulunmayan e-posta da gerçek bir Argon2id doğrulaması çalıştırır.
+# Bu değer hiçbir hesaba ait değildir ve sır değildir; yalnızca var/yok
+# yollarının hesaplama maliyetini eşitleyerek zamanlama ile e-posta
+# sorgulanmasını zorlaştırır. Parametreleri PasswordHasher varsayılanlarıyla
+# aynı tutulmuştur.
+_SAHTE_SIFRE_OZETI = (
+    "$argon2id$v=19$m=65536,t=3,p=4$AGQ7bdOUcoA+qk/I5pVPCg$"
+    "VCxMPxnGWiJ8ZGepbBMSJipUxzc5TZ6SIixryVUTcIM"
+)
+
 _tasiyici = HTTPBearer(auto_error=False)
 
 
@@ -29,9 +39,11 @@ def sifre_ozetle(sifre: str) -> str:
     return _ozetleyici.hash(sifre)
 
 
-def sifre_dogrula(ozet: str, sifre: str) -> bool:
+def sifre_dogrula(ozet: str | None, sifre: str) -> bool:
+    gercek_kullanici = ozet is not None
     try:
-        return _ozetleyici.verify(ozet, sifre)
+        eslesti = _ozetleyici.verify(ozet or _SAHTE_SIFRE_OZETI, sifre)
+        return gercek_kullanici and eslesti
     except VerifyMismatchError:
         return False
     except Exception:

@@ -100,9 +100,14 @@ def giris(istek: GirisIstek, db: Session = Depends(oturum)) -> Jetonlar:
         .with_for_update()
     )
 
-    # Kullanıcı yoksa da şifre yanlışsa da AYNI mesaj: hangi e-postaların
-    # kayıtlı olduğunu sızdırmamak için.
-    if kullanici is None or not sifre_dogrula(kullanici.sifre_ozet, istek.sifre):
+    # Kullanıcı yoksa da gerçek bir Argon2 doğrulaması yapılır. Yalnızca aynı
+    # mesajı vermek yetmez: hızlı "kullanıcı yok" yolu süre ölçümüyle kayıtlı
+    # e-postaları sızdırırdı.
+    sifre_gecerli = sifre_dogrula(
+        kullanici.sifre_ozet if kullanici is not None else None,
+        istek.sifre,
+    )
+    if kullanici is None or not sifre_gecerli:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "E-posta ya da şifre hatalı")
 
     return _jetonlar(db, kullanici)

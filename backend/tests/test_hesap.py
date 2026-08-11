@@ -67,6 +67,25 @@ def test_olmayan_kullanici_ile_yanlis_sifre_ayni_mesaji_veriyor(istemci):
     assert yok.json()["detail"] == yanlis.json()["detail"]
 
 
+def test_olmayan_kullanici_da_argon2_dogrulamasindan_geciyor(istemci, monkeypatch):
+    """Aynı yanıtın yanında hesaplama yolu da zamanlama sızıntısı vermemeli."""
+    gorulen_ozetler: list[str | None] = []
+
+    def izle(ozet: str | None, _sifre: str) -> bool:
+        gorulen_ozetler.append(ozet)
+        return False
+
+    monkeypatch.setattr(hesap, "sifre_dogrula", izle)
+
+    yanit = istemci.post(
+        "/auth/giris",
+        json={"eposta": "olmayan@example.com", "sifre": "parola123"},
+    )
+
+    assert yanit.status_code == 401
+    assert gorulen_ozetler == [None]
+
+
 def test_kisa_sifre_reddediliyor(istemci):
     yanit = istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "kisa"})
 
