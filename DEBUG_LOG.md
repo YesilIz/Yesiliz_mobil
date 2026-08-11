@@ -5,6 +5,7 @@ This file records evidence-backed issues investigated during the seven-hour miss
 ## Mission baseline
 
 - Start: 2026-08-11 00:09:10 +03
+- End: 2026-08-11 07:09:15 +03 (elapsed: 7h 00m 05s)
 - Base commit: `71a3ab133fdda2aa3f4953ff081e21a7a1747cc2`
 - Working branch: `fix/turan-debug`
 - Preserved pre-existing user change: deletion of `Dökümanlar/Yesiliz_Kapsam_ve_Sinirlar_v3.pdf`
@@ -695,3 +696,13 @@ This file records evidence-backed issues investigated during the seven-hour miss
 - Latest forced suites: 30 `core-risk` and 200 app JVM tests passed; all 89 backend tests passed. API 36 connected suite reports 44 tests, 40 passed and 4 documented usage-permission skips. Android lint passes with zero errors.
 - Current forced suites: 30 `core-risk` and 230 app JVM tests passed; all 96 backend tests passed. The latest physical API 31 and emulator API 36 suites each passed all 47 connected tests with no skip or failure; Android lint remains at zero errors. The shrunk signed release is 8,594,218 bytes/one DEX and passed an API 36 onboarding/tabs/cold-restart smoke.
 - Final validation: 30 `core-risk`, 263 app JVM and 107 backend tests passed. Physical API 31 and emulator API 36 each report 48 connected tests: 44 executed pass plus four documented UsageStats-permission precondition skips, with zero failure/error. Release lint reports zero issues. The final signed release is 8,610,730 bytes, one DEX, SHA-256 `73e069f93a4f50f6131a487f1bb48b40ce063ee647b9588e8bb2824ef917b658`, and verifies with APK Signature Scheme v2/RSA-4096.
+
+## Remaining launch-risk register
+
+- Authentication, registration, reset and six-digit parent pairing do not yet have deployment-wide shared rate limiting. Add a Redis-backed limiter and alerting before public exposure.
+- Weekly league points are bounded to 0–2,000 but remain client-attested. A public competition needs server-verifiable events or another anti-cheat trust boundary.
+- Access/refresh tokens are in app-private DataStore with Android backup disabled, but are not Keystore-encrypted. Migrate them to hardware-backed/encrypted storage as defense in depth.
+- Password-reset mail delivery is intentionally unavailable and truthfully returns 503; an e-mail provider and operational monitoring are still required.
+- Under-18 parental consent is an explicitly disclosed self-attestation, not verified consent. Product/legal approval and a verifiable guardian flow remain outside this local mission.
+- Health Connect `1.2.0-alpha01` was device-validated but is prerelease. Upgrade only through a dedicated dependency/test review, not as an untested last-minute version bump.
+- The two-device 48-test matrix predates DBG-074/075. The final Android league delta was separately covered by two JVM regressions and a physical API 31 smoke; the final backend delta by 20 focused plus all 107 backend tests. A full final-source connected rerun remains recommended in CI.
