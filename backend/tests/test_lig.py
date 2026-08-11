@@ -47,6 +47,12 @@ def test_henuz_dolmamis_grupta_hareket_kumeleri_cakismiyor():
     assert _hareket_esikleri(4) == (3, 1)
     assert _hareket_esikleri(10) == (3, 3)
 
+    for uye_sayisi in range(21):
+        yukselen, dusen = _hareket_esikleri(uye_sayisi)
+        assert 0 <= yukselen <= ayarlar().lig_yukselen
+        assert 0 <= dusen <= ayarlar().lig_dusen
+        assert yukselen + dusen <= uye_sayisi
+
 
 def test_katilinca_siralamada_gorunuyor(istemci, kullanici_kur):
     basliklar, _ = kullanici_kur()
