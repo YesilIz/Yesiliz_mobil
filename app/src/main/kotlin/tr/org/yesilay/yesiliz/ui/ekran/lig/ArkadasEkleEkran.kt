@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
@@ -182,7 +183,7 @@ private fun DavetKoduGirisi(
             onValueChange = onKodDegis,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Davet kodu") },
-            placeholder = { Text("YSZ-7K2Q") },
+            placeholder = { Text(DavetKodu.ORNEK) },
             singleLine = true,
             enabled = !islemde,
             isError = hata != null,

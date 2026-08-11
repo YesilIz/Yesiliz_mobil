@@ -174,13 +174,13 @@ class ArkadasEkleViewModel @Inject constructor(
     }
 
     private companion object {
-        const val DAVET_KODU_AZAMI = 8
+        const val DAVET_KODU_AZAMI = 4 + DavetKodu.UZUNLUK
     }
 }
 
 /** Davet kodu biçimi ve kendi-kodunu-kullanma tuzağı için saf doğrulama. */
 internal fun davetKodunuDogrula(kod: String, kendiKodu: String): String? = when {
-    !DavetKodu.gecerliMi(kod) -> "Kod YSZ-7K2Q biçiminde olmalı."
+    !DavetKodu.gecerliMi(kod) -> "Kod ${DavetKodu.ORNEK} biçiminde olmalı."
     kod.trim().uppercase() == kendiKodu.trim().uppercase() ->
         "Kendi davet kodunu kullanamazsın."
     else -> null

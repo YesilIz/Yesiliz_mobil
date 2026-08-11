@@ -12,8 +12,8 @@ class DavetKoduTest {
     fun `kod tasarimdaki bicimde uretiliyor`() {
         val kod = DavetKodu.uret(Random(42))
 
-        // YSZ-XXXX
-        assertTrue(kod, Regex("^YSZ-[A-Z2-9]{4}$").matches(kod))
+        // YSZ-XXXXXXXX
+        assertTrue(kod, Regex("^YSZ-[A-HJ-NP-Z2-9]{8}$").matches(kod))
         assertEquals(DavetKodu.UZUNLUK, kod.removePrefix("YSZ-").length)
     }
 
@@ -43,18 +43,19 @@ class DavetKoduTest {
 
     @Test
     fun `gecerlilik kucuk harf ve bosluga tolerans gosteriyor`() {
-        assertTrue(DavetKodu.gecerliMi("ysz-7k2q"))
-        assertTrue(DavetKodu.gecerliMi("  YSZ-7K2Q  "))
+        assertTrue(DavetKodu.gecerliMi("ysz-7k2qabcd"))
+        assertTrue(DavetKodu.gecerliMi("  YSZ-7K2QABCD  "))
     }
 
     @Test
     fun `bozuk kodlar reddediliyor`() {
         assertFalse(DavetKodu.gecerliMi(""))
         assertFalse(DavetKodu.gecerliMi("YSZ-"))
-        assertFalse(DavetKodu.gecerliMi("YSZ-7K2"))
-        assertFalse(DavetKodu.gecerliMi("YSZ-7K2QX"))
-        assertFalse(DavetKodu.gecerliMi("ABC-7K2Q"))
+        assertFalse(DavetKodu.gecerliMi("YSZ-7K2Q"))
+        assertFalse(DavetKodu.gecerliMi("YSZ-7K2QABC"))
+        assertFalse(DavetKodu.gecerliMi("YSZ-7K2QABCDF"))
+        assertFalse(DavetKodu.gecerliMi("ABC-7K2QABCD"))
         // Yasaklı karakter içeren kod da geçersiz.
-        assertFalse(DavetKodu.gecerliMi("YSZ-7K2O"))
+        assertFalse(DavetKodu.gecerliMi("YSZ-7K2OABCD"))
     }
 }

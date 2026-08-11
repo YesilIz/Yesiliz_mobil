@@ -8,12 +8,12 @@ class DavetKoduGirdisiTest {
 
     @Test
     fun baskaKullanicininGecerliKoduKabulEdilir() {
-        assertNull(davetKodunuDogrula("ysz-7k2q", "YSZ-ABCD"))
+        assertNull(davetKodunuDogrula("ysz-7k2qabcd", "YSZ-ABCDEFGH"))
     }
 
     @Test
     fun bozukKodVeKendiKoduReddedilir() {
-        assertNotNull(davetKodunuDogrula("7K2Q", "YSZ-ABCD"))
-        assertNotNull(davetKodunuDogrula(" ysz-abcd ", "YSZ-ABCD"))
+        assertNotNull(davetKodunuDogrula("7K2QABCD", "YSZ-ABCDEFGH"))
+        assertNotNull(davetKodunuDogrula(" ysz-abcdefgh ", "YSZ-ABCDEFGH"))
     }
 }

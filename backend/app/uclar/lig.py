@@ -33,6 +33,7 @@ SEVIYELER = ["Fidan Ligi", "Filiz Ligi", "Ağaç Ligi", "Koru Ligi", "Orman Ligi
 # I, O, 0, 1 yok: kod sesli paylaşılıyor ve bu karakterler ayırt edilemiyor.
 _ALFABE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _ONEK = "YSZ"
+_DAVET_GOVDE_UZUNLUGU = 8
 
 
 def hafta_baslangici(gun: dt.date | None = None) -> dt.date:
@@ -220,6 +221,11 @@ def davet_kodu(
         kayit = DavetKodu(kullanici_id=kullanici.id, kod=_kod_uret(db))
         db.add(kayit)
         db.commit()
+    elif len(kayit.kod) != len(_ONEK) + 1 + _DAVET_GOVDE_UZUNLUGU:
+        # Alembic göçü eski kısa kodları siliyor; savunma katmanı olarak
+        # göç atlanmış bir ortamda da sahip ilk okumada kodunu döndürür.
+        kayit.kod = _kod_uret(db)
+        db.commit()
     return KodYanit(kod=kayit.kod)
 
 
@@ -345,9 +351,9 @@ def _kalan_gun(hafta: dt.date, bugun: dt.date | None = None) -> int:
 
 
 def _kod_uret(db: Session) -> str:
-    """Çakışma olmayana kadar dene — alfabe 32^4 ≈ 1M olasılık."""
+    """Çakışma olmayana kadar dene — alfabe 32^8 ≈ 1,1T olasılık."""
     for _ in range(20):
-        govde = "".join(secrets.choice(_ALFABE) for _ in range(4))
+        govde = "".join(secrets.choice(_ALFABE) for _ in range(_DAVET_GOVDE_UZUNLUGU))
         kod = f"{_ONEK}-{govde}"
         if db.scalar(select(DavetKodu).where(DavetKodu.kod == kod)) is None:
             return kod

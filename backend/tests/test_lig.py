@@ -101,6 +101,7 @@ def test_davet_kodu_kalici(istemci, kullanici_kur):
     # Kod değişirse paylaşılmış davet geçersizleşir.
     assert ilk == ikinci
     assert ilk.startswith("YSZ-")
+    assert len(ilk.removeprefix("YSZ-")) == 8
 
 
 def test_davet_kodu_karistirilabilir_karakter_icermiyor(istemci, kullanici_kur):
@@ -151,7 +152,9 @@ def test_kendi_kodunu_kullanmak_reddediliyor(istemci, kullanici_kur):
 def test_olmayan_kod_reddediliyor(istemci, kullanici_kur):
     basliklar, _ = kullanici_kur()
 
-    yanit = istemci.post("/arkadas/davet", json={"kod": "YSZ-ZZZZ"}, headers=basliklar)
+    yanit = istemci.post(
+        "/arkadas/davet", json={"kod": "YSZ-ZZZZZZZZ"}, headers=basliklar
+    )
 
     assert yanit.status_code == 404
 
