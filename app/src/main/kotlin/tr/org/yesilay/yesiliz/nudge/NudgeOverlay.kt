@@ -48,7 +48,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
  */
 @Composable
 fun NudgeOverlay(
-    esikDakika: Long,
+    esikSaniye: Long,
     onDevamEt: () -> Unit,
     onNefesEvet: () -> Unit,
     onNefesHayir: () -> Unit,
@@ -70,7 +70,7 @@ fun NudgeOverlay(
         ) {
             when (asama) {
                 NudgeAsama.ANA_KART -> AnaKart(
-                    esikDakika = esikDakika,
+                    esikSaniye = esikSaniye,
                     onMolaVer = { asama = NudgeAsama.MOLA_SORUSU },
                     onDevamEt = onDevamEt,
                 )
@@ -85,10 +85,15 @@ fun NudgeOverlay(
 
 @Composable
 private fun AnaKart(
-    esikDakika: Long,
+    esikSaniye: Long,
     onMolaVer: () -> Unit,
     onDevamEt: () -> Unit,
 ) {
+    val sureBilgisi = if (esikSaniye >= 60) {
+        "${esikSaniye / 60} dakikadır buradasın"
+    } else {
+        "$esikSaniye saniyedir buradasın"
+    }
     Column {
         IkonRozeti(
             ikon = Icons.Filled.EnergySavingsLeaf,
@@ -99,7 +104,7 @@ private fun AnaKart(
         )
         Spacer(modifier = Modifier.height(Bosluk.M))
         Text(
-            text = "$esikDakika dakikadır buradasın",
+            text = sureBilgisi,
             style = MaterialTheme.typography.headlineMedium,
             color = MetinBirincil,
         )

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
@@ -30,6 +31,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.MainActivity
 import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
@@ -102,9 +104,22 @@ class NudgeOverlayService : Service() {
         while (kapsam.isActive) {
             if (overlayGorunumu == null) {
                 val simdi = Instant.now(saat)
-                val pencere = NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5)
+                // Pencereyi en az 10 dakika tut ki kısa eşiklerde bile yeterli
+                // geçmiş olsun ve UsageStatsManager'ın gecikmeyle yazdığı
+                // olaylar da yakalanabilsin.
+                val enAzPencere = OruntuCikar.BLOK_TOLERANSI.plusMinutes(10)
+                val pencere = maxOf(
+                    NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5),
+                    enAzPencere,
+                )
                 val hamOlaylar = kullanimOkuyucu.sonPencereOlaylari(pencere, simdi)
                 val oturumlar = OturumCikar.cikar(hamOlaylar, simdi.minus(pencere), simdi)
+
+                val sonOturum = oturumlar.maxByOrNull { it.bitis }
+                val suAnTuketimdeMi = sonOturum != null && esleyici.bul(
+                    sonOturum.paketAdi,
+                    kullanimOkuyucu.androidKategorisi(sonOturum.paketAdi),
+                ).anahtar in Sabitler.TUKETIM
 
                 val tuketimOlaylari = oturumlar.mapNotNull { oturum ->
                     val kategori = esleyici.bul(
@@ -115,7 +130,15 @@ class NudgeOverlayService : Service() {
                     KullanimOlay(oturum.paketAdi, kategori, oturum.baslangic, oturum.bitis)
                 }
 
-                if (Tetikleyici.degerlendir(tuketimOlaylari, simdi, sonEylem) == TetikSonucu.GOSTER) {
+                // Ön plandaki uygulamayı kontrol et: UsageStatsManager olayları
+                // gecikebilir; hâlâ açık olan tüketim uygulaması için son
+                // oturumun bitişini şimdiye uzat.
+                val guncelTuketim = if (suAnTuketimdeMi) onPlanTuketimUzat(tuketimOlaylari, simdi) else tuketimOlaylari
+
+                val sonuc = Tetikleyici.degerlendir(guncelTuketim, simdi, sonEylem, suAnTuketimdeMi)
+                Log.d(TAG, "poll: oturum=${oturumlar.size} tuketim=${guncelTuketim.size} sonuc=$sonuc")
+
+                if (sonuc == TetikSonucu.GOSTER) {
                     overlayiGoster()
                     // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
                     // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
@@ -129,20 +152,52 @@ class NudgeOverlayService : Service() {
         }
     }
 
-    private fun overlayiGoster() {
+    /**
+     * `UsageStatsManager.queryEvents()` hâlâ ön planda olan uygulamanın
+     * `ACTIVITY_PAUSED` olayını henüz yazmamış olabilir. Bu durumda
+     * `OturumCikar` oturumu `pencereBit = simdi` ile kapatır — bu doğru.
+     *
+     * Ama gerçek cihazlarda bazen `ACTIVITY_RESUMED` olayının kendisi de
+     * birkaç saniye gecikmeli yazılabiliyor. Bu durumda son tüketim
+     * oturumunun `bitis`'i `simdi`'den birkaç saniye önce kalır ve
+     * `acikBlokSuresi`'nin `simdiyeBosluk` kontrolü 2dk tolerans içinde
+     * olsa bile blok süresini olduğundan kısa hesaplar.
+     *
+     * Bu düzeltme: eğer son tüketim oturumunun bitişi `simdi`'ye
+     * tolerans içinde yakınsa, bitişi `simdi`'ye uzatır — blok hâlâ
+     * devam ediyor demektir.
+     */
+    private fun onPlanTuketimUzat(
+        olaylar: List<KullanimOlay>,
+        simdi: Instant,
+    ): List<KullanimOlay> {
+        if (olaylar.isEmpty()) return olaylar
+        val sonOlay = olaylar.maxByOrNull { it.bitis } ?: return olaylar
+        val bosluk = java.time.Duration.between(sonOlay.bitis, simdi)
+        // Tolerans içindeyse ve bitis simdi'den önce ise, simdi'ye uzat.
+        if (bosluk > java.time.Duration.ZERO && bosluk <= OruntuCikar.BLOK_TOLERANSI) {
+            return olaylar.map { olay ->
+                if (olay === sonOlay) olay.copy(bitis = simdi) else olay
+            }
+        }
+        return olaylar
+    }
+
+    private suspend fun overlayiGoster() = withContext(Dispatchers.Main) {
+        if (overlayGorunumu != null) return@withContext
         val yasamDongusu = OverlayYasamDongusu().apply { baslat() }
         val viewModelSahibi = object : ViewModelStoreOwner {
             override val viewModelStore = ViewModelStore()
         }
 
-        val composeView = ComposeView(this).apply {
+        val composeView = ComposeView(this@NudgeOverlayService).apply {
             setViewTreeLifecycleOwner(yasamDongusu)
             setViewTreeViewModelStoreOwner(viewModelSahibi)
             setViewTreeSavedStateRegistryOwner(yasamDongusu)
             setContent {
                 YesilizTemasi {
                     NudgeOverlay(
-                        esikDakika = NudgeSabitleri.ESIK.toMinutes(),
+                        esikSaniye = NudgeSabitleri.ESIK.seconds,
                         onDevamEt = { eylemVeKapat(EylemTuru.DEVAM_EDILDI) },
                         onNefesEvet = {
                             nefesEkraninaGit()
@@ -177,7 +232,7 @@ class NudgeOverlayService : Service() {
         overlayGorunumu = composeView
         overlaySahibi = yasamDongusu
 
-        otoKapanmaIsi = kapsam.launch {
+        otoKapanmaIsi = kapsam.launch(Dispatchers.Main) {
             delay(NudgeSabitleri.OTO_KAPANMA.toMillis())
             eylemVeKapat(EylemTuru.DEVAM_EDILDI)
         }
@@ -236,6 +291,7 @@ class NudgeOverlayService : Service() {
     }
 
     private companion object {
+        const val TAG = "NudgeOverlay"
         const val KANAL_ID = "nudge_servis"
         const val BILDIRIM_ID = 1
         const val BULANIKLIK_YARICAPI_PX = 48

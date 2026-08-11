@@ -36,7 +36,10 @@ object Tetikleyici {
         tuketimOlaylari: List<KullanimOlay>,
         simdi: Instant,
         sonEylem: SonEylem?,
+        suAnTuketimdeMi: Boolean = true,
     ): TetikSonucu {
+        if (!suAnTuketimdeMi) return TetikSonucu.GOSTERME
+
         if (sonEylem != null) {
             val sonum = when (sonEylem.tur) {
                 EylemTuru.MOLA_VERILDI -> NudgeSabitleri.SONUM_MOLA
