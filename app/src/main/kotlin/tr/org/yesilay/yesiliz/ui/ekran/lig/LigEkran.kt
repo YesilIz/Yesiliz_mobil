@@ -34,7 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -254,9 +256,10 @@ private fun BosLig(
     ) {
         Spacer(modifier = Modifier.height(Olcu.BolumArasi))
         Image(
-            painter = painterResource(tr.org.yesilay.yesiliz.R.drawable.agac_evre1_cicek),
+            painter = painterResource(tr.org.yesilay.yesiliz.R.drawable.downscaled_tree_phase_1),
             contentDescription = null,
-            modifier = Modifier.height(Olcu.AgacBoyu),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(180.dp),
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         Text(

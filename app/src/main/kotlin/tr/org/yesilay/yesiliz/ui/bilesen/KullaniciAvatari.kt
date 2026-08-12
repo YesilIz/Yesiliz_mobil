@@ -47,10 +47,10 @@ fun KullaniciAvatari(
 ) {
     Box(
         modifier = modifier
-            .then(if (onTikla != null) Modifier.clickable(onClick = onTikla) else Modifier)
             .size(olcu)
             .clip(CircleShape)
-            .background(zemin ?: avatarRengi(isim)),
+            .background(zemin ?: avatarRengi(isim))
+            .then(if (onTikla != null) Modifier.clickable(onClick = onTikla) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Text(
