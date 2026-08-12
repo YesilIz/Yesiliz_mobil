@@ -15,5 +15,5 @@ enum class NudgeAsama {
 
 data class NudgeDurum(
     val asama: NudgeAsama = NudgeAsama.ANA_KART,
-    val esikDakika: Long = NudgeSabitleri.ESIK.toMinutes(),
+    val esikSaniye: Long = NudgeSabitleri.ESIK.seconds,
 )

@@ -17,26 +17,45 @@ object NudgeSabitleri {
      * `OruntuCikar.BLOK_ESIGI` (30dk, risk skorunun `oturum` örüntüsü) ile
      * bilerek aynı değil — nudge kendi eşiğini taşıyor, mockup'taki
      * "45 dakikadır buradasın" metniyle uyumlu.
+     *
+     * Cihazda denerken kısa değerlere çekilebilir (ör. 15 saniye);
+     * [POLL_ARALIGI] ve sönüm süreleri otomatik uyum sağlar. Ama o haliyle
+     * **commit'lenmez** — `TetikleyiciTest` 45 dakikalık eşiğe göre yazılmış
+     * senaryolar taşıyor ve kısa eşikte kırmızıya döner.
      */
     val ESIK: Duration = Duration.ofMinutes(45)
 
-    /** Canlı izleme aralığı — WorkManager'ın ~15dk asgari periyodu bunun için uygun değil. */
-    val POLL_ARALIGI: Duration = Duration.ofSeconds(20)
+    /**
+     * Canlı izleme aralığı — WorkManager'ın ~15dk asgari periyodu
+     * bunun için uygun değil.
+     *
+     * [ESIK] kısa tutulduğunda polling de hızlanır: eşiğin yarısını
+     * veya 20 saniyeyi aşmaz. Böylece kısa test eşiklerinde bile
+     * en az bir poll eşiğin altında gerçekleşir.
+     */
+    val POLL_ARALIGI: Duration = minOf(
+        Duration.ofSeconds(20),
+        ESIK.dividedBy(2).coerceAtLeast(Duration.ofSeconds(3)),
+    )
 
     /** Dokunulmazsa overlay kendiliğinden kapanır. */
-    val OTO_KAPANMA: Duration = Duration.ofSeconds(6)
+    val OTO_KAPANMA: Duration = Duration.ofSeconds(60)
 
     /**
      * "5 dk mola ver" sonrası sönüm — kullanıcı uygulamadan gerçekten
      * ayrıldığı için kısa bir yeniden-tetiklenme penceresi yeterli.
+     *
+     * [ESIK] kısa tutulduğunda sönüm eşiği aşmamalı.
      */
-    val SONUM_MOLA: Duration = Duration.ofMinutes(5)
+    val SONUM_MOLA: Duration = minOf(Duration.ofMinutes(5), ESIK)
 
     /**
      * "Devam et" (veya zaman aşımı / dışarı dokunma) sonrası sönüm —
      * kullanıcı **aynı** tüketim bloğunda kalmaya devam ediyor; kısa bir
      * sönüm birkaç dakika içinde yeniden rahatsız ederdi, bu yüzden
      * [SONUM_MOLA]'dan daha uzun.
+     *
+     * [ESIK] kısa tutulduğunda sönüm eşiği aşmamalı.
      */
-    val SONUM_DEVAM: Duration = Duration.ofMinutes(10)
+    val SONUM_DEVAM: Duration = minOf(Duration.ofMinutes(10), ESIK)
 }

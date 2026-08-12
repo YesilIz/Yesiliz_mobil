@@ -1,7 +1,12 @@
 package tr.org.yesilay.yesiliz
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
+import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
 import tr.org.yesilay.yesiliz.data.depo.YerelOturumSiniri
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
@@ -53,6 +59,9 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var yerelOturumSiniri: YerelOturumSiniri
 
     private var hedefRota by mutableStateOf<String?>(null)
+
+    private var overlayIzniSoruldu = false
+    private var pilOptimizasyonuSoruldu = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -92,6 +101,8 @@ class MainActivity : ComponentActivity() {
             // her açılışı bedava bir örnekleme noktası.
             adimDeposu.ornekle()
         }
+        // Nudge için gereken izinleri kontrol et ve eksikleri iste.
+        nudgeIzinleriniKontrolEt()
     }
 
     /** Uygulama ekrandayken gece yarısı geçilirse tüm tarihli akışları yeniler. */
@@ -127,8 +138,10 @@ class MainActivity : ComponentActivity() {
                     // sistem ekranından verip dönebiliyor ve tercih o sırada
                     // değişmediği için akış tek başına haber vermezdi.
                     if (kullaniciIstedi && NudgeIzni.verildiMi(this@MainActivity)) {
+                        Log.d(TAG, "Nudge servisi baslatiliyor")
                         ContextCompat.startForegroundService(this@MainActivity, servisIntent)
                     } else {
+                        Log.d(TAG, "Nudge servisi durduruluyor (istendi=$kullaniciIstedi, izin=${NudgeIzni.verildiMi(this@MainActivity)})")
                         stopService(servisIntent)
                     }
                 }
@@ -152,7 +165,68 @@ class MainActivity : ComponentActivity() {
         hamRota = intent.getStringExtra(EXTRA_HEDEF_ROTA),
     )
 
+    /**
+     * Nudge popup'ı için gerekli izinleri kontrol eder ve eksikleri sırayla ister.
+     *
+     * Gereken izinler:
+     * 1. **PACKAGE_USAGE_STATS** — hangi uygulamanın ne kadar kullanıldığını okumak için
+     * 2. **SYSTEM_ALERT_WINDOW** — popup'ı diğer uygulamaların üstünde göstermek için
+     * 3. **Pil optimizasyonu muafiyeti** — Samsung/OEM arka plan kısıtlamasından korunmak için
+     *
+     * Her `onResume`'da çalışır: kullanıcı Ayarlar'dan dönüşte eksik izinler tazeleşir.
+     * Bir defada yalnızca bir izin istenir — kullanıcıyı art arda diyaloglarla
+     * boğmamak için.
+     */
+    private fun nudgeIzinleriniKontrolEt() {
+        // 1. Kullanım erişimi izni — tüm sistemin temeli
+        if (!KullanimIzni.verildiMi(this)) {
+            Log.d(TAG, "Kullanim erisimi izni eksik")
+            // Onboarding'de zaten isteniyor, burada tekrar yönlendirmiyoruz.
+            return
+        }
+
+        // 2. Overlay izni — diğer uygulamaların üzerinde göstermek için
+        if (!NudgeIzni.verildiMi(this)) {
+            if (!overlayIzniSoruldu) {
+                Log.d(TAG, "Overlay izni eksik, ayar ekranina yonlendiriliyor")
+                if (NudgeIzni.ayarEkraniVarMi(this)) {
+                    overlayIzniSoruldu = true
+                    startActivity(NudgeIzni.ayarIntent(this))
+                }
+            }
+            return // Izin verilene kadar digerlerine gecme
+        }
+
+        // 3. Pil optimizasyonu muafiyeti — Samsung ve OEM cihazlarda
+        //    foreground service arka planda öldürülmesin
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            if (!pilOptimizasyonuSoruldu) {
+                Log.d(TAG, "Pil optimizasyonu muafiyeti isteniyor")
+                pilOptimizasyonuSoruldu = true
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
+                }
+            }
+            return // Izin verilene kadar digerlerine gecme
+        }
+
+        // 4. Mola hatırlatıcı kapalıysa otomatik aç — tüm izinler verilmiş
+        lifecycleScope.launch {
+            val acikMi = tercihler.molaHatirlaticiAcikMi.first()
+            if (!acikMi) {
+                Log.d(TAG, "Tum izinler verildi, mola hatirlatici otomatik aciliyor")
+                tercihler.molaHatirlaticiAyarla(true)
+            }
+        }
+    }
+
     companion object {
+        private const val TAG = "MainActivity"
+
         /** Nudge overlay'in "Nefes egzersizi yapmak ister misin? → Evet" derin bağlantısı. */
         const val EXTRA_HEDEF_ROTA = "hedef_rota"
 

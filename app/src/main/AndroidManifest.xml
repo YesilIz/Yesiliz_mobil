@@ -25,6 +25,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
+      Samsung ve diğer OEM ROM'ları foreground service'i bile arka planda
+      öldürebiliyor. Bu izin, uygulamadan sistem "pil optimizasyonu"
+      muafiyeti istemesine olanak tanıyor — nudge servisi ancak bu
+      muafiyetle güvenilir biçimde arka planda çalışabiliyor.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!--
       Aktif yürüyüş sayacı arka planda da çalışsın (debug.md İ-3).
 
       Eski karar (CLAUDE.md §12 K15) foreground service kullanmıyordu:
