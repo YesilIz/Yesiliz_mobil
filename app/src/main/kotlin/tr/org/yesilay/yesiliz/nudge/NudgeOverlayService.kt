@@ -240,7 +240,7 @@ class NudgeOverlayService : Service() {
             // da geri alınabilir. Bu normal bir izin yarışıdır, fatal değil.
             yasamDongusu.durdur()
             stopSelf()
-            return false
+            return@withContext
         }
 
         overlayGorunumu = composeView
@@ -250,7 +250,6 @@ class NudgeOverlayService : Service() {
             delay(NudgeSabitleri.OTO_KAPANMA.toMillis())
             eylemVeKapat(EylemTuru.DEVAM_EDILDI)
         }
-        return true
     }
 
     private fun eylemVeKapat(tur: EylemTuru) {
