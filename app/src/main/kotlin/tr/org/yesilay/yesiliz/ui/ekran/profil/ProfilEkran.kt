@@ -416,6 +416,10 @@ fun ProfilEkran(
                     viewModel.sunucuAdresiKaydet(adres)
                     sunucuAdresiAcik = false
                 },
+                onVarsayilanaDon = {
+                    viewModel.sunucuAdresiVarsayilanaDon()
+                    sunucuAdresiAcik = false
+                },
                 onKapat = { sunucuAdresiAcik = false },
             )
         }
@@ -619,15 +623,17 @@ private fun GecmisiIndirIcerik(
 /**
  * Sunucu adresi — yalnızca debug derlemesinde görünen geliştirici ayarı.
  *
- * Varsayılan adres artık build türünden geliyor (`BuildConfig.API_TABANI`):
- * release'de gerçek HTTPS alan adı, debug'da emülatörün `10.0.2.2`'si. Bu
- * alan yalnızca **debug'da** anlamlı — gerçek cihazdan geliştirme
- * makinesine bağlanmak için (`debug.md` O-14).
+ * Varsayılan adres derlemeden geliyor (`BuildConfig.API_TABANI`) ve iki build
+ * türünde de canlı sunucu: temiz kurulmuş bir telefon hiçbir ayar yapmadan
+ * bağlanıyor. Bu alan yalnızca **debug'da** anlamlı — yerel backend'e ya da
+ * geliştirme makinesine bağlanmak için (`debug.md` O-14). "Varsayılana dön"
+ * kayıtlı ezmeyi silip derlemedeki adrese geri götürüyor.
  */
 @Composable
 private fun SunucuAdresiIcerik(
     mevcut: String,
     onKaydet: (String) -> Unit,
+    onVarsayilanaDon: () -> Unit,
     onKapat: () -> Unit,
 ) {
     var adres by remember(mevcut) { mutableStateOf(mevcut) }
@@ -657,6 +663,7 @@ private fun SunucuAdresiIcerik(
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Kaydet ve dene", onTikla = { onKaydet(adres) })
+        MetinBaglanti(metin = "Varsayılana dön", onTikla = onVarsayilanaDon)
         MetinBaglanti(metin = "Vazgeç", onTikla = onKapat)
     }
 }

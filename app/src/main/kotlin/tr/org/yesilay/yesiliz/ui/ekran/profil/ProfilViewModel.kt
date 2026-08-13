@@ -195,14 +195,22 @@ class ProfilViewModel @Inject constructor(
     /**
      * Sunucu adresi (Profil › Geliştirici).
      *
-     * Varsayılan `10.0.2.2` yalnızca emülatörde çalışıyor; gerçek cihazda
-     * geliştirme makinesinin LAN adresi giriliyor (`debug.md` O-14).
-     * Kaydettikten sonra senkron hemen deneniyor ki adresin doğru olup
-     * olmadığı anlaşılsın.
+     * Varsayılan iki build türünde de canlı sunucu; burası yalnızca yerel
+     * backend'e (docker compose / LAN tüneli) bağlanmak için (`debug.md`
+     * O-14). Kaydettikten sonra senkron hemen deneniyor ki adresin doğru
+     * olup olmadığı anlaşılsın.
      */
     fun sunucuAdresiKaydet(adres: String) {
         viewModelScope.launch {
             tercihler.sunucuTabaniniKaydet(adres)
+            senkronDeposu.senkronEt()
+        }
+    }
+
+    /** Kayıtlı ezmeyi siler; adres derlemedeki canlı sunucuya döner. */
+    fun sunucuAdresiVarsayilanaDon() {
+        viewModelScope.launch {
+            tercihler.sunucuTabaniniSifirla()
             senkronDeposu.senkronEt()
         }
     }

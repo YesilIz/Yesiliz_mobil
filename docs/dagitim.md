@@ -161,12 +161,26 @@ Oradan `BuildConfig.API_TABANI` üretiliyor:
 
 | Build türü | Adres |
 |---|---|
-| debug | `http://10.0.2.2:8000/` — emülatör; gerçek cihazda Profil › Geliştirici'den LAN adresi |
+| debug | `canliSunucu` — gerçek telefona kurulan debug APK'sı da hiçbir ayar yapmadan canlı sunucuya bağlanıyor |
 | release | `canliSunucu` (HTTPS) |
+
+Debug varsayılanı bir zamanlar `http://10.0.2.2:8000/` idi; o adres yalnızca
+emülatörde anlamlı olduğu için gerçek cihazda her çağrı zaman aşımına uğrayıp
+sessizce yerel yedeğe düşüyordu (§12 K18/K24) ve adresi elle yazmak
+gerekiyordu. **Yerel backend'e** bağlanmak artık aynı düğmeden:
+
+```bash
+./gradlew :app:installDebug -Pyesiliz.sunucu=http://10.0.2.2:8000/   # emülatör
+adb reverse tcp:8000 tcp:8000                                        # gerçek cihaz
+./gradlew :app:installDebug -Pyesiliz.sunucu=http://127.0.0.1:8000/
+```
 
 `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor, `AgModulu` da ondan alıyor.
 Kullanıcı adresi Profil › Geliştirici'den değiştirdiğinde DataStore'daki
-değer öne geçiyor — o ekran yalnızca debug'da görünüyor.
+değer öne geçiyor — o ekran yalnızca debug'da görünüyor. Aynı ekrandaki
+**"Varsayılana dön"** kayıtlı ezmeyi silip derlemedeki adrese döndürüyor;
+ayrıca eski varsayılandan kalan ezmeler ilk açılışta bir kez otomatik
+temizleniyor (`Tercihler.eskiSunucuAdresiniTemizle`, sürüm işaretçili).
 
 Üç koruma birlikte çalışıyor:
 

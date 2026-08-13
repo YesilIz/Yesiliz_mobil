@@ -102,15 +102,21 @@ android {
         }
     }
 
-    // Sunucu adresi build türüne göre: debug yerel/test sunucusu, release
-    // gerçek HTTPS adresi. Tek yapılandırma noktası — `Tercihler` ve
-    // `AgModulu` buradan okuyor, koda ikinci bir adres yazılmıyor.
+    // Sunucu adresi iki build türünde de `canliSunucu`'dan geliyor. Tek
+    // yapılandırma noktası — `Tercihler` ve `AgModulu` buradan okuyor,
+    // koda ikinci bir adres yazılmıyor.
     buildTypes {
         debug {
-            // Emülatörün geliştirme makinesine baktığı adres
-            // (`backend/docker-compose.yml`). Gerçek cihazda Profil ›
-            // Geliştirici'den LAN adresiyle değiştiriliyor.
-            buildConfigField("String", "API_TABANI", "\"http://10.0.2.2:8000/\"")
+            // Debug de canlı sunucuya bağlanıyor: gerçek telefona kurulan
+            // debug APK'sının varsayılanı emülatör adresi olduğu sürece
+            // her çağrı zaman aşımına uğrayıp sessizce yerel yedeğe
+            // düşüyordu (§12 K18/K24) ve adresi elle yazmak gerekiyordu.
+            //
+            // Yerel backend'e bağlanmak için adres derlemede veriliyor:
+            //   ./gradlew :app:installDebug -Pyesiliz.sunucu=http://127.0.0.1:8000/
+            // ya da bir kez Profil › Geliştirici › Sunucu adresi'nden
+            // (o değer yalnızca debug'da okunuyor).
+            buildConfigField("String", "API_TABANI", "\"$canliSunucu\"")
         }
         release {
             buildConfigField("String", "API_TABANI", "\"$canliSunucu\"")

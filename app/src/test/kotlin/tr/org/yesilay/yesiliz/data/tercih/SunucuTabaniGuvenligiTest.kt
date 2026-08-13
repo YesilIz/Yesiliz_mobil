@@ -1,6 +1,8 @@
 package tr.org.yesilay.yesiliz.data.tercih
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SunucuTabaniGuvenligiTest {
@@ -27,5 +29,20 @@ class SunucuTabaniGuvenligiTest {
                 varsayilan = "https://api.yesiliz.example/",
             ),
         )
+    }
+
+    /**
+     * Varsayılan adres emülatörünkiyken kaydedilmiş ezmeler cihazlarda kaldı;
+     * işaretçisi olmayan her kurulumda bir kez siliniyor.
+     */
+    @Test
+    fun isaretcisiOlmayanKurulumdaEskiAdresTemizlenir() {
+        assertTrue(sunucuAdresiTemizlenmeli(null))
+        assertTrue(sunucuAdresiTemizlenmeli(0))
+    }
+
+    @Test
+    fun temizlikBirKezKosar() {
+        assertFalse(sunucuAdresiTemizlenmeli(Tercihler.SUNUCU_TABANI_GECERLI_SURUM))
     }
 }
