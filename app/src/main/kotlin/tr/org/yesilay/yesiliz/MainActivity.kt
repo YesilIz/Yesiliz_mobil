@@ -20,6 +20,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.depo.AdimDeposu
 import tr.org.yesilay.yesiliz.data.depo.GecmisVeriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
@@ -57,6 +58,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var guncelGun: GuncelGun
 
     @Inject lateinit var yerelOturumSiniri: YerelOturumSiniri
+
+    @Inject lateinit var isPlanlayici: IsPlanlayici
 
     private var hedefRota by mutableStateOf<String?>(null)
 
@@ -104,6 +107,7 @@ class MainActivity : ComponentActivity() {
             // ve iki örnek arasında kalan adımlar kayboluyor. Uygulamanın
             // her açılışı bedava bir örnekleme noktası.
             adimDeposu.ornekle()
+            isPlanlayici.simdiTazele()
         }
         // Nudge için gereken izinleri kontrol et ve eksikleri iste.
         nudgeIzinleriniKontrolEt()

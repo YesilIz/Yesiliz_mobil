@@ -88,6 +88,23 @@ class KullanimOkuyucu(
     }
 
     /**
+     * O güne ait tüm uygulamaların ön plan kullanım süreleri (dakika olarak).
+     *
+     * `queryEvents` yalnızca ~5-7 günlük detaylı olay geçmişi tutar. Daha eski
+     * günlerin verisini doğrudan Android `UsageStatsManager.queryAndAggregateUsageStats`
+     * üzerinden çekmek için kullanılır.
+     */
+    fun gunlukPaketDakikalari(tarih: LocalDate): Map<String, Double> {
+        val zon = saat.zone
+        val pencereBas = tarih.atStartOfDay(zon).toInstant().toEpochMilli()
+        val pencereBit = tarih.plusDays(1).atStartOfDay(zon).toInstant().toEpochMilli()
+        val stats = usageStatsManager.queryAndAggregateUsageStats(pencereBas, pencereBit)
+        return stats.values
+            .filter { it.packageName != kendiPaketAdi && it.totalTimeInForeground > 0 }
+            .associate { it.packageName to (it.totalTimeInForeground / 60_000.0) }
+    }
+
+    /**
      * Son [pencere] içindeki ham olaylar — nudge'ın canlı tetikleyicisi için.
      *
      * [gununOturumlari]'nin aksine gün sınırına bağlı değil; kısa, kayan bir

@@ -24,19 +24,19 @@ enum class Aralik(val etiket: String) {
     AY("Ay"),
     ;
 
-    /** Seçili pencerenin [başlangıç, bitiş] sınırları — bitiş bugün. */
+    /** Seçili pencerenin [başlangıç, bitiş] sınırları. */
     fun pencere(bugun: LocalDate): Pair<LocalDate, LocalDate> = when (this) {
         GUN -> bugun to bugun
-        HAFTA -> bugun.with(WeekFields.ISO.dayOfWeek(), 1) to bugun
+        HAFTA -> bugun.with(WeekFields.ISO.dayOfWeek(), 1) to bugun.with(WeekFields.ISO.dayOfWeek(), 7)
         AY -> bugun.withDayOfMonth(1) to bugun
     }
 
-    /** Karşılaştırma için bir önceki pencerenin başlangıcı. */
+    /** Karşılaştırma için bir önceki pencere. */
     fun oncekiPencere(bugun: LocalDate): Pair<LocalDate, LocalDate> {
-        val (bas, _) = pencere(bugun)
+        val (bas, bit) = pencere(bugun)
         return when (this) {
             GUN -> bas.minusDays(1) to bas.minusDays(1)
-            HAFTA -> bas.minusWeeks(1) to bas.minusDays(1)
+            HAFTA -> bas.minusWeeks(1) to bit.minusWeeks(1)
             AY -> bas.minusMonths(1) to bas.minusDays(1)
         }
     }

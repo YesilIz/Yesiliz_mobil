@@ -11,6 +11,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
+import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
+import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
+import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
@@ -42,6 +48,10 @@ import kotlin.math.roundToInt
 @HiltViewModel
 class IstatistikViewModel @Inject constructor(
     private val ozetDao: GunlukOzetDao,
+    private val kullanimDeposu: KullanimDeposu,
+    private val aktiviteSaglayici: AktiviteSaglayici,
+    private val riskDeposu: RiskDeposu,
+    private val puanDeposu: PuanDeposu,
     riskDao: RiskSonucDao,
     guncelGun: GuncelGun,
 ) : ViewModel() {
@@ -60,6 +70,7 @@ class IstatistikViewModel @Inject constructor(
             // Karşılaştırma için bir önceki pencereyi de çekiyoruz; tek sorgu
             // yerine iki sorgu, ama aralık küçük (en fazla 60 satır).
             val oncekiPencere = aralik.oncekiPencere(bugun)
+            pencereyiCanliTazele(oncekiPencere.first, pencere.second)
 
             ozetDao.araliktakilerAkisi(oncekiPencere.first, pencere.second)
                 .map { hepsi ->
@@ -77,6 +88,22 @@ class IstatistikViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(AKIS_BEKLEME_MS),
             initialValue = IstatistikDurum(),
         )
+
+    private fun pencereyiCanliTazele(bas: LocalDate, bit: LocalDate) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val gunFarki = java.time.temporal.ChronoUnit.DAYS.between(bas, bit).toInt()
+            (0..gunFarki).forEach { i ->
+                val gun = bas.plusDays(i.toLong())
+                val mevcuttur = ozetDao.getir(gun)
+                if (mevcuttur == null || !mevcuttur.olayVarMi || mevcuttur.adim == 0.0) {
+                    val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
+                    kullanimDeposu.gunuIsle(gun, aktivite)
+                    riskDeposu.gunuHesapla(gun)
+                    puanDeposu.gunuYenidenHesapla(gun)
+                }
+            }
+        }
+    }
 
     fun aralikSecildi(aralik: Aralik) {
         // Aralık değişince gün seçimi anlamını yitiriyor — "geçen haftanın
@@ -136,33 +163,42 @@ class IstatistikViewModel @Inject constructor(
         simdiki: List<GunlukOzetEntity>,
         onceki: List<GunlukOzetEntity>,
     ): IstatistikDurum {
-        if (simdiki.isEmpty()) {
+        if (simdiki.isEmpty() && onceki.isEmpty()) {
             return IstatistikDurum(aralik = aralik, gunSayisi = 0)
         }
 
-        val ekranOrt = simdiki.map { it.toplamEkranDk() }.average()
-        val adimOrt = simdiki.map { it.adim }.average()
+        val simdikiHarita = simdiki.associateBy { it.tarih }
+        val gunFarki = java.time.temporal.ChronoUnit.DAYS.between(bas, bit).toInt()
+        val tumGunler = (0..gunFarki).map { i ->
+            val gun = bas.plusDays(i.toLong())
+            simdikiHarita[gun] ?: GunlukOzetEntity(tarih = gun)
+        }
+
+        val veriVarliklari = tumGunler.filter { it.olayVarMi || it.adim > 0.0 }
+        val hesaplanacakGunler = if (veriVarliklari.isNotEmpty()) veriVarliklari else tumGunler
+
+        val ekranOrt = hesaplanacakGunler.map { it.toplamEkranDk() }.average()
+        val adimOrt = hesaplanacakGunler.map { it.adim }.average()
         val ekranOnceki = onceki.takeIf { it.isNotEmpty() }?.map { it.toplamEkranDk() }?.average()
         val adimOnceki = onceki.takeIf { it.isNotEmpty() }?.map { it.adim }?.average()
 
-        val ekranCubuklari = simdiki.map { Cubuk(aralik.etiketle(it.tarih), it.toplamEkranDk().toFloat()) }
-        val adimCubuklari = simdiki.map { Cubuk(aralik.etiketle(it.tarih), it.adim.toFloat()) }
+        val ekranCubuklari = tumGunler.map { Cubuk(aralik.etiketle(it.tarih), it.toplamEkranDk().toFloat()) }
+        val adimCubuklari = tumGunler.map { Cubuk(aralik.etiketle(it.tarih), it.adim.toFloat()) }
 
         return IstatistikDurum(
             aralik = aralik,
-            gunSayisi = simdiki.size,
-            gunler = simdiki,
+            gunSayisi = tumGunler.size,
+            gunler = tumGunler,
             tarihAraligi = tarihAraligi(bas, bit),
             ekranOrtalama = ekranOrt.roundToInt(),
             ekranCubuklari = ekranCubuklari,
-            // En yüksek gün vurgulanıyor — tasarımda öne çıkan çubuk bu.
-            ekranVurgu = simdiki.indices.maxByOrNull { simdiki[it].toplamEkranDk() } ?: -1,
+            ekranVurgu = tumGunler.indices.maxByOrNull { tumGunler[it].toplamEkranDk() } ?: -1,
             ekranFark = farkMetni(aralik, ekranOrt, ekranOnceki, "dk"),
             ekranAzaldi = ekranOnceki == null || ekranOrt <= ekranOnceki,
-            kategoriler = kategoriDagilimi(simdiki),
+            kategoriler = kategoriDagilimi(tumGunler),
             adimOrtalama = adimOrt.roundToInt(),
             adimCubuklari = adimCubuklari,
-            adimVurgu = simdiki.indices.maxByOrNull { simdiki[it].adim } ?: -1,
+            adimVurgu = tumGunler.indices.maxByOrNull { tumGunler[it].adim } ?: -1,
             adimFark = farkMetni(aralik, adimOrt, adimOnceki, "adım"),
             adimArtti = adimOnceki == null || adimOrt >= adimOnceki,
         )

@@ -57,45 +57,82 @@ class KullanimDeposu @Inject constructor(
         // Sistem paketleri (launcher, SystemUI, Ayarlar) HİÇ saklanmıyor.
         // Risk hesabına zaten girmiyorlar; saklamak hem yer israfı hem de
         // gereksiz veri toplamak olurdu (CLAUDE.md §4 veri minimizasyonu).
-        // Emülatörde 14 oturumun 11'i sistemdi — oran düşük değil.
         val olaylar = kategorilendir(oturumlar).filter { it.kategori.hesabaGirer }
 
         // Gün yeniden işlenebilir (worker iki kez koşabilir) — önce temizle.
-        // `eskileriSil` yalnızca tarihten ÖNCEsini siler, bu yüzden aynı günü
-        // ayrıca silmek gerekiyor.
         olayDao.gununuSil(tarih)
-        olayDao.ekle(
-            olaylar.map {
-                KullanimOlayEntity(
-                    paketAdi = it.paketAdi,
-                    kategori = it.kategori.anahtar,
-                    baslangic = it.baslangic,
-                    bitis = it.bitis,
-                    tarih = tarih,
-                )
-            },
-        )
+        if (olaylar.isNotEmpty()) {
+            olayDao.ekle(
+                olaylar.map {
+                    KullanimOlayEntity(
+                        paketAdi = it.paketAdi,
+                        kategori = it.kategori.anahtar,
+                        baslangic = it.baslangic,
+                        bitis = it.bitis,
+                        tarih = tarih,
+                    )
+                },
+            )
+        }
 
-        val cikarim = OruntuCikar.cikar(olaylar, tarih, saat.zone)
+        val cikarim = if (olaylar.isNotEmpty()) {
+            OruntuCikar.cikar(olaylar, tarih, saat.zone)
+        } else {
+            agregadanCikar(tarih)
+        }
+
         val gecmis = ozetDao.araliktakiler(
             tarih.minusDays(YER_DEGIS_GUN - 1L),
             tarih.minusDays(1),
         )
         val yerDegis = yerDegisDegeri(gecmis, cikarim.toplamDk, aktivite.adim)
-        // Satır boş günde de yazılıyor (telefonsuz geçen gerçek bir gün de
-        // kayıt), ama `olayVarMi` ile işaretleniyor: satırın varlığı veri
-        // olduğu anlamına gelmiyordu ve puan/seri/alpha bunu "veri var"
-        // sanıyordu (`debug.md` K-4, K-5).
+        val olayVarMi = cikarim.toplamDk > 0.0 || aktivite.adim > 0.0
+
         ozetDao.kaydet(
             ozetKur(
                 tarih = tarih,
                 c = cikarim,
                 aktivite = aktivite,
-                olayVarMi = olaylar.isNotEmpty(),
+                olayVarMi = olayVarMi,
                 yerDegis = yerDegis,
             ),
         )
         return cikarim
+    }
+
+    private suspend fun agregadanCikar(tarih: LocalDate): GunlukCikarim {
+        val paketDakikalari = okuyucu.gunlukPaketDakikalari(tarih)
+        if (paketDakikalari.isEmpty()) {
+            return GunlukCikarim(
+                kategoriDakika = emptyMap(),
+                oruntu = emptyMap(),
+                toplamDk = 0.0,
+                geceKullanimDk = 0.0,
+                acilisSayisi = 0,
+                uykuPenceresi = null,
+            )
+        }
+
+        val esleyici = kategoriDeposu.esleyiciAl()
+        val kategoriDakikaMap = mutableMapOf<String, Double>()
+
+        paketDakikalari.forEach { (paket, dakika) ->
+            val kat = esleyici.bul(paket)
+            if (kat.hesabaGirer) {
+                val mevcut = kategoriDakikaMap[kat.anahtar] ?: 0.0
+                kategoriDakikaMap[kat.anahtar] = mevcut + dakika
+            }
+        }
+
+        val toplamDk = kategoriDakikaMap.values.sum()
+        return GunlukCikarim(
+            kategoriDakika = kategoriDakikaMap,
+            oruntu = emptyMap(),
+            toplamDk = toplamDk,
+            geceKullanimDk = 0.0,
+            acilisSayisi = 0,
+            uykuPenceresi = null,
+        )
     }
 
     /** Ham oturumları kategorili domain modeline çevirir. */

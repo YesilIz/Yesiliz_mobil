@@ -103,13 +103,15 @@ class GunlukOzetWorker @AssistedInject constructor(
 
             (TELAFI_GUN downTo 0).forEach { geriGun ->
                 val gun = bugun.minusDays(geriGun)
-                if (kurulum != null && gun < kurulum) return@forEach
-                // Bugün hep yeniden; geçmiş günler yalnızca eksikse.
-                if (gun != bugun && gun in islenmis) return@forEach
+                val ozetSatiri = ozetDao.getir(gun)
+                val adimEksikMi = ozetSatiri == null || ozetSatiri.adim == 0.0
+                // Bugün hep yeniden; geçmiş günler yalnızca eksikse VEYA adımı sıfır kalmışsa yeniden işlenir.
+                if (gun != bugun && gun in islenmis && !adimEksikMi) return@forEach
 
                 val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
                 gunlukZinciriAtomik(db) {
-                    kullanimDeposu.gunuIsle(gun, aktivite, enErken = veriBaslangici)
+                    val enErken = if (gun == bugun) veriBaslangici else null
+                    kullanimDeposu.gunuIsle(gun, aktivite, enErken = enErken)
                     riskDeposu.gunuHesapla(gun)
                     // Adım/spor/gece değerleri değişti; günün puanı da değişir.
                     puanDeposu.gunuYenidenHesapla(gun)
@@ -187,7 +189,7 @@ class GunlukOzetWorker @AssistedInject constructor(
         val SERI_ESIKLERI = setOf(3, 7, 14, 30, 60, 100)
 
         /** Kaçırılan günler için geriye dönük tarama penceresi. */
-        const val TELAFI_GUN = 7L
+        const val TELAFI_GUN = 30L
 
         /** Ham olay saklama süresi; özet kalıcı, ayrıntı değil. */
         const val HAM_OLAY_SAKLAMA_GUN = 30L
