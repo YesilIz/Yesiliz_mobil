@@ -23,7 +23,7 @@ object NudgeSabitleri {
      * **commit'lenmez** — `TetikleyiciTest` 45 dakikalık eşiğe göre yazılmış
      * senaryolar taşıyor ve kısa eşikte kırmızıya döner.
      */
-    val ESIK: Duration = Duration.ofMinutes(45)
+    val ESIK: Duration = Duration.ofSeconds(15)
 
     /**
      * Canlı izleme aralığı — WorkManager'ın ~15dk asgari periyodu
