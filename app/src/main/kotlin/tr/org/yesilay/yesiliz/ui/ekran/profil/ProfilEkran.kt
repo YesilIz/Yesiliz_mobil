@@ -510,12 +510,12 @@ fun ProfilEkran(
         AltSayfa(onKapat = { profiliDuzenleAcik = false }) {
             ProfiliDuzenleIcerik(
                 durum = durum,
-                onKaydet = { yeniAd, yeniEposta, yeniSifre, yeniAvatarId, onHata ->
+                onKaydet = { yeniAd, yeniAvatarId, mevcutSifre, yeniSifre, onHata ->
                     viewModel.profilGuncelle(
                         ad = yeniAd,
-                        eposta = yeniEposta,
-                        yeniSifre = yeniSifre,
                         avatarId = yeniAvatarId,
+                        mevcutSifre = mevcutSifre,
+                        yeniSifre = yeniSifre,
                     ) { sonuc ->
                         when (sonuc) {
                             is HesapSonuc.Basarili -> profiliDuzenleAcik = false
@@ -1409,21 +1409,20 @@ private fun ProfiliDuzenleIcerik(
     durum: ProfilDurum,
     onKaydet: (
         yeniAd: String,
-        yeniEposta: String,
-        yeniSifre: String?,
         yeniAvatarId: String,
+        mevcutSifre: String?,
+        yeniSifre: String?,
         onHata: (HesapAlani, String) -> Unit,
     ) -> Unit,
     onKapat: () -> Unit,
 ) {
     var yeniIsim by remember { mutableStateOf(durum.isim) }
-    var yeniEposta by remember { mutableStateOf(durum.eposta) }
     var yeniSifre by remember { mutableStateOf("") }
+    var mevcutSifre by remember { mutableStateOf("") }
     var sifreGorunur by remember { mutableStateOf(false) }
     var secilenAvatarId by remember { mutableStateOf(durum.avatarId.ifBlank { "HARF" }) }
 
     var adHatasi by remember { mutableStateOf<String?>(null) }
-    var epostaHatasi by remember { mutableStateOf<String?>(null) }
     var sifreHatasi by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -1505,15 +1504,17 @@ private fun ProfiliDuzenleIcerik(
             singleLine = true,
         )
 
+        // E-posta **salt okunur**: giriş kimliği ve doğrulama e-postası
+        // gönderemiyoruz (A15). Düzenlenebilir bırakmak, yalnızca cihazda
+        // değişen bir e-posta demekti — sunucudaki hesap eski adreste
+        // kalıyor, yerel veri sahibi anahtarı da bozuluyordu.
         OutlinedTextField(
-            value = yeniEposta,
-            onValueChange = {
-                yeniEposta = it
-                epostaHatasi = null
-            },
+            value = durum.eposta,
+            onValueChange = { },
             label = { Text("E-posta Adresi") },
-            isError = epostaHatasi != null,
-            supportingText = epostaHatasi?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+            readOnly = true,
+            enabled = false,
+            supportingText = { Text("E-posta adresi şu an değiştirilemiyor.") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -1540,29 +1541,50 @@ private fun ProfiliDuzenleIcerik(
             singleLine = true,
         )
 
+        // Yalnızca şifre değiştiriliyorsa soruluyor; sunucu da onsuz kabul
+        // etmiyor (telefonu eline geçiren biri hesabı devralmasın).
+        if (yeniSifre.isNotBlank()) {
+            OutlinedTextField(
+                value = mevcutSifre,
+                onValueChange = {
+                    mevcutSifre = it
+                    sifreHatasi = null
+                },
+                label = { Text("Mevcut Şifren") },
+                visualTransformation = if (sifreGorunur) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+
         Spacer(modifier = Modifier.height(Bosluk.S))
 
         BirincilButon(
             metin = "Kaydet",
             onTikla = {
                 val hAd = HesapDogrula.ad(yeniIsim)
-                val hEposta = HesapDogrula.eposta(yeniEposta)
-                val hSifre = if (yeniSifre.isNotBlank()) HesapDogrula.sifre(yeniSifre) else null
+                val hSifre = when {
+                    yeniSifre.isBlank() -> null
+                    mevcutSifre.isBlank() -> "Şifreni değiştirmek için mevcut şifreni de gir."
+                    else -> HesapDogrula.sifre(yeniSifre)
+                }
 
                 adHatasi = hAd
-                epostaHatasi = hEposta
                 sifreHatasi = hSifre
 
-                if (hAd == null && hEposta == null && hSifre == null) {
+                if (hAd == null && hSifre == null) {
                     onKaydet(
                         yeniIsim.trim(),
-                        yeniEposta.trim(),
-                        yeniSifre.ifBlank { null },
                         secilenAvatarId,
+                        mevcutSifre.ifBlank { null },
+                        yeniSifre.ifBlank { null },
                     ) { alan, mesaj ->
                         when (alan) {
                             HesapAlani.AD -> adHatasi = mesaj
-                            HesapAlani.EPOSTA -> epostaHatasi = mesaj
                             HesapAlani.SIFRE -> sifreHatasi = mesaj
                             else -> adHatasi = mesaj
                         }

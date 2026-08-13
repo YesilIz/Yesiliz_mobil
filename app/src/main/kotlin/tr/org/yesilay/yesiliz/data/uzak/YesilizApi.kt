@@ -3,6 +3,7 @@ package tr.org.yesilay.yesiliz.data.uzak
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -34,6 +35,10 @@ interface YesilizApi {
 
     @POST("auth/sifre-sifirla")
     suspend fun sifreSifirla(@Body istek: SifreSifirlaIstek): Map<String, String>
+
+    /** Ad, profil simgesi ve (mevcut şifre doğrulanarak) şifre değişimi. */
+    @PATCH("auth/profil")
+    suspend fun profilGuncelle(@Body istek: ProfilIstek): ProfilDto
 
     /**
      * Hesabı ve sunucudaki tüm satırlarını kalıcı siler.

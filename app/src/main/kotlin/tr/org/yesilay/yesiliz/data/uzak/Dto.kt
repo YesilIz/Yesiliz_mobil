@@ -34,7 +34,23 @@ data class JetonlarDto(
     val yenileme: String,
     val ad: String,
     val eposta: String,
+    /** Profil simgesi; yeni telefonda girişte geri gelsin diye. */
+    val avatar: String = "",
 )
+
+/**
+ * Profil güncelleme — e-posta alanı **yok** (bkz. `HesapDeposu.profilGuncelle`).
+ */
+@Serializable
+data class ProfilIstek(
+    val ad: String,
+    val avatar: String,
+    val mevcutSifre: String? = null,
+    val yeniSifre: String? = null,
+)
+
+@Serializable
+data class ProfilDto(val ad: String, val eposta: String, val avatar: String = "")
 
 // --- özet senkronu ---
 

@@ -288,6 +288,89 @@ def test_hesap_silinince_kullanici_ve_ozetler_gidiyor(istemci, kullanici_kur, db
     assert db.scalar(select(YenilemeJetonu)) is None
 
 
+def test_profil_ad_ve_avatar_sunucuda_guncelleniyor(istemci, kullanici_kur, db):
+    baslik, _ = kullanici_kur()
+
+    yanit = istemci.patch(
+        "/auth/profil", json={"ad": "Turan K", "avatar": "YAPRAK"}, headers=baslik
+    )
+
+    assert yanit.status_code == 200, yanit.text
+    assert yanit.json() == {"ad": "Turan K", "eposta": "turan@example.com", "avatar": "YAPRAK"}
+    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com"))
+    db.refresh(kullanici)
+    assert (kullanici.ad, kullanici.avatar) == ("Turan K", "YAPRAK")
+
+
+def test_profil_avatari_sonraki_giriste_geri_geliyor(istemci, kullanici_kur):
+    baslik, _ = kullanici_kur()
+    istemci.patch("/auth/profil", json={"ad": "Turan", "avatar": "AGAC"}, headers=baslik)
+
+    giris = istemci.post(
+        "/auth/giris", json={"eposta": "turan@example.com", "sifre": "parola123"}
+    ).json()
+
+    assert giris["avatar"] == "AGAC"
+
+
+def test_profilden_sifre_degistirince_yeni_sifre_geciyor(istemci, kullanici_kur):
+    baslik, _ = kullanici_kur()
+
+    yanit = istemci.patch(
+        "/auth/profil",
+        json={"ad": "Turan", "mevcutSifre": "parola123", "yeniSifre": "yeniparola1"},
+        headers=baslik,
+    )
+
+    assert yanit.status_code == 200, yanit.text
+    assert istemci.post(
+        "/auth/giris", json={"eposta": "turan@example.com", "sifre": "yeniparola1"}
+    ).status_code == 200
+    assert istemci.post(
+        "/auth/giris", json={"eposta": "turan@example.com", "sifre": "parola123"}
+    ).status_code == 401
+
+
+def test_sifre_degistirmek_mevcut_sifreyi_istiyor(istemci, kullanici_kur):
+    baslik, _ = kullanici_kur()
+
+    eksik = istemci.patch(
+        "/auth/profil", json={"ad": "Turan", "yeniSifre": "yeniparola1"}, headers=baslik
+    )
+    yanlis = istemci.patch(
+        "/auth/profil",
+        json={"ad": "Turan", "mevcutSifre": "baskasifre", "yeniSifre": "yeniparola1"},
+        headers=baslik,
+    )
+
+    assert eksik.status_code == 400
+    assert yanlis.status_code == 401
+    # Reddedilen istek adı da değiştirmemeli: güncelleme ya hep ya hiç.
+    assert istemci.post(
+        "/auth/giris", json={"eposta": "turan@example.com", "sifre": "parola123"}
+    ).status_code == 200
+
+
+def test_profil_guncelleme_oturum_istiyor(istemci):
+    istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
+
+    assert istemci.patch("/auth/profil", json={"ad": "Başkası"}).status_code == 401
+
+
+def test_profil_ucu_epostayi_degistirmiyor(istemci, kullanici_kur, db):
+    """E-posta doğrulaması yok (A15); değiştirilmesi hesabı kilitleyebilirdi."""
+    baslik, _ = kullanici_kur()
+
+    istemci.patch(
+        "/auth/profil",
+        json={"ad": "Turan", "eposta": "yeni@example.com"},
+        headers=baslik,
+    )
+
+    assert db.scalar(select(Kullanici).where(Kullanici.eposta == "yeni@example.com")) is None
+    assert db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com")) is not None
+
+
 def test_hesap_silme_oturum_istiyor(istemci):
     istemci.post("/auth/kayit", json={"ad": "Turan", "eposta": "a@b.com", "sifre": "parola123"})
 

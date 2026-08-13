@@ -51,6 +51,10 @@ class Kullanici(Taban):
     sifre_ozet: Mapped[str] = mapped_column(String(255))
     # `kullanici` | `uzman` — uzman paneli arayüzü Faz 3, rol şimdiden var.
     rol: Mapped[str] = mapped_column(String(20), default="kullanici")
+    # Profil simgesi kimliği (`HARF`, `YAPRAK`, …). Görselin kendisi
+    # uygulamada; sunucu yalnızca seçimi taşıyor ki kullanıcı telefon
+    # değiştirdiğinde simgesi de gelsin.
+    avatar: Mapped[str] = mapped_column(String(32), default="")
     olusturma: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
 
     ozetler: Mapped[list[GunlukOzet]] = relationship(back_populates="kullanici")

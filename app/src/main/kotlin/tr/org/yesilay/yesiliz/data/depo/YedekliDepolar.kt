@@ -114,15 +114,16 @@ class YedekliHesapDeposu @Inject constructor(
 
     override val oturum: Flow<Oturum> = yerel.oturum
 
-    override suspend fun girisYap(eposta: String, sifre: String): HesapSonuc {
-        val sonuc = cevrimdisiYedek { uzak.girisYap(eposta, sifre) }
-        return if (sonuc is HesapSonuc.Basarili) sonuc else yerel.girisYap(eposta, sifre)
-    }
+    // `?:` yalnızca **ağ hatasında** (null) yerele düşürüyor. Bir ara
+    // sürümde bu `if (sonuc is Basarili) … else yerel…`'e çevrilmişti: o
+    // hâlde sunucunun 401 "şifre hatalı" yanıtı da yerel sahte depoya
+    // gidiyordu ve o depo biçimi geçerli her e-posta/şifreyi kabul edip
+    // `Basarili` döndüğü için kullanıcı **yanlış şifreyle içeri giriyordu**.
+    override suspend fun girisYap(eposta: String, sifre: String): HesapSonuc =
+        cevrimdisiYedek { uzak.girisYap(eposta, sifre) } ?: yerel.girisYap(eposta, sifre)
 
-    override suspend fun kayitOl(ad: String, eposta: String, sifre: String): HesapSonuc {
-        val sonuc = cevrimdisiYedek { uzak.kayitOl(ad, eposta, sifre) }
-        return if (sonuc is HesapSonuc.Basarili) sonuc else yerel.kayitOl(ad, eposta, sifre)
-    }
+    override suspend fun kayitOl(ad: String, eposta: String, sifre: String): HesapSonuc =
+        cevrimdisiYedek { uzak.kayitOl(ad, eposta, sifre) } ?: yerel.kayitOl(ad, eposta, sifre)
 
     override suspend fun sifreSifirla(eposta: String): HesapSonuc =
         cevrimdisiYedek { uzak.sifreSifirla(eposta) } ?: yerel.sifreSifirla(eposta)
@@ -135,12 +136,17 @@ class YedekliHesapDeposu @Inject constructor(
         uzak.cikisYap()
     }
 
+    // Sunucu birincil: ad ve simge orada da değişmeli, şifre yalnızca orada
+    // değişebilir. Yerele düşüş yine yalnızca ağ hatasında ve o kol şifre
+    // değişimini açıkça reddediyor.
     override suspend fun profilGuncelle(
         ad: String,
-        eposta: String,
-        yeniSifre: String?,
         avatarId: String,
-    ): HesapSonuc = yerel.profilGuncelle(ad, eposta, yeniSifre, avatarId)
+        mevcutSifre: String?,
+        yeniSifre: String?,
+    ): HesapSonuc =
+        cevrimdisiYedek { uzak.profilGuncelle(ad, avatarId, mevcutSifre, yeniSifre) }
+            ?: yerel.profilGuncelle(ad, avatarId, mevcutSifre, yeniSifre)
 
     /**
      * Misafirin sunucuda kaydı yok; uzak depoyu çağırmak anlamsız 401
@@ -157,11 +163,25 @@ class YedekliHesapDeposu @Inject constructor(
     }
 
     /** Ağ hatasında `null` döner (çağıran yerele düşer), iş hatasını geçirir. */
-    private suspend fun cevrimdisiYedek(blok: suspend () -> HesapSonuc): HesapSonuc? = try {
-        blok()
-    } catch (_: IOException) {
-        null
-    }
+    private suspend fun cevrimdisiYedek(blok: suspend () -> HesapSonuc): HesapSonuc? =
+        hesapYedegi(blok)
+}
+
+/**
+ * Hesap işlemlerinin yedek kuralı: **yalnızca ağ hatasında** `null`.
+ *
+ * Sunucunun ürettiği iş hatası (401 yanlış şifre, 409 e-posta kayıtlı)
+ * olduğu gibi dönüyor; çağıran taraf `?:` ile yalnızca `null` durumunda
+ * yerele düşüyor. Ayrı ve test edilebilir bir fonksiyon olmasının sebebi
+ * bunun bir kez bozulmuş olması: kural `if (sonuc is Basarili) … else
+ * yerel…`e çevrilince 401 de yerele düşüyor ve yerel sahte depo biçimi
+ * geçerli her şifreyi kabul ettiği için kullanıcı **yanlış şifreyle içeri
+ * giriyordu** (`agdanAl`/`demoYedegi` ile aynı desen).
+ */
+internal suspend fun hesapYedegi(uzak: suspend () -> HesapSonuc): HesapSonuc? = try {
+    uzak()
+} catch (_: IOException) {
+    null
 }
 
 /** Yalnızca bağlantı hatasında yedeği çalıştıran ortak yardımcı. */

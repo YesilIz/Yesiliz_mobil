@@ -257,21 +257,25 @@ class ProfilViewModel @Inject constructor(
     }
 
     /**
-     * Oturum açmış kullanıcının profil bilgilerini (isim, e-posta, isteğe bağlı şifre ve avatar) günceller.
+     * Oturum açmış kullanıcının adını, profil simgesini ve isteğe bağlı
+     * olarak şifresini günceller — güncelleme **sunucuda** yapılıyor.
+     *
+     * E-posta parametresi yok: giriş kimliği ve doğrulanamıyor
+     * (`HesapDeposu.profilGuncelle`).
      */
     fun profilGuncelle(
         ad: String,
-        eposta: String,
-        yeniSifre: String?,
         avatarId: String,
+        mevcutSifre: String?,
+        yeniSifre: String?,
         onSonuc: (tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc) -> Unit,
     ) {
         viewModelScope.launch {
             val sonuc = hesapDeposu.profilGuncelle(
                 ad = ad,
-                eposta = eposta,
-                yeniSifre = yeniSifre,
                 avatarId = avatarId,
+                mevcutSifre = mevcutSifre,
+                yeniSifre = yeniSifre,
             )
             onSonuc(sonuc)
         }

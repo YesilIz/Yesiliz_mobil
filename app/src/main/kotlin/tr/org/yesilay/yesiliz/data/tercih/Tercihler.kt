@@ -202,19 +202,32 @@ class Tercihler @Inject constructor(
         depo.edit { it[LIGDE_GORUN] = acik }
     }
 
-    suspend fun oturumuKaydet(ad: String, eposta: String, misafir: Boolean) {
+    suspend fun oturumuKaydet(
+        ad: String,
+        eposta: String,
+        misafir: Boolean,
+        avatarId: String = "",
+    ) {
         depo.edit { p ->
             p[HESAP_GIRIS] = !misafir
             p[HESAP_MISAFIR] = misafir
             p[HESAP_AD] = ad
             p[HESAP_EPOSTA] = eposta
+            p[HESAP_AVATAR] = avatarId
         }
     }
 
-    suspend fun profilGuncelle(ad: String, eposta: String, avatarId: String) {
+    /**
+     * Profil güncellemesinin **cihaz** tarafı — e-postaya dokunmuyor.
+     *
+     * E-posta burada da değiştirilebiliyordu; `YerelOturumSiniri`'nin veri
+     * sahibi anahtarı e-posta olduğu için (`VERI_SAHIBI`) bu, sonraki
+     * girişte sahip uyuşmazlığı yaratıp kullanıcının bütün yerel geçmişini
+     * sildiriyordu. E-posta yalnızca giriş/kayıt akışında yazılıyor.
+     */
+    suspend fun profilGuncelle(ad: String, avatarId: String) {
         depo.edit { p ->
             p[HESAP_AD] = ad
-            p[HESAP_EPOSTA] = eposta
             p[HESAP_AVATAR] = avatarId
         }
     }
