@@ -106,10 +106,14 @@ class YerelOturumSiniri @Inject constructor(
         // Sunucu adresi cihaz/geliştirici ayarıdır; hesap verisi değil.
         // Gerçek cihazda LAN tüneli kullanılıyorsa hesap geçişi sonrası
         // bağlantının kendiliğinden bozulmaması için korunur.
-        val sunucuTabani = tercihler.sunucuTabani.first()
+        //
+        // Okunan şey **ham ezme**: etkin adres okunsaydı, ezme olmadığı hâlde
+        // o günkü varsayılan kalıcı bir ezmeye dönüşür ve derlemedeki adres
+        // bir daha bu cihaza ulaşamazdı.
+        val sunucuTabani = tercihler.saklananSunucuTabani.first()
         db.clearAllTables()
         tercihler.sifirla()
-        tercihler.sunucuTabaniniKaydet(sunucuTabani)
+        if (sunucuTabani != null) tercihler.sunucuTabaniniKaydet(sunucuTabani)
         jetonDeposu.temizle()
         kategoriDeposu.seedEt(zorla = true)
     }

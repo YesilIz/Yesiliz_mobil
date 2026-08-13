@@ -11,9 +11,10 @@ package tr.org.yesilay.yesiliz.ui.ekran.profil
  * ya da şifresiz HTTP adresi bulunmuyor" diyor.
  */
 internal const val SUNUCU_ADRESI_ACIKLAMA =
-    "Yayınlanan sürüm canlı sunucuya kendiliğinden bağlanır; burayı " +
-        "değiştirmen gerekmez. Debug derlemesinin varsayılanı 10.0.2.2 ve " +
-        "o adres yalnızca emülatörde çalışır — gerçek cihazda geliştirme " +
-        "makinenin yerel ağ adresini yaz."
+    "Bu derleme de canlı sunucuya kendiliğinden bağlanır; burayı " +
+        "değiştirmen gerekmez. Yalnızca yerel backend'e bağlanacaksan yaz: " +
+        "emülatörde 10.0.2.2, gerçek cihazda geliştirme makinenin yerel ağ " +
+        "adresi (ya da `adb reverse` ile 127.0.0.1). Canlı sunucuya dönmek " +
+        "için \"Varsayılana dön\"."
 
-internal const val SUNUCU_ADRESI_ORNEK = "http://192.168.1.20:8000/"
+internal const val SUNUCU_ADRESI_ORNEK = "http://10.0.2.2:8000/"

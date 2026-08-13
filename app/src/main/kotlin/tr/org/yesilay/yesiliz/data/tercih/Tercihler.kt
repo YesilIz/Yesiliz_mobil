@@ -284,14 +284,14 @@ class Tercihler @Inject constructor(
      * ikisini birlikte yürütür.
      */
     /**
-     * Sunucu adresi — varsayılanı [VARSAYILAN_SUNUCU], yani build türü
-     * belirliyor. Release'de gerçek HTTPS alan adı; temiz kurulmuş bir
-     * telefon hiçbir ayar yapmadan sunucuya ulaşıyor.
+     * Sunucu adresi — varsayılanı [VARSAYILAN_SUNUCU], yani derlemeye gömülen
+     * canlı adres. Debug de release de aynı sunucuya bakıyor: temiz kurulmuş
+     * bir telefon hiçbir ayar yapmadan çalışıyor.
      *
-     * Bu alan **hata ayıklama** için duruyor: debug derlemesinde varsayılan
-     * `10.0.2.2` yalnızca emülatörde anlamlı, gerçek cihazda geliştirme
-     * makinesinin LAN adresi girilebilsin diye Profil › Geliştirici'den
-     * değiştirilebiliyor (`debug.md` O-14).
+     * Kayıtlı değer **hata ayıklama** için duruyor: yerel backend'e (docker
+     * compose) bağlanmak isteyen geliştirici Profil › Geliştirici'den adres
+     * yazabiliyor (`debug.md` O-14). Yayın derlemesi bu değeri okumuyor
+     * (§12 K24).
      */
     val sunucuTabani: Flow<String> = depo.data.map { p ->
         etkinSunucuTabani(
@@ -300,6 +300,16 @@ class Tercihler @Inject constructor(
             varsayilan = VARSAYILAN_SUNUCU,
         )
     }
+
+    /**
+     * Kayıtlı geliştirici ezmesi — **ham** değer, varsayılana düşmüyor.
+     *
+     * "Ezme var mı yok mu" sorusunu ayırt etmesi gereken tek yer
+     * `YerelOturumSiniri.yereliTemizle`: orada etkin adres okunup geri
+     * yazılsaydı, ezme olmadığı hâlde o günkü varsayılan kalıcı bir ezmeye
+     * dönüşür ve derlemedeki adres bir daha değişemezdi.
+     */
+    val saklananSunucuTabani: Flow<String?> = depo.data.map { it[SUNUCU_TABANI] }
 
     suspend fun sunucuTabaniniKaydet(adres: String) {
         // Geliştirici adresi yalnızca debug aracıdır. Eski/test bir
@@ -310,6 +320,40 @@ class Tercihler @Inject constructor(
             // Sondaki eğik çizgi Retrofit ve OkHttp için şart; kullanıcıya
             // yazdırmak yerine burada tamamlanıyor.
             p[SUNUCU_TABANI] = adres.trim().let { if (it.endsWith("/")) it else "$it/" }
+            p[SUNUCU_TABANI_SURUM] = SUNUCU_TABANI_GECERLI_SURUM
+        }
+    }
+
+    /**
+     * "Varsayılana dön" — kayıtlı ezmeyi siler, adres [VARSAYILAN_SUNUCU]'ya
+     * (derlemeye gömülü canlı sunucu) döner.
+     */
+    suspend fun sunucuTabaniniSifirla() {
+        if (!BuildConfig.DEBUG) return
+        depo.edit { p ->
+            p.remove(SUNUCU_TABANI)
+            p[SUNUCU_TABANI_SURUM] = SUNUCU_TABANI_GECERLI_SURUM
+        }
+    }
+
+    /**
+     * Tek seferlik temizlik — açılışta çağrılır.
+     *
+     * Debug varsayılanı emülatör adresiyken cihazlara elle yazılmış (ya da
+     * `YerelOturumSiniri` tarafından geri yazılmış) adresler DataStore'da
+     * kaldı ve varsayılanı ezmeye devam ediyor. Değere **bakmıyor**: sürüm
+     * işaretçisi yoksa kayıtlı ezme siliniyor, işaretçi yazılıyor. Yerel
+     * backend'e bağlanan geliştirici adresi bir kez yeniden yazar.
+     *
+     * (Değere bakan bir kural eski adresi string sabiti olarak taşımak
+     * zorunda kalırdı; `10.0.2.2` sabiti `src/main`'e giremiyor — §12 K32
+     * nöbetçisi derlemeyi düşürür.)
+     */
+    suspend fun eskiSunucuAdresiniTemizle() {
+        if (!sunucuAdresiTemizlenmeli(depo.data.first()[SUNUCU_TABANI_SURUM])) return
+        depo.edit { p ->
+            p.remove(SUNUCU_TABANI)
+            p[SUNUCU_TABANI_SURUM] = SUNUCU_TABANI_GECERLI_SURUM
         }
     }
 
@@ -334,15 +378,22 @@ class Tercihler @Inject constructor(
 
     companion object {
         /**
-         * Varsayılan sunucu adresi — **build türünden** geliyor.
+         * Varsayılan sunucu adresi — **derlemeden** geliyor.
          *
-         * Release: gerçek HTTPS alan adı. Debug: emülatörün makineye
-         * baktığı `10.0.2.2` (`backend/docker-compose.yml`).
-         * Tek yapılandırma noktası `app/build.gradle.kts`; adres uygulama
-         * koduna ikinci bir yere yazılmıyor. `AgModulu` yer tutucu taban
-         * olarak da bunu kullanıyor.
+         * İki build türünde de canlı HTTPS adresi; `-Pyesiliz.sunucu` ya da
+         * `YESILIZ_SUNUCU` ile eziliyor. Tek yapılandırma noktası
+         * `app/build.gradle.kts`; adres uygulama koduna ikinci bir yere
+         * yazılmıyor. `AgModulu` yer tutucu taban olarak da bunu kullanıyor.
          */
         val VARSAYILAN_SUNUCU: String = BuildConfig.API_TABANI
+
+        /**
+         * Kayıtlı sunucu adresinin şema sürümü — [eskiSunucuAdresiniTemizle].
+         *
+         * Varsayılan adres değiştiğinde bu sayı artırılırsa cihazlardaki eski
+         * ezmeler bir kez daha temizlenir.
+         */
+        const val SUNUCU_TABANI_GECERLI_SURUM = 1
 
         // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
         private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
@@ -353,6 +404,7 @@ class Tercihler @Inject constructor(
         private val SON_ANKET = longPreferencesKey("son_anket_gunu")
         private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
+        private val SUNUCU_TABANI_SURUM = intPreferencesKey("sunucu_tabani_surum")
         private val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
         private val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
         private val HESAP_GIRIS = booleanPreferencesKey("hesap_giris")
@@ -380,6 +432,15 @@ class Tercihler @Inject constructor(
         const val VARSAYILAN_HEDEF = 240
     }
 }
+
+/**
+ * Kayıtlı geliştirici adresi tek seferlik temizlenmeli mi?
+ *
+ * Saf karar: işaretçi yoksa (ya da eskiyse) evet. Değere bakmıyor —
+ * gerekçesi [Tercihler.eskiSunucuAdresiniTemizle]'de.
+ */
+internal fun sunucuAdresiTemizlenmeli(saklananSurum: Int?): Boolean =
+    (saklananSurum ?: 0) < Tercihler.SUNUCU_TABANI_GECERLI_SURUM
 
 /** Yayın istemcisi kalıcı bir debug sunucu geçersiz kılmasını asla kullanmaz. */
 internal fun etkinSunucuTabani(

@@ -91,6 +91,10 @@ class MainActivity : ComponentActivity() {
         // Aynı günde dönülse bile selamlama ve zaman etiketleri tazelenir.
         guncelGun.yenile()
         lifecycleScope.launch {
+            // Varsayılan sunucu adresi emülatörünkiyken cihazlara elle
+            // yazılmış ezmeler DataStore'da kaldı ve canlı adresi ezmeye
+            // devam ediyordu. Tek seferlik; ikinci açılıştan sonra no-op.
+            tercihler.eskiSunucuAdresiniTemizle()
             // Eski sürümden gelen cihazlarda yerel davranış verisinin
             // sahibini UsageStats yeniden okunmadan önce geri doldur.
             yerelOturumSiniri.baslat()
