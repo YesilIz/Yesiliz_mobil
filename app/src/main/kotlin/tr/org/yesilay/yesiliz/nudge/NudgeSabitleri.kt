@@ -15,13 +15,18 @@ object NudgeSabitleri {
      * Kesintisiz tüketim bloğu bu süreyi aşınca nudge tetiklenir.
      *
      * `OruntuCikar.BLOK_ESIGI` (30dk, risk skorunun `oturum` örüntüsü) ile
-     * bilerek aynı değil — nudge kendi eşiğini taşıyor, mockup'taki
-     * "45 dakikadır buradasın" metniyle uyumlu.
+     * bilerek aynı değil — nudge kendi eşiğini taşıyor.
      *
-     * Cihazda denerken kısa değerlere çekilebilir (ör. 15 saniye);
-     * [POLL_ARALIGI] ve sönüm süreleri otomatik uyum sağlar. Ama o haliyle
-     * **commit'lenmez** — `TetikleyiciTest` 45 dakikalık eşiğe göre yazılmış
-     * senaryolar taşıyor ve kısa eşikte kırmızıya döner.
+     * **Şu an 15 saniye: demo/geliştirme değeri.** Popup'ı cihazda 45 dakika
+     * beklemeden görebilmek için bilinçli olarak kısaltıldı (13 Ağu 2026).
+     * [POLL_ARALIGI] ve sönüm süreleri otomatik uyum sağlıyor; `TetikleyiciTest`
+     * de artık dakika sabitleri yerine bu değere **göreli** yazıldığı için
+     * eşik ne olursa olsun yeşil kalıyor.
+     *
+     * Gerçek kullanıcı davranışı 45 dakikaydı ve mockup metni ("45 dakikadır
+     * buradasın", `DESIGN.md §5`) hâlâ ona göre. **Yayın öncesi geri alınmalı:**
+     * 15 saniyede bir nudge, uygulamanın "zorlama yok, hafif dokunuş" ilkesinin
+     * (CLAUDE.md §3) tam tersi olur.
      */
     val ESIK: Duration = Duration.ofSeconds(15)
 
