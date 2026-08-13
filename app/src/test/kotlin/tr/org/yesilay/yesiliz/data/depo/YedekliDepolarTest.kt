@@ -10,6 +10,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
+import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
+import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 
 class YedekliDepolarTest {
 
@@ -44,6 +46,29 @@ class YedekliDepolarTest {
                 yerel = { "yanlış başarı" },
             )
         }
+        Unit
+    }
+
+    @Test
+    fun girisAgHatasindaYerelYedegeDusuyor() = runBlocking {
+        assertEquals(null, hesapYedegi { throw IOException("çevrimdışı") })
+    }
+
+    /**
+     * Sunucu "şifre hatalı" derken yerel sahte depoya sormak, kullanıcıyı
+     * **yanlış şifreyle** içeri almak demekti; o depo biçimi geçerli her
+     * şifreyi kabul ediyor. Bir kez böyle bozulduğu için testi var.
+     */
+    @Test
+    fun yanlisSifreYerelYedegeDusmuyor() = runBlocking {
+        val hata = HesapSonuc.Hata(HesapAlani.SIFRE, "E-posta ya da şifre hatalı.")
+
+        assertEquals(hata, hesapYedegi { hata })
+    }
+
+    @Test(expected = CancellationException::class)
+    fun hesapYedegiIptaliYutmaz() = run {
+        runBlocking { hesapYedegi { throw CancellationException("ekran kapandı") } }
         Unit
     }
 

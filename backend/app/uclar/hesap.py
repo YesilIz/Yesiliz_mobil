@@ -38,6 +38,8 @@ from app.semalar import (
     GirisIstek,
     Jetonlar,
     KayitIstek,
+    Profil,
+    ProfilIstek,
     SifreSifirlaIstek,
     SifreYenileIstek,
     YenileIstek,
@@ -64,6 +66,7 @@ def _jetonlar(db: Session, kullanici: Kullanici) -> Jetonlar:
         yenileme=yenileme,
         ad=kullanici.ad,
         eposta=kullanici.eposta,
+        avatar=kullanici.avatar or "",
     )
 
 
@@ -153,6 +156,42 @@ def yenile(istek: YenileIstek, db: Session = Depends(oturum)) -> Jetonlar:
     if kullanici is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
     return _jetonlar(db, kullanici)
+
+
+@yonlendirici.patch("/profil", response_model=Profil)
+def profil_guncelle(
+    istek: ProfilIstek,
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> Profil:
+    """
+    Ad, profil simgesi ve şifre güncellemesi.
+
+    Bu uç yazılmadan önce istemci "profil güncellendi" diyip yalnızca
+    DataStore'a yazıyordu: sunucudaki ad değişmiyor, girilen yeni şifre ise
+    hiçbir yere gitmiyordu — kullanıcı şifresini değiştirdiğini sanıp eski
+    şifreyle giriş yapmaya devam ediyordu (CLAUDE.md §4, K37).
+
+    Şifre değişimi **mevcut şifreyi** şart koşuyor. Erişim jetonu tek başına
+    yetseydi, telefonu eline geçiren biri hesabı kalıcı olarak devralırdı.
+    """
+    kilitli = kullaniciyi_kilitle(db, kullanici.id)
+
+    if istek.yeniSifre is not None:
+        if not istek.mevcutSifre:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Şifre değiştirmek için mevcut şifreni de gir",
+            )
+        if not sifre_dogrula(kilitli.sifre_ozet, istek.mevcutSifre):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Mevcut şifre hatalı")
+        kilitli.sifre_ozet = sifre_ozetle(istek.yeniSifre)
+
+    kilitli.ad = istek.ad
+    kilitli.avatar = istek.avatar
+    db.commit()
+    db.refresh(kilitli)
+    return Profil(ad=kilitli.ad, eposta=kilitli.eposta, avatar=kilitli.avatar or "")
 
 
 @yonlendirici.post("/cikis")

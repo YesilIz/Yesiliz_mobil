@@ -45,11 +45,40 @@ class SifreYenileIstek(BaseModel):
     yeniSifre: str = Field(min_length=8, max_length=128)
 
 
+class ProfilIstek(BaseModel):
+    """
+    Profil güncelleme — **e-posta yok**.
+
+    E-posta giriş kimliği; doğrulama e-postası gönderilemediği sürece
+    (A15, sağlayıcı bağlı değil) değiştirilmesi kullanıcıyı ulaşılamaz bir
+    adrese kilitler. Alan sunucuda da istemcide de kapalı.
+    """
+
+    ad: str = Field(min_length=2, max_length=120)
+    avatar: str = Field(default="", max_length=32)
+    # Yeni şifre verilirse mevcut şifre ZORUNLU: çalınmış bir telefon
+    # yalnızca erişim jetonuyla şifreyi değiştirebilmemeli.
+    mevcutSifre: str | None = Field(default=None, max_length=128)
+    yeniSifre: str | None = Field(default=None, min_length=8, max_length=128)
+
+    @field_validator("ad", "avatar", mode="before")
+    @classmethod
+    def bosluklari_temizle(cls, deger: object) -> object:
+        return deger.strip() if isinstance(deger, str) else deger
+
+
+class Profil(BaseModel):
+    ad: str
+    eposta: str
+    avatar: str
+
+
 class Jetonlar(BaseModel):
     erisim: str
     yenileme: str
     ad: str
     eposta: str
+    avatar: str = ""
 
 
 # --- özet senkronu ---

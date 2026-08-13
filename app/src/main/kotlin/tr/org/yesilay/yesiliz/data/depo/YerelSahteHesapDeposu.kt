@@ -73,18 +73,28 @@ class YerelSahteHesapDeposu @Inject constructor(
         tercihler.oturumuSil()
     }
 
+    /**
+     * Çevrimdışı profil güncellemesi — **şifre hariç**.
+     *
+     * Ad ve simge cihazda tutulan görünüm bilgisi; sunucuya ulaşılamasa da
+     * yazılabilir. Şifre değil: burada saklanan bir parola yok (§12 K16) ve
+     * "değiştirildi" demek, kullanıcının eski şifresiyle giriş yapmaya devam
+     * ettiğini fark etmemesi demek olurdu.
+     */
     override suspend fun profilGuncelle(
         ad: String,
-        eposta: String,
-        yeniSifre: String?,
         avatarId: String,
+        mevcutSifre: String?,
+        yeniSifre: String?,
     ): HesapSonuc {
         HesapDogrula.ad(ad)?.let { return HesapSonuc.Hata(HesapAlani.AD, it) }
-        HesapDogrula.eposta(eposta)?.let { return HesapSonuc.Hata(HesapAlani.EPOSTA, it) }
         if (!yeniSifre.isNullOrBlank()) {
-            HesapDogrula.sifre(yeniSifre)?.let { return HesapSonuc.Hata(HesapAlani.SIFRE, it) }
+            return HesapSonuc.Hata(
+                HesapAlani.SIFRE,
+                "Şifreni değiştirmek için internet bağlantısı gerekiyor.",
+            )
         }
-        tercihler.profilGuncelle(ad = ad.trim(), eposta = eposta.trim(), avatarId = avatarId.trim())
+        tercihler.profilGuncelle(ad = ad.trim(), avatarId = avatarId.trim())
         return HesapSonuc.Basarili
     }
 

@@ -29,11 +29,24 @@ interface HesapDeposu {
 
     suspend fun cikisYap()
 
+    /**
+     * Ad, profil simgesi ve (isteğe bağlı) şifre güncellemesi —
+     * `PATCH /auth/profil`.
+     *
+     * **E-posta yok:** giriş kimliği ve doğrulama e-postası gönderemiyoruz
+     * (A15). Yalnızca cihazda değiştirmek sunucudaki hesabı olduğu gibi
+     * bırakır, üstelik yerel veri sahibi anahtarını da bozar
+     * ([tr.org.yesilay.yesiliz.data.depo.YerelOturumSiniri] e-posta ile
+     * çalışıyor: sonraki girişte kullanıcının bütün yerel geçmişi silinirdi).
+     *
+     * [mevcutSifre] yalnızca [yeniSifre] verildiğinde gerekiyor; sunucu da
+     * şart koşuyor — erişim jetonu tek başına şifre değiştirmeye yetmemeli.
+     */
     suspend fun profilGuncelle(
         ad: String,
-        eposta: String,
-        yeniSifre: String? = null,
         avatarId: String,
+        mevcutSifre: String? = null,
+        yeniSifre: String? = null,
     ): HesapSonuc
 
     /**
