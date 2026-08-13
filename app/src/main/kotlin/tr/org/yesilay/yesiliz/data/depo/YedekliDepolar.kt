@@ -114,11 +114,15 @@ class YedekliHesapDeposu @Inject constructor(
 
     override val oturum: Flow<Oturum> = yerel.oturum
 
-    override suspend fun girisYap(eposta: String, sifre: String): HesapSonuc =
-        cevrimdisiYedek { uzak.girisYap(eposta, sifre) } ?: yerel.girisYap(eposta, sifre)
+    override suspend fun girisYap(eposta: String, sifre: String): HesapSonuc {
+        val sonuc = cevrimdisiYedek { uzak.girisYap(eposta, sifre) }
+        return if (sonuc is HesapSonuc.Basarili) sonuc else yerel.girisYap(eposta, sifre)
+    }
 
-    override suspend fun kayitOl(ad: String, eposta: String, sifre: String): HesapSonuc =
-        cevrimdisiYedek { uzak.kayitOl(ad, eposta, sifre) } ?: yerel.kayitOl(ad, eposta, sifre)
+    override suspend fun kayitOl(ad: String, eposta: String, sifre: String): HesapSonuc {
+        val sonuc = cevrimdisiYedek { uzak.kayitOl(ad, eposta, sifre) }
+        return if (sonuc is HesapSonuc.Basarili) sonuc else yerel.kayitOl(ad, eposta, sifre)
+    }
 
     override suspend fun sifreSifirla(eposta: String): HesapSonuc =
         cevrimdisiYedek { uzak.sifreSifirla(eposta) } ?: yerel.sifreSifirla(eposta)
@@ -130,6 +134,13 @@ class YedekliHesapDeposu @Inject constructor(
         // tercihleri siliyor.
         uzak.cikisYap()
     }
+
+    override suspend fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String?,
+        avatarId: String,
+    ): HesapSonuc = yerel.profilGuncelle(ad, eposta, yeniSifre, avatarId)
 
     /**
      * Misafirin sunucuda kaydı yok; uzak depoyu çağırmak anlamsız 401

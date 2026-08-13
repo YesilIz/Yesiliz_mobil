@@ -94,6 +94,7 @@ class ProfilViewModel @Inject constructor(
             // Misafirin çıkacağı bir hesap yok; satır gösterilmiyor.
             hesapVarMi = oturum.girisYapildiMi && !oturum.misafirMi,
             eposta = oturum.eposta,
+            avatarId = oturum.avatarId,
         )
     }.combine(ligDeposu.ligAkisi()) { durum, lig ->
         durum.copy(ligAdi = lig.ligAdi.takeIf { lig.katildiMi }.orEmpty())
@@ -244,6 +245,27 @@ class ProfilViewModel @Inject constructor(
         viewModelScope.launch {
             hesapDeposu.cikisYap()
             _silindi.send(Unit)
+        }
+    }
+
+    /**
+     * Oturum açmış kullanıcının profil bilgilerini (isim, e-posta, isteğe bağlı şifre ve avatar) günceller.
+     */
+    fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String?,
+        avatarId: String,
+        onSonuc: (tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val sonuc = hesapDeposu.profilGuncelle(
+                ad = ad,
+                eposta = eposta,
+                yeniSifre = yeniSifre,
+                avatarId = avatarId,
+            )
+            onSonuc(sonuc)
         }
     }
 

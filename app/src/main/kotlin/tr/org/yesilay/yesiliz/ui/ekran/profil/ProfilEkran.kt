@@ -52,6 +52,22 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDogrula
+import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
+import tr.org.yesilay.yesiliz.ui.bilesen.TUM_AVATARLAR
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -151,6 +167,7 @@ fun ProfilEkran(
     var yedamAcik by remember { mutableStateOf(false) }
     var bildirimSaatleriAcik by remember { mutableStateOf(false) }
     var cikisOnayi by remember { mutableStateOf(false) }
+    var profiliDuzenleAcik by remember { mutableStateOf(false) }
     var sunucuAdresiAcik by remember { mutableStateOf(false) }
 
     // Dışarıdan istenen alt sayfa açılıyor (`debug.md` O-8).
@@ -171,8 +188,10 @@ fun ProfilEkran(
             ) {
                 KullaniciAvatari(
                     isim = durum.isim,
+                    avatarId = durum.avatarId,
                     olcu = Olcu.AvatarBuyuk,
                     zemin = YesilKoyu,
+                    onTikla = if (durum.hesapVarMi) { { profiliDuzenleAcik = true } } else onHesapOlustur,
                 )
                 Spacer(modifier = Modifier.height(Bosluk.S))
                 Text(
@@ -181,6 +200,31 @@ fun ProfilEkran(
                     fontWeight = FontWeight.Bold,
                     color = MetinBirincil,
                 )
+                if (durum.hesapVarMi) {
+                    Spacer(modifier = Modifier.height(Bosluk.Xs))
+                    Cip(
+                        metin = "Profili Düzenle",
+                        ikon = Icons.Filled.Edit,
+                        zemin = Yesil50,
+                        renk = YesilAna,
+                        onTikla = { profiliDuzenleAcik = true },
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(Bosluk.Xs))
+                    Text(
+                        text = "Misafir Kullanıcı",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MetinIkincil,
+                    )
+                    Spacer(modifier = Modifier.height(Bosluk.S))
+                    Cip(
+                        metin = "Hesap Oluştur",
+                        ikon = Icons.Filled.PersonAdd,
+                        zemin = Yesil50,
+                        renk = YesilAna,
+                        onTikla = onHesapOlustur,
+                    )
+                }
                 if (durum.ligAdi.isNotBlank()) {
                     Spacer(modifier = Modifier.height(Bosluk.S))
                     Cip(metin = durum.ligAdi, zemin = YesilNane)
@@ -455,6 +499,28 @@ fun ProfilEkran(
     if (yedamAcik) {
         AltSayfa(onKapat = { yedamAcik = false }) {
             YedamHakkindaIcerik(onKapat = { yedamAcik = false })
+        }
+    }
+
+    if (profiliDuzenleAcik) {
+        AltSayfa(onKapat = { profiliDuzenleAcik = false }) {
+            ProfiliDuzenleIcerik(
+                durum = durum,
+                onKaydet = { yeniAd, yeniEposta, yeniSifre, yeniAvatarId, onHata ->
+                    viewModel.profilGuncelle(
+                        ad = yeniAd,
+                        eposta = yeniEposta,
+                        yeniSifre = yeniSifre,
+                        avatarId = yeniAvatarId,
+                    ) { sonuc ->
+                        when (sonuc) {
+                            is HesapSonuc.Basarili -> profiliDuzenleAcik = false
+                            is HesapSonuc.Hata -> onHata(sonuc.alan, sonuc.mesaj)
+                        }
+                    }
+                },
+                onKapat = { profiliDuzenleAcik = false },
+            )
         }
     }
 
@@ -1328,6 +1394,175 @@ private fun BildirimSaatleriIcerik(
                 onDegis = { saatDegeri -> onDegis(saatler.copy(aksamSaati = saatDegeri)) },
             )
         }
+    }
+}
+
+@Composable
+private fun ProfiliDuzenleIcerik(
+    durum: ProfilDurum,
+    onKaydet: (
+        yeniAd: String,
+        yeniEposta: String,
+        yeniSifre: String?,
+        yeniAvatarId: String,
+        onHata: (HesapAlani, String) -> Unit,
+    ) -> Unit,
+    onKapat: () -> Unit,
+) {
+    var yeniIsim by remember { mutableStateOf(durum.isim) }
+    var yeniEposta by remember { mutableStateOf(durum.eposta) }
+    var yeniSifre by remember { mutableStateOf("") }
+    var sifreGorunur by remember { mutableStateOf(false) }
+    var secilenAvatarId by remember { mutableStateOf(durum.avatarId.ifBlank { "HARF" }) }
+
+    var adHatasi by remember { mutableStateOf<String?>(null) }
+    var epostaHatasi by remember { mutableStateOf<String?>(null) }
+    var sifreHatasi by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Olcu.EkranKenari)
+            .padding(bottom = Olcu.BolumArasi),
+        verticalArrangement = Arrangement.spacedBy(Bosluk.M),
+    ) {
+        AltSayfaBasligi("Profili Düzenle", onKapat)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            KullaniciAvatari(
+                isim = yeniIsim.ifBlank { "M" },
+                avatarId = secilenAvatarId,
+                olcu = Olcu.AvatarBuyuk,
+                zemin = YesilKoyu,
+            )
+            Spacer(modifier = Modifier.height(Bosluk.Xs))
+            Text(
+                text = "Profil Simgesi Seçin",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MetinBirincil,
+            )
+        }
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(TUM_AVATARLAR) { avatarSecenegi ->
+                val secili = avatarSecenegi.id.equals(secilenAvatarId, ignoreCase = true)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { secilenAvatarId = avatarSecenegi.id },
+                ) {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .border(
+                                width = if (secili) 3.dp else 0.dp,
+                                color = if (secili) YesilAna else Color.Transparent,
+                                shape = CircleShape,
+                            )
+                            .padding(if (secili) 3.dp else 0.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        KullaniciAvatari(
+                            isim = yeniIsim.ifBlank { "M" },
+                            avatarId = avatarSecenegi.id,
+                            olcu = 52.dp,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(Bosluk.Xs))
+                    Text(
+                        text = avatarSecenegi.baslik,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (secili) YesilAna else MetinIkincil,
+                        fontWeight = if (secili) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = yeniIsim,
+            onValueChange = {
+                yeniIsim = it
+                adHatasi = null
+            },
+            label = { Text("Kullanıcı Adı") },
+            isError = adHatasi != null,
+            supportingText = adHatasi?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        OutlinedTextField(
+            value = yeniEposta,
+            onValueChange = {
+                yeniEposta = it
+                epostaHatasi = null
+            },
+            label = { Text("E-posta Adresi") },
+            isError = epostaHatasi != null,
+            supportingText = epostaHatasi?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        OutlinedTextField(
+            value = yeniSifre,
+            onValueChange = {
+                yeniSifre = it
+                sifreHatasi = null
+            },
+            label = { Text("Yeni Şifre (İsteğe Bağlı)") },
+            isError = sifreHatasi != null,
+            supportingText = sifreHatasi?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+            visualTransformation = if (sifreGorunur) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { sifreGorunur = !sifreGorunur }) {
+                    Icon(
+                        imageVector = if (sifreGorunur) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = if (sifreGorunur) "Şifreyi Gizle" else "Şifreyi Göster",
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        Spacer(modifier = Modifier.height(Bosluk.S))
+
+        BirincilButon(
+            metin = "Kaydet",
+            onTikla = {
+                val hAd = HesapDogrula.ad(yeniIsim)
+                val hEposta = HesapDogrula.eposta(yeniEposta)
+                val hSifre = if (yeniSifre.isNotBlank()) HesapDogrula.sifre(yeniSifre) else null
+
+                adHatasi = hAd
+                epostaHatasi = hEposta
+                sifreHatasi = hSifre
+
+                if (hAd == null && hEposta == null && hSifre == null) {
+                    onKaydet(
+                        yeniIsim.trim(),
+                        yeniEposta.trim(),
+                        yeniSifre.ifBlank { null },
+                        secilenAvatarId,
+                    ) { alan, mesaj ->
+                        when (alan) {
+                            HesapAlani.AD -> adHatasi = mesaj
+                            HesapAlani.EPOSTA -> epostaHatasi = mesaj
+                            HesapAlani.SIFRE -> sifreHatasi = mesaj
+                            else -> adHatasi = mesaj
+                        }
+                    }
+                }
+            },
+        )
     }
 }
 

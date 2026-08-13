@@ -131,6 +131,13 @@ class SunucuHesapDeposu @Inject constructor(
 
     override suspend fun cikisYap() = uzak.cikisYap()
 
+    override suspend fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String?,
+        avatarId: String,
+    ): HesapSonuc = uzak.profilGuncelle(ad, eposta, yeniSifre, avatarId)
+
     override suspend fun hesabiSil(): Boolean = uzak.hesabiSil()
 
     /**

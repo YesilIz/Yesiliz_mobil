@@ -33,6 +33,7 @@ data class ProfilDurum(
     /** Gerçek bir hesapla giriş yapıldı mı — misafirde "Çıkış yap" yok. */
     val hesapVarMi: Boolean = false,
     val eposta: String = "",
+    val avatarId: String = "",
     /** Yardım alt sayfasındaki SSS — `assets/sozlesmeler.json`. */
     val sss: List<SssMaddesi> = emptyList(),
     /** Geliştirici ayarındaki sunucu adresi (`debug.md` O-14). */

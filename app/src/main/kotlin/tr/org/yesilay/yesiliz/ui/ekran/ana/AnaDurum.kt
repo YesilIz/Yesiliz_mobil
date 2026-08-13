@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 data class AnaDurum(
     val selamlama: String = "",
     val isim: String = "",
+    val avatarId: String = "",
     val serideGun: Int = 0,
     val agacEvresi: Int = 1,
     val puan: Int = 0,

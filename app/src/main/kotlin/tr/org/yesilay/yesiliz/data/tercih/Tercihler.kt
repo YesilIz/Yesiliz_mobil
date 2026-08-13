@@ -105,6 +105,7 @@ class Tercihler @Inject constructor(
             misafirMi = p[HESAP_MISAFIR] ?: false,
             ad = p[HESAP_AD] ?: "",
             eposta = p[HESAP_EPOSTA] ?: "",
+            avatarId = p[HESAP_AVATAR] ?: "",
         )
     }
 
@@ -210,12 +211,21 @@ class Tercihler @Inject constructor(
         }
     }
 
+    suspend fun profilGuncelle(ad: String, eposta: String, avatarId: String) {
+        depo.edit { p ->
+            p[HESAP_AD] = ad
+            p[HESAP_EPOSTA] = eposta
+            p[HESAP_AVATAR] = avatarId
+        }
+    }
+
     suspend fun oturumuSil() {
         depo.edit { p ->
             p.remove(HESAP_GIRIS)
             p.remove(HESAP_MISAFIR)
             p.remove(HESAP_AD)
             p.remove(HESAP_EPOSTA)
+            p.remove(HESAP_AVATAR)
         }
     }
 
@@ -349,6 +359,7 @@ class Tercihler @Inject constructor(
         private val HESAP_MISAFIR = booleanPreferencesKey("hesap_misafir")
         private val HESAP_AD = stringPreferencesKey("hesap_ad")
         private val HESAP_EPOSTA = stringPreferencesKey("hesap_eposta")
+        private val HESAP_AVATAR = stringPreferencesKey("hesap_avatar")
         private val VERI_SAHIBI = stringPreferencesKey("yerel_veri_sahibi")
         private val VERI_BASLANGIC_ANI = longPreferencesKey("yerel_veri_baslangic_ani")
         private val DAVET_KODU = stringPreferencesKey("davet_kodu")

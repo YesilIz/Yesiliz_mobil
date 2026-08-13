@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,48 +21,51 @@ import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.avatarRengi
 
 /**
- * Baş harf avatarı.
+ * Kullanıcı avatarı bileşeni.
  *
- * Foto yüklenmiyor — profil fotoğrafı toplamak veri politikasına yük bindirir
- * ve tasarımda da yok. Renk isimden deterministik türetiliyor
- * (`ui/tema/KategoriRenk.kt → avatarRengi`).
- *
- * `buyukHarf()` şart: "irem".first().uppercase() ROOT'ta "I" verir,
- * Türkçede "İ" olmalı (CLAUDE.md §9).
+ * Kullanıcı tarafından tercih edilmiş bir [avatarId] varsa ilgili tematik ikonu,
+ * yoksa isimden türetilen baş harfi dairesel bir zemin üstünde çizer.
  */
 @Composable
 fun KullaniciAvatari(
     isim: String,
     modifier: Modifier = Modifier,
+    avatarId: String? = null,
     olcu: Dp = Olcu.AvatarKucuk,
     zemin: Color? = null,
     metinRengi: Color = Beyaz,
-    /**
-     * Verilirse avatar tıklanabilir olur.
-     *
-     * Ana ekranın sol üstündeki avatar süslemeydi; Profil'e götürmüyordu
-     * (`debug.md` O-17). Lig satırlarındaki avatarlar tıklanabilir
-     * olmamaya devam ediyor.
-     */
     onTikla: (() -> Unit)? = null,
 ) {
+    val secenek = avatarBul(avatarId)
+    val seciliZemin = zemin ?: secenek?.zeminRenk ?: avatarRengi(isim)
+
     Box(
         modifier = modifier
             .size(olcu)
             .clip(CircleShape)
-            .background(zemin ?: avatarRengi(isim))
+            .background(seciliZemin)
             .then(if (onTikla != null) Modifier.clickable(onClick = onTikla) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = isim.take(1).buyukHarf(),
-            style = if (olcu >= Olcu.AvatarBuyuk) {
-                MaterialTheme.typography.displayLarge
-            } else {
-                MaterialTheme.typography.headlineMedium
-            },
-            fontWeight = FontWeight.SemiBold,
-            color = metinRengi,
-        )
+        val ikon = secenek?.ikon
+        if (ikon != null) {
+            Icon(
+                imageVector = ikon,
+                contentDescription = secenek.baslik,
+                tint = metinRengi,
+                modifier = Modifier.size(olcu * 0.55f),
+            )
+        } else {
+            Text(
+                text = isim.take(1).buyukHarf(),
+                style = if (olcu >= Olcu.AvatarBuyuk) {
+                    MaterialTheme.typography.displayLarge
+                } else {
+                    MaterialTheme.typography.headlineMedium
+                },
+                fontWeight = FontWeight.SemiBold,
+                color = metinRengi,
+            )
+        }
     }
 }

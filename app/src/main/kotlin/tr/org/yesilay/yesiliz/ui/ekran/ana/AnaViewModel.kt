@@ -130,7 +130,10 @@ class AnaViewModel @Inject constructor(
                 }
                 .combine(tercihler.oturum) { ara, oturum ->
                     // Misafir kullanıcının adı yok; sabit ada düşülüyor.
-                    ara.copy(isim = oturum.ad.ifBlank { SABIT_ISIM })
+                    ara.copy(
+                        isim = oturum.ad.ifBlank { SABIT_ISIM },
+                        avatarId = oturum.avatarId,
+                    )
                 }
                 .combine(
                     combine(
@@ -148,6 +151,7 @@ class AnaViewModel @Inject constructor(
                     AnaDurum(
                         selamlama = selamlama(),
                         isim = ara.isim,
+                        avatarId = ara.avatarId,
                         serideGun = ara.seriGun,
                         agacEvresi = agacEvresi(ara.toplamPuan),
                         puan = ara.toplamPuan,
@@ -255,6 +259,7 @@ class AnaViewModel @Inject constructor(
         val hedefDk: Int,
         val ebeveynAktifMi: Boolean = false,
         val isim: String = SABIT_ISIM,
+        val avatarId: String = "",
         val ruhHali: RuhHaliDurumu = RuhHaliDurumu(),
         val okunmamisBildirim: Int = 0,
         val degerlendirmeYenilensin: Boolean = false,

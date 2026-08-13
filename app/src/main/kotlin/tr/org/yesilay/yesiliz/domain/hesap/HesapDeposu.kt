@@ -29,6 +29,13 @@ interface HesapDeposu {
 
     suspend fun cikisYap()
 
+    suspend fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String? = null,
+        avatarId: String,
+    ): HesapSonuc
+
     /**
      * Hesabı sunucudan da kalıcı siler ve oturumu kapatır.
      *
@@ -52,6 +59,7 @@ data class Oturum(
     val misafirMi: Boolean = false,
     val ad: String = "",
     val eposta: String = "",
+    val avatarId: String = "",
 ) {
     /** Hesap ekranı gösterilsin mi — ne giriş yapılmış ne misafir seçilmiş. */
     val karsilamaGerekliMi: Boolean get() = !girisYapildiMi && !misafirMi

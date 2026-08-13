@@ -15,6 +15,7 @@ import tr.org.yesilay.yesiliz.data.uzak.SifreSifirlaIstek
 import tr.org.yesilay.yesiliz.data.uzak.YesilizApi
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
 import tr.org.yesilay.yesiliz.domain.hesap.HesapDeposu
+import tr.org.yesilay.yesiliz.domain.hesap.HesapDogrula
 import tr.org.yesilay.yesiliz.domain.hesap.HesapSonuc
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import javax.inject.Inject
@@ -76,6 +77,21 @@ class RetrofitHesapDeposu @Inject constructor(
             // açık "çıkış" eylemi cihazda yarım kalmasın.
             yerelOturumuTemizle()
         }
+    }
+
+    override suspend fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String?,
+        avatarId: String,
+    ): HesapSonuc {
+        HesapDogrula.ad(ad)?.let { return HesapSonuc.Hata(HesapAlani.AD, it) }
+        HesapDogrula.eposta(eposta)?.let { return HesapSonuc.Hata(HesapAlani.EPOSTA, it) }
+        if (!yeniSifre.isNullOrBlank()) {
+            HesapDogrula.sifre(yeniSifre)?.let { return HesapSonuc.Hata(HesapAlani.SIFRE, it) }
+        }
+        tercihler.profilGuncelle(ad = ad.trim(), eposta = eposta.trim(), avatarId = avatarId.trim())
+        return HesapSonuc.Basarili
     }
 
     override suspend fun hesabiSil(): Boolean {

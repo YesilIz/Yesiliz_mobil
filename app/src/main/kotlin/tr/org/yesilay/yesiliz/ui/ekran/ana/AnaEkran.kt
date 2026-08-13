@@ -294,6 +294,7 @@ fun AnaEkran(
             ) {
                 KullaniciAvatari(
                     isim = durum.isim,
+                    avatarId = durum.avatarId,
                     zemin = Beyaz.copy(alpha = YariSaydam),
                     onTikla = onProfil,
                 )

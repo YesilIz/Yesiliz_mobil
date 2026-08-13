@@ -73,6 +73,21 @@ class YerelSahteHesapDeposu @Inject constructor(
         tercihler.oturumuSil()
     }
 
+    override suspend fun profilGuncelle(
+        ad: String,
+        eposta: String,
+        yeniSifre: String?,
+        avatarId: String,
+    ): HesapSonuc {
+        HesapDogrula.ad(ad)?.let { return HesapSonuc.Hata(HesapAlani.AD, it) }
+        HesapDogrula.eposta(eposta)?.let { return HesapSonuc.Hata(HesapAlani.EPOSTA, it) }
+        if (!yeniSifre.isNullOrBlank()) {
+            HesapDogrula.sifre(yeniSifre)?.let { return HesapSonuc.Hata(HesapAlani.SIFRE, it) }
+        }
+        tercihler.profilGuncelle(ad = ad.trim(), eposta = eposta.trim(), avatarId = avatarId.trim())
+        return HesapSonuc.Basarili
+    }
+
     /**
      * Sunucusuz hesabın sunucuda kaydı yok — silinecek uzak bir şey de yok.
      * `true` dönmesi doğru: kullanıcıya yanlış bir uyarı gösterilmemeli.
