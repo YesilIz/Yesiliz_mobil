@@ -8,11 +8,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import tr.org.yesilay.yesiliz.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +40,7 @@ import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
+import tr.org.yesilay.yesiliz.ui.tema.Yaricap
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 
@@ -59,25 +69,42 @@ fun NudgeOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Beyaz.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = 0.35f))
             .padding(horizontal = Olcu.EkranKenari),
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment = Alignment.Center,
     ) {
-        Kart(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = UST_BOSLUK),
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(Yaricap.Kart),
+            color = Color.Transparent,
+            border = BorderStroke(1.dp, Beyaz.copy(alpha = 0.6f)),
+            shadowElevation = 24.dp,
         ) {
-            when (asama) {
-                NudgeAsama.ANA_KART -> AnaKart(
-                    esikSaniye = esikSaniye,
-                    onMolaVer = { asama = NudgeAsama.MOLA_SORUSU },
-                    onDevamEt = onDevamEt,
-                )
-                NudgeAsama.MOLA_SORUSU -> MolaSorusu(
-                    onEvet = onNefesEvet,
-                    onHayir = onNefesHayir,
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Beyaz.copy(alpha = 0.7f),
+                                Beyaz.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+            ) {
+                Column(modifier = Modifier.padding(Olcu.KartIci)) {
+                    when (asama) {
+                        NudgeAsama.ANA_KART -> AnaKart(
+                            esikSaniye = esikSaniye,
+                            onMolaVer = { asama = NudgeAsama.MOLA_SORUSU },
+                            onDevamEt = onDevamEt,
+                        )
+                        NudgeAsama.MOLA_SORUSU -> MolaSorusu(
+                            onEvet = onNefesEvet,
+                            onHayir = onNefesHayir,
+                        )
+                    }
+                }
             }
         }
     }
@@ -95,12 +122,13 @@ private fun AnaKart(
         "$esikSaniye saniyedir buradasın"
     }
     Column {
-        IkonRozeti(
-            ikon = Icons.Filled.EnergySavingsLeaf,
-            zemin = YesilNane,
-            renk = YesilAna,
-            olcu = 48.dp,
-            sekil = CircleShape,
+        Image(
+            painter = painterResource(id = R.drawable.sende_yesilaycisin),
+            contentDescription = "Sen de Yeşilaycısın",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            contentScale = ContentScale.Fit
         )
         Spacer(modifier = Modifier.height(Bosluk.M))
         Text(
@@ -126,12 +154,13 @@ private fun MolaSorusu(
     onHayir: () -> Unit,
 ) {
     Column {
-        IkonRozeti(
-            ikon = Icons.Filled.EnergySavingsLeaf,
-            zemin = YesilNane,
-            renk = YesilAna,
-            olcu = 48.dp,
-            sekil = CircleShape,
+        Image(
+            painter = painterResource(id = R.drawable.sende_yesilaycisin),
+            contentDescription = "Sen de Yeşilaycısın",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            contentScale = ContentScale.Fit
         )
         Spacer(modifier = Modifier.height(Bosluk.M))
         Text(
@@ -145,9 +174,3 @@ private fun MolaSorusu(
     }
 }
 
-/**
- * Kartın ekranın üst üçte birine yerleşmesi — tasarımda tam bir token yok
- * (`docs/tasarim-referans.md §4`: bu ekran için yalnızca yerleşim referansı
- * var), Stitch mockup'ının `pt-[221px]`'ine yakın bir sabit.
- */
-private val UST_BOSLUK = 96.dp
