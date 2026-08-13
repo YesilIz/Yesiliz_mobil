@@ -651,6 +651,7 @@ sıfırlanmış gerçek telefona kuruldu.
 |---|---|
 | Release APK'nın **gerçek telefonda** akış doğrulaması | `gorev1.md`'nin 13 kriterinden 12'si sağlandı. APK 11 Ağu'da sıfırlanmış Samsung SM-A217F'e kuruldu, açıldı, çökmedi; `DEBUGGABLE` değil, gömülü adres canlı HTTPS. **Kalan tek şey akışın kendisi:** hiçbir manuel sunucu ayarı yapmadan kayıt → giriş → lig turu ve o turda "çevrimdışı" uyarısının **görünmemesi** |
 | Yayın öncesi riskler | `DEBUG_LOG.md` son bölümü — paylaşımlı hız sınırı, istemci beyanlı lig puanı, Keystore'suz jeton saklama, e-posta sağlayıcısı, doğrulanabilir ebeveyn onayı. §12 A12–A16 (ebeveyn onayı A5/K26) |
+| **`NudgeSabitleri.ESIK` demo değerinde: 15 saniye** | 13 Ağu 2026'da popup'ı cihazda beklemeden görebilmek için kısaltıldı ve bilinçli olarak commit'lendi. `TetikleyiciTest` artık eşiğe göreli yazıldığı için testler bunu yakalamıyor — **yayın öncesi 45 dakikaya dönmesi elle hatırlanmalı.** 15 saniyede bir nudge §3'ün "hafif dokunuş, zorlama yok" ilkesinin tersi |
 | Uzman/Yeşilay paneli | Web tarafı — hiç başlanmadı, MVP kritik yolunda değil |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
