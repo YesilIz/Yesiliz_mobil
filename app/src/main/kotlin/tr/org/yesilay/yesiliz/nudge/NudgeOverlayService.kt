@@ -308,7 +308,7 @@ class NudgeOverlayService : Service() {
         const val TAG = "NudgeOverlay"
         const val KANAL_ID = "nudge_servis"
         const val BILDIRIM_ID = 1
-        const val BULANIKLIK_YARICAPI_PX = 120
+        const val BULANIKLIK_YARICAPI_PX = 45
     }
 }
 
