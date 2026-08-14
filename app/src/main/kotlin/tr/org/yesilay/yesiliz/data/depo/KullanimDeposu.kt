@@ -2,6 +2,7 @@ package tr.org.yesilay.yesiliz.data.depo
 
 import tr.org.yesilay.yesiliz.data.kullanim.HamOturum
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
+import tr.org.yesilay.yesiliz.data.saglik.AdimKaynagiTuru
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
@@ -86,7 +87,11 @@ class KullanimDeposu @Inject constructor(
             tarih.minusDays(1),
         )
         val yerDegis = yerDegisDegeri(gecmis, cikarim.toplamDk, aktivite.adim)
-        val olayVarMi = cikarim.toplamDk > 0.0 || aktivite.adim > 0.0
+        // Ölçüm bayrağı YALNIZCA gerçek kullanım ölçümüne bakar. Adım tek
+        // başına "veri var" yapmaz: adım verisi telefon kullanılmadan da
+        // (saatten, bileklikten) gelebiliyor ve `olayVarMi` puan/seri/alpha
+        // için "bu gün ölçüldü mü" sorusunun cevabı (CLAUDE.md §9).
+        val olayVarMi = cikarim.toplamDk > 0.0
 
         ozetDao.kaydet(
             ozetKur(
@@ -100,18 +105,29 @@ class KullanimDeposu @Inject constructor(
         return cikarim
     }
 
+    /**
+     * Olay geçmişi tükenmiş geçmiş günler için yedek yol.
+     *
+     * Android yalnızca paket başına **toplam süre** veriyor — saat bilgisi yok.
+     * Bu yüzden örüntüler (gece, oturum, açılış, sabah, uyku öncesi) burada
+     * hesaplanamıyor ve `geceOlculduMu = false` işaretleniyor: "gece 0 dakika"
+     * ile "geceyi ölçemedik" karışırsa `GECE_TEMIZ` görevi ölçülemeyen her
+     * güne puan yazar.
+     *
+     * Güvenilir kova yoksa ([AgregaSuz] `null` döndürürse) gün **boş** kalıyor
+     * ve `olayVarMi = false` yazılıyor — uydurma değer üretilmiyor (§4).
+     */
     private suspend fun agregadanCikar(tarih: LocalDate): GunlukCikarim {
-        val paketDakikalari = okuyucu.gunlukPaketDakikalari(tarih)
-        if (paketDakikalari.isEmpty()) {
-            return GunlukCikarim(
-                kategoriDakika = emptyMap(),
-                oruntu = emptyMap(),
-                toplamDk = 0.0,
-                geceKullanimDk = 0.0,
-                acilisSayisi = 0,
-                uykuPenceresi = null,
-            )
-        }
+        val bos = GunlukCikarim(
+            kategoriDakika = emptyMap(),
+            oruntu = emptyMap(),
+            toplamDk = 0.0,
+            geceKullanimDk = 0.0,
+            acilisSayisi = 0,
+            uykuPenceresi = null,
+            geceOlculduMu = false,
+        )
+        val paketDakikalari = okuyucu.gunlukPaketDakikalari(tarih) ?: return bos
 
         val esleyici = kategoriDeposu.esleyiciAl()
         val kategoriDakikaMap = mutableMapOf<String, Double>()
@@ -123,15 +139,16 @@ class KullanimDeposu @Inject constructor(
                 kategoriDakikaMap[kat.anahtar] = mevcut + dakika
             }
         }
+        if (kategoriDakikaMap.isEmpty()) return bos
 
-        val toplamDk = kategoriDakikaMap.values.sum()
         return GunlukCikarim(
             kategoriDakika = kategoriDakikaMap,
             oruntu = emptyMap(),
-            toplamDk = toplamDk,
+            toplamDk = kategoriDakikaMap.values.sum(),
             geceKullanimDk = 0.0,
             acilisSayisi = 0,
             uykuPenceresi = null,
+            geceOlculduMu = false,
         )
     }
 
@@ -208,6 +225,8 @@ class KullanimDeposu @Inject constructor(
             geceKullanimDk = c.geceKullanimDk,
             acilisSayisi = c.acilisSayisi,
             olayVarMi = olayVarMi,
+            geceOlculduMu = c.geceOlculduMu,
+            adimKaynagi = aktivite.adimKaynagi.name,
         )
     }
 
@@ -240,4 +259,6 @@ private fun GunlukOzetEntity.toplamEkranDk(): Double =
 data class GunlukAktivite(
     val adim: Double = 0.0,
     val sporDk: Double = 0.0,
+    /** [adim] hangi kaynaktan geldi — ekranda gösteriliyor, bkz. AdimKaynagiTuru. */
+    val adimKaynagi: AdimKaynagiTuru = AdimKaynagiTuru.YOK,
 )

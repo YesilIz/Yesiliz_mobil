@@ -121,6 +121,27 @@ data class GunlukOzetEntity(
      * ayıran şey bu bayrak.
      */
     val olayVarMi: Boolean = false,
+
+    /**
+     * Gece kullanımı gerçekten ölçülebildi mi.
+     *
+     * Olay bazlı yolda her oturumun saati bilindiği için `true`. Olay geçmişi
+     * tükenmiş eski günlerde yalnızca paket başına toplam süre okunabiliyor
+     * (saat bilgisi yok) ve bu bayrak `false` oluyor. Ayrım olmasa
+     * `geceKullanimDk = 0` "gece hiç kullanılmadı" sanılır ve `GECE_TEMIZ`
+     * görevi ölçülemeyen her güne puan yazardı.
+     */
+    val geceOlculduMu: Boolean = true,
+
+    /**
+     * [adim] hangi kaynaktan geldi — `SAGLIK` | `SENSOR` | `YOK`.
+     *
+     * Kullanıcı Fit/Samsung Health ile uygulamanın sayısı arasındaki farkı
+     * hata sanıyor; fark gerçek (o uygulamalar ham sayacı kendi hareket
+     * sınıflandırıcılarından geçirip eliyor). Sayının nereden geldiğini
+     * söyleyebilmek için saklanıyor.
+     */
+    val adimKaynagi: String = "YOK",
 )
 
 /**
@@ -210,18 +231,42 @@ data class PuanGunlukEntity(
     val puanNet: Int,
     val seriGun: Int,
     val carpani: Double,
+
+    /**
+     * O gün günlük ekran süresi hedefi tutturuldu mu — serinin **tek** girdisi.
+     *
+     * Eskiden seri "önceki günde puan aldın mı" ile ilerliyordu; nefes
+     * egzersizi yapıp 9 saat ekranda kalan kullanıcının serisi de büyüyordu.
+     * Seri artık davranışın kendisini ödüllendiriyor.
+     */
+    val hedefTutturuldu: Boolean = false,
+
+    /**
+     * Bu gün hedefi kaçırdı ama seri **joker hakkıyla** korundu mu.
+     *
+     * Joker penceresi 7 gün: son 7 günde joker kullanılmışsa hak yok, seri
+     * sıfırlanır. Tek kötü günün 30 günlük seriyi silmesi kullanıcıyı
+     * uygulamadan koparıyor; bedelsiz olması da seriyi anlamsızlaştırıyor.
+     */
+    val jokerKullanildi: Boolean = false,
 )
 
 /**
- * Günlük ruh hali beyanı — ana ekrandaki slider.
+ * Ruh hali beyanı — ana ekrandaki slider.
  *
  * **Risk skoruna girmez** (`core-risk` bunu bilmiyor); kullanıcının kendi
- * anlatısı ve "Ruh hali kaydı" görevinin dayanağı. Günde tek satır: aynı gün
- * tekrar sürüklenince değer güncellenir, yeni satır açılmaz.
+ * anlatısı ve "Ruh hali kaydı" görevinin dayanağı.
+ *
+ * Gün **üç pencereye** bölünüyor (sabah/öğlen/akşam, [RuhHaliPenceresi]) ve
+ * her pencere kendi satırını tutuyor: tek satır varken günün hangi saatinde
+ * nasıl hissedildiği kayboluyordu, oysa ruh hali gün içinde değişen şey.
+ * Aynı pencerede tekrar sürüklenince değer güncellenir, yeni satır açılmaz.
  */
-@Entity(tableName = "ruh_hali")
+@Entity(tableName = "ruh_hali", primaryKeys = ["tarih", "dilim"])
 data class RuhHaliEntity(
-    @PrimaryKey val tarih: LocalDate,
+    val tarih: LocalDate,
+    /** `sabah` | `oglen` | `aksam` — [RuhHaliPenceresi.anahtar] */
+    val dilim: String,
     /** 0f (zorlanıyorum) – 1f (harika) */
     val deger: Float,
 )

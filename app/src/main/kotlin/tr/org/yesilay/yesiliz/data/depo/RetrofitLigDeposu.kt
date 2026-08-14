@@ -53,7 +53,7 @@ class RetrofitLigDeposu @Inject constructor(
 
     override suspend fun davetKodu(): String = api.davetKodu().kod
 
-    override suspend fun ligeKatil() {
+    override suspend fun ligeKatil(): LigDeposu.KatilimSonuc {
         // Gizlilik tercihi veri paylaşım rızasından bağımsızdır ve yeni
         // haftanın üyeliği açılırken ilk andan uygulanmalıdır.
         val gorunur = tercihler.ligdeGorun.first()
@@ -66,6 +66,7 @@ class RetrofitLigDeposu @Inject constructor(
             yanit = api.lig()
         }
         ozet.value = yanit.cevir()
+        return LigDeposu.KatilimSonuc.BASARILI
     }
 
     /**

@@ -90,18 +90,39 @@ class KullanimOkuyucu(
     /**
      * O güne ait tüm uygulamaların ön plan kullanım süreleri (dakika olarak).
      *
-     * `queryEvents` yalnızca ~5-7 günlük detaylı olay geçmişi tutar. Daha eski
-     * günlerin verisini doğrudan Android `UsageStatsManager.queryAndAggregateUsageStats`
-     * üzerinden çekmek için kullanılır.
+     * `queryEvents` yalnızca ~7-10 günlük detaylı olay geçmişi tutuyor; daha
+     * eski günler için ([gununOturumlari] boş dönünce) bu yol devreye giriyor.
+     *
+     * **`queryAndAggregateUsageStats` kullanılmıyor** — o çağrı istenen aralığa
+     * kırpma yapmadan kesişen kovaları birleştiriyor ve günlük kovası kalmamış
+     * eski günler için haftalık/aylık kovayı tek güne yazıyordu (istatistik
+     * ekranındaki "19 saat"). Ham kovalar [AgregaSuz]'e veriliyor, süzme
+     * kuralları orada ve emülatörsüz test edilebiliyor.
+     *
+     * @return paket → dakika; o gün için güvenilir kova yoksa **`null`**
+     *   (sıfır değil — "kullanmadın" ile "ölçemedik" farklı şeyler)
      */
-    fun gunlukPaketDakikalari(tarih: LocalDate): Map<String, Double> {
+    fun gunlukPaketDakikalari(tarih: LocalDate): Map<String, Double>? {
         val zon = saat.zone
         val pencereBas = tarih.atStartOfDay(zon).toInstant().toEpochMilli()
         val pencereBit = tarih.plusDays(1).atStartOfDay(zon).toInstant().toEpochMilli()
-        val stats = usageStatsManager.queryAndAggregateUsageStats(pencereBas, pencereBit)
-        return stats.values
-            .filter { it.packageName != kendiPaketAdi && it.totalTimeInForeground > 0 }
-            .associate { it.packageName to (it.totalTimeInForeground / 60_000.0) }
+        val ham = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            pencereBas,
+            pencereBit,
+        ) ?: return null
+
+        val kovalar = ham
+            .filter { it.packageName != kendiPaketAdi }
+            .map {
+                AgregaKova(
+                    paketAdi = it.packageName,
+                    basMs = it.firstTimeStamp,
+                    bitMs = it.lastTimeStamp,
+                    onPlanMs = it.totalTimeInForeground,
+                )
+            }
+        return AgregaSuz.gunlukDakikalar(kovalar, pencereBas, pencereBit)
     }
 
     /**

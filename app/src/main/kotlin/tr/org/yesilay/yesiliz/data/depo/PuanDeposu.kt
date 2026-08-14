@@ -14,7 +14,6 @@ import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.domain.puan.PuanHesapla
 import tr.org.yesilay.yesiliz.domain.puan.PuanSabitleri
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -91,14 +90,6 @@ class PuanDeposu @Inject constructor(
         val ozet = ozetDao.getir(tarih)
         val hedefDk = tercihler.anlik().gunlukHedefDk
 
-        val onceki = puanDao.oncekiAktifGun(tarih)
-        val seri = PuanHesapla.yeniSeri(
-            oncekiSeri = onceki?.seriGun ?: 0,
-            aradakiBosGun = onceki
-                ?.let { ChronoUnit.DAYS.between(it.tarih, tarih).toInt() - 1 }
-                ?: 0,
-        )
-
         val toplamEkranDk = ozet?.let {
             it.socialDk + it.entertainmentDk + it.gamesDk + it.communicationDk +
                 it.productivityDk + it.educationDk + it.healthDk + it.otherDk
@@ -116,6 +107,22 @@ class PuanDeposu @Inject constructor(
         // gerçekten kullanım ölçülmüş olması.
         val olcumVar = ozet != null && ozet.olayVarMi
 
+        // Seri artık hedefe bağlı (bkz. PuanHesapla.yeniSeri). Önceki gün
+        // "puan aldığı gün" değil, takvimde bir önceki gün — seri puandan
+        // bağımsızlaştığı için "aktif gün" araması anlamını yitirdi.
+        val onceki = puanDao.getir(tarih.minusDays(1))
+        val hedefTutturuldu = olcumVar && hedefDk > 0 && toplamEkranDk <= hedefDk
+        val jokerHakkiVar = puanDao.jokerKullanilanGunSayisi(
+            baslangic = tarih.minusDays(PuanSabitleri.KORUMA_PENCERESI_GUN - 1L),
+            bitis = tarih.minusDays(1),
+        ) == 0
+        val seri = PuanHesapla.yeniSeri(
+            oncekiSeri = onceki?.seriGun ?: 0,
+            olculduMu = olcumVar,
+            hedefTutturuldu = hedefTutturuldu,
+            jokerHakkiVar = jokerHakkiVar,
+        )
+
         val puan = PuanHesapla.gunlukPuan(
             gorevPuani = gorevDao.gununPuani(tarih),
             sporDk = ozet?.sporDk ?: 0.0,
@@ -123,8 +130,17 @@ class PuanDeposu @Inject constructor(
             // Oransal (`debug.md` İ-4): hedefin altındaysan tam puan,
             // aştıkça doğrusal iniyor, iki katında sıfırlanıyor.
             hedefOrani = if (olcumVar) PuanHesapla.hedefeYakinlik(toplamEkranDk, hedefDk) else 0.0,
-            geceOrani = if (olcumVar) PuanHesapla.geceTemizligi(ozet.geceKullanimDk) else 0.0,
-            seriGun = seri,
+            // Gece ÖLÇÜLEMEYEN günde (olay geçmişi tükenmiş eski gün; orada
+            // yalnızca paket başına toplam süre okunabiliyor, saat bilgisi
+            // yok) `geceKullanimDk = 0` "gece temiz" demek değil "bilmiyoruz"
+            // demek. Puan yazmak, ölçmediğimiz bir davranışı ödüllendirmek
+            // olurdu.
+            geceOrani = if (olcumVar && ozet.geceOlculduMu) {
+                PuanHesapla.geceTemizligi(ozet.geceKullanimDk)
+            } else {
+                0.0
+            },
+            seriGun = seri.seri,
         )
 
         puanDao.kaydet(
@@ -134,13 +150,15 @@ class PuanDeposu @Inject constructor(
                 puanNet = puan.net,
                 seriGun = puan.seriGun,
                 carpani = puan.carpan,
+                hedefTutturuldu = hedefTutturuldu,
+                jokerKullanildi = seri.jokerHarcandi,
             ),
         )
     }
 
     /** Ana Sayfa'daki alev çipi — kaç gündür seri sürüyor. */
     suspend fun seriGunu(tarih: LocalDate): Int =
-        puanDao.getir(tarih)?.seriGun ?: puanDao.oncekiAktifGun(tarih)?.seriGun ?: 0
+        puanDao.getir(tarih)?.seriGun ?: puanDao.oncekiGun(tarih)?.seriGun ?: 0
 
     private companion object {
         /** Puan geçmişi alt sayfasında gösterilen kayıt sayısı. */

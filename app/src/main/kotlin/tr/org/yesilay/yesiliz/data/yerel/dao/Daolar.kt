@@ -262,16 +262,27 @@ interface PuanGunlukDao {
     suspend fun sonuncu(): PuanGunlukEntity?
 
     /**
-     * Seri hesabının dayanağı: [tarih]'ten **önceki** en son puan kazanılan gün.
+     * Joker penceresi denetimi: verilen aralıkta kaç gün joker harcandı.
      *
-     * `puanNet > 0` şartı önemli — puan kazanılmayan gün seriyi ilerletmiyor
-     * ("aktif gün" tanımı, `docs/spec-puan.md §9.1`).
+     * Seri, hedefi kaçıran günde yalnızca son 7 günde joker kullanılmamışsa
+     * korunuyor ([PuanHesapla.yeniSeri]). Sıfır dönerse hak var.
      */
     @Query(
-        "SELECT * FROM puan_gunluk WHERE tarih < :tarih AND puanNet > 0 " +
-            "ORDER BY tarih DESC LIMIT 1",
+        "SELECT COUNT(*) FROM puan_gunluk " +
+            "WHERE tarih BETWEEN :baslangic AND :bitis AND jokerKullanildi = 1",
     )
-    suspend fun oncekiAktifGun(tarih: LocalDate): PuanGunlukEntity?
+    suspend fun jokerKullanilanGunSayisi(baslangic: LocalDate, bitis: LocalDate): Int
+
+    /**
+     * Seri çipinin yedeği: [tarih]'ten önceki en son yazılmış puan satırı.
+     *
+     * Eskiden `puanNet > 0` şartı vardı ("aktif gün") ve seri hesabının
+     * dayanağıydı. Seri artık puandan değil hedef tutturmadan geliyor, o
+     * yüzden şart kaldırıldı — bu sorgu yalnızca "bugünün satırı henüz
+     * yazılmadıysa en son bilinen seri neydi" sorusunu cevaplıyor.
+     */
+    @Query("SELECT * FROM puan_gunluk WHERE tarih < :tarih ORDER BY tarih DESC LIMIT 1")
+    suspend fun oncekiGun(tarih: LocalDate): PuanGunlukEntity?
 
     /**
      * Ödüller ekranının "aktif gün" sayacı.
@@ -306,10 +317,14 @@ interface RuhHaliDao {
     @Upsert
     suspend fun kaydet(kayit: RuhHaliEntity)
 
+    /** Günün üç penceresinin tamamı — ana ekran "2/3" durumunu buradan kurar. */
     @Query("SELECT * FROM ruh_hali WHERE tarih = :tarih")
-    fun gununAkisi(tarih: LocalDate): Flow<RuhHaliEntity?>
+    fun gununAkisi(tarih: LocalDate): Flow<List<RuhHaliEntity>>
 
-    @Query("SELECT * FROM ruh_hali WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih")
+    @Query("SELECT * FROM ruh_hali WHERE tarih = :tarih AND dilim = :dilim")
+    suspend fun getir(tarih: LocalDate, dilim: String): RuhHaliEntity?
+
+    @Query("SELECT * FROM ruh_hali WHERE tarih BETWEEN :bas AND :bit ORDER BY tarih, dilim")
     suspend fun aralik(bas: LocalDate, bit: LocalDate): List<RuhHaliEntity>
 }
 

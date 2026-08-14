@@ -135,21 +135,56 @@ object PuanHesapla {
         min(PuanSabitleri.SERI_TAVAN, 1.0 + PuanSabitleri.SERI_ARTIS * seriGun)
 
     /**
-     * Yeni seri değerini bulur.
+     * Yeni seri değerini bulur — **serinin tek kuralı burada**.
      *
-     * @param oncekiSeri en son aktif günün seri değeri
-     * @param aradakiBosGun o günle bugün arasındaki boş gün sayısı
-     * @return kesintisizse artan, tek gün kaçırıldıysa **donmuş**, daha
-     *   fazlaysa 1'den başlayan seri
+     * Eski kural "önceki günde puan aldın mı" idi ve seriyi davranıştan
+     * kopartıyordu: nefes egzersizi yapıp 9 saat ekranda kalan kullanıcının
+     * serisi de büyüyordu. Seri artık günlük ekran süresi hedefini tutturmaya
+     * bağlı, yani ödüllendirdiği şey uygulamanın istediği davranışın kendisi.
+     *
+     * | Durum | Sonuç |
+     * |---|---|
+     * | Gün ölçüldü **ve** hedef tutturuldu | önceki + 1 |
+     * | Hedef kaçırıldı, joker hakkı var | önceki (donar, joker harcanır) |
+     * | Hedef kaçırıldı, joker hakkı yok | 0 |
+     * | Gün hiç ölçülmedi | önceki (kırılmaz, joker de harcanmaz) |
+     *
+     * Son satır bilinçli: izin verilmediği ya da veri gelmediği için
+     * ölçemediğimiz günü kullanıcının hatası saymak, bizim eksiğimizi ona
+     * ceza olarak yazmak olurdu (CLAUDE.md §4 "ceza puanı yok").
+     *
+     * @param oncekiSeri bir önceki günün seri değeri (yoksa 0)
+     * @param olculduMu o gün gerçekten kullanım ölçüldü mü (`olayVarMi`)
+     * @param hedefTutturuldu ekran süresi günlük hedefin altında kaldı mı
+     * @param jokerHakkiVar son [PuanSabitleri.KORUMA_PENCERESI_GUN] günde
+     *   joker kullanılmamış mı
      */
-    fun yeniSeri(oncekiSeri: Int, aradakiBosGun: Int): Int = when {
-        oncekiSeri <= 0 -> 1
-        aradakiBosGun == 0 -> oncekiSeri + 1
-        // Kayıp koruması: bir gün kaçırma seriyi dondurur, sıfırlamaz.
-        aradakiBosGun == 1 -> oncekiSeri
-        else -> 1
+    fun yeniSeri(
+        oncekiSeri: Int,
+        olculduMu: Boolean,
+        hedefTutturuldu: Boolean,
+        jokerHakkiVar: Boolean,
+    ): SeriSonuc = when {
+        !olculduMu -> SeriSonuc(oncekiSeri.coerceAtLeast(0), jokerHarcandi = false)
+        hedefTutturuldu -> SeriSonuc(oncekiSeri.coerceAtLeast(0) + 1, jokerHarcandi = false)
+        // Kayıp koruması: haftada bir kaçırma seriyi dondurur, sıfırlamaz.
+        jokerHakkiVar && oncekiSeri > 0 -> SeriSonuc(oncekiSeri, jokerHarcandi = true)
+        else -> SeriSonuc(0, jokerHarcandi = false)
     }
 }
+
+/**
+ * [PuanHesapla.yeniSeri] sonucu.
+ *
+ * @param seri o günün seri değeri
+ * @param jokerHarcandi hedef kaçırıldı ama seri joker hakkıyla korundu —
+ *   `puan_gunluk.jokerKullanildi` olarak saklanıyor ki bir sonraki gün
+ *   pencerede joker kalıp kalmadığını sorabilsin
+ */
+data class SeriSonuc(
+    val seri: Int,
+    val jokerHarcandi: Boolean,
+)
 
 /**
  * Bir günün puan sonucu.

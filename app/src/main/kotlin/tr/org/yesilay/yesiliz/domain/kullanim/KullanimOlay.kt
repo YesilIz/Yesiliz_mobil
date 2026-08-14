@@ -42,6 +42,16 @@ data class GunlukCikarim(
     val acilisSayisi: Int,
     /** Uyku olarak yorumlanan boşluk; bulunamadıysa null. */
     val uykuPenceresi: UykuPenceresi?,
+    /**
+     * Gece kullanımı gerçekten **ölçülebildi mi**.
+     *
+     * Olay bazlı yolda (`OruntuCikar`) her oturumun saati bilindiği için
+     * her zaman `true`. Agrega yolunda (Android yalnızca paket başına toplam
+     * süre veriyor, saat bilgisi yok) `false` — orada `geceKullanimDk = 0`
+     * "gece hiç kullanılmadı" değil "gece ölçülemedi" demek. Ayrımı
+     * kaybedersek `GECE_TEMIZ` görevi ölçülemeyen her güne puan yazar.
+     */
+    val geceOlculduMu: Boolean = true,
 )
 
 /**

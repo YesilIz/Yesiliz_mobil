@@ -7,13 +7,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import retrofit2.HttpException
 import java.io.IOException
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import javax.inject.Inject
@@ -28,9 +32,33 @@ import javax.inject.Inject
 @HiltViewModel
 class LigViewModel @Inject constructor(
     private val depo: LigDeposu,
+    private val tercihler: Tercihler,
 ) : ViewModel() {
 
-    val durum: StateFlow<LigDurum> = depo.ligAkisi()
+    /**
+     * Elle tazeleme tetikleyicisi.
+     *
+     * [LigDeposu.ligAkisi] bir `flow { }`: sunucuyu abonelik başına **bir
+     * kez** yokluyor. İlk denemede ağ yoksa ekran, yeniden abone olunana
+     * kadar (sekme değişimi ya da uygulamayı kapatıp açma) çevrimdışı
+     * kalıyordu — "çık gir yapınca güncelleniyor" şikâyetinin lig ayağı.
+     * Yenile butonu bu akışı yeniden kuruyor.
+     */
+    private val tazelemeIsareti = MutableStateFlow(0)
+
+    private val _katilimHatasi = MutableStateFlow<String?>(null)
+    val katilimHatasi: StateFlow<String?> = _katilimHatasi.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val durum: StateFlow<LigDurum> = tazelemeIsareti
+        .flatMapLatest { depo.ligAkisi() }
+        .combine(tercihler.oturum) { ozet, oturum ->
+            // Misafir ve hiç giriş yapmamış kullanıcı sunucuya gitmeden
+            // "oturum yok" durumuna düşüyor: lig uçları zorunlu jeton
+            // istiyor, çağrı zaten 401 dönecek.
+            val girisYok = oturum.misafirMi || !oturum.girisYapildiMi
+            if (girisYok) ozet.copy(oturumYok = true, cevrimdisi = false) else ozet
+        }
         .map { ozet ->
             LigDurum(
                 ligAdi = ozet.ligAdi,
@@ -49,6 +77,7 @@ class LigViewModel @Inject constructor(
                 katildiMi = ozet.katildiMi,
                 gorunuyorum = ozet.gorunuyorum,
                 cevrimdisi = ozet.cevrimdisi,
+                oturumYok = ozet.oturumYok,
                 yukleniyor = false,
             )
         }
@@ -59,7 +88,25 @@ class LigViewModel @Inject constructor(
         )
 
     fun ligeKatil() {
-        viewModelScope.launch { depo.ligeKatil() }
+        viewModelScope.launch {
+            _katilimHatasi.value = when (depo.ligeKatil()) {
+                LigDeposu.KatilimSonuc.BASARILI -> null
+                LigDeposu.KatilimSonuc.OTURUM_YOK ->
+                    "Lige katılmak için giriş yapman gerekiyor."
+                LigDeposu.KatilimSonuc.ULASILAMADI ->
+                    "Sunucuya ulaşılamadı. Birazdan tekrar dene."
+            }
+        }
+    }
+
+    /** Yenile butonu — akışı baştan kurar, sunucu yeniden yoklanır. */
+    fun tazele() {
+        _katilimHatasi.value = null
+        tazelemeIsareti.update { it + 1 }
+    }
+
+    fun katilimHatasiGoruldu() {
+        _katilimHatasi.value = null
     }
 
     private companion object {

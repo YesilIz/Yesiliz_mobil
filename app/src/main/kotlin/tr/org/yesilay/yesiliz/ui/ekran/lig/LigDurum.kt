@@ -26,6 +26,15 @@ data class LigDurum(
     val gorunuyorum: Boolean = true,
     /** Sıralama sunucudan değil yerel yedekten geliyor (`debug.md` O-14). */
     val cevrimdisi: Boolean = false,
+    /**
+     * Sunucu ayakta ama kimlik yok — kullanıcı misafir ya da oturumu düşmüş.
+     *
+     * [cevrimdisi] ile ayrı tutuluyor çünkü kullanıcının yapması gereken şey
+     * farklı: biri beklemek, diğeri giriş yapmak. İkisi aynı karta
+     * indirgenince misafir kullanıcı "Lig şu anda kullanılamıyor" görüyor ve
+     * yapabileceği bir şey olmadığını sanıyordu.
+     */
+    val oturumYok: Boolean = false,
     val yukleniyor: Boolean = true,
 )
 

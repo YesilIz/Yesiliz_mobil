@@ -84,9 +84,12 @@ enum class Gorev(
     RUH_HALI(
         id = "ruh_hali",
         baslik = "Ruh hali kaydı",
-        aciklama = "Bugün nasıl hissettiğini işaretle",
+        aciklama = "Sabah, öğlen ve akşam nasıl hissettiğini işaretle",
         puan = 3,
-        gunlukLimit = 1,
+        // Gün üç pencereye bölünüyor (RuhHaliPenceresi); her pencere kendi
+        // kaydını ve puanını alıyor. Ruh hali gün içinde değişen bir şey,
+        // tek kayıt "bugün nasıldın"ı sabahki tek ana indirgiyordu.
+        gunlukLimit = RuhHaliPenceresi.GUNLUK_PENCERE_SAYISI,
         dogrulama = DogrulamaTuru.BEYAN,
     ),
     UYKU_BEYANI(

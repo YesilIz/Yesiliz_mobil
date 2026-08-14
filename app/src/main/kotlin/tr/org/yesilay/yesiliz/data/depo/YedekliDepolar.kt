@@ -56,10 +56,13 @@ class YedekliLigDeposu @Inject constructor(
             uzak.ligAkisi()
         } catch (_: IOException) {
             yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
-        } catch (_: retrofit2.HttpException) {
-            // 401: oturum yok/expired → yerel mock. Misafir kullanıcı da
-            // lig sekmesini boş görmemeli.
-            yerel.ligAkisi().map { it.copy(cevrimdisi = true) }
+        } catch (hata: retrofit2.HttpException) {
+            // 401 ayrı bir dünya: sunucu ayakta, kimlik yok. Debug'da yine
+            // demo veriye düşülüyor (lig sekmesi boş kalmasın) ama ekran
+            // "giriş yap" diyebilsin diye SEBEBİ taşınıyor — release'de
+            // aynı ayrım kullanıcıyı çıkışsız bir kartta bırakmıyor.
+            val oturumYok = hata.code() == HTTP_YETKISIZ
+            yerel.ligAkisi().map { it.copy(cevrimdisi = true, oturumYok = oturumYok) }
         }
         emitAll(kaynak)
     }
@@ -79,9 +82,8 @@ class YedekliLigDeposu @Inject constructor(
     override suspend fun davetKodu(): String =
         demoYedegi({ uzak.davetKodu() }, { yerel.davetKodu() })
 
-    override suspend fun ligeKatil() {
+    override suspend fun ligeKatil(): LigDeposu.KatilimSonuc =
         demoYedegi({ uzak.ligeKatil() }, { yerel.ligeKatil() })
-    }
 
     override suspend fun davetGonder(kod: String) {
         // Örnek kişi çipleri yalnızca debug deposunda var ve isim taşır;
@@ -183,6 +185,9 @@ internal suspend fun hesapYedegi(uzak: suspend () -> HesapSonuc): HesapSonuc? = 
 } catch (_: IOException) {
     null
 }
+
+/** Sunucu ayakta ama kimlik yok — `GET /lig` zorunlu jeton istiyor. */
+internal const val HTTP_YETKISIZ = 401
 
 /** Yalnızca bağlantı hatasında yedeği çalıştıran ortak yardımcı. */
 internal suspend fun <T> agdanAl(uzak: suspend () -> T, yerel: suspend () -> T): T = try {

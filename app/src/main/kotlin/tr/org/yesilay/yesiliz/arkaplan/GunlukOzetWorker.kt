@@ -101,22 +101,41 @@ class GunlukOzetWorker @AssistedInject constructor(
             // ile gece yarısı arasındaki adımlar örneklenmezse kaybolur.
             adimDeposu.ornekle()
 
+            // Bir kereye mahsus tam tarama: eski bir sürüm geçmiş günlere
+            // UYDURMA adım sayısı yazmıştı (hafta içi ~5.500 / hafta sonu
+            // ~3.800, gün numarasından türetilmiş). O satırlar "adım var"
+            // göründüğü için aşağıdaki atlama koşuluna takılıp sonsuza kadar
+            // kalırdı. Bayrak `Tercihler`'de ve bir kez tüketiliyor —
+            // `eskiSunucuAdresiniTemizle` ile aynı desen (§12 K24).
+            val tamTarama = tercihler.uydurmaAdimTemizligiGerekli.first()
+
             (TELAFI_GUN downTo 0).forEach { geriGun ->
                 val gun = bugun.minusDays(geriGun)
-                val ozetSatiri = ozetDao.getir(gun)
-                val adimEksikMi = ozetSatiri == null || ozetSatiri.adim == 0.0
-                // Bugün hep yeniden; geçmiş günler yalnızca eksikse VEYA adımı sıfır kalmışsa yeniden işlenir.
-                if (gun != bugun && gun in islenmis && !adimEksikMi) return@forEach
+                // Bugün hep yeniden; geçmiş günler yalnızca eksikse.
+                if (!tamTarama && gun != bugun && gun in islenmis) return@forEach
+
+                // Kurulumdan ÖNCEKİ günler için ekran süresi geçmişi
+                // yazılıyor (UsageStats o günleri gerçekten ölçmüş, §10
+                // Android'in avantajı) ama **puan ve risk yazılmıyor**:
+                // kullanıcı o günlerde uygulamayı kullanmıyordu, geriye
+                // dönük seri/puan vermek hiçbir şey yapmadan ödül dağıtmak
+                // olurdu (`debug.md` K-4). İstatistik geçmişi gösteriyor,
+                // ödül zinciri göstermiyor.
+                val kurulumOncesi = kurulum != null && gun < kurulum
 
                 val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
                 gunlukZinciriAtomik(db) {
                     val enErken = if (gun == bugun) veriBaslangici else null
                     kullanimDeposu.gunuIsle(gun, aktivite, enErken = enErken)
-                    riskDeposu.gunuHesapla(gun)
-                    // Adım/spor/gece değerleri değişti; günün puanı da değişir.
-                    puanDeposu.gunuYenidenHesapla(gun)
+                    if (!kurulumOncesi) {
+                        riskDeposu.gunuHesapla(gun)
+                        // Adım/spor/gece değerleri değişti; günün puanı da değişir.
+                        puanDeposu.gunuYenidenHesapla(gun)
+                    }
                 }
             }
+
+            if (tamTarama) tercihler.uydurmaAdimTemizligiBitti()
 
             // Bildirim defterine bugünün kazanımları. `birKezGunde` koruması
             // sayesinde worker gün içinde tekrar koşsa da satır katlanmıyor.

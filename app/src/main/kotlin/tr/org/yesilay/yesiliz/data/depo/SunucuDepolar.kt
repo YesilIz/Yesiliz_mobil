@@ -2,6 +2,7 @@ package tr.org.yesilay.yesiliz.data.depo
 
 import android.util.Log
 import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import tr.org.yesilay.yesiliz.domain.hesap.HesapAlani
@@ -43,21 +44,28 @@ class SunucuLigDeposu @Inject constructor(
 ) : LigDeposu {
 
     override fun ligAkisi(): Flow<LigOzeti> = flow {
+        var oturumYok = false
         val ulasildi = try {
             uzak.tazele()
             true
         } catch (iptal: CancellationException) {
             throw iptal
         } catch (hata: Exception) {
+            // 401 "sunucuya ulaşılamıyor" DEĞİL: sunucu cevap verdi ve
+            // kimlik istedi. İkisini aynı boş ekrana indirgemek, misafir
+            // kullanıcıya ve oturumu düşmüş kullanıcıya yapabileceği bir
+            // şey olmadığını söylemek oluyordu — oysa yapması gereken tek
+            // şey giriş yapmak.
+            oturumYok = (hata as? HttpException)?.code() == HTTP_YETKISIZ
             Log.w(ETIKET, "lig tazelenemedi", hata)
             false
         }
         if (ulasildi) {
             uzak.ligAkisi().collect { emit(it) }
         } else {
-            // Boş sıralama + bayrak: ekran "sunucuya ulaşılamıyor" notunu
-            // gösteriyor ve altında hiçbir satır olmuyor.
-            emit(BOS_LIG)
+            // Boş sıralama + bayrak: ekran sebebi (giriş yok / sunucuya
+            // ulaşılamıyor) yazıyor ve altında hiçbir satır olmuyor.
+            emit(BOS_LIG.copy(cevrimdisi = !oturumYok, oturumYok = oturumYok))
         }
     }
 
@@ -79,8 +87,24 @@ class SunucuLigDeposu @Inject constructor(
         uzak.davetKodu()
     }
 
-    override suspend fun ligeKatil() {
-        sessizce("lige katılınamadı", Unit) { uzak.ligeKatil() }
+    /**
+     * Hata artık **yutulmuyor**, indirgeniyor.
+     *
+     * `sessizce(...)` sarmalayıcısı buradaydı: katılma isteği 401 ya da ağ
+     * hatası aldığında kullanıcı hiçbir şey görmüyordu — butona basıyor,
+     * ekran değişmiyor, sebebi söyleyen bir iz kalmıyordu.
+     */
+    override suspend fun ligeKatil(): LigDeposu.KatilimSonuc = try {
+        uzak.ligeKatil()
+    } catch (iptal: CancellationException) {
+        throw iptal
+    } catch (hata: Exception) {
+        Log.w(ETIKET, "lige katılınamadı", hata)
+        if ((hata as? HttpException)?.code() == HTTP_YETKISIZ) {
+            LigDeposu.KatilimSonuc.OTURUM_YOK
+        } else {
+            LigDeposu.KatilimSonuc.ULASILAMADI
+        }
     }
 
     // Kod hatası kullanıcıya gösterilmeli; boş başarıya indirgenirse ekran

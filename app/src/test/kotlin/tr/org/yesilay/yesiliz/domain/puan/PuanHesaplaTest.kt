@@ -67,11 +67,80 @@ class PuanHesaplaTest {
     }
 
     @Test
-    fun `bir gun kacirma seriyi sifirlamaz dondurur`() {
-        // §7.4 kayıp koruması
-        assertEquals("kesintisiz → artar", 6, PuanHesapla.yeniSeri(5, aradakiBosGun = 0))
-        assertEquals("bir gün kaçtı → donar", 5, PuanHesapla.yeniSeri(5, aradakiBosGun = 1))
-        assertEquals("iki gün kaçtı → sıfırlanır", 1, PuanHesapla.yeniSeri(5, aradakiBosGun = 2))
+    fun `hedef tutturulan gun seriyi artirir`() {
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 5,
+            olculduMu = true,
+            hedefTutturuldu = true,
+            jokerHakkiVar = true,
+        )
+        assertEquals(6, sonuc.seri)
+        assertEquals("hedef tutunca joker harcanmaz", false, sonuc.jokerHarcandi)
+    }
+
+    @Test
+    fun `seri sifirdan baslar`() {
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 0,
+            olculduMu = true,
+            hedefTutturuldu = true,
+            jokerHakkiVar = true,
+        )
+        assertEquals(1, sonuc.seri)
+    }
+
+    @Test
+    fun `hedef kacirilinca joker seriyi dondurur`() {
+        // §7.4 kayıp koruması: haftada bir kaçırma seriyi sıfırlamıyor.
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 5,
+            olculduMu = true,
+            hedefTutturuldu = false,
+            jokerHakkiVar = true,
+        )
+        assertEquals("seri donuyor", 5, sonuc.seri)
+        assertEquals("joker harcandı", true, sonuc.jokerHarcandi)
+    }
+
+    @Test
+    fun `joker hakki yokken hedef kacirmak seriyi sifirlar`() {
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 30,
+            olculduMu = true,
+            hedefTutturuldu = false,
+            jokerHakkiVar = false,
+        )
+        assertEquals(0, sonuc.seri)
+        assertEquals(false, sonuc.jokerHarcandi)
+    }
+
+    @Test
+    fun `olculmeyen gun seriyi ne artirir ne kirar`() {
+        // İzin verilmediği ya da veri gelmediği için ölçemediğimiz gün
+        // kullanıcının hatası değil — bizim eksiğimizi ona ceza olarak
+        // yazmıyoruz (CLAUDE.md §4).
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 12,
+            olculduMu = false,
+            hedefTutturuldu = false,
+            jokerHakkiVar = false,
+        )
+        assertEquals("seri korunuyor", 12, sonuc.seri)
+        assertEquals("joker de harcanmıyor", false, sonuc.jokerHarcandi)
+    }
+
+    @Test
+    fun `serisi olmayan kullanici joker harcamaz`() {
+        // Seri zaten 0 iken "dondurulacak" bir şey yok; joker hakkı
+        // boşa harcanmamalı.
+        val sonuc = PuanHesapla.yeniSeri(
+            oncekiSeri = 0,
+            olculduMu = true,
+            hedefTutturuldu = false,
+            jokerHakkiVar = true,
+        )
+        assertEquals(0, sonuc.seri)
+        assertEquals(false, sonuc.jokerHarcandi)
     }
 
     @Test

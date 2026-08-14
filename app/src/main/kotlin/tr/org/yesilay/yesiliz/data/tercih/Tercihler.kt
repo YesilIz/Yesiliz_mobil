@@ -370,6 +370,26 @@ class Tercihler @Inject constructor(
         }
     }
 
+    /**
+     * Uydurma adım verisi temizliği yapılmalı mı — tek seferlik.
+     *
+     * Bir ara sürüm, geçmiş günlerde adım 0 dönünce hafta içi ~5.500 /
+     * hafta sonu ~3.800 civarında **üretilmiş** bir sayı yazıyordu ve bu
+     * sayı risk sönümlemesine, puana ve seriye giriyordu. Fonksiyon
+     * kaldırıldı ama cihazlardaki satırlar duruyor; gecelik worker o
+     * satırları atlıyordu çünkü "adım var" görünüyorlardı.
+     *
+     * Bayrak görüldüğünde worker telafi penceresinin tamamını **koşulsuz**
+     * yeniden işliyor, sonra bayrağı düşürüyor. Sürüm işaretçili desen
+     * [eskiSunucuAdresiniTemizle] ile aynı.
+     */
+    val uydurmaAdimTemizligiGerekli: Flow<Boolean> =
+        depo.data.map { (it[ADIM_TEMIZLIK_SURUM] ?: 0) < ADIM_TEMIZLIK_GECERLI_SURUM }
+
+    suspend fun uydurmaAdimTemizligiBitti() {
+        depo.edit { it[ADIM_TEMIZLIK_SURUM] = ADIM_TEMIZLIK_GECERLI_SURUM }
+    }
+
     suspend fun sifirla() {
         depo.edit { it.clear() }
     }
@@ -408,6 +428,14 @@ class Tercihler @Inject constructor(
          */
         const val SUNUCU_TABANI_GECERLI_SURUM = 1
 
+        /**
+         * Adım temizliği sürümü — [uydurmaAdimTemizligiGerekli].
+         *
+         * Geçmiş günlerin adımını bozan yeni bir kusur çıkarsa bu sayı
+         * artırılır ve telafi penceresi bir kez daha baştan işlenir.
+         */
+        const val ADIM_TEMIZLIK_GECERLI_SURUM = 1
+
         // Anahtarlar dışarıya kapalı; yalnızca sabit paylaşılıyor.
         private val ONBOARDING_BITTI = booleanPreferencesKey("onboarding_bitti")
         private val GUNLUK_HEDEF = intPreferencesKey("gunluk_hedef_dk")
@@ -418,6 +446,7 @@ class Tercihler @Inject constructor(
         private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
         private val SUNUCU_TABANI_SURUM = intPreferencesKey("sunucu_tabani_surum")
+        private val ADIM_TEMIZLIK_SURUM = intPreferencesKey("adim_temizlik_surum")
         private val LIGDE_GORUN = booleanPreferencesKey("ligde_gorun")
         private val LIGE_KATILDI = booleanPreferencesKey("lige_katildi")
         private val HESAP_GIRIS = booleanPreferencesKey("hesap_giris")

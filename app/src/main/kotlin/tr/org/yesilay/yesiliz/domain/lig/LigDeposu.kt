@@ -25,10 +25,29 @@ interface LigDeposu {
     suspend fun davetKodu(): String
 
     /** Boş durumdaki "Lige katıl" — mevcut sıralamaya dahil eder. */
-    suspend fun ligeKatil()
+    suspend fun ligeKatil(): KatilimSonuc
 
     /** Başka bir kullanıcının davet kodunu kabul eder; debug örneklerinde isim alabilir. */
     suspend fun davetGonder(kod: String)
+
+    /**
+     * Katılım denemesinin sonucu.
+     *
+     * `ligeKatil()` eskiden `Unit` dönüyordu ve `SunucuLigDeposu` hatayı
+     * sessizce yutuyordu: kullanıcı "Lige katıl" butonuna basıyor, hiçbir
+     * şey olmuyor, hiçbir mesaj çıkmıyordu. Katılamayan kullanıcı da boş
+     * lig ekranında kalıyordu — "lig görünmüyor" şikâyetinin ikinci ayağı
+     * buydu (CLAUDE.md §12 K37: yapılmayan iş yapıldı gösterilmez).
+     */
+    enum class KatilimSonuc {
+        BASARILI,
+
+        /** Sunucu ayakta ama kimlik yok — kullanıcı giriş yapmalı. */
+        OTURUM_YOK,
+
+        /** Ağ/sunucu hatası — sonra tekrar denenebilir. */
+        ULASILAMADI,
+    }
 
     /** Henüz eklenmemiş öneri listesi. */
     suspend fun onerilenler(): List<OnerilenKisi>
@@ -60,6 +79,17 @@ data class LigOzeti(
      * ama görünmez olması değil.
      */
     val cevrimdisi: Boolean = false,
+    /**
+     * Sunucu **ulaşılabilir ama kimlik yok** — `GET /lig` 401 döndü.
+     *
+     * [cevrimdisi] ile aynı kefeye konamaz. Lig uçları zorunlu jeton
+     * istiyor; misafir kullanıcı, hiç giriş yapmamış kullanıcı ve yenileme
+     * jetonu da düşmüş kullanıcı 401 alıyor. Bu üç durumda ekran "Lig şu
+     * anda kullanılamıyor" diyordu — sunucu ayaktayken bile. Kullanıcının
+     * yapması gereken şey belliydi (giriş yap) ama ekran onu söylemiyordu:
+     * bir telefonda lig görünürken diğerinde görünmemesinin sebebi buydu.
+     */
+    val oturumYok: Boolean = false,
 )
 
 data class LigSatiri(

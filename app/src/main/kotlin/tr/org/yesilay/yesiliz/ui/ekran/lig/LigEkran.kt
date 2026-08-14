@@ -47,6 +47,8 @@ import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
+import tr.org.yesilay.yesiliz.ui.bilesen.UyariSeridi
+import tr.org.yesilay.yesiliz.ui.bilesen.YenileDugmesi
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
@@ -71,23 +73,37 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 @Composable
 fun LigEkran(
     onArkadasEkle: () -> Unit,
+    onGiris: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LigViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
+    val katilimHatasi by viewModel.katilimHatasi.collectAsStateWithLifecycle()
     var kuralAcik by remember { mutableStateOf(false) }
 
     // İçerik zemini beyaz: sıralama satırları `Yesil50` dolgulu, zemin de
     // `Yesil50` olsaydı satırlar kaybolurdu.
-    YesilBaslikliEkran(baslik = "Lig", icerikZemini = Beyaz, modifier = modifier) {
+    YesilBaslikliEkran(
+        baslik = "Lig",
+        icerikZemini = Beyaz,
+        modifier = modifier,
+        sagEylem = { YenileDugmesi(onTikla = viewModel::tazele, donuyor = durum.yukleniyor) },
+    ) {
+        // Katılma denemesi sessizce başarısız oluyordu: butona basılıyor,
+        // hiçbir şey değişmiyor, sebep söylenmiyordu (§12 K37).
+        katilimHatasi?.let { mesaj ->
+            UyariSeridi(metin = mesaj, onKapat = viewModel::katilimHatasiGoruldu)
+        }
         // Boş durum (tasarım 37): kullanıcı ne lige katılmış ne de arkadaşı
         // var. Sahte bir sıralama göstermektense ne yapabileceğini söylemek
         // doğru — aynı ilke İstatistik'in boş durumunda da geçerli.
         if (!durum.yukleniyor && !durum.katildiMi) {
             BosLig(
                 cevrimdisi = durum.cevrimdisi,
+                oturumYok = durum.oturumYok,
                 onKatil = viewModel::ligeKatil,
                 onArkadasEkle = onArkadasEkle,
+                onGiris = onGiris,
             )
             return@YesilBaslikliEkran
         }
@@ -244,10 +260,12 @@ private fun GorunmuyorNotu() {
 @Composable
 private fun BosLig(
     cevrimdisi: Boolean,
+    oturumYok: Boolean,
     onKatil: () -> Unit,
     onArkadasEkle: () -> Unit,
+    onGiris: () -> Unit,
 ) {
-    val icerik = bosLigIcerigi(cevrimdisi)
+    val icerik = bosLigIcerigi(cevrimdisi, oturumYok)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -282,6 +300,12 @@ private fun BosLig(
             Spacer(modifier = Modifier.height(Bosluk.S))
             IkincilButon(metin = "Arkadaş davet et", onTikla = onArkadasEkle)
         }
+        // Çıkışsız bir kartta bırakmamak için: sebep neyse eylemi de var
+        // (DBG-073 ile aynı ilke).
+        if (icerik.girisGorunur) {
+            Spacer(modifier = Modifier.height(Olcu.BolumArasi))
+            BirincilButon(metin = "Giriş yap", onTikla = onGiris)
+        }
     }
 }
 
@@ -295,17 +319,35 @@ internal data class BosLigIcerigi(
     val baslik: String,
     val aciklama: String,
     val eylemlerGorunur: Boolean,
+    /** "Giriş yap" butonu — yalnızca oturum yokken. */
+    val girisGorunur: Boolean = false,
 )
 
-internal fun bosLigIcerigi(cevrimdisi: Boolean): BosLigIcerigi = if (cevrimdisi) {
-    BosLigIcerigi(
+/**
+ * Üç ayrı sebep, üç ayrı metin.
+ *
+ * [oturumYok] eskiden yoktu: lig uçları zorunlu jeton istediği için misafir
+ * kullanıcı da, oturumu düşmüş kullanıcı da 401 alıyor ve ekran bunu
+ * "sunucuya ulaşılamıyor" diye gösteriyordu. Sunucu ayaktayken bile lig
+ * gelmemesinin ve bunun telefondan telefona değişmesinin sebebi buydu —
+ * kullanıcının yapması gereken tek şey giriş yapmaktı ama ekran onu
+ * söylemiyordu.
+ */
+internal fun bosLigIcerigi(cevrimdisi: Boolean, oturumYok: Boolean = false): BosLigIcerigi = when {
+    oturumYok -> BosLigIcerigi(
+        baslik = "Lig için giriş yapman gerekiyor",
+        aciklama = "Sıralama hesabına bağlı. Giriş yaptığında ligdeki yerini " +
+            "ve arkadaşlarını burada göreceksin.",
+        eylemlerGorunur = false,
+        girisGorunur = true,
+    )
+    cevrimdisi -> BosLigIcerigi(
         baslik = "Lig şu anda kullanılamıyor",
-        aciklama = "Sunucuya ulaşılamıyor. Bağlantın geldiğinde Lig sekmesini " +
-            "yeniden açıp tekrar deneyebilirsin.",
+        aciklama = "Sunucuya ulaşılamıyor. Bağlantın geldiğinde yenile " +
+            "düğmesine dokunup tekrar deneyebilirsin.",
         eylemlerGorunur = false,
     )
-} else {
-    BosLigIcerigi(
+    else -> BosLigIcerigi(
         baslik = "Henüz kimseyle yarışmıyorsun",
         aciklama = "Bir lige katıl ya da arkadaşlarını davet et, birlikte " +
             "ilerlemenizi görün.",

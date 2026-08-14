@@ -77,8 +77,9 @@ class YerelSahteLigDeposu @Inject constructor(
     override suspend fun davetKodu(): String =
         tercihler.davetKodu.first() ?: DavetKodu.uret().also { tercihler.davetKodunuKaydet(it) }
 
-    override suspend fun ligeKatil() {
+    override suspend fun ligeKatil(): LigDeposu.KatilimSonuc {
         tercihler.ligeKatildiIsaretle()
+        return LigDeposu.KatilimSonuc.BASARILI
     }
 
     override suspend fun davetGonder(kod: String) {

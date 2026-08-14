@@ -177,6 +177,62 @@ val GECIS_7_8 = object : Migration(7, 8) {
     }
 }
 
+/**
+ * Ölçüm dürüstlüğü turu — üç değişiklik, tek geçiş.
+ *
+ * 1. `gunluk_ozet.geceOlculduMu`: olay geçmişi tükenmiş eski günlerde saat
+ *    bilgisi okunamıyor; `geceKullanimDk = 0` orada "gece temiz" değil "gece
+ *    ölçülemedi" demek. Var olan satırlar `olayVarMi` ile dolduruluyor —
+ *    ölçülmemiş günün gecesi de ölçülmemiştir.
+ * 2. `gunluk_ozet.adimKaynagi`: adımın Health Connect'ten mi telefon
+ *    sayacından mı geldiğini ekranda söyleyebilmek için. Geriye dönük
+ *    bilinemiyor, `YOK` kalıyor.
+ * 3. `puan_gunluk.hedefTutturuldu` + `jokerKullanildi`: seri artık "puan
+ *    aldın mı" ile değil günlük hedefi tutturmakla ilerliyor. Geçmiş günler
+ *    için hedefin o gün ne olduğu bilinmiyor (tercih tek değer, geçmişi
+ *    tutulmuyor); varsayılan `0` kalıyor ve seri ilk gecelik koşumda
+ *    yeniden türetiliyor.
+ * 4. `ruh_hali` birincil anahtarı `tarih` → `(tarih, dilim)`: ruh hali günde
+ *    üç pencerede kaydediliyor. Var olan satırlar `sabah` penceresine
+ *    taşınıyor — kayıp yok.
+ *
+ * SQLite birincil anahtar değiştiremediği için `ruh_hali` yeniden kuruluyor
+ * (kopyala → sil → yeniden adlandır); Room'un beklediği şema ile birebir
+ * aynı olmalı, yoksa açılışta doğrulama hatası verir.
+ */
+val GECIS_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `gunluk_ozet` ADD COLUMN `geceOlculduMu` INTEGER NOT NULL DEFAULT 1",
+        )
+        db.execSQL("UPDATE `gunluk_ozet` SET `geceOlculduMu` = `olayVarMi`")
+        db.execSQL(
+            "ALTER TABLE `gunluk_ozet` ADD COLUMN `adimKaynagi` TEXT NOT NULL DEFAULT 'YOK'",
+        )
+
+        db.execSQL(
+            "ALTER TABLE `puan_gunluk` ADD COLUMN `hedefTutturuldu` INTEGER NOT NULL DEFAULT 0",
+        )
+        db.execSQL(
+            "ALTER TABLE `puan_gunluk` ADD COLUMN `jokerKullanildi` INTEGER NOT NULL DEFAULT 0",
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `ruh_hali_yeni` (" +
+                "`tarih` TEXT NOT NULL, " +
+                "`dilim` TEXT NOT NULL, " +
+                "`deger` REAL NOT NULL, " +
+                "PRIMARY KEY(`tarih`, `dilim`))",
+        )
+        db.execSQL(
+            "INSERT INTO `ruh_hali_yeni` (`tarih`, `dilim`, `deger`) " +
+                "SELECT `tarih`, 'sabah', `deger` FROM `ruh_hali`",
+        )
+        db.execSQL("DROP TABLE `ruh_hali`")
+        db.execSQL("ALTER TABLE `ruh_hali_yeni` RENAME TO `ruh_hali`")
+    }
+}
+
 /** Veritabanı kurulurken uygulanacak tüm geçişler. */
 val TUM_GECISLER = arrayOf(
     GECIS_1_2,
@@ -186,4 +242,5 @@ val TUM_GECISLER = arrayOf(
     GECIS_5_6,
     GECIS_6_7,
     GECIS_7_8,
+    GECIS_8_9,
 )

@@ -209,7 +209,10 @@ fun YesilizGezinme(
                 IstatistikEkran(onRiskDetay = { navController.navigate(Rota.RISK_DETAY) })
             }
             composable(Rota.LIG) {
-                LigEkran(onArkadasEkle = { navController.navigate(Rota.ARKADAS_EKLE) })
+                LigEkran(
+                    onArkadasEkle = { navController.navigate(Rota.ARKADAS_EKLE) },
+                    onGiris = { navController.navigate(Rota.GIRIS) },
+                )
             }
             composable(Rota.ARKADAS_EKLE) {
                 ArkadasEkleEkran(onGeri = { navController.popBackStack() })

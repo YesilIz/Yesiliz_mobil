@@ -82,7 +82,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         OdulSecimiEntity::class,
         AktiviteOturumuEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)

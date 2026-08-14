@@ -35,6 +35,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.domain.gorev.RuhHaliPenceresi
 import tr.org.yesilay.yesiliz.risk.Bant
 import tr.org.yesilay.yesiliz.risk.VeriDurumu
 import java.time.Clock
@@ -118,10 +119,16 @@ class AnaViewModel @Inject constructor(
                 combine(
                     beyanDeposu.ruhHaliAkisi(bugun),
                     suruklenenRuhHali,
-                ) { kayitli, suruklenen ->
+                ) { kayitlilar, suruklenen ->
+                    // Gün üç pencereye bölündü: slider açık pencerenin
+                    // değerini gösteriyor, "2/3" bilgisi günün tamamından.
+                    val pencere = acikPencere()
+                    val buPencere = kayitlilar.firstOrNull { it.dilim == pencere.anahtar }
                     RuhHaliDurumu(
-                        deger = suruklenen ?: kayitli?.deger ?: VARSAYILAN_RUH_HALI,
-                        kaydedildi = kayitli != null,
+                        deger = suruklenen ?: buPencere?.deger ?: VARSAYILAN_RUH_HALI,
+                        kaydedildi = buPencere != null,
+                        pencere = pencere,
+                        doldurulan = kayitlilar.size,
                     )
                 },
             ) { ara, ruhHali -> ara.copy(ruhHali = ruhHali) }
@@ -193,16 +200,27 @@ class AnaViewModel @Inject constructor(
     }
 
     /**
-     * Parmak kalktı — değer kalıcı olarak yazılıyor ve o gün ilk kez
-     * kaydediliyorsa "Ruh hali kaydı" görevinin puanı veriliyor.
+     * Parmak kalktı — değer kalıcı olarak yazılıyor ve o pencere ilk kez
+     * dolduruluyorsa "Ruh hali kaydı" görevinin puanı veriliyor.
      */
     fun ruhHaliBirakildi() {
         val deger = suruklenenRuhHali.value ?: return
         viewModelScope.launch {
-            beyanDeposu.ruhHaliKaydet(guncelGun.bugun(), deger)
+            // Gün ve pencere birlikte türetiliyor: gece yarısı ile 05:00
+            // arası hâlâ DÜNÜN akşam penceresi, yoksa kullanıcı yeni günün
+            // akşam kaydını saatler önce yapmış olurdu.
+            val (gun, pencere) = RuhHaliPenceresi.gunuVeDilimi(
+                guncelGun.bugun(),
+                LocalTime.now(saat),
+            )
+            beyanDeposu.ruhHaliKaydet(gun, pencere, deger)
             suruklenenRuhHali.value = null
         }
     }
+
+    /** Şu anki yerel saatin düştüğü ruh hali penceresi. */
+    private fun acikPencere(): RuhHaliPenceresi =
+        RuhHaliPenceresi.bul(LocalTime.now(saat))
 
     fun degerlendirmeErtele() {
         degerlendirmeGizlendi.value = true
@@ -268,6 +286,10 @@ class AnaViewModel @Inject constructor(
     private data class RuhHaliDurumu(
         val deger: Float = VARSAYILAN_RUH_HALI,
         val kaydedildi: Boolean = false,
+        /** Şu an hangi pencere açık — kart başlığı bunu yazıyor. */
+        val pencere: RuhHaliPenceresi = RuhHaliPenceresi.SABAH,
+        /** Bugün kaç pencere dolduruldu (0..3). */
+        val doldurulan: Int = 0,
     )
 
     private companion object {
