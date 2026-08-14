@@ -173,6 +173,7 @@ fun YesilizGezinme(
                             baglam.startActivity(KullanimIzni.ayarIntent())
                         }
                     },
+                    onSaglikIzni = { navController.navigate(Rota.SAGLIK_IZIN) },
                 )
             }
             composable(Rota.BILGI_BANKASI) {

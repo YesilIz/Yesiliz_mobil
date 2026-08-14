@@ -81,6 +81,22 @@ class IsPlanlayici @Inject constructor(
     }
 
     /**
+     * Kullanıcının **elle** tetiklediği tazeleme (yenile düğmesi).
+     *
+     * [simdiTazele]'den ayrı bir iş adı ve `REPLACE` politikası kullanıyor:
+     * açılış işi `KEEP` olduğu için kuyrukta bekleyen bir iş varken düğmeye
+     * basmak hiçbir şey yapmazdı — kullanıcı dokunuyor, hiçbir şey olmuyor.
+     * Elle istenen tazeleme her zaman koşmalı.
+     */
+    fun elleTazele() {
+        isYoneticisi.enqueueUniqueWork(
+            ELLE_TAZELE_IS_ADI,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<GunlukOzetWorker>().build(),
+        )
+    }
+
+    /**
      * Günlük hatırlatmaları planlar.
      *
      * Ayar kapalıysa iki iş de **iptal ediliyor** — kapalı ayarla her gün
@@ -118,6 +134,7 @@ class IsPlanlayici @Inject constructor(
 
     private companion object {
         val CALISMA_SAATI: LocalTime = LocalTime.of(3, 0)
+        const val ELLE_TAZELE_IS_ADI = "yesiliz_elle_tazele"
         const val ACILIS_IS_ADI = "gunluk_ozet_acilis"
     }
 }

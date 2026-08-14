@@ -70,6 +70,17 @@ enum class Aralik(val etiket: String) {
 data class IstatistikDurum(
     val aralik: Aralik = Aralik.HAFTA,
     val gunSayisi: Int = 0,
+    /**
+     * Penceredeki günlerin kaçı gerçekten ölçüldü.
+     *
+     * [gunSayisi]'ndan küçükse grafikte boşluklar var; ekran ortalamanın
+     * hangi günlerden hesaplandığını söylüyor. Eskiden ölçülmemiş günler
+     * sıfır sayılıp ortalamaya giriyordu ve ekran süresi olduğundan iyi
+     * görünüyordu.
+     */
+    val olculenGunSayisi: Int = 0,
+    /** "Health Connect" / "Telefon sayacı" — adım kartındaki kaynak etiketi. */
+    val adimKaynagi: String? = null,
     /** Penceredeki ham satırlar — gün seçimi bunun üzerinden çalışıyor. */
     val gunler: List<GunlukOzetEntity> = emptyList(),
     val tarihAraligi: String = "",

@@ -53,7 +53,7 @@ fun ProfilKurulumEkran(
     modifier: Modifier = Modifier,
 ) {
     OnboardingIskelet(
-        adim = 3,
+        adim = 4,
         ilerleMetni = "Devam",
         onIlerle = onDevam,
         ilerleEtkin = durum.cinsiyet != null,

@@ -269,12 +269,95 @@ class GecisTest {
         }
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun gecis8den9aSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 8).close()
+        yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
+    }
+
+    /**
+     * `geceOlculduMu` geriye dönük `olayVarMi`'den dolduruluyor.
+     *
+     * Ölçülmemiş günün gecesi de ölçülmemiştir. Varsayılan `1` bırakılsaydı
+     * o günler "gece temiz" sayılıp `GECE_TEMIZ` görevi geriye dönük puan
+     * yazardı.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis8den9aGeceOlculduMuyuOlayVarMidanDolduruyor() {
+        yardimci.createDatabase(TEST_DB, 8).apply {
+            execSQL(satir("2026-08-01", acilis = 12, olayVarMi = 1))
+            execSQL(satir("2026-08-02", acilis = 0, olayVarMi = 0))
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
+
+        db.query("SELECT tarih, geceOlculduMu, adimKaynagi FROM gunluk_ozet ORDER BY tarih")
+            .use { imlec ->
+                assertTrue(imlec.moveToNext())
+                assertEquals("2026-08-01", imlec.getString(0))
+                assertEquals("ölçülmüş günün gecesi ölçülmemiş sayılmış", 1, imlec.getInt(1))
+                assertEquals("YOK", imlec.getString(2))
+
+                assertTrue(imlec.moveToNext())
+                assertEquals("2026-08-02", imlec.getString(0))
+                assertEquals("ölçülmemiş günün gecesi ölçülmüş sayılmış", 0, imlec.getInt(1))
+            }
+    }
+
+    /** `ruh_hali` birincil anahtarı değişiyor; var olan satırlar sabah penceresine taşınıyor. */
+    @Test
+    @Throws(IOException::class)
+    fun gecis8den9aRuhHaliKayitlariniSabahPenceresineTasiyor() {
+        yardimci.createDatabase(TEST_DB, 8).apply {
+            execSQL("INSERT INTO ruh_hali (tarih, deger) VALUES ('2026-08-01', 0.75)")
+            execSQL("INSERT INTO ruh_hali (tarih, deger) VALUES ('2026-08-02', 0.25)")
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
+
+        db.query("SELECT tarih, dilim, deger FROM ruh_hali ORDER BY tarih").use { imlec ->
+            assertTrue("ruh hali kayıtları kaybolmuş", imlec.moveToNext())
+            assertEquals("2026-08-01", imlec.getString(0))
+            assertEquals("sabah", imlec.getString(1))
+            assertEquals(0.75f, imlec.getFloat(2), 1e-6f)
+
+            assertTrue(imlec.moveToNext())
+            assertEquals("2026-08-02", imlec.getString(0))
+            assertEquals("sabah", imlec.getString(1))
+
+            assertTrue("fazladan satır üretilmiş", imlec.isLast)
+        }
+    }
+
+    /** Aynı günün üç penceresi artık yan yana durabiliyor — eski şemada imkânsızdı. */
+    @Test
+    @Throws(IOException::class)
+    fun gecis8den9aSonrasiAyniGunUcPencereAlabiliyor() {
+        yardimci.createDatabase(TEST_DB, 8).apply {
+            execSQL("INSERT INTO ruh_hali (tarih, deger) VALUES ('2026-08-01', 0.5)")
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
+        db.execSQL("INSERT INTO ruh_hali (tarih, dilim, deger) VALUES ('2026-08-01', 'oglen', 0.6)")
+        db.execSQL("INSERT INTO ruh_hali (tarih, dilim, deger) VALUES ('2026-08-01', 'aksam', 0.9)")
+
+        db.query("SELECT COUNT(*) FROM ruh_hali WHERE tarih = '2026-08-01'").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals(3, imlec.getInt(0))
+        }
+    }
+
     /**
      * Kapsamlı dolu veritabanı — `gorev2.md` §10 "gerçek kullanıcı geçmişine
      * benzeyen dolu bir veritabanı": üç günlük geçmiş, dört tablo birden
      * (`gunluk_ozet`, `risk_sonuc`, `adim_sayac`) — sürüm 4'te (adım sayacı
-     * eklendikten sonra) kurulup 7'ye kadar TÜM geçişlerden (5→6 ve 6→7
-     * dahil) geçiriliyor. Doğrulanan üç şey: hiçbir satır kaybolmuyor, yeni
+     * eklendikten sonra) kurulup 9'a kadar TÜM geçişlerden (5→6, 6→7, 7→8 ve
+     * 8→9 dahil) geçiriliyor. Doğrulanan üç şey: hiçbir satır kaybolmuyor, yeni
      * kolon/tablo doğru dolduruluyor, hiçbir geçiş veriyi mükerrer yazmıyor
      * (satır sayıları girdiyle birebir).
      */
@@ -302,7 +385,8 @@ class GecisTest {
         }
 
         val db = yardimci.runMigrationsAndValidate(
-            TEST_DB, 7, true, GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7,
+            TEST_DB, 9, true,
+            GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7, GECIS_7_8, GECIS_8_9,
         )
 
         db.query("SELECT COUNT(*) FROM gunluk_ozet").use { imlec ->

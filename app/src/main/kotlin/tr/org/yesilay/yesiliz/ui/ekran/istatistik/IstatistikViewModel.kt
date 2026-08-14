@@ -10,13 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
-import tr.org.yesilay.yesiliz.data.saglik.AktiviteSaglayici
-import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
-import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
@@ -48,15 +46,15 @@ import kotlin.math.roundToInt
 @HiltViewModel
 class IstatistikViewModel @Inject constructor(
     private val ozetDao: GunlukOzetDao,
-    private val kullanimDeposu: KullanimDeposu,
-    private val aktiviteSaglayici: AktiviteSaglayici,
-    private val riskDeposu: RiskDeposu,
-    private val puanDeposu: PuanDeposu,
+    private val isPlanlayici: IsPlanlayici,
     riskDao: RiskSonucDao,
     guncelGun: GuncelGun,
 ) : ViewModel() {
 
     private val secilenAralik = MutableStateFlow(Aralik.HAFTA)
+
+    private val _tazeleniyor = MutableStateFlow(false)
+    val tazeleniyor: StateFlow<Boolean> = _tazeleniyor.asStateFlow()
 
     /** Grafikte dokunulan gün; -1 = seçim yok, ekran ortalamayı gösteriyor. */
     private val secilenIndeks = MutableStateFlow(SECIM_YOK)
@@ -70,7 +68,6 @@ class IstatistikViewModel @Inject constructor(
             // Karşılaştırma için bir önceki pencereyi de çekiyoruz; tek sorgu
             // yerine iki sorgu, ama aralık küçük (en fazla 60 satır).
             val oncekiPencere = aralik.oncekiPencere(bugun)
-            pencereyiCanliTazele(oncekiPencere.first, pencere.second)
 
             ozetDao.araliktakilerAkisi(oncekiPencere.first, pencere.second)
                 .map { hepsi ->
@@ -89,19 +86,27 @@ class IstatistikViewModel @Inject constructor(
             initialValue = IstatistikDurum(),
         )
 
-    private fun pencereyiCanliTazele(bas: LocalDate, bit: LocalDate) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val gunFarki = java.time.temporal.ChronoUnit.DAYS.between(bas, bit).toInt()
-            (0..gunFarki).forEach { i ->
-                val gun = bas.plusDays(i.toLong())
-                val mevcuttur = ozetDao.getir(gun)
-                if (mevcuttur == null || !mevcuttur.olayVarMi || mevcuttur.adim == 0.0) {
-                    val aktivite = aktiviteSaglayici.gununAktivitesi(gun)
-                    kullanimDeposu.gunuIsle(gun, aktivite)
-                    riskDeposu.gunuHesapla(gun)
-                    puanDeposu.gunuYenidenHesapla(gun)
-                }
-            }
+    /**
+     * Yenile düğmesi — gecelik işi hemen kuyruğa alır.
+     *
+     * Burada eskiden `pencereyiCanliTazele` vardı: ekran her açıldığında ve
+     * her aralık değişiminde penceredeki günleri ViewModel'in kendisi
+     * yeniden işliyordu. Üç sorunu vardı — (1) ViewModel'den depoya YAZMAK
+     * katman ihlali (CLAUDE.md §6: UI yalnızca okur), (2) worker'ın
+     * uyguladığı kurulum tarihi ve `enErken` korumalarını atlıyordu, (3)
+     * "adım sıfırsa yeniden işle" koşulu, adım gerçekten sıfır olan her
+     * günde sonsuza kadar tetikleniyordu. Telafi işi tek bir yerde
+     * (`GunlukOzetWorker`) kalsın diye tazeleme ona devredildi.
+     */
+    fun tazele() {
+        if (_tazeleniyor.value) return
+        _tazeleniyor.value = true
+        viewModelScope.launch {
+            isPlanlayici.elleTazele()
+            // İş kuyrukta; kısa bir görsel geri bildirim yeter. Room akışı
+            // sonuç yazıldığı anda ekranı zaten güncelliyor.
+            delay(TAZELEME_GERI_BILDIRIM_MS)
+            _tazeleniyor.value = false
         }
     }
 
@@ -156,6 +161,9 @@ class IstatistikViewModel @Inject constructor(
 
     private fun gunBasligi(tarih: LocalDate): String = tarih.format(GUN_BASLIK_BICIM)
 
+    /** Boş listede `Double.NaN` yerine 0 — `average()` boşta NaN döndürüyor. */
+    private fun List<Double>.ortalamaVeyaSifir(): Double = if (isEmpty()) 0.0 else average()
+
     private fun durumKur(
         aralik: Aralik,
         bas: LocalDate,
@@ -174,20 +182,36 @@ class IstatistikViewModel @Inject constructor(
             simdikiHarita[gun] ?: GunlukOzetEntity(tarih = gun)
         }
 
-        val veriVarliklari = tumGunler.filter { it.olayVarMi || it.adim > 0.0 }
-        val hesaplanacakGunler = if (veriVarliklari.isNotEmpty()) veriVarliklari else tumGunler
+        // ORTALAMA yalnızca ölçülmüş günlerden. Ölçülmemiş gün grafikte boş
+        // çubuk olarak duruyor (kullanıcı boşluğu görsün) ama ortalamayı
+        // aşağı çekmiyor: "o gün telefonu hiç açmadım" ile "o günü
+        // ölçemedik" farklı şeyler ve ikincisini sıfır saymak ekran süresini
+        // olduğundan iyi gösterirdi.
+        val olculenler = tumGunler.filter { it.olayVarMi }
+        val olculenOnceki = onceki.filter { it.olayVarMi }
 
-        val ekranOrt = hesaplanacakGunler.map { it.toplamEkranDk() }.average()
-        val adimOrt = hesaplanacakGunler.map { it.adim }.average()
-        val ekranOnceki = onceki.takeIf { it.isNotEmpty() }?.map { it.toplamEkranDk() }?.average()
-        val adimOnceki = onceki.takeIf { it.isNotEmpty() }?.map { it.adim }?.average()
+        val ekranOrt = olculenler.map { it.toplamEkranDk() }.ortalamaVeyaSifir()
+        // Adım ayrı süzülüyor: adım verisi ekran ölçümünden bağımsız gelebilir
+        // (saatten/bileklikten). Sıfır adımlı günü ortalamaya katmak, adım
+        // izni olmayan kullanıcının ortalamasını sıfıra çekiyordu.
+        val adimOrt = tumGunler.filter { it.adim > 0.0 }.map { it.adim }.ortalamaVeyaSifir()
+        val ekranOnceki = olculenOnceki.takeIf { it.isNotEmpty() }
+            ?.map { it.toplamEkranDk() }?.average()
+        val adimOnceki = onceki.filter { it.adim > 0.0 }.takeIf { it.isNotEmpty() }
+            ?.map { it.adim }?.average()
 
-        val ekranCubuklari = tumGunler.map { Cubuk(aralik.etiketle(it.tarih), it.toplamEkranDk().toFloat()) }
-        val adimCubuklari = tumGunler.map { Cubuk(aralik.etiketle(it.tarih), it.adim.toFloat()) }
+        val ekranCubuklari = tumGunler.map {
+            Cubuk(aralik.etiketle(it.tarih), it.toplamEkranDk().toFloat(), veriVar = it.olayVarMi)
+        }
+        val adimCubuklari = tumGunler.map {
+            Cubuk(aralik.etiketle(it.tarih), it.adim.toFloat(), veriVar = it.adim > 0.0)
+        }
 
         return IstatistikDurum(
             aralik = aralik,
             gunSayisi = tumGunler.size,
+            olculenGunSayisi = olculenler.size,
+            adimKaynagi = olculenAdimKaynagi(tumGunler),
             gunler = tumGunler,
             tarihAraligi = tarihAraligi(bas, bit),
             ekranOrtalama = ekranOrt.roundToInt(),
@@ -203,6 +227,29 @@ class IstatistikViewModel @Inject constructor(
             adimArtti = adimOnceki == null || adimOrt >= adimOnceki,
         )
     }
+
+    /**
+     * Penceredeki adımların ağırlıklı kaynağı — ekranda etiket olarak.
+     *
+     * Kullanıcı Fit/Samsung Health ile uygulamanın sayısı arasındaki %10-20
+     * farkı hata sanıyor. Fark gerçek: o uygulamalar ham sayacı kendi
+     * hareket sınıflandırıcılarından geçirip yanlış pozitifleri eliyor, ham
+     * `TYPE_STEP_COUNTER` elemiyor. Hangi kaynağın kullanıldığını söylemek
+     * farkı açıklanabilir kılıyor.
+     */
+    private fun olculenAdimKaynagi(gunler: List<GunlukOzetEntity>): String? = gunler
+        .filter { it.adim > 0.0 }
+        .groupingBy { it.adimKaynagi }
+        .eachCount()
+        .maxByOrNull { it.value }
+        ?.key
+        ?.let { anahtar ->
+            when (anahtar) {
+                "SAGLIK" -> "Health Connect"
+                "SENSOR" -> "Telefon sayacı"
+                else -> null
+            }
+        }
 
     /**
      * Kategori dağılımı — `sistem` yok.
@@ -261,6 +308,9 @@ class IstatistikViewModel @Inject constructor(
 
     private companion object {
         const val AKIS_BEKLEME_MS = 5_000L
+
+        /** Yenile ikonunun en az bu kadar dönmesi — dokunuş görsel karşılık bulsun. */
+        const val TAZELEME_GERI_BILDIRIM_MS = 900L
         const val SECIM_YOK = -1
         val TR: Locale = Locale.forLanguageTag("tr")
         val GUN_AY_BICIM: DateTimeFormatter = DateTimeFormatter.ofPattern("d", TR)

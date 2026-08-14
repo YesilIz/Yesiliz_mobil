@@ -377,6 +377,17 @@ interface BildirimDao {
     suspend fun sayi(tur: String, zamandanSonra: java.time.Instant): Int
 
     /** Defter sonsuza kadar büyümesin. */
+    @Query("SELECT * FROM bildirim WHERE id = :id")
+    suspend fun getir(id: Long): BildirimEntity?
+
+    /** Kullanıcının tek bir bildirimi silmesi — kaydırarak. */
+    @Query("DELETE FROM bildirim WHERE id = :id")
+    suspend fun sil(id: Long)
+
+    /** "Tümünü temizle" — geri alınamaz, ekran onay soruyor. */
+    @Query("DELETE FROM bildirim")
+    suspend fun hepsiniSil()
+
     @Query("DELETE FROM bildirim WHERE zaman < :zaman")
     suspend fun eskileriSil(zaman: java.time.Instant): Int
 }

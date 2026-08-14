@@ -46,13 +46,16 @@ class OdakViewModel @Inject constructor(
     private var sayacIsi: Job? = null
     private var bitirmeIsi: Job? = null
 
-    /** Seans başlamadan önce süre değiştirilebiliyor. */
-    fun sureDegistir() {
+    /**
+     * Seans başlamadan önce süre seçilebiliyor.
+     *
+     * Hem hızlı seçim çipleri hem tekerlek buraya bağlı; tek giriş noktası
+     * olduğu için sınır kontrolü de tek yerde.
+     */
+    fun sureSecildi(dakika: Int) {
         if (_durum.value.basladi) return
-        val indeks = OdakHesapla.SURELER.indexOf(_durum.value.sureDk)
-        _durum.update {
-            it.copy(sureDk = OdakHesapla.SURELER[(indeks + 1) % OdakHesapla.SURELER.size])
-        }
+        val guvenli = dakika.coerceIn(OdakHesapla.EN_KISA_DK, OdakHesapla.EN_UZUN_DK)
+        _durum.update { it.copy(sureDk = guvenli) }
     }
 
     fun basla() {

@@ -22,6 +22,8 @@ import tr.org.yesilay.yesiliz.data.uzak.GunlukOzetDto
 import tr.org.yesilay.yesiliz.data.uzak.JetonlarDto
 import tr.org.yesilay.yesiliz.data.uzak.KayitIstek
 import tr.org.yesilay.yesiliz.data.uzak.KodYanit
+import tr.org.yesilay.yesiliz.data.uzak.ProfilDto
+import tr.org.yesilay.yesiliz.data.uzak.ProfilIstek
 import tr.org.yesilay.yesiliz.data.uzak.LigGorunurlukIstek
 import tr.org.yesilay.yesiliz.data.uzak.LigKatilIstek
 import tr.org.yesilay.yesiliz.data.uzak.LigYanit
@@ -81,6 +83,7 @@ class OdulDeposuTest {
             override suspend fun cikis() = patla()
             override suspend fun sifreSifirla(istek: SifreSifirlaIstek) = patla()
             override suspend fun hesabiSil() = patla()
+            override suspend fun profilGuncelle(istek: ProfilIstek): ProfilDto = patla()
             override suspend fun ozetGonder(istek: SenkronIstek): SenkronYanit = patla()
             override suspend fun ozetleriGetir(bas: String, bit: String): List<GunlukOzetDto> = patla()
             override suspend fun heartbeat() = patla()

@@ -35,6 +35,24 @@ class BildirimDeposu @Inject constructor(
         dao.tumunuOku()
     }
 
+    /** Geri alma için silinmeden önce okunuyor. */
+    suspend fun getir(id: Long): BildirimEntity? = dao.getir(id)
+
+    /** Kaydırarak silme — geri alma için satırın kendisi çağırana dönüyor. */
+    suspend fun sil(id: Long) {
+        dao.sil(id)
+    }
+
+    /** "Tümünü temizle". Geri alınamaz; ekran önce onay soruyor. */
+    suspend fun hepsiniSil() {
+        dao.hepsiniSil()
+    }
+
+    /** Geri alma — silinen satır aynı içerikle yeniden yazılıyor. */
+    suspend fun geriYukle(kayit: BildirimEntity) {
+        dao.ekle(kayit)
+    }
+
     suspend fun gorevTamamlandi(gorev: Gorev) = yaz(
         tur = BildirimTuru.PUAN,
         baslik = "${gorev.puan} puan kazandın!",

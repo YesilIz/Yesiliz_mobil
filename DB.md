@@ -1,14 +1,14 @@
 # DB.md — Yeşilİz Veritabanı
 
 > **ÜRETİLEN DOSYA — elle düzenleme.**
-> Kaynak: `app\schemas\tr.org.yesilay.yesiliz.data.yerel.YesilizDb\7.json`
+> Kaynak: `app/schemas/tr.org.yesilay.yesiliz.data.yerel.YesilizDb/9.json`
 > Yeniden üretmek için:
 > ```bash
 > ./gradlew :app:assembleDebug      # Room şemayı yeniden yazar
 > python3 tools/db_dokuman_uret.py  # bu dosyayı günceller
 > ```
 
-**Şema sürümü:** 7 · **Tablo sayısı:** 15 · **Güncelleme:** 2026-08-06
+**Şema sürümü:** 9 · **Tablo sayısı:** 15 · **Güncelleme:** 2026-08-14
 
 ---
 
@@ -34,13 +34,13 @@ yalnızca `gunluk_ozet` ve `risk_sonuc` özetleri gider.
 | `bildirim` | 6 | `id` | 1 |  |
 | `farkindalik_testi` | 5 | `id` | 0 |  |
 | `gorev_tamamlama` | 5 | `id` | 1 | Görev tamamlama geçmişi (spec-puan.md §7). |
-| `gunluk_ozet` | 26 | `tarih` | 0 | Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır. |
+| `gunluk_ozet` | 28 | `tarih` | 0 | Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır. |
 | `kategori_esleme` | 3 | `paketAdi` | 0 | Paket → kategori. `assets/kategori_tablosu.json`'dan seed edilir; kullanıcı override'ı aynı tabloda `kaynak='kullanici'` ile durur. |
 | `kullanim_olay` | 6 | `id` | 2 | Ham kullanım olayları. **Cihazdan çıkmaz** (CLAUDE.md §4). En hacimli tablo; özet çıkarıldıktan sonra eskiler silinir. |
 | `odul_secimi` | 3 | `kademeId` | 0 |  |
-| `puan_gunluk` | 5 | `tarih` | 0 | Günlük puan ve seri. Ceza yok, sadece kazanç. |
+| `puan_gunluk` | 7 | `tarih` | 0 | Günlük puan ve seri. Ceza yok, sadece kazanç. |
 | `risk_sonuc` | 12 | `tarih` | 0 | Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı. |
-| `ruh_hali` | 2 | `tarih` | 0 |  |
+| `ruh_hali` | 3 | `tarih, dilim` | 0 |  |
 | `uyku_beyani` | 2 | `tarih` | 0 |  |
 
 ---
@@ -168,6 +168,8 @@ Günlük özet — risk motorunun girdisi ve ekranların okuduğu satır.
 | `geceKullanimDk` | REAL | hayır |  |  |
 | `acilisSayisi` | INTEGER | hayır |  | hedef motorda `INTEGER` (aralığı dar, BIGINT gereksiz) |
 | `olayVarMi` | INTEGER | hayır |  |  |
+| `geceOlculduMu` | INTEGER | hayır |  |  |
+| `adimKaynagi` | TEXT | hayır |  |  |
 
 
 ### `kategori_esleme`
@@ -217,6 +219,8 @@ Günlük puan ve seri. Ceza yok, sadece kazanç.
 | `puanNet` | INTEGER | hayır |  | hedef motorda `INTEGER` (aralığı dar, BIGINT gereksiz) |
 | `seriGun` | INTEGER | hayır |  | hedef motorda `SMALLINT` (aralığı dar, BIGINT gereksiz) |
 | `carpani` | REAL | hayır |  |  |
+| `hedefTutturuldu` | INTEGER | hayır |  |  |
+| `jokerKullanildi` | INTEGER | hayır |  |  |
 
 
 ### `risk_sonuc`
@@ -244,6 +248,7 @@ Günlük risk anlık görüntüsü. Trend ve histerezisin kaynağı.
 | Kolon | SQLite | Null? | PK | Not |
 |---|---|---|---|---|
 | `tarih` | TEXT | hayır | ✔ | ISO tarih metni (`2026-07-28`) — hedef motorda `DATE` yapılabilir |
+| `dilim` | TEXT | hayır | ✔ |  |
 | `deger` | REAL | hayır |  |  |
 
 
@@ -272,15 +277,15 @@ CREATE INDEX IF NOT EXISTS `index_bildirim_zaman` ON `bildirim` (`zaman`)
 CREATE TABLE IF NOT EXISTS `farkindalik_testi` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `yanitlar` TEXT NOT NULL, `hamPuan` INTEGER NOT NULL, `seviye` TEXT NOT NULL)
 CREATE TABLE IF NOT EXISTS `gorev_tamamlama` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tarih` TEXT NOT NULL, `gorevId` TEXT NOT NULL, `puan` INTEGER NOT NULL, `dogrulamaTuru` TEXT NOT NULL)
 CREATE INDEX IF NOT EXISTS `index_gorev_tamamlama_tarih` ON `gorev_tamamlama` (`tarih`)
-CREATE TABLE IF NOT EXISTS `gunluk_ozet` (`tarih` TEXT NOT NULL, `socialDk` REAL NOT NULL, `entertainmentDk` REAL NOT NULL, `gamesDk` REAL NOT NULL, `communicationDk` REAL NOT NULL, `productivityDk` REAL NOT NULL, `educationDk` REAL NOT NULL, `healthDk` REAL NOT NULL, `otherDk` REAL NOT NULL, `gece` REAL NOT NULL, `oturum` REAL NOT NULL, `acilis` REAL NOT NULL, `sabah` REAL NOT NULL, `uykuOncesi` REAL NOT NULL, `yerDegis` REAL NOT NULL, `adim` REAL NOT NULL, `sporDk` REAL NOT NULL, `bTuketim` REAL NOT NULL, `bIslevsel` REAL NOT NULL, `P` REAL NOT NULL, `A` REAL NOT NULL, `D` REAL NOT NULL, `S` REAL NOT NULL, `geceKullanimDk` REAL NOT NULL, `acilisSayisi` INTEGER NOT NULL, `olayVarMi` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `gunluk_ozet` (`tarih` TEXT NOT NULL, `socialDk` REAL NOT NULL, `entertainmentDk` REAL NOT NULL, `gamesDk` REAL NOT NULL, `communicationDk` REAL NOT NULL, `productivityDk` REAL NOT NULL, `educationDk` REAL NOT NULL, `healthDk` REAL NOT NULL, `otherDk` REAL NOT NULL, `gece` REAL NOT NULL, `oturum` REAL NOT NULL, `acilis` REAL NOT NULL, `sabah` REAL NOT NULL, `uykuOncesi` REAL NOT NULL, `yerDegis` REAL NOT NULL, `adim` REAL NOT NULL, `sporDk` REAL NOT NULL, `bTuketim` REAL NOT NULL, `bIslevsel` REAL NOT NULL, `P` REAL NOT NULL, `A` REAL NOT NULL, `D` REAL NOT NULL, `S` REAL NOT NULL, `geceKullanimDk` REAL NOT NULL, `acilisSayisi` INTEGER NOT NULL, `olayVarMi` INTEGER NOT NULL, `geceOlculduMu` INTEGER NOT NULL, `adimKaynagi` TEXT NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `kategori_esleme` (`paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `kaynak` TEXT NOT NULL, PRIMARY KEY(`paketAdi`))
 CREATE TABLE IF NOT EXISTS `kullanim_olay` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `paketAdi` TEXT NOT NULL, `kategori` TEXT NOT NULL, `baslangic` INTEGER NOT NULL, `bitis` INTEGER NOT NULL, `tarih` TEXT NOT NULL)
 CREATE INDEX IF NOT EXISTS `index_kullanim_olay_tarih` ON `kullanim_olay` (`tarih`)
 CREATE INDEX IF NOT EXISTS `index_kullanim_olay_baslangic` ON `kullanim_olay` (`baslangic`)
 CREATE TABLE IF NOT EXISTS `odul_secimi` (`kademeId` TEXT NOT NULL, `secenekId` TEXT NOT NULL, `tarih` TEXT NOT NULL, PRIMARY KEY(`kademeId`))
-CREATE TABLE IF NOT EXISTS `puan_gunluk` (`tarih` TEXT NOT NULL, `puanHam` INTEGER NOT NULL, `puanNet` INTEGER NOT NULL, `seriGun` INTEGER NOT NULL, `carpani` REAL NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `puan_gunluk` (`tarih` TEXT NOT NULL, `puanHam` INTEGER NOT NULL, `puanNet` INTEGER NOT NULL, `seriGun` INTEGER NOT NULL, `carpani` REAL NOT NULL, `hedefTutturuldu` INTEGER NOT NULL, `jokerKullanildi` INTEGER NOT NULL, PRIMARY KEY(`tarih`))
 CREATE TABLE IF NOT EXISTS `risk_sonuc` (`tarih` TEXT NOT NULL, `S` REAL NOT NULL, `rB` REAL NOT NULL, `rS` REAL, `alpha` REAL NOT NULL, `R` REAL NOT NULL, `adayBant` TEXT NOT NULL, `gosterilenBant` TEXT NOT NULL, `guvenlikKurali` TEXT, `trend` TEXT NOT NULL, `surukleyiciler` TEXT NOT NULL, `veriDurumu` TEXT NOT NULL, PRIMARY KEY(`tarih`))
-CREATE TABLE IF NOT EXISTS `ruh_hali` (`tarih` TEXT NOT NULL, `deger` REAL NOT NULL, PRIMARY KEY(`tarih`))
+CREATE TABLE IF NOT EXISTS `ruh_hali` (`tarih` TEXT NOT NULL, `dilim` TEXT NOT NULL, `deger` REAL NOT NULL, PRIMARY KEY(`tarih`, `dilim`))
 CREATE TABLE IF NOT EXISTS `uyku_beyani` (`tarih` TEXT NOT NULL, `aralik` TEXT NOT NULL, PRIMARY KEY(`tarih`))
 ```
 
@@ -437,6 +442,8 @@ CREATE TABLE "gunluk_ozet" (
   "geceKullanimDk" DOUBLE PRECISION NOT NULL,
   "acilisSayisi" INTEGER NOT NULL,
   "olayVarMi" BIGINT NOT NULL,
+  "geceOlculduMu" BIGINT NOT NULL,
+  "adimKaynagi" TEXT NOT NULL,
   PRIMARY KEY ("tarih")
 );
 
@@ -472,6 +479,8 @@ CREATE TABLE "puan_gunluk" (
   "puanNet" INTEGER NOT NULL,
   "seriGun" SMALLINT NOT NULL,
   "carpani" DOUBLE PRECISION NOT NULL,
+  "hedefTutturuldu" BIGINT NOT NULL,
+  "jokerKullanildi" BIGINT NOT NULL,
   PRIMARY KEY ("tarih")
 );
 
@@ -493,8 +502,9 @@ CREATE TABLE "risk_sonuc" (
 
 CREATE TABLE "ruh_hali" (
   "tarih" TEXT NOT NULL,
+  "dilim" TEXT NOT NULL,
   "deger" DOUBLE PRECISION NOT NULL,
-  PRIMARY KEY ("tarih")
+  PRIMARY KEY ("tarih", "dilim")
 );
 
 CREATE TABLE "uyku_beyani" (
@@ -608,6 +618,8 @@ CREATE TABLE [gunluk_ozet] (
   [geceKullanimDk] FLOAT NOT NULL,
   [acilisSayisi] INT NOT NULL,
   [olayVarMi] BIGINT NOT NULL,
+  [geceOlculduMu] BIGINT NOT NULL,
+  [adimKaynagi] NVARCHAR(MAX) NOT NULL,
   PRIMARY KEY ([tarih])
 );
 
@@ -643,6 +655,8 @@ CREATE TABLE [puan_gunluk] (
   [puanNet] INT NOT NULL,
   [seriGun] SMALLINT NOT NULL,
   [carpani] FLOAT NOT NULL,
+  [hedefTutturuldu] BIGINT NOT NULL,
+  [jokerKullanildi] BIGINT NOT NULL,
   PRIMARY KEY ([tarih])
 );
 
@@ -664,8 +678,9 @@ CREATE TABLE [risk_sonuc] (
 
 CREATE TABLE [ruh_hali] (
   [tarih] NVARCHAR(450) NOT NULL,
+  [dilim] NVARCHAR(450) NOT NULL,
   [deger] FLOAT NOT NULL,
-  PRIMARY KEY ([tarih])
+  PRIMARY KEY ([tarih], [dilim])
 );
 
 CREATE TABLE [uyku_beyani] (

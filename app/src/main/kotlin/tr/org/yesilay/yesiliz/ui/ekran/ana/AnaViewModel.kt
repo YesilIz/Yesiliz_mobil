@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.BeyanDeposu
@@ -34,6 +35,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.gosterilebilirBant
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
+import tr.org.yesilay.yesiliz.arkaplan.IsPlanlayici
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.domain.gorev.RuhHaliPenceresi
 import tr.org.yesilay.yesiliz.risk.Bant
@@ -71,6 +73,7 @@ class AnaViewModel @Inject constructor(
     riskDao: RiskSonucDao,
     puanDao: PuanGunlukDao,
     private val guncelGun: GuncelGun,
+    private val isPlanlayici: IsPlanlayici,
     private val saat: Clock,
 ) : ViewModel() {
 
@@ -85,6 +88,13 @@ class AnaViewModel @Inject constructor(
 
     /** Hatırlatma kartı "Sonra" ile kapatıldıysa o oturum boyunca gizli. */
     private val degerlendirmeGizlendi = MutableStateFlow(false)
+
+    private val izinHatirlatmasiGizlendi = MutableStateFlow(false)
+
+    /** Eksik izinler — `ON_RESUME`'da yeniden hesaplanıyor. */
+    private val eksikIzinler = MutableStateFlow<List<EksikIzin>>(emptyList())
+
+    private val tazeleniyor = MutableStateFlow(false)
 
     /** Özel kullanım erişimi sistem ekranından dönünce elle tazelenir. */
     private val kullanimIzniVar = MutableStateFlow(KullanimIzni.verildiMi(baglam))
@@ -108,6 +118,7 @@ class AnaViewModel @Inject constructor(
                     bant = risk?.gosterilebilirBant(),
                     toplamPuan = toplamPuan,
                     seriGun = gunlukPuan?.seriGun ?: 0,
+                    seriJokerli = gunlukPuan?.jokerKullanildi == true,
                     hedefDk = hedef,
                 )
             }.combine(tercihler.ebeveynEslesmisMi) { ara, ebeveynAktif ->
@@ -160,6 +171,7 @@ class AnaViewModel @Inject constructor(
                         isim = ara.isim,
                         avatarId = ara.avatarId,
                         serideGun = ara.seriGun,
+                        seriJokerli = ara.seriJokerli,
                         agacEvresi = agacEvresi(ara.toplamPuan),
                         puan = ara.toplamPuan,
                         ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
@@ -167,6 +179,8 @@ class AnaViewModel @Inject constructor(
                         adim = ara.ozet?.adim?.roundToInt() ?: 0,
                         ruhHali = ara.ruhHali.deger,
                         ruhHaliKaydedildi = ara.ruhHali.kaydedildi,
+                        ruhHaliPenceresi = ara.ruhHali.pencere.etiket,
+                        ruhHaliDoldurulan = ara.ruhHali.doldurulan,
                         gorevler = Gorev.banttanOner(ara.bant).map { gorev ->
                             GorevOzeti(
                                 id = gorev.id,
@@ -177,7 +191,11 @@ class AnaViewModel @Inject constructor(
                                 tamamlandi = gorev.id in tamamlananIdler,
                             )
                         },
-                        veriVarMi = ara.ozet != null,
+                        // `ozet != null` DEĞİL: gecelik worker ölçüm
+                        // bulamadığı güne de satır yazıyor. Satırın varlığını
+                        // veri saymak, boş güne gerçek sayı gösterilmesine
+                        // yol açıyordu (CLAUDE.md §9).
+                        veriVarMi = ara.ozet?.olayVarMi == true,
                         izinVarMi = false,
                         ebeveynAktifMi = ara.ebeveynAktifMi,
                         okunmamisBildirim = ara.okunmamisBildirim,
@@ -186,6 +204,12 @@ class AnaViewModel @Inject constructor(
                 }
                 .combine(kullanimIzniVar) { anaDurum, izinVarMi ->
                     anaDurum.copy(izinVarMi = izinVarMi)
+                }
+                .combine(eksikIzinler) { anaDurum, eksikler ->
+                    anaDurum.copy(eksikIzinler = eksikler)
+                }
+                .combine(tazeleniyor) { anaDurum, donuyor ->
+                    anaDurum.copy(tazeleniyor = donuyor)
                 }
             }
         .stateIn(
@@ -229,7 +253,54 @@ class AnaViewModel @Inject constructor(
     /** Kullanım erişimi normal izin geri çağrısı üretmediği için ON_RESUME yolu. */
     fun kullanimIzniniTazele() {
         kullanimIzniVar.value = KullanimIzni.verildiMi(baglam)
+        eksikIzinler.value = eksikIzinleriHesapla()
     }
+
+    /**
+     * Yenile düğmesi — gecelik özet işini hemen kuyruğa alır.
+     *
+     * Ekran Room akışlarından besleniyor, yani veri yazılır yazılmaz
+     * güncelleniyor; sorun verinin ne zaman YAZILDIĞIydı. Gün içinde
+     * kullanım değiştiğinde özet ancak gecelik iş koştuğunda ya da uygulama
+     * yeniden açıldığında tazeleniyordu.
+     */
+    fun tazele() {
+        if (tazeleniyor.value) return
+        tazeleniyor.value = true
+        viewModelScope.launch {
+            isPlanlayici.elleTazele()
+            delay(TAZELEME_GERI_BILDIRIM_MS)
+            tazeleniyor.value = false
+        }
+    }
+
+    /** Hatırlatıcı kartı kapatıldı — o oturum boyunca bir daha gösterilmiyor. */
+    fun izinHatirlatmasiniGizle() {
+        izinHatirlatmasiGizlendi.value = true
+        eksikIzinler.value = eksikIzinleriHesapla()
+    }
+
+    private fun eksikIzinleriHesapla(): List<EksikIzin> {
+        if (izinHatirlatmasiGizlendi.value) return emptyList()
+        return buildList {
+            if (!KullanimIzni.verildiMi(baglam)) add(EksikIzin.KULLANIM)
+            if (!adimIzniVar()) add(EksikIzin.ADIM)
+        }
+    }
+
+    /**
+     * Adım verisi gelebiliyor mu.
+     *
+     * İzin adı yerine SONUCA bakılıyor: Health Connect izni verilmiş ama
+     * hiç veri yazan uygulama yoksa da, donanım sayacı izni yokken de
+     * sonuç aynı — adım göremiyoruz (§12 K27). Kullanıcıya izin ekranını
+     * göstermek her iki durumda da doğru eylem.
+     */
+    private fun adimIzniVar(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            baglam,
+            android.Manifest.permission.ACTIVITY_RECOGNITION,
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     /**
      * Görevi tamamlar. Tekrar dokununca **geri alınmıyor**: verilen puanı
@@ -274,6 +345,7 @@ class AnaViewModel @Inject constructor(
         val bant: Bant?,
         val toplamPuan: Int,
         val seriGun: Int,
+        val seriJokerli: Boolean = false,
         val hedefDk: Int,
         val ebeveynAktifMi: Boolean = false,
         val isim: String = SABIT_ISIM,
@@ -300,6 +372,9 @@ class AnaViewModel @Inject constructor(
 
         /** Ekran arka plana gidince akışı hemen kesme. */
         const val AKIS_BEKLEME_MS = 5_000L
+
+        /** Yenile ikonu en az bu kadar dönsün — dokunuş karşılık bulsun. */
+        const val TAZELEME_GERI_BILDIRIM_MS = 900L
 
         /** `docs/spec-anket.md §6.4`: anket 4 haftada bir tekrarlanır. */
         const val ANKET_TAZELEME_GUN = 28L

@@ -22,6 +22,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HedefEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HedefOzelEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IlkSonucEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.EbeveynOnayiEkran
+import tr.org.yesilay.yesiliz.ui.ekran.onboarding.HareketIzinEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.IzinEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.NasilCalisirEkran
 import tr.org.yesilay.yesiliz.ui.ekran.onboarding.KarsilamaEkran
@@ -74,7 +75,7 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
             }
 
             LaunchedEffect(durum.izinVerildiMi) {
-                if (durum.izinVerildiMi) girdi.guvenliGit(navController, Rota.PROFIL_KURULUM)
+                if (durum.izinVerildiMi) girdi.guvenliGit(navController, Rota.HAREKET_IZNI)
             }
 
             IzinEkran(
@@ -82,10 +83,21 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
                     if (KullanimIzni.ayarEkraniVarMi(context)) {
                         context.startActivity(KullanimIzni.ayarIntent())
                     } else {
-                        girdi.guvenliGit(navController, Rota.PROFIL_KURULUM)
+                        girdi.guvenliGit(navController, Rota.HAREKET_IZNI)
                     }
                 },
-                onAtla = { girdi.guvenliGit(navController, Rota.PROFIL_KURULUM) },
+                onAtla = { girdi.guvenliGit(navController, Rota.HAREKET_IZNI) },
+            )
+        }
+
+        // Adım izni artık karşılamada isteniyor. Eskiden yalnızca Profil ›
+        // "Adım ve hareket izni" satırından verilebiliyordu; varsayılan
+        // kullanıcı hiç izin vermiyor ve aktivite sönümlemesi (`D`) hep
+        // 1,0 kalıyordu. Atlanabilir — reddeden kullanıcı uygulamayı
+        // eksiksiz kullanmaya devam ediyor.
+        composable(Rota.HAREKET_IZNI) { girdi ->
+            HareketIzinEkran(
+                onDevam = { girdi.guvenliGit(navController, Rota.PROFIL_KURULUM) },
             )
         }
 

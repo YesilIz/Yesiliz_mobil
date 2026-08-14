@@ -74,7 +74,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.R
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.domain.gorev.RuhHaliPenceresi
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.puanEtiketi
 import tr.org.yesilay.yesiliz.ui.suresiDk
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
@@ -83,6 +85,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
+import tr.org.yesilay.yesiliz.ui.bilesen.YenileDugmesi
 import tr.org.yesilay.yesiliz.ui.bilesen.SallananYapraklar
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.sureMetni
@@ -119,6 +122,7 @@ fun AnaEkran(
     onProfil: () -> Unit,
     onIstatistik: () -> Unit,
     onKullanimIzni: () -> Unit,
+    onSaglikIzni: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AnaViewModel = hiltViewModel(),
 ) {
@@ -228,6 +232,18 @@ fun AnaEkran(
                         )
                     }
                 }
+
+                // Karşılama akışında izin atlanabiliyor; atlayan kullanıcı
+                // eksiğini ancak Profil'in derinliklerinde bulabiliyordu.
+                // Kart kapatılabilir — bilinçli reddedeni sürekli dürtmek
+                // §3'ün "zorlama yok" ilkesine aykırı.
+                durum.eksikIzinler.firstOrNull()?.let { eksik ->
+                    IzinHatirlatmaKarti(
+                        eksik = eksik,
+                        onIzinVer = if (eksik == EksikIzin.KULLANIM) onKullanimIzni else onSaglikIzni,
+                        onGizle = viewModel::izinHatirlatmasiniGizle,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(Bosluk.L))
@@ -260,6 +276,8 @@ fun AnaEkran(
                     RuhHaliKarti(
                         deger = durum.ruhHali,
                         kaydedildi = durum.ruhHaliKaydedildi,
+                        pencere = durum.ruhHaliPenceresi,
+                        doldurulan = durum.ruhHaliDoldurulan,
                         onDegis = viewModel::ruhHaliDegisti,
                         onBirakildi = viewModel::ruhHaliBirakildi,
                     )
@@ -279,9 +297,17 @@ fun AnaEkran(
             }
         }
 
-        // 3. ÜST BAŞLIK KATMANI (En üstte duran ve tıklamaları doğrudan alan etkileşimli başlık)
+        // 3. ÜST BAŞLIK KATMANI (En üstte duran ve tıklamaları doğrudan alan
+        // etkileşimli başlık)
+        //
+        // Zemin kaydırmayla opaklaşıyor. Başlık şeffaftı ve metinleri beyazdı;
+        // aşağı kaydırınca 2. katmandaki beyaz `Surface` altına giriyor ve
+        // beyaz üstüne beyaz kalıyordu — satır görünmez oluyor ama tıklamayı
+        // almaya devam ediyordu.
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(YesilAna.copy(alpha = kaydirmaOrani)),
         ) {
             Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
@@ -317,10 +343,14 @@ fun AnaEkran(
                 }
                 Cip(
                     onTikla = onIstatistik,
-                    metin = "${durum.serideGun} gün",
+                    metin = durum.seriEtiketi,
                     ikon = Icons.Filled.LocalFireDepartment,
                     zemin = Beyaz.copy(alpha = YariSaydam),
                     renk = Beyaz,
+                )
+                YenileDugmesi(
+                    onTikla = viewModel::tazele,
+                    donuyor = durum.tazeleniyor,
                 )
                 ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
             }
@@ -351,77 +381,6 @@ fun AnaEkran(
     }
 }
 
-/** Yeşil selamlama şeridi + altında beyaza sönen ağaç. */
-@Composable
-private fun Basliktan(
-    durum: AnaDurum,
-    onBildirimler: () -> Unit,
-    onProfil: () -> Unit,
-    onIstatistik: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth().background(YesilAna)) {
-        Box(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Olcu.EkranKenari, vertical = Bosluk.M),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Bosluk.M),
-        ) {
-            KullaniciAvatari(
-                isim = durum.isim,
-                zemin = Beyaz.copy(alpha = YariSaydam),
-                // Avatar süslemeydi, tıklanmıyordu (`debug.md` O-17).
-                onTikla = onProfil,
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = durum.selamlama,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Beyaz.copy(alpha = AzSaydam),
-                )
-                Text(
-                    text = durum.isim,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Beyaz,
-                )
-            }
-            Cip(
-                // Çip tıklanabilir GÖRÜNÜYOR ama `onTikla` verilmemişti;
-                // `Cip` bu parametreyi zaten destekliyor (`debug.md` O-15).
-                // İstatistik ekranı serinin nereden geldiğini gösteren
-                // tek yer.
-                onTikla = onIstatistik,
-                metin = "${durum.serideGun} gün",
-                ikon = Icons.Filled.LocalFireDepartment,
-                zemin = Beyaz.copy(alpha = YariSaydam),
-                renk = Beyaz,
-            )
-            ZilIkonu(okunmamis = durum.okunmamisBildirim, onTikla = onBildirimler)
-        }
-
-        // Ağaç: yeşilden beyaza sönen zemin üstünde. İllüstrasyon açık zemin
-        // için üretildi, doğrudan yeşile konursa kenarları kirli görünüyor.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(AgacAlani)
-                .background(Gradyan.BaslikSonumu),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(agacGorseli(durum.agacEvresi)),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(340.dp),
-            )
-            SallananYapraklar(modifier = Modifier.size(340.dp))
-        }
-    }
-}
-
 /**
  * Başlıktaki zil — okunmamış varsa üstünde küçük beyaz nokta.
  *
@@ -430,6 +389,39 @@ private fun Basliktan(
  * dengesi bozulmuyor ve rozet sayı yerine **nokta**: "3 okunmamış bildirim"
  * demek uygulamayı açtırmaya çalışan bir dil, uygulamanın amacıyla çelişir.
  */
+/**
+ * Eksik izin hatırlatıcısı.
+ *
+ * Ekranda zaten kurulu olan `Kart` + `BosDurum` deseni kullanılıyor
+ * (kullanım izni kartıyla aynı dil); yeni bir uyarı bileşeni yazmak iki
+ * farklı görünüm üretirdi.
+ */
+@Composable
+private fun IzinHatirlatmaKarti(
+    eksik: EksikIzin,
+    onIzinVer: () -> Unit,
+    onGizle: () -> Unit,
+) {
+    Kart {
+        BosDurum(
+            baslik = eksik.baslik,
+            aciklama = eksik.aciklama,
+            eylem = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    BirincilButon(metin = "İzin ver", onTikla = onIzinVer)
+                    Spacer(modifier = Modifier.height(Bosluk.S))
+                    Text(
+                        text = "Şimdi değil",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MetinIkincil,
+                        modifier = Modifier.clickable(onClick = onGizle),
+                    )
+                }
+            },
+        )
+    }
+}
+
 @Composable
 private fun ZilIkonu(okunmamis: Int, onTikla: () -> Unit) {
     Box(
@@ -597,13 +589,15 @@ private fun DikeyAyrac() {
 private fun RuhHaliKarti(
     deger: Float,
     kaydedildi: Boolean,
+    pencere: String,
+    doldurulan: Int,
     onDegis: (Float) -> Unit,
     onBirakildi: () -> Unit,
 ) {
     Kart {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Bugün nasıl hissediyorsun?",
+                text = "$pencere: nasıl hissediyorsun?",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MetinBirincil,
@@ -617,11 +611,18 @@ private fun RuhHaliKarti(
                 )
             }
         }
+        // Gün üç pencereye bölündü (sabah/öğlen/akşam). "Bugün 2/3" demek,
+        // kaydın niye tekrar istendiğini ve puanın nereden geldiğini
+        // açıklıyor — eskiden tek kayıt vardı ve kullanıcı gün içinde
+        // tekrar sürüklediğinde neden puan almadığını bilmiyordu.
         Text(
             text = if (kaydedildi) {
-                "Kaydedildi. Gün içinde fikrin değişirse tekrar sürükleyebilirsin."
+                "Bu pencere kaydedildi · bugün $doldurulan/" +
+                    "${RuhHaliPenceresi.GUNLUK_PENCERE_SAYISI}. " +
+                    "Fikrin değişirse tekrar sürükleyebilirsin."
             } else {
-                "Sürükle, cevabın her gün değişsin."
+                "Sürükle · bugün $doldurulan/" +
+                    "${RuhHaliPenceresi.GUNLUK_PENCERE_SAYISI} kayıt"
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
@@ -765,7 +766,7 @@ private fun GorevSatiri(gorev: GorevOzeti, onTikla: () -> Unit) {
             if (gorev.tamamlandi) {
                 Cip(metin = "Tamamlandı", ikon = Icons.Filled.CheckCircle, zemin = YesilNane, renk = YesilAna)
             } else {
-                Cip(metin = "+${gorev.puan}", renk = YesilAna)
+                Cip(metin = gorev.puan.puanEtiketi(), renk = YesilAna)
             }
         }
     }

@@ -32,7 +32,19 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil200
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 
 /** Bir çubuk: etiket + değer. [deger] eksen birimindeki ham değer. */
-data class Cubuk(val etiket: String, val deger: Float)
+data class Cubuk(
+    val etiket: String,
+    val deger: Float,
+    /**
+     * O gün için ölçüm var mı.
+     *
+     * `false` iken çubuk **soluk** çiziliyor: sıfır yükseklikli bir çubuk
+     * "o gün hiç kullanmadın" gibi okunuyordu, oysa ölçemediğimiz gün de
+     * aynı görünüyor. İkisini ayırmak grafiğin dürüstlüğü için şart
+     * (CLAUDE.md §9 "satır var ≠ veri var").
+     */
+    val veriVar: Boolean = true,
+)
 
 /**
  * Haftalık çubuk grafik — İstatistik ve Ebeveyn panelindeki grafik.
@@ -58,7 +70,10 @@ fun CubukGrafik(
     eksenEtiketleri: List<String> = emptyList(),
 ) {
     if (cubuklar.isEmpty()) return
-    val enBuyuk = cubuklar.maxOf { it.deger }.coerceAtLeast(1f)
+    // Ölçek yalnızca VERİSİ OLAN günlerden: veri yok diye 0 yazılan bir
+    // gün en büyüğü değiştirmiyor zaten, ama tüm gün verisizse ölçek 1f'e
+    // düşüp tek bir gürültü çubuğu grafiği ele geçirmesin.
+    val enBuyuk = cubuklar.filter { it.veriVar }.maxOfOrNull { it.deger }?.coerceAtLeast(1f) ?: 1f
     val yogunluk = LocalDensity.current
 
     // Kullanıcı bir gün seçtiyse vurgu ona geçiyor; seçim yokken eski
@@ -106,8 +121,20 @@ fun CubukGrafik(
                 val yaricap = with(yogunluk) { Olcu.CubukYaricapi.toPx() }
 
                 cubuklar.forEachIndexed { i, cubuk ->
-                    val yukseklik = size.height * (cubuk.deger / enBuyuk)
                     val x = yuva * i + (yuva - genislik) / 2f
+                    if (!cubuk.veriVar) {
+                        // Ölçüm yok: sıfır yükseklikli çubuk "o gün hiç
+                        // kullanmadın" gibi okunuyordu. Zemine oturan ince
+                        // bir iz, "burada veri yok" demenin sessiz yolu.
+                        drawRoundRect(
+                            color = Ayrac,
+                            topLeft = Offset(x, size.height - yaricap),
+                            size = Size(genislik, yaricap),
+                            cornerRadius = CornerRadius(yaricap, yaricap),
+                        )
+                        return@forEachIndexed
+                    }
+                    val yukseklik = size.height * (cubuk.deger / enBuyuk)
                     drawRoundRect(
                         color = if (i == one) renk else soluk,
                         topLeft = Offset(x, size.height - yukseklik),

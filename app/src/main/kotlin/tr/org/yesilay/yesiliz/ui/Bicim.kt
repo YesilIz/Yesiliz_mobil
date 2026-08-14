@@ -19,6 +19,17 @@ private val TR_BICIM: Locale = Locale.forLanguageTag("tr")
 fun Int.binlik(): String = NumberFormat.getIntegerInstance(TR_BICIM).format(this)
 
 /**
+ * Puan rozeti metni — `25` → `+25p`.
+ *
+ * Rozetler yalnızca `+25` yazıyordu ve neyin 25'i olduğu belirsizdi
+ * (dakika mı, adım mı, puan mı). `p` eki bunu tek karakterle söylüyor.
+ *
+ * **Yalnızca rozet/çip için.** Cümle içinde ("25 puan kazandın!") kısaltma
+ * kullanılmıyor — orada `p` Türkçeyi bozar ve zaten yer sıkıntısı yok.
+ */
+fun Int.puanEtiketi(): String = "+${binlik()}p"
+
+/**
  * Dakika → okunur süre. `260` → `4s 20dk`, `45` → `45 dk`, `120` → `2s`.
  *
  * Tasarımda saat/dakika arasında boşluk yok (`4s 20dk`), tek birim varken var

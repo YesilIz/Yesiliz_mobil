@@ -9,4 +9,6 @@
     <color name="yesil_koyu">#FF124734</color>
     <color name="yesil_50">#FFEDF7EF</color>
     <color name="beyaz">#FFFFFFFF</color>
+    <!-- Launcher ikonunun zemini ; yeni logonun kendi açık yeşili. -->
+    <color name="logo_zemini">#FFE7F7EA</color>
 </resources>

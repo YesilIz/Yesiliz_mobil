@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.ui.puanEtiketi
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
@@ -120,7 +121,7 @@ private fun AktiviteSatiri(kart: AktiviteKarti, onTikla: () -> Unit) {
                         Cip(metin = "$it dk")
                         Spacer(modifier = Modifier.width(Bosluk.S))
                     }
-                    Cip(metin = "+${kart.gorev.puan}", zemin = YesilNane, renk = YesilAna)
+                    Cip(metin = kart.gorev.puan.puanEtiketi(), zemin = YesilNane, renk = YesilAna)
                 }
             }
             Spacer(modifier = Modifier.width(Bosluk.S))

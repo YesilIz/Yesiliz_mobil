@@ -1,17 +1,27 @@
 package tr.org.yesilay.yesiliz.ui.ekran.odak
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import tr.org.yesilay.yesiliz.ui.bilesen.Cip
+import tr.org.yesilay.yesiliz.ui.bilesen.TekerlekSecici
+import tr.org.yesilay.yesiliz.ui.tema.Beyaz
+import tr.org.yesilay.yesiliz.ui.tema.YesilAna
+import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -23,7 +33,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
-import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -32,7 +41,6 @@ import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinIkincil
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
-import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 
 /**
  * Odak seansı — `debug.md` İ-1.
@@ -92,7 +100,7 @@ fun OdakEkran(
                 durum.basladi -> Suruyor(durum = durum, onVazgec = viewModel::vazgec)
                 else -> Hazirlik(
                     sureDk = durum.sureDk,
-                    onSureDegistir = viewModel::sureDegistir,
+                    onSureSec = viewModel::sureSecildi,
                     onBasla = viewModel::basla,
                 )
             }
@@ -101,7 +109,9 @@ fun OdakEkran(
 }
 
 @Composable
-private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Unit) {
+private fun Hazirlik(sureDk: Int, onSureSec: (Int) -> Unit, onBasla: () -> Unit) {
+    var tekerlekAcik by remember { mutableStateOf(false) }
+
     Text(
         text = "Telefonu bırak",
         style = MaterialTheme.typography.headlineLarge,
@@ -122,10 +132,42 @@ private fun Hazirlik(sureDk: Int, onSureDegistir: () -> Unit, onBasla: () -> Uni
         HalkaIcerik(ana = "$sureDk", alt = "dakika")
     }
     Spacer(modifier = Modifier.height(Olcu.BolumArasi))
-    IkincilButon(metin = "Süreyi değiştir", onTikla = onSureDegistir)
+
+    // Hızlı çipler duruyor: kullanıcıların çoğu bu üç süreden birini
+    // seçiyor ve tekerleği açmaya gerek kalmıyor.
+    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
+        OdakHesapla.SURELER.forEach { dakika ->
+            Cip(
+                metin = "$dakika dk",
+                onTikla = { onSureSec(dakika) },
+                zemin = if (dakika == sureDk) YesilAna else YesilNane,
+                renk = if (dakika == sureDk) Beyaz else YesilAna,
+            )
+        }
+    }
     Spacer(modifier = Modifier.height(Bosluk.S))
+    IkincilButon(
+        metin = if (tekerlekAcik) "Tamam" else "Kendim seçeyim",
+        onTikla = { tekerlekAcik = !tekerlekAcik },
+    )
+
+    if (tekerlekAcik) {
+        Spacer(modifier = Modifier.height(Bosluk.S))
+        TekerlekSecici(
+            degerler = OdakHesapla.TEKERLEK_SURELERI,
+            secili = sureDk,
+            onSec = onSureSec,
+            etiketle = { "$it dk" },
+            modifier = Modifier.fillMaxWidth(TEKERLEK_GENISLIK_ORANI),
+        )
+    }
+
+    Spacer(modifier = Modifier.height(Olcu.BolumArasi))
     BirincilButon(metin = "Başlat", onTikla = onBasla)
 }
+
+/** Tekerlek ekranın tamamını kaplamasın — orta sütun yeterli. */
+private const val TEKERLEK_GENISLIK_ORANI = 0.6f
 
 @Composable
 private fun Suruyor(durum: OdakDurum, onVazgec: () -> Unit) {

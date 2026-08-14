@@ -40,6 +40,8 @@ import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
 import tr.org.yesilay.yesiliz.ui.bilesen.SatirBaglanti
 import tr.org.yesilay.yesiliz.ui.bilesen.RiskGirisKarti
+import tr.org.yesilay.yesiliz.ui.bilesen.UyariSeridi
+import tr.org.yesilay.yesiliz.ui.bilesen.YenileDugmesi
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.CubukGrafik
@@ -75,8 +77,13 @@ fun IstatistikEkran(
     viewModel: IstatistikViewModel = hiltViewModel(),
 ) {
     val durum by viewModel.durum.collectAsStateWithLifecycle()
+    val tazeleniyor by viewModel.tazeleniyor.collectAsStateWithLifecycle()
 
-    YesilBaslikliEkran(baslik = "İstatistik", modifier = modifier) {
+    YesilBaslikliEkran(
+        baslik = "İstatistik",
+        modifier = modifier,
+        sagEylem = { YenileDugmesi(onTikla = viewModel::tazele, donuyor = tazeleniyor) },
+    ) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             Spacer(modifier = Modifier.height(Olcu.Aralik))
 
@@ -119,6 +126,18 @@ fun IstatistikEkran(
                     )
                 }
 
+                // Penceredeki bazı günler ölçülemedi. Grafikte boş yer
+                // görünüyor; ortalamanın hangi günlerden hesaplandığını
+                // söylemezsek kullanıcı eksik veriyi "az kullanmışım" diye
+                // okur.
+                if (durum.olculenGunSayisi in 1 until durum.gunSayisi) {
+                    UyariSeridi(
+                        metin = "${durum.gunSayisi} günün ${durum.olculenGunSayisi} tanesi " +
+                            "ölçüldü. Ortalama yalnızca o günlerden hesaplandı; " +
+                            "ölçülemeyen günler grafikte boş görünüyor.",
+                    )
+                }
+
                 Kart {
                     Text(
                         text = "Kategori dağılımı",
@@ -158,6 +177,21 @@ fun IstatistikEkran(
                         renk = YesilAna,
                         soluk = AdimMavi,
                         eksenEtiketleri = listOf(AdimTavani.kisaBin(), (AdimTavani / 2).kisaBin(), "0"),
+                    )
+                }
+
+                // Adım sayısı Fit/Samsung Health'ten %10-20 farklı çıkıyor
+                // ve kullanıcı bunu hata sanıyor. Fark gerçek: o uygulamalar
+                // ham sayacı kendi hareket sınıflandırıcılarından geçirip
+                // yanlış pozitifleri eliyor. Kaynağı söylemek farkı
+                // açıklanabilir kılıyor.
+                durum.adimKaynagi?.let { kaynak ->
+                    Text(
+                        text = "Adım kaynağı: $kaynak",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MetinUcuncul,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 

@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher ikonu ; yeni logo (docs/tasarim/yenilogo.png).
+
+  Foreground PNG'leri tools/logo_uret.py üretiyor, ELLE DÜZENLENMEZ.
+
+  Kaynak görsel kare ve alfasız; asıl marka işareti ortadaki yuvarlak diskin
+  içinde. Dosya olduğu gibi foreground yapılsaydı yuvarlak maske altında disk
+  kırpılırdı (adaptive icon 108dp tuvalin yalnızca orta 66dp'sini garanti
+  ediyor). Bu yüzden zeminler atıldı ve yalnızca işaret güvenli alana
+  ölçeklendi; zemin rengini bu katman veriyor, yani maske daire de olsa
+  squircle da olsa kenardan kenara doluyor.
+
+  monochrome hâlâ vektör hilal: Android 13+ temalı ikon tek renkli bir maske
+  istiyor, fotoğrafik PNG orada okunmaz hâle geliyor.
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/yesil_ana" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <background android:drawable="@color/logo_zemini" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
     <monochrome android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>

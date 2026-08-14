@@ -67,7 +67,7 @@ fun EbeveynOnayiEkran(
         // Yaş adımıyla aynı numara: bu ekran akışa YENİ bir adım eklemiyor,
         // 18 altı kullanıcı için o adımın devamı. Gösterge 4'ten 5'e
         // çıksaydı yetişkin ve çocuk akışlarının uzunluğu farklı görünürdü.
-        adim = 3,
+        adim = 4,
         ilerleMetni = "Onaylıyorum, devam et",
         onIlerle = onDevam,
         ilerleEtkin = onayli,

@@ -28,8 +28,14 @@ import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.Olcu
 
-/** Onboarding toplam adım sayısı — tasarımda 4 çubuk. */
-const val ONBOARDING_ADIM = 4
+/**
+ * Onboarding toplam adım sayısı.
+ *
+ * Tasarımda 4 çubuk vardı; hareket izni adımı eklenince 5 oldu. Adım
+ * göstergesi gerçek adım sayısını yansıtmalı — kullanıcı 5 ekran görüp
+ * çubuğun 4'te kalmasını "takıldı" diye okur.
+ */
+const val ONBOARDING_ADIM = 5
 
 /**
  * Onboarding ekranlarının ortak iskeleti.

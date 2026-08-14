@@ -14,12 +14,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
+import tr.org.yesilay.yesiliz.data.yerel.entity.BildirimEntity
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimGrubu
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimGrupla
 import tr.org.yesilay.yesiliz.domain.bildirim.BildirimTuru
@@ -34,6 +37,10 @@ class BildirimViewModel @Inject constructor(
     private val saat: Clock,
     guncelGun: GuncelGun,
 ) : ViewModel() {
+
+    /** Son silinen kayıt — "Geri al" bunun üzerinden çalışıyor. */
+    private val _sonSilinen = MutableStateFlow<BildirimEntity?>(null)
+    val sonSilinen: StateFlow<BildirimEntity?> = _sonSilinen.asStateFlow()
 
     val durum: StateFlow<BildirimDurum> = combine(
         depo.sonlar(),
@@ -80,6 +87,39 @@ class BildirimViewModel @Inject constructor(
 
     fun tumunuOku() {
         viewModelScope.launch { depo.tumunuOku() }
+    }
+
+    /**
+     * Kaydırarak silme.
+     *
+     * Silinen satır [sonSilinen]'de tutuluyor ki "Geri al" gerçekten geri
+     * alabilsin. Geri alınamayan bir silme, yanlışlıkla kaydıran kullanıcıya
+     * kaydı kalıcı olarak kaybettirirdi.
+     */
+    fun sil(id: Long) {
+        viewModelScope.launch {
+            val kayit = depo.getir(id) ?: return@launch
+            depo.sil(id)
+            _sonSilinen.value = kayit
+        }
+    }
+
+    fun silmeyiGeriAl() {
+        val kayit = _sonSilinen.value ?: return
+        _sonSilinen.value = null
+        viewModelScope.launch { depo.geriYukle(kayit) }
+    }
+
+    fun geriAlmaSuresiDoldu() {
+        _sonSilinen.value = null
+    }
+
+    /** "Tümünü temizle" — ekran önce onay soruyor, burada geri alma yok. */
+    fun hepsiniSil() {
+        viewModelScope.launch {
+            depo.hepsiniSil()
+            _sonSilinen.value = null
+        }
     }
 
     private companion object {

@@ -13,8 +13,32 @@ package tr.org.yesilay.yesiliz.ui.ekran.odak
  */
 object OdakHesapla {
 
-    /** Seçilebilir seans süreleri, dakika. */
+    /** Hızlı seçim çipleri — en sık kullanılan üç süre. */
     val SURELER = listOf(15, 25, 45)
+
+    /** Tekerlekle seçilebilecek en kısa seans. */
+    const val EN_KISA_DK = 5
+
+    /**
+     * Tekerlekle seçilebilecek en uzun seans.
+     *
+     * Puan süreye bağlı DEĞİL (sabit [tr.org.yesilay.yesiliz.domain.gorev.Gorev.ODAK]
+     * puanı), o yüzden uzun süre seçmek bir kazanç yolu açmıyor; sınır
+     * yalnızca makullük için.
+     */
+    const val EN_UZUN_DK = 120
+
+    /** Tekerlek adımı — dakika. */
+    const val ADIM_DK = 5
+
+    /**
+     * Tekerlekteki tüm seçenekler.
+     *
+     * Eskiden yalnızca [SURELER] vardı ve "Süreyi değiştir" butonu listede
+     * döngüsel geziyordu: aradaki bir değer (30 dk) seçilemiyor, istenen
+     * süreye kaç dokunuşta ulaşılacağı belirsiz kalıyordu.
+     */
+    val TEKERLEK_SURELERI: List<Int> = (EN_KISA_DK..EN_UZUN_DK step ADIM_DK).toList()
 
     /**
      * Seansın anlık durumu.

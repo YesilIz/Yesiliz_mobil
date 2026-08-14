@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.ui.binlik
+import tr.org.yesilay.yesiliz.ui.puanEtiketi
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
@@ -600,7 +601,7 @@ private fun PuanGecmisi(kayitlar: List<PuanKaydi>, onKapat: () -> Unit) {
                     )
                 }
                 Text(
-                    text = "+${kayit.puan}",
+                    text = kayit.puan.puanEtiketi(),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = YesilAna,

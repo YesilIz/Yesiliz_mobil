@@ -40,7 +40,7 @@ fun AnketEkran(
     val sayfaTamam = (ilk until son).all { durum.yanitlar[it] > 0 }
 
     OnboardingIskelet(
-        adim = 4,
+        adim = 5,
         ilerleMetni = "Devam",
         onIlerle = { if (sonSayfa) onBitti() else sayfa++ },
         ilerleEtkin = sayfaTamam,
