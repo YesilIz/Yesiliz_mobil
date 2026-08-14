@@ -23,6 +23,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import tr.org.yesilay.yesiliz.R
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,44 +78,75 @@ fun NudgeOverlay(
     modifier: Modifier = Modifier,
 ) {
     var asama by remember { mutableStateOf(NudgeAsama.ANA_KART) }
+    var gorunur by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        gorunur = true
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = 0.75f))
             .padding(horizontal = Olcu.EkranKenari),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Yaricap.Kart),
-            color = Color.Transparent,
-            border = BorderStroke(1.dp, Beyaz.copy(alpha = 0.6f)),
-            shadowElevation = 24.dp,
+        AnimatedVisibility(
+            visible = gorunur,
+            enter = scaleIn(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                initialScale = 0.3f
+            ) + fadeIn(),
+            exit = scaleOut() + fadeOut()
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Beyaz.copy(alpha = 0.7f),
-                                Beyaz.copy(alpha = 0.2f)
-                            )
-                        )
-                    )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Yaricap.Kart),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, Beyaz.copy(alpha = 0.6f)),
+                shadowElevation = 24.dp,
             ) {
-                Column(modifier = Modifier.padding(Olcu.KartIci)) {
-                    when (asama) {
-                        NudgeAsama.ANA_KART -> AnaKart(
-                            esikSaniye = esikSaniye,
-                            onMolaVer = { asama = NudgeAsama.MOLA_SORUSU },
-                            onDevamEt = onDevamEt,
-                        )
-                        NudgeAsama.MOLA_SORUSU -> MolaSorusu(
-                            onEvet = onNefesEvet,
-                            onHayir = onNefesHayir,
-                        )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Beyaz.copy(alpha = 0.95f),
+                                    Beyaz.copy(alpha = 0.85f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.hilal),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth(0.75f)
+                            .offset(y = (-50).dp)
+                            .blur(radius = 12.dp)
+                            .alpha(0.9f),
+                        contentScale = ContentScale.Fit
+                    )
+                    Column(
+                        modifier = Modifier.padding(Olcu.KartIci),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        when (asama) {
+                            NudgeAsama.ANA_KART -> AnaKart(
+                                esikSaniye = esikSaniye,
+                                onMolaVer = { asama = NudgeAsama.MOLA_SORUSU },
+                                onDevamEt = onDevamEt,
+                            )
+                            NudgeAsama.MOLA_SORUSU -> MolaSorusu(
+                                onEvet = onNefesEvet,
+                                onHayir = onNefesHayir,
+                            )
+                        }
                     }
                 }
             }
@@ -121,7 +165,7 @@ private fun AnaKart(
     } else {
         "$esikSaniye saniyedir buradasın"
     }
-    Column {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Image(
             painter = painterResource(id = R.drawable.sende_yesilaycisin),
             contentDescription = "Sen de Yeşilaycısın",
@@ -135,12 +179,15 @@ private fun AnaKart(
             text = sureBilgisi,
             style = MaterialTheme.typography.headlineMedium,
             color = MetinBirincil,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(Bosluk.Xs))
         Text(
             text = "Kısa bir mola iyi gelebilir.",
             style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
             color = MetinIkincil,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "5 dk mola ver", onTikla = onMolaVer)
@@ -153,7 +200,7 @@ private fun MolaSorusu(
     onEvet: () -> Unit,
     onHayir: () -> Unit,
 ) {
-    Column {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Image(
             painter = painterResource(id = R.drawable.sende_yesilaycisin),
             contentDescription = "Sen de Yeşilaycısın",
@@ -167,6 +214,7 @@ private fun MolaSorusu(
             text = "Nefes egzersizi yapmak ister misin?",
             style = MaterialTheme.typography.headlineMedium,
             color = MetinBirincil,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
         BirincilButon(metin = "Evet", onTikla = onEvet)
