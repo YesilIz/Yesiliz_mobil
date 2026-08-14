@@ -2,6 +2,8 @@ package tr.org.yesilay.yesiliz.ui.gezinme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -96,9 +98,14 @@ fun NavGraphBuilder.onboardingAkisi(navController: NavHostController) {
         // 1,0 kalıyordu. Atlanabilir — reddeden kullanıcı uygulamayı
         // eksiksiz kullanmaya devam ediyor.
         composable(Rota.HAREKET_IZNI) { girdi ->
-            HareketIzinEkran(
-                onDevam = { girdi.guvenliGit(navController, Rota.PROFIL_KURULUM) },
-            )
+            // `guvenliGit` DEĞİL: izin diyaloğu kapanırken ekran henüz
+            // RESUMED olmadığı için tek gezinme isteği sessizce düşüyor ve
+            // kullanıcı izin ekranında kalıyordu (emülatörde görüldü).
+            var devamEt by remember { mutableStateOf(false) }
+            LaunchedEffect(devamEt) {
+                if (devamEt) girdi.bekleyipGit(navController, Rota.PROFIL_KURULUM)
+            }
+            HareketIzinEkran(onDevam = { devamEt = true })
         }
 
         composable(Rota.PROFIL_KURULUM) { girdi ->

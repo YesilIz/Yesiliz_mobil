@@ -14,6 +14,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -26,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
+import tr.org.yesilay.yesiliz.ui.tema.Yesil200
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,27 +100,18 @@ fun BildirimEkran(
             baslik = "Bildirimler",
             onGeri = onGeri,
             icerikZemini = Beyaz,
+            // Başlığın sağ eylem alanı 96dp ile SINIRLI (`debug.md` Y-2
+            // düzeltmesi). "Tümünü oku" metin bağlantısı ile çöp ikonu
+            // birlikte sığmıyor ve ikisi de görünmez oluyordu; ikon burada
+            // kalıyor, metin bağlantısı listenin başına taşındı.
             sagEylem = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Okunmamış yoksa eylem de yok — tıklanınca hiçbir şey
-                    // olmayan bir bağlantı göstermek, düzeltmeye çalıştığımız
-                    // sorunun aynısı.
-                    if (durum.okunmamisVarMi) {
-                        // `MetinBaglanti` `fillMaxWidth` dayatıyor (kendi
-                        // KDoc'u da uyarıyor): başlık çubuğunun tamamını
-                        // kaplıyor, "Bildirimler" yazısının üstüne biniyor ve
-                        // geri okuna basınca bütün bildirimleri okundu
-                        // işaretliyordu (`debug.md` Y-2).
-                        SatirBaglanti(metin = "Tümünü oku", onTikla = viewModel::tumunuOku)
-                    }
-                    if (durum.gruplar.isNotEmpty()) {
-                        IconButton(onClick = { temizleOnayi = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Delete,
-                                contentDescription = "Tümünü temizle",
-                                tint = Beyaz,
-                            )
-                        }
+                if (durum.gruplar.isNotEmpty()) {
+                    IconButton(onClick = { temizleOnayi = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Tümünü temizle",
+                            tint = Beyaz,
+                        )
                     }
                 }
             },
@@ -141,6 +134,15 @@ fun BildirimEkran(
                 contentPadding = PaddingValues(vertical = Olcu.EkranKenari),
                 verticalArrangement = Arrangement.spacedBy(Bosluk.S),
             ) {
+                // Okunmamış yoksa eylem de yok — tıklanınca hiçbir şey
+                // olmayan bir bağlantı göstermek, düzeltmeye çalıştığımız
+                // sorunun aynısı.
+                if (durum.okunmamisVarMi) {
+                    item(key = "tumunu-oku") {
+                        SatirBaglanti(metin = "Tümünü oku", onTikla = viewModel::tumunuOku)
+                    }
+                }
+
                 durum.gruplar.forEach { grup ->
                     item(key = "baslik-${grup.grup.name}") {
                         Column {
@@ -161,13 +163,22 @@ fun BildirimEkran(
             }
         }
 
+        // Varsayılan M3 snackbar'ının eylem rengi MOR; projede o palet yok
+        // (DESIGN.md §1). Zemin koyu yeşil, eylem açık yeşil.
         SnackbarHost(
             hostState = karMesajDurumu,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(Olcu.EkranKenari),
-        )
+        ) { veri ->
+            Snackbar(
+                snackbarData = veri,
+                containerColor = YesilKoyu,
+                contentColor = Beyaz,
+                actionColor = Yesil200,
+            )
+        }
     }
 
     if (temizleOnayi) {

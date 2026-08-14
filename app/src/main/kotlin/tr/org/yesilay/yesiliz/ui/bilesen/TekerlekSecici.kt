@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import tr.org.yesilay.yesiliz.ui.tema.MetinBirincil
 import tr.org.yesilay.yesiliz.ui.tema.MetinUcuncul
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
-import tr.org.yesilay.yesiliz.ui.tema.Yesil50
+import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 
 /**
  * Tekerlekli değer seçici — ortadaki değer seçili, üstü/altı soluk.
@@ -51,7 +51,7 @@ fun <T> TekerlekSecici(
     secili: T,
     onSec: (T) -> Unit,
     modifier: Modifier = Modifier,
-    gorunenSatir: Int = 5,
+    gorunenSatir: Int = 3,
     satirYuksekligi: Dp = 44.dp,
     etiketle: (T) -> String = { it.toString() },
 ) {
@@ -81,13 +81,17 @@ fun <T> TekerlekSecici(
     Box(modifier = modifier.height(satirYuksekligi * gorunenSatir)) {
         // Ortadaki yuvanın vurgusu — hangi satırın seçili olduğu, metin
         // solukluğundan bağımsız olarak da okunabilsin.
+        //
+        // Beyaz, `Yesil50` değil: bu bileşenin kullanıldığı ekranların zemini
+        // zaten `Yesil50` ve vurgu şeridi zeminle aynı renk olunca görünmez
+        // oluyordu.
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
                 .height(satirYuksekligi)
                 .clip(RoundedCornerShape(Yaricap.Cip))
-                .background(Yesil50),
+                .background(Beyaz),
         )
 
         LazyColumn(

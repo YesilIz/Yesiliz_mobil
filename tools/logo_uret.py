@@ -39,11 +39,19 @@ KOK = Path(__file__).resolve().parent.parent
 KAYNAK = KOK / "docs" / "tasarim" / "yenilogo.png"
 RES = KOK / "app" / "src" / "main" / "res"
 
-# Adaptive icon tuvali 108dp; launcher yalnızca orta 66dp'yi garanti ediyor.
-# İşareti 66/108'in biraz altında tutuyoruz ki en agresif maskede bile
-# kenarına değmesin.
+# Adaptive icon tuvali 108dp.
+#
+# Ölçek KÖŞEGENDEN hesaplanıyor, kenardan değil. Android'in "orta 66dp
+# güvenlidir" garantisi bir KARE tarif ediyor ama maske YUVARLAK: kareye tam
+# oturan dikdörtgen bir işaretin köşeleri çemberin dışında kalıyor. Telefonun
+# altındaki geniş kavis tam olarak orada duruyor ve emülatörde kırpıldığı
+# görüldü (önce 66, sonra 60 denendi — ikisi de kesiyordu).
+#
+# Doğru ölçüt: işaretin sınır kutusunun KÖŞEGENİ maskenin çapından küçük
+# olmalı. Yuvarlak maskenin çapı 72dp; [GUVENLI_KOSEGEN_DP] biraz altında
+# kalıyor ki squircle gibi daha dar maskelerde de pay olsun.
 TUVAL_DP = 108
-GUVENLI_DP = 60
+GUVENLI_KOSEGEN_DP = 66
 
 # mipmap yoğunlukları — 48dp'lik ikonun katları (adaptive icon 108dp tuval).
 YOGUNLUKLAR = {
@@ -100,25 +108,28 @@ def uret() -> None:
     kutu = isaret_kutusu(kaynak)
     isaret = zemin_saydamla(kaynak.crop(kutu))
 
-    # Kare tuvale oturt: işaret 739x856 gibi dikdörtgen, ölçek uzun kenardan.
-    kenar = max(isaret.size)
-    kare = Image.new("RGBA", (kenar, kenar), (0, 0, 0, 0))
-    kare.paste(
-        isaret,
-        ((kenar - isaret.width) // 2, (kenar - isaret.height) // 2),
-        isaret,
-    )
+    gen, yuk = isaret.size
+    kosegen = (gen ** 2 + yuk ** 2) ** 0.5
 
     for ad, boyut in YOGUNLUKLAR.items():
         hedef_klasor = RES / f"mipmap-{ad}"
         hedef_klasor.mkdir(parents=True, exist_ok=True)
 
-        guvenli_px = round(boyut * GUVENLI_DP / TUVAL_DP)
-        olcekli = kare.resize((guvenli_px, guvenli_px), Image.LANCZOS)
+        # Köşegen kuralı: işaret hangi yöne uzarsa uzasın çemberin içinde
+        # kalıyor. En/boy oranı korunuyor.
+        hedef_kosegen = boyut * GUVENLI_KOSEGEN_DP / TUVAL_DP
+        oran = hedef_kosegen / kosegen
+        olcekli = isaret.resize(
+            (max(1, round(gen * oran)), max(1, round(yuk * oran))),
+            Image.LANCZOS,
+        )
 
         tuval = Image.new("RGBA", (boyut, boyut), (0, 0, 0, 0))
-        pay = (boyut - guvenli_px) // 2
-        tuval.paste(olcekli, (pay, pay), olcekli)
+        tuval.paste(
+            olcekli,
+            ((boyut - olcekli.width) // 2, (boyut - olcekli.height) // 2),
+            olcekli,
+        )
 
         hedef = hedef_klasor / "ic_launcher_foreground.png"
         tuval.save(hedef, "PNG", optimize=True)

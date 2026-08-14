@@ -237,7 +237,15 @@ fun AnaEkran(
                 // eksiğini ancak Profil'in derinliklerinde bulabiliyordu.
                 // Kart kapatılabilir — bilinçli reddedeni sürekli dürtmek
                 // §3'ün "zorlama yok" ilkesine aykırı.
-                durum.eksikIzinler.firstOrNull()?.let { eksik ->
+                //
+                // Kullanım izni ZATEN yukarıdaki boş durum kartında
+                // anlatılıyor; ikisini birden göstermek aynı şeyi iki kez
+                // söylemek olurdu. Hatırlatıcı yalnızca o kartın kapsamadığı
+                // eksikleri sunuyor.
+                val ustKartKullanimIznini = !durum.veriVarMi && !durum.izinVarMi
+                durum.eksikIzinler
+                    .filterNot { ustKartKullanimIznini && it == EksikIzin.KULLANIM }
+                    .firstOrNull()?.let { eksik ->
                     IzinHatirlatmaKarti(
                         eksik = eksik,
                         onIzinVer = if (eksik == EksikIzin.KULLANIM) onKullanimIzni else onSaglikIzni,
@@ -764,7 +772,21 @@ private fun GorevSatiri(gorev: GorevOzeti, onTikla: () -> Unit) {
                 )
             }
             if (gorev.tamamlandi) {
-                Cip(metin = "Tamamlandı", ikon = Icons.Filled.CheckCircle, zemin = YesilNane, renk = YesilAna)
+                Cip(
+                    metin = "Tamamlandı",
+                    ikon = Icons.Filled.CheckCircle,
+                    zemin = YesilNane,
+                    renk = YesilAna,
+                )
+            } else if (gorev.gunlukLimit > 1 && gorev.yapilan > 0) {
+                // Kısmen yapılmış çok pencereli görev (ruh hali: 3 pencere).
+                // "Tamamlandı" da "+3p" de yanlış olurdu; kaçının kaldığını
+                // söylemek doğru olan.
+                Cip(
+                    metin = "${gorev.yapilan}/${gorev.gunlukLimit}",
+                    zemin = YesilNane,
+                    renk = YesilAna,
+                )
             } else {
                 Cip(metin = gorev.puan.puanEtiketi(), renk = YesilAna)
             }

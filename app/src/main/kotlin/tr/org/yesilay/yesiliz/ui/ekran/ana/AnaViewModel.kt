@@ -165,7 +165,13 @@ class AnaViewModel @Inject constructor(
                     ara.copy(degerlendirmeYenilensin = yenilensin)
                 }
                 .combine(puanDeposu.gununGorevleri(bugun)) { ara, tamamlananlar ->
-                    val tamamlananIdler = tamamlananlar.map { it.gorevId }.toSet()
+                    // Görev başına KAÇ KEZ yapıldığı, "yapıldı mı" değil.
+                    // Ruh hali günde üç pencere (§12 K41); tek kayıtla
+                    // "Tamamlandı" yazmak kullanıcıyı kalan iki pencereden
+                    // caydırıyordu.
+                    val tamamlanmaSayilari = tamamlananlar
+                        .groupingBy { it.gorevId }
+                        .eachCount()
                     AnaDurum(
                         selamlama = selamlama(),
                         isim = ara.isim,
@@ -188,7 +194,10 @@ class AnaViewModel @Inject constructor(
                                 aciklama = gorev.aciklama,
                                 puan = gorev.puan,
                                 ikon = gorev.ikonu(),
-                                tamamlandi = gorev.id in tamamlananIdler,
+                                tamamlandi = (tamamlanmaSayilari[gorev.id] ?: 0) >=
+                                    gorev.gunlukLimit,
+                                yapilan = tamamlanmaSayilari[gorev.id] ?: 0,
+                                gunlukLimit = gorev.gunlukLimit,
                             )
                         },
                         // `ozet != null` DEĞİL: gecelik worker ölçüm

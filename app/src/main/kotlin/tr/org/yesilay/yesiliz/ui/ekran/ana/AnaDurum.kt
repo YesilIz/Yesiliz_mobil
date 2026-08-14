@@ -98,5 +98,8 @@ data class GorevOzeti(
     val aciklama: String,
     val puan: Int,
     val ikon: ImageVector,
+    /** Bugün kaç kez yapıldı — günlük limiti 1'den büyük görevler için. */
+    val yapilan: Int = 0,
+    val gunlukLimit: Int = 1,
     val tamamlandi: Boolean = false,
 )
