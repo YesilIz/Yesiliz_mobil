@@ -17,18 +17,28 @@ object NudgeSabitleri {
      * `OruntuCikar.BLOK_ESIGI` (30dk, risk skorunun `oturum` örüntüsü) ile
      * bilerek aynı değil — nudge kendi eşiğini taşıyor.
      *
-     * **Şu an 15 saniye: demo/geliştirme değeri.** Popup'ı cihazda 45 dakika
-     * beklemeden görebilmek için bilinçli olarak kısaltıldı (13 Ağu 2026).
-     * [POLL_ARALIGI] ve sönüm süreleri otomatik uyum sağlıyor; `TetikleyiciTest`
-     * de artık dakika sabitleri yerine bu değere **göreli** yazıldığı için
-     * eşik ne olursa olsun yeşil kalıyor.
+     * **45 dakika — gerçek kullanıcı değeri.** Mockup metni de buna göre
+     * ("45 dakikadır buradasın", `DESIGN.md §5`); `NudgeOverlay.AnaKart`
+     * eşik 60 sn'yi aşınca dakikaya çeviriyor ve `BildirimDeposu`'na giden
+     * `ESIK.toMinutes()` de ancak burada anlamlı bir sayı üretiyor.
      *
-     * Gerçek kullanıcı davranışı 45 dakikaydı ve mockup metni ("45 dakikadır
-     * buradasın", `DESIGN.md §5`) hâlâ ona göre. **Yayın öncesi geri alınmalı:**
+     * **Bu satır `dev` ile bilinçli olarak ayrışıyor** (14 Ağu 2026): geliştirme
+     * dalında değer 15 saniye, çünkü popup'ı cihazda doğrulamak için 45 dakika
+     * beklemek pratik değil. Yayınlanan dal olan `main` gerçek değeri taşır —
      * 15 saniyede bir nudge, uygulamanın "zorlama yok, hafif dokunuş" ilkesinin
-     * (CLAUDE.md §3) tam tersi olur.
+     * (CLAUDE.md §3) tam tersi olurdu.
+     *
+     * Ayrışmanın maliyeti: `main` artık `dev`'e fast-forward **edilemez**,
+     * gerçek merge gerekiyor. `dev` bu satıra dokunmadığı sürece birleştirme
+     * 45 dakikayı koruyor; dokunursa çakışma çıkıyor ve karar insana kalıyor —
+     * istenen davranış bu. `git reset --hard dev` ise değeri sessizce yutar.
+     *
+     * [POLL_ARALIGI] ve sönüm süreleri değere otomatik uyum sağlıyor;
+     * `TetikleyiciTest` dakika sabitleri yerine bu değere **göreli** yazıldığı
+     * için iki dalda da yeşil kalıyor — yani testler ayrışmayı yakalamaz,
+     * KDoc'un kendisi tek uyarı noktası.
      */
-    val ESIK: Duration = Duration.ofSeconds(15)
+    val ESIK: Duration = Duration.ofMinutes(45)
 
     /**
      * Canlı izleme aralığı — WorkManager'ın ~15dk asgari periyodu
