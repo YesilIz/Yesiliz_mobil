@@ -56,7 +56,7 @@ data class Cubuk(
  * @param vurgulanan vurgulanacak çubuğun indeksi (bugün / en iyi gün); -1 yoksa
  * @param secili kullanıcının dokunarak seçtiği çubuk; -1 yoksa
  * @param onCubukSecildi dokunma işleyicisi; null ise grafik tıklanamaz
- * @param eksenEtiketleri sağ eksende gösterilecek 3 etiket (üst → alt)
+ * @param eksenBicimi sağ eksendeki üç etiketi çubuk ölçeğinden üretir
  */
 @Composable
 fun CubukGrafik(
@@ -67,7 +67,16 @@ fun CubukGrafik(
     onCubukSecildi: ((Int) -> Unit)? = null,
     renk: Color = YesilAna,
     soluk: Color = Yesil200,
-    eksenEtiketleri: List<String> = emptyList(),
+    /**
+     * Eksen etiketlerini ÇUBUKLARIN ölçeğinden üretir.
+     *
+     * Eskiden sabit bir liste veriliyordu (`8s / 4s / 0`) ama çubuklar
+     * verinin kendi maksimumuna göre ölçekleniyordu: 8 DAKİKALIK bir gün,
+     * tepesinde "8s" yazan bir eksenin altında tam boy çubuk olarak
+     * çiziliyordu. Grafik ile eksen birbirini tutmuyordu — gerçek cihazda
+     * görüldü. Artık ikisi aynı sayıdan türüyor.
+     */
+    eksenBicimi: ((Float) -> String)? = null,
 ) {
     if (cubuklar.isEmpty()) return
     // Ölçek yalnızca VERİSİ OLAN günlerden: veri yok diye 0 yazılan bir
@@ -174,7 +183,12 @@ fun CubukGrafik(
             }
         }
 
-        if (eksenEtiketleri.isNotEmpty()) {
+        if (eksenBicimi != null) {
+            val eksenEtiketleri = listOf(
+                eksenBicimi(enBuyuk),
+                eksenBicimi(enBuyuk / 2f),
+                eksenBicimi(0f),
+            )
             Column(
                 modifier = Modifier
                     .padding(start = Bosluk.S)
@@ -188,6 +202,10 @@ fun CubukGrafik(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MetinUcuncul,
+                        // Etiket veriden türüyor ve uzayabiliyor; sarmak
+                        // yerine tek satırda kalıyor.
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }

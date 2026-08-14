@@ -137,9 +137,8 @@ class GunlukOzetWorker @AssistedInject constructor(
 
             if (tamTarama) tercihler.uydurmaAdimTemizligiBitti()
 
-            // Bildirim defterine bugünün kazanımları. `birKezGunde` koruması
-            // sayesinde worker gün içinde tekrar koşsa da satır katlanmıyor.
-            bugunuBildir(bugun)
+            // Kapanan günün kazanımları bildirim defterine.
+            kapananGunuBildir(bugun)
 
             // Ham olaylar sonsuza kadar tutulmuyor (veri minimizasyonu,
             // CLAUDE.md §4). Özet zaten çıkarıldı.
@@ -185,19 +184,44 @@ class GunlukOzetWorker @AssistedInject constructor(
      * olarak yok — CLAUDE.md §4: ceza suçluluk üretir. Kötü giden bir günü
      * kullanıcıya bildirimle hatırlatmak, uygulamayı sildiren davranış.
      */
-    private suspend fun bugunuBildir(bugun: LocalDate) {
-        val ozet = ozetDao.getir(bugun) ?: return
+    /**
+     * Kapanan günün kutlaması.
+     *
+     * **Bugünü değil DÜNÜ bildiriyor.** Eskiden süren gün için
+     * "Ekran süresi hedefine ulaştın" yazıyordu: sabah 8 dakikayken hedefin
+     * altında olmak gün sonunda hedefin altında kalmak demek değil, üstelik
+     * kurulum gününde yalnızca kurulum sonrası ölçülen birkaç dakika
+     * karşılaştırılıyordu. Puan ve seri zaten gün bitiminde karar veriyor
+     * (§12 K40); kutlama da aynı anda gelmeli, yoksa uygulama puan
+     * vermediği bir başarıyı ilan ediyor (§12 K37).
+     *
+     * `birKezGunde` koruması sayesinde worker gün içinde tekrar koşsa da
+     * satır katlanmıyor.
+     */
+    private suspend fun kapananGunuBildir(bugun: LocalDate) {
+        val gun = bugun.minusDays(1)
+        val ozet = ozetDao.getir(gun) ?: return
+        // Ölçülmemiş gün kutlanmaz: sıfır dakika "hedefin altında" değil
+        // "ölçemedik" demek (CLAUDE.md §9).
+        if (!ozet.olayVarMi) return
+
+        // Gün başından itibaren ölçülmediyse hedef karşılaştırması geçersiz
+        // — `PuanDeposu` ile aynı kural.
+        val veriBaslangici = tercihler.veriBaslangicAni.first()
+        val gunBasi = gun.atStartOfDay(saat.zone).toInstant()
+        if (veriBaslangici != null && veriBaslangici.isAfter(gunBasi)) return
+
         val hedef = tercihler.anlik().gunlukHedefDk
         val ekranDk = ozet.let {
             it.socialDk + it.entertainmentDk + it.gamesDk + it.communicationDk +
                 it.productivityDk + it.educationDk + it.healthDk + it.otherDk
         }.roundToInt()
 
-        if (ekranDk <= hedef) {
+        if (hedef > 0 && ekranDk <= hedef) {
             bildirimDeposu.hedefTutturuldu(ekranDk, hedef)
         }
 
-        val seri = puanDeposu.seriGunu(bugun)
+        val seri = puanDeposu.seriGunu(gun)
         if (seri in SERI_ESIKLERI) {
             bildirimDeposu.seriIlerledi(seri)
         }

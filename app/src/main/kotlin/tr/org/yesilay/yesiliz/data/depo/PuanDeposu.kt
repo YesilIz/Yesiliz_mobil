@@ -1,6 +1,7 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import androidx.room.withTransaction
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
@@ -13,6 +14,7 @@ import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.domain.puan.PuanHesapla
 import tr.org.yesilay.yesiliz.domain.puan.PuanSabitleri
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,6 +37,7 @@ class PuanDeposu @Inject constructor(
     private val puanDao: PuanGunlukDao,
     private val ozetDao: GunlukOzetDao,
     private val tercihler: Tercihler,
+    private val saat: Clock,
 ) {
 
     val toplamPuan: Flow<Int> = puanDao.toplamPuanAkisi()
@@ -90,6 +93,19 @@ class PuanDeposu @Inject constructor(
         val ozet = ozetDao.getir(tarih)
         val hedefDk = tercihler.anlik().gunlukHedefDk
 
+        // Gün BAŞINDAN İTİBAREN ölçüldü mü.
+        //
+        // `KullanimDeposu` bugünü `enErken = veriBaslangicAni` ile işliyor,
+        // yani kurulum/rıza anından öncesi hiç okunmuyor. Saat 14:00'te
+        // kurulan kullanıcının o günkü "toplam ekran süresi" 8 dakika
+        // çıkıyor ve bu, TÜM GÜN için konmuş 285 dakikalık hedefle
+        // karşılaştırılınca hedef tam puanla tutturulmuş sayılıyordu:
+        // misafir kullanıcı uygulamayı açar açmaz 27 puan ve 1 günlük seri
+        // görüyordu. Yarım ölçülen gün hedef için geçerli bir taban değil.
+        val veriBaslangici = tercihler.veriBaslangicAni.first()
+        val gunBasi = tarih.atStartOfDay(saat.zone).toInstant()
+        val tamGunOlculdu = veriBaslangici == null || !veriBaslangici.isAfter(gunBasi)
+
         val toplamEkranDk = ozet?.let {
             it.socialDk + it.entertainmentDk + it.gamesDk + it.communicationDk +
                 it.productivityDk + it.educationDk + it.healthDk + it.otherDk
@@ -106,19 +122,28 @@ class PuanDeposu @Inject constructor(
         // (`debug.md` K-4). Doğru ölçüt satırın varlığı değil, o gün
         // gerçekten kullanım ölçülmüş olması.
         val olcumVar = ozet != null && ozet.olayVarMi
+        val hedefeUygunGun = olcumVar && tamGunOlculdu
 
         // Seri artık hedefe bağlı (bkz. PuanHesapla.yeniSeri). Önceki gün
         // "puan aldığı gün" değil, takvimde bir önceki gün — seri puandan
         // bağımsızlaştığı için "aktif gün" araması anlamını yitirdi.
         val onceki = puanDao.getir(tarih.minusDays(1))
-        val hedefTutturuldu = olcumVar && hedefDk > 0 && toplamEkranDk <= hedefDk
+
+        // Seri kararı GÜN BİTİMİNDE veriliyor (§12 K40). Süren gün için
+        // "hedefi tutturdun" demek, akşam hedef aşılınca geri alınacak bir
+        // seri göstermek olurdu; kullanıcı bunu bozulma sanır.
+        val gunKapandi = tarih < LocalDate.now(saat)
+        val hedefTutturuldu = hedefeUygunGun && gunKapandi &&
+            hedefDk > 0 && toplamEkranDk <= hedefDk
         val jokerHakkiVar = puanDao.jokerKullanilanGunSayisi(
             baslangic = tarih.minusDays(PuanSabitleri.KORUMA_PENCERESI_GUN - 1L),
             bitis = tarih.minusDays(1),
         ) == 0
         val seri = PuanHesapla.yeniSeri(
             oncekiSeri = onceki?.seriGun ?: 0,
-            olculduMu = olcumVar,
+            // Süren gün ve yarım ölçülen gün seriyi ne artırır ne kırar;
+            // önceki günün değeri korunur.
+            olculduMu = hedefeUygunGun && gunKapandi,
             hedefTutturuldu = hedefTutturuldu,
             jokerHakkiVar = jokerHakkiVar,
         )
@@ -129,13 +154,20 @@ class PuanDeposu @Inject constructor(
             adim = ozet?.adim ?: 0.0,
             // Oransal (`debug.md` İ-4): hedefin altındaysan tam puan,
             // aştıkça doğrusal iniyor, iki katında sıfırlanıyor.
-            hedefOrani = if (olcumVar) PuanHesapla.hedefeYakinlik(toplamEkranDk, hedefDk) else 0.0,
+            // Puan gün içinde CANLI birikiyor (seri gibi gün sonuna
+            // bırakılmıyor) ama yarım ölçülen günde verilmiyor: 8 dakikalık
+            // bir ölçümü 285 dakikalık hedefle karşılaştırmak ölçüm değil.
+            hedefOrani = if (hedefeUygunGun) {
+                PuanHesapla.hedefeYakinlik(toplamEkranDk, hedefDk)
+            } else {
+                0.0
+            },
             // Gece ÖLÇÜLEMEYEN günde (olay geçmişi tükenmiş eski gün; orada
             // yalnızca paket başına toplam süre okunabiliyor, saat bilgisi
             // yok) `geceKullanimDk = 0` "gece temiz" demek değil "bilmiyoruz"
             // demek. Puan yazmak, ölçmediğimiz bir davranışı ödüllendirmek
             // olurdu.
-            geceOrani = if (olcumVar && ozet.geceOlculduMu) {
+            geceOrani = if (hedefeUygunGun && ozet.geceOlculduMu) {
                 PuanHesapla.geceTemizligi(ozet.geceKullanimDk)
             } else {
                 0.0

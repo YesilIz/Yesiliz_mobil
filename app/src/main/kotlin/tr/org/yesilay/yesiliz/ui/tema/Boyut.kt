@@ -87,7 +87,14 @@ object Olcu {
     val KartKenarligi = 1.dp
 
     /** çubuk grafiğin sağındaki eksen etiketi sütunu */
-    val GrafikEkseni = 28.dp
+    /**
+     * Grafik eksen sütunu.
+     *
+     * 28dp idi ve eksen sabit etiketler ("8s") taşıdığı sürece yetiyordu.
+     * Etiketler artık veriden türüyor ve "11dk" gibi dört karaktere
+     * çıkabiliyor; dar sütunda iki satıra kırılıyordu.
+     */
+    val GrafikEkseni = 40.dp
 
     /** çubuk ucu yuvarlaması */
     val CubukYaricapi = 4.dp

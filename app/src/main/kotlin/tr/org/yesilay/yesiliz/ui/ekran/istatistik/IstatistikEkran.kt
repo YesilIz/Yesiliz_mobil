@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.risk.Bant
+import kotlin.math.roundToInt
 import tr.org.yesilay.yesiliz.ui.binlik
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BosDurum
@@ -48,7 +49,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.veri.CubukGrafik
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.YiginBar
 import tr.org.yesilay.yesiliz.ui.bilesen.veri.YiginLejant
 import tr.org.yesilay.yesiliz.ui.kisaBin
-import tr.org.yesilay.yesiliz.ui.kisaSaat
+import tr.org.yesilay.yesiliz.ui.eksenSuresi
 import tr.org.yesilay.yesiliz.ui.sureMetni
 import tr.org.yesilay.yesiliz.ui.tema.AdimMavi
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
@@ -122,7 +123,7 @@ fun IstatistikEkran(
                         onCubukSecildi = viewModel::gunSecildi,
                         renk = YesilAna,
                         soluk = Yesil200,
-                        eksenEtiketleri = listOf(EkranTavani.kisaSaat(), (EkranTavani / 2).kisaSaat(), "0"),
+                        eksenBicimi = { it.roundToInt().eksenSuresi() },
                     )
                 }
 
@@ -176,7 +177,7 @@ fun IstatistikEkran(
                         onCubukSecildi = viewModel::gunSecildi,
                         renk = YesilAna,
                         soluk = AdimMavi,
-                        eksenEtiketleri = listOf(AdimTavani.kisaBin(), (AdimTavani / 2).kisaBin(), "0"),
+                        eksenBicimi = { if (it < 1000f) it.roundToInt().toString() else it.roundToInt().kisaBin() },
                     )
                 }
 
@@ -324,5 +325,3 @@ private fun OlcumKarti(
  * uyarı ikonu risk bandını değil "bir şey var, bak" iması taşıyor.
  */
 /** Grafik ekseninin tavanı — tasarımda ekran 8s, adım 8b'de sabit. */
-private const val EkranTavani = 480
-private const val AdimTavani = 8_000

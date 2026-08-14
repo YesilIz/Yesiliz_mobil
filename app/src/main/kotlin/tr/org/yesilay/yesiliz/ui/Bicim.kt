@@ -48,6 +48,19 @@ fun Int.sureMetni(): String {
 /** Grafik ekseni için kısa süre: `480` → `8s`. */
 fun Int.kisaSaat(): String = "${this / 60}s"
 
+/**
+ * Grafik ekseni için süre — bir saatin ALTINI da gösterir.
+ *
+ * [kisaSaat] tam bölme yaptığı için 8 dakikayı "0s" yazıyordu; ekseni
+ * verinin kendi ölçeğinden türetince (grafiğin tepesi 8 dakika olabiliyor)
+ * üç etiket birden "0s" çıkıyordu.
+ */
+fun Int.eksenSuresi(): String = when {
+    this <= 0 -> "0"
+    this < 60 -> "${this}dk"
+    else -> "${this / 60}s"
+}
+
 /** Grafik ekseni için kısa adım: `8000` → `8b`. */
 fun Int.kisaBin(): String = "${this / 1000}b"
 

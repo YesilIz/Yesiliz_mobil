@@ -29,6 +29,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import java.time.Instant
+import java.time.Clock
 import java.time.LocalDate
 
 /**
@@ -218,6 +219,7 @@ class YesilizDbTest {
             puanDao = db.puanGunlukDao(),
             ozetDao = db.gunlukOzetDao(),
             tercihler = Tercihler(baglam),
+            saat = Clock.systemDefaultZone(),
         )
         val gun = LocalDate.of(2026, 8, 11)
 
