@@ -613,11 +613,11 @@ backend pytest). Sayılar **17 Ağustos 2026'da** ölçüldü: JVM tarafı
 `:core-risk:test` + `:app:testDebugUnitTest` (345 test, 0 hata, 1 `Assume`
 atlaması — `TetikleyiciTest`'in "devam et sönümü moladan uzun" senaryosu, `dev`
 dalında iki sönüm de eşiğe eşitlendiği için atlanıyor, §12 K50), backend
-`docker compose exec api pytest -q` (117 passed). Cihaz süiti
-(`connectedDebugAndroidTest`) o gün **koşturulmadı**; en son 11 Ağustos'ta hem
-gerçek telefonda (Samsung SM-A217F · API 31) hem emülatörde (API 36) 44 geçen +
-4 `Assume` atlaması ile koştu (`KullanimOkuyucuTest`, UsageStats izni verilmeden
-atlanıyor; `adb shell appops … allow` sonrası geçiyor). Zincir uçtan uca
+`docker compose exec api pytest -q` (117 passed), cihaz süiti emülatörde
+(API 36) `:app:connectedDebugAndroidTest` (56 test, 0 hata, 4 `Assume`
+atlaması — `KullanimOkuyucuTest`, UsageStats izni verilmeden atlanıyor;
+`adb shell appops … allow` sonrası geçiyor). Süit en son 11 Ağustos'ta gerçek
+telefonda da (Samsung SM-A217F · API 31) koştu. Zincir uçtan uca
 çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
