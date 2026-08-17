@@ -18,11 +18,20 @@ object Gradyan {
     )
 
     /**
-     * Ana sayfadaki ağaç alanı — yeşil başlıktan beyaza sönüyor.
+     * Ana sayfadaki ağaç alanı — yeşil başlıktan açık yeşile sönüyor.
      * Ağaç illüstrasyonu açık zemin için üretildiği için geçiş şart.
+     *
+     * Marka yeşili ilk %12'de **korunuyor**: başlığın metinleri beyaz ve
+     * başlık zemini ancak kaydırınca opaklaşıyor (`AnaEkran`), yani üst şerit
+     * koyu kalmazsa beyaz metin okunmaz oluyor. Onun altında hızla açılıyor —
+     * arkadaki manzara ([tr.org.yesilay.yesiliz.ui.bilesen.OrmanZemini])
+     * doygun yeşilin üstünde hiç okunmuyordu.
      */
     val BaslikSonumu: Brush = Brush.verticalGradient(
-        listOf(YesilAna, Beyaz),
+        0.00f to YesilAna,
+        0.12f to YesilAna,
+        0.30f to YesilNane,
+        1.00f to Yesil50,
     )
 
     /** Puan kartı — sol üst koyu yeşil, sağ alt açık yeşil. */
