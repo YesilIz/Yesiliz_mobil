@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.domain.hesap.Oturum
+import tr.org.yesilay.yesiliz.nudge.NudgeAyari
 import java.time.LocalDate
 import java.time.Instant
 import javax.inject.Inject
@@ -125,6 +126,35 @@ class Tercihler @Inject constructor(
 
     /** Varsayılan **kapalı** — overlay izni gerektirdiği için opt-in. */
     val molaHatirlaticiAcikMi: Flow<Boolean> = depo.data.map { it[MOLA_HATIRLATICI] ?: false }
+
+    /**
+     * Kullanıcının seçtiği nudge eşiği (dakika) — hiç seçmediyse `null`.
+     *
+     * `null`'ın ayrı bir değer olması gerekiyor: seçim yapılmamışsa etkin
+     * eşik derlemeye gömülü varsayılandır (`NudgeAyari.VARSAYILAN`, dala
+     * göre 45 dk / 15 sn — §12 K50). Burada 45 yazsaydık `main` ile `dev`
+     * arasındaki ayrım DataStore'a sızardı.
+     *
+     * Aralık denetimi okuyan tarafta ([NudgeAyari.kirp]): yedekten ya da
+     * eski bir sürümden gelen değer de sınıra çekilir.
+     */
+    val nudgeEsikDk: Flow<Int?> = depo.data.map { it[NUDGE_ESIK] }
+
+    suspend fun nudgeEsiginiKaydet(dakika: Int) {
+        depo.edit { it[NUDGE_ESIK] = NudgeAyari.kirp(dakika) }
+    }
+
+    /**
+     * Seçimi siler — etkin eşik yeniden derlemeye gömülü varsayılan olur.
+     *
+     * Değeri varsayılana **eşitlemek** yetmiyordu: `dev` dalının 15 saniyelik
+     * doğrulama eşiği (§12 K50) 15 dakikalık alt sınırın altında, yani bir kez
+     * kaydettikten sonra hiçbir seçimle geri gelmiyor. Anahtarı kaldırmak tek
+     * yol.
+     */
+    suspend fun nudgeEsiginiSifirla() {
+        depo.edit { it.remove(NUDGE_ESIK) }
+    }
 
     // --- günlük hatırlatma saatleri ---
 
@@ -460,6 +490,7 @@ class Tercihler @Inject constructor(
         private val EBEVEYN_ESLESMIS = booleanPreferencesKey("ebeveyn_eslesmis")
         private val EBEVEYN_ROL = stringPreferencesKey("ebeveyn_cihaz_rolu")
         private val MOLA_HATIRLATICI = booleanPreferencesKey("mola_hatirlatici_acik")
+        private val NUDGE_ESIK = intPreferencesKey("nudge_esik_dk")
 
         /**
          * `"acik|sabahSaati|aksamSaati"` — ör. `"true|9|21"`.

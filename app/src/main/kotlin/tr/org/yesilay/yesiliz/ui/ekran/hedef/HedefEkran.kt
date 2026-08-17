@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.nudge.NudgeAyari
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -107,6 +108,8 @@ fun HedefEkran(
 
                 AyarSeridi(
                     deger = durum.secilenDk,
+                    enAz = HedefSinir.EN_AZ,
+                    enCok = HedefSinir.EN_COK,
                     onAzalt = viewModel::azalt,
                     onArttir = viewModel::arttir,
                 )
@@ -123,10 +126,12 @@ fun HedefEkran(
                     }
                 }
 
+                MolaEsigiBolumu(durum = durum, viewModel = viewModel)
+
                 BilgiSeridi(ebeveynAktifMi = durum.ebeveynAktifMi)
 
                 BirincilButon(
-                    metin = if (durum.kaydedildi) "Kaydedildi" else "Hedefi kaydet",
+                    metin = if (durum.kaydedildi) "Kaydedildi" else "Kaydet",
                     onTikla = viewModel::kaydet,
                     etkin = durum.degistiMi,
                 )
@@ -135,9 +140,75 @@ fun HedefEkran(
     }
 }
 
+/**
+ * Kesintisiz ekran süresi eşiği — nudge bu süre dolunca çıkıyor.
+ *
+ * Aynı ekranda duruyor çünkü kullanıcı için tek bir soru: "günde ne kadar,
+ * bir oturuşta ne kadar". Sınırlar [NudgeAyari]'de ve seçim onlarla kırpılıyor
+ * — 12 saatlik bir eşik hatırlatıcıyı hiç tetiklenmez hâle getirirdi.
+ */
+@Composable
+private fun MolaEsigiBolumu(durum: HedefDurum, viewModel: HedefViewModel) {
+    BolumBasligi("Mola hatırlatıcı")
+
+    Text(
+        text = "Kesintisiz ${durum.secilenNudgeDk.sureMetni()} ekranda kalınca " +
+            "kısa bir mola önerisi çıkar.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MetinIkincil,
+    )
+
+    AyarSeridi(
+        deger = durum.secilenNudgeDk,
+        enAz = NudgeAyari.EN_AZ_DK,
+        enCok = NudgeAyari.EN_COK_DK,
+        onAzalt = viewModel::nudgeAzalt,
+        onArttir = viewModel::nudgeArttir,
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
+        NudgeAyari.HIZLI_SECIM.forEach { dakika ->
+            HizliCip(
+                dakika = dakika,
+                secili = dakika == durum.secilenNudgeDk,
+                onTikla = { viewModel.nudgeAyarla(dakika) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+
+    // Varsayılana dönmek yalnızca kayıtlı bir seçim varken anlamlı.
+    if (durum.nudgeSecilmisMi) {
+        Text(
+            text = "Varsayılana dön",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = YesilAna,
+            modifier = Modifier.clickable(onClick = viewModel::nudgeVarsayilanaDon),
+        )
+    }
+
+    // Hatırlatıcı kapalıyken eşiğin bir etkisi yok; bunu söylememek,
+    // çalışmayan bir ayarı çalışıyormuş gibi göstermek olurdu (§12 K37).
+    if (!durum.molaHatirlaticiAcik) {
+        Text(
+            text = "Mola hatırlatıcı şu anda kapalı. Profil › Gizlilik'teki " +
+                "\"Mola hatırlatıcı\" anahtarını açtığında bu eşik geçerli olur.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MetinUcuncul,
+        )
+    }
+}
+
 /** `−` (beyaz) · değer · `+` (YesilAna) — tasarım 34'teki şerit. */
 @Composable
-private fun AyarSeridi(deger: Int, onAzalt: () -> Unit, onArttir: () -> Unit) {
+private fun AyarSeridi(
+    deger: Int,
+    enAz: Int,
+    enCok: Int,
+    onAzalt: () -> Unit,
+    onArttir: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -151,7 +222,7 @@ private fun AyarSeridi(deger: Int, onAzalt: () -> Unit, onArttir: () -> Unit) {
             aciklama = "Azalt",
             zemin = Beyaz,
             renk = MetinBirincil,
-            etkin = deger > HedefSinir.EN_AZ,
+            etkin = deger > enAz,
             onTikla = onAzalt,
         )
         Text(
@@ -167,7 +238,7 @@ private fun AyarSeridi(deger: Int, onAzalt: () -> Unit, onArttir: () -> Unit) {
             aciklama = "Arttır",
             zemin = YesilAna,
             renk = Beyaz,
-            etkin = deger < HedefSinir.EN_COK,
+            etkin = deger < enCok,
             onTikla = onArttir,
         )
     }

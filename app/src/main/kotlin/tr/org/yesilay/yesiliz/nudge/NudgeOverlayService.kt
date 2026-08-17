@@ -30,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tr.org.yesilay.yesiliz.MainActivity
@@ -38,6 +39,7 @@ import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
 import tr.org.yesilay.yesiliz.data.kullanim.OturumCikar
+import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.domain.kategori.KategoriEsleyici
 import tr.org.yesilay.yesiliz.domain.kullanim.KullanimOlay
@@ -66,6 +68,7 @@ class NudgeOverlayService : Service() {
     @Inject lateinit var kullanimOkuyucu: KullanimOkuyucu
     @Inject lateinit var kategoriDeposu: KategoriDeposu
     @Inject lateinit var bildirimDeposu: BildirimDeposu
+    @Inject lateinit var tercihler: Tercihler
     @Inject lateinit var saat: Clock
 
     private val servisIsi = SupervisorJob()
@@ -120,13 +123,16 @@ class NudgeOverlayService : Service() {
         val esleyici = kategoriDeposu.esleyiciAl()
 
         while (kapsam.isActive) {
+            // Eşik her turda yeniden okunuyor: kullanıcı Hedeflerim'den
+            // değiştirdiğinde servisi yeniden başlatmak gerekmesin.
+            val ayar = NudgeAyari.dakikadan(tercihler.nudgeEsikDk.first())
             val simdi = Instant.now(saat)
             // Pencereyi en az 10 dakika tut ki kısa eşiklerde bile yeterli
             // geçmiş olsun ve UsageStatsManager'ın gecikmeyle yazdığı
             // olaylar da yakalanabilsin.
             val enAzPencere = OruntuCikar.BLOK_TOLERANSI.plusMinutes(10)
             val pencere = maxOf(
-                NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5),
+                ayar.esik.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5),
                 enAzPencere,
             )
             // Ham olaylar: kendi paketimiz **dahil**. Eleme yapan
@@ -151,7 +157,7 @@ class NudgeOverlayService : Service() {
                     Log.d(TAG, "poll: onPlan=$onPlanPaketi tuketimden cikildi, overlay kapatiliyor")
                     withContext(Dispatchers.Main) { eylemVeKapat(EylemTuru.MOLA_VERILDI) }
                 }
-                delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
+                delay(ayar.pollAraligi.toMillis())
                 continue
             }
 
@@ -167,7 +173,13 @@ class NudgeOverlayService : Service() {
             // oturumun bitişini şimdiye uzat.
             val guncelTuketim = if (suAnTuketimdeMi) onPlanTuketimUzat(tuketimOlaylari, simdi) else tuketimOlaylari
 
-            val sonuc = Tetikleyici.degerlendir(guncelTuketim, simdi, sonEylem, suAnTuketimdeMi)
+            val sonuc = Tetikleyici.degerlendir(
+                guncelTuketim,
+                simdi,
+                sonEylem,
+                suAnTuketimdeMi,
+                ayar,
+            )
             Log.d(
                 TAG,
                 "poll: oturum=${oturumlar.size} tuketim=${guncelTuketim.size} " +
@@ -175,15 +187,13 @@ class NudgeOverlayService : Service() {
             )
 
             if (sonuc == TetikSonucu.GOSTER) {
-                overlayiGoster()
+                overlayiGoster(ayar)
                 // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
                 // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
                 // "neden mola önerdi" sorusunun cevabını saklıyor.
-                bildirimDeposu.molaHatirlatildi(
-                    NudgeSabitleri.ESIK.toMinutes().toInt(),
-                )
+                bildirimDeposu.molaHatirlatildi(ayar.esik.toMinutes().toInt())
             }
-            delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
+            delay(ayar.pollAraligi.toMillis())
         }
     }
 
@@ -235,7 +245,7 @@ class NudgeOverlayService : Service() {
         return olaylar
     }
 
-    private suspend fun overlayiGoster() = withContext(Dispatchers.Main) {
+    private suspend fun overlayiGoster(ayar: NudgeAyari) = withContext(Dispatchers.Main) {
         if (overlayGorunumu != null) return@withContext
         val yasamDongusu = OverlayYasamDongusu().apply { baslat() }
         val viewModelSahibi = object : ViewModelStoreOwner {
@@ -249,7 +259,7 @@ class NudgeOverlayService : Service() {
             setContent {
                 YesilizTemasi {
                     NudgeOverlay(
-                        esikSaniye = NudgeSabitleri.ESIK.seconds,
+                        esikSaniye = ayar.esik.seconds,
                         onDevamEt = { eylemVeKapat(EylemTuru.DEVAM_EDILDI) },
                         onNefesEvet = {
                             nefesEkraninaGit()

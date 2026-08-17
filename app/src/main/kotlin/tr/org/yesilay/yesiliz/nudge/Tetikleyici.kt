@@ -31,24 +31,27 @@ object Tetikleyici {
      * @param simdi tetikleyicinin çalıştığı an
      * @param sonEylem overlay en son ne zaman/nasıl kapatıldı — `null` ise
      *   sönüm penceresi yok
+     * @param ayar etkin eşik ve sönüm süreleri; kullanıcının seçtiği eşikten
+     *   türüyor (`NudgeAyari`), verilmezse varsayılan
      */
     fun degerlendir(
         tuketimOlaylari: List<KullanimOlay>,
         simdi: Instant,
         sonEylem: SonEylem?,
         suAnTuketimdeMi: Boolean = true,
+        ayar: NudgeAyari = NudgeAyari.VARSAYILAN,
     ): TetikSonucu {
         if (!suAnTuketimdeMi) return TetikSonucu.GOSTERME
 
         if (sonEylem != null) {
             val sonum = when (sonEylem.tur) {
-                EylemTuru.MOLA_VERILDI -> NudgeSabitleri.SONUM_MOLA
-                EylemTuru.DEVAM_EDILDI -> NudgeSabitleri.SONUM_DEVAM
+                EylemTuru.MOLA_VERILDI -> ayar.sonumMola
+                EylemTuru.DEVAM_EDILDI -> ayar.sonumDevam
             }
             if (Duration.between(sonEylem.an, simdi) < sonum) return TetikSonucu.GOSTERME
         }
 
-        return if (acikBlokSuresi(tuketimOlaylari, simdi) >= NudgeSabitleri.ESIK) {
+        return if (acikBlokSuresi(tuketimOlaylari, simdi) >= ayar.esik) {
             TetikSonucu.GOSTER
         } else {
             TetikSonucu.GOSTERME

@@ -143,7 +143,7 @@ class TetikleyiciTest {
         val simdi = an(uzunBlok)
         val sonEylem = SonEylem(
             EylemTuru.MOLA_VERILDI,
-            simdi.minus(NudgeSabitleri.SONUM_MOLA.dividedBy(2)),
+            simdi.minus(NudgeAyari.VARSAYILAN.sonumMola.dividedBy(2)),
         )
         val sonuc = Tetikleyici.degerlendir(olaylar, simdi, sonEylem)
         assertEquals(TetikSonucu.GOSTERME, sonuc)
@@ -155,7 +155,7 @@ class TetikleyiciTest {
         val simdi = an(uzunBlok)
         val sonEylem = SonEylem(
             EylemTuru.MOLA_VERILDI,
-            simdi.minus(NudgeSabitleri.SONUM_MOLA).minusSeconds(1),
+            simdi.minus(NudgeAyari.VARSAYILAN.sonumMola).minusSeconds(1),
         )
         val sonuc = Tetikleyici.degerlendir(olaylar, simdi, sonEylem)
         assertEquals(TetikSonucu.GOSTER, sonuc)
@@ -163,18 +163,18 @@ class TetikleyiciTest {
 
     @Test
     fun `devam et sonumu moladan daha uzun`() {
-        // Her iki sönüm de eşikle sınırlanıyor (`NudgeSabitleri`): eşik 10
+        // Her iki sönüm de eşikle sınırlanıyor (`NudgeAyari`): eşik 10
         // dakikanın altına çekilirse ikisi de eşiğe eşitlenir ve "daha uzun"
         // diye bir fark kalmaz. O ayarda test edilecek bir davranış yok;
         // 45 dakikalık gerçek eşikte korunması gereken şey duruyor.
-        assumeTrue(NudgeSabitleri.SONUM_DEVAM > NudgeSabitleri.SONUM_MOLA)
+        assumeTrue(NudgeAyari.VARSAYILAN.sonumDevam > NudgeAyari.VARSAYILAN.sonumMola)
 
         val olaylar = listOf(olay(Duration.ZERO, uzunBlok))
         val simdi = an(uzunBlok)
         // Mola sönümü geçmiş olurdu ama Devam et sönümü hâlâ sürüyor.
         val sonEylem = SonEylem(
             EylemTuru.DEVAM_EDILDI,
-            simdi.minus(NudgeSabitleri.SONUM_MOLA).minusSeconds(1),
+            simdi.minus(NudgeAyari.VARSAYILAN.sonumMola).minusSeconds(1),
         )
         val sonuc = Tetikleyici.degerlendir(olaylar, simdi, sonEylem)
         assertEquals(TetikSonucu.GOSTERME, sonuc)
