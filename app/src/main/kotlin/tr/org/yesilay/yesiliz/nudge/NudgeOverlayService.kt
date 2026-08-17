@@ -38,6 +38,8 @@ import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KategoriDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimOkuyucu
 import tr.org.yesilay.yesiliz.data.kullanim.OturumCikar
+import tr.org.yesilay.yesiliz.domain.kategori.Kategori
+import tr.org.yesilay.yesiliz.domain.kategori.KategoriEsleyici
 import tr.org.yesilay.yesiliz.domain.kullanim.KullanimOlay
 import tr.org.yesilay.yesiliz.domain.kullanim.OruntuCikar
 import tr.org.yesilay.yesiliz.risk.Sabitler
@@ -70,6 +72,16 @@ class NudgeOverlayService : Service() {
     private val kapsam = CoroutineScope(Dispatchers.Default + servisIsi)
 
     private var sonEylem: SonEylem? = null
+
+    /**
+     * En son bilinen ön plan paketi — [OnPlanTespit.onPlandakiPaket]'in
+     * başlangıç değeri.
+     *
+     * Kayan pencerede hiç ön plan olayı olmaması "bilinmiyor" değil,
+     * "kullanıcı aynı uygulamada kaldı" demek: eşikten uzun süren tam da
+     * nudge'ın hedeflediği oturumlar bu duruma düşüyor.
+     */
+    private var sonOnPlanPaketi: String? = null
     private var overlayGorunumu: ComposeView? = null
     private var overlaySahibi: OverlayYasamDongusu? = null
     private var otoKapanmaIsi: Job? = null
@@ -108,54 +120,88 @@ class NudgeOverlayService : Service() {
         val esleyici = kategoriDeposu.esleyiciAl()
 
         while (kapsam.isActive) {
-            if (overlayGorunumu == null) {
-                val simdi = Instant.now(saat)
-                // Pencereyi en az 10 dakika tut ki kısa eşiklerde bile yeterli
-                // geçmiş olsun ve UsageStatsManager'ın gecikmeyle yazdığı
-                // olaylar da yakalanabilsin.
-                val enAzPencere = OruntuCikar.BLOK_TOLERANSI.plusMinutes(10)
-                val pencere = maxOf(
-                    NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5),
-                    enAzPencere,
+            val simdi = Instant.now(saat)
+            // Pencereyi en az 10 dakika tut ki kısa eşiklerde bile yeterli
+            // geçmiş olsun ve UsageStatsManager'ın gecikmeyle yazdığı
+            // olaylar da yakalanabilsin.
+            val enAzPencere = OruntuCikar.BLOK_TOLERANSI.plusMinutes(10)
+            val pencere = maxOf(
+                NudgeSabitleri.ESIK.plus(OruntuCikar.BLOK_TOLERANSI).plusMinutes(5),
+                enAzPencere,
+            )
+            // Ham olaylar: kendi paketimiz **dahil**. Eleme yapan
+            // `sonPencereOlaylari` burada kullanılamaz — o eleme yüzünden
+            // kullanıcının Yeşilİz'e geçişi görünmüyor, tüketim oturumu
+            // hiç kapanmıyor ve nudge kendi uygulamamızın üstünde
+            // tetikleniyordu (§12 K51).
+            val hamOlaylar = kullanimOkuyucu.sonPencereHamOlaylari(pencere, simdi)
+
+            val onPlanPaketi = OnPlanTespit.onPlandakiPaket(hamOlaylar, sonOnPlanPaketi)
+            sonOnPlanPaketi = onPlanPaketi
+            val suAnTuketimdeMi = OnPlanTespit.tuketimdeMi(onPlanPaketi) {
+                tuketimKategorisi(it, esleyici) != null
+            }
+
+            if (overlayGorunumu != null) {
+                // Overlay dururken de ön plan sorulmaya devam ediyor:
+                // kullanıcı tüketim uygulamasından çıktıysa nudge'ın işi
+                // bitmiştir. Kapatılmazsa overlay kullanıcıyı Yeşilİz'e —
+                // hatta kendi önerdiği nefes ekranına — kadar takip ediyor.
+                if (!suAnTuketimdeMi) {
+                    Log.d(TAG, "poll: onPlan=$onPlanPaketi tuketimden cikildi, overlay kapatiliyor")
+                    withContext(Dispatchers.Main) { eylemVeKapat(EylemTuru.MOLA_VERILDI) }
+                }
+                delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
+                continue
+            }
+
+            val oturumlar = OturumCikar.cikar(hamOlaylar, simdi.minus(pencere), simdi)
+            val tuketimOlaylari = oturumlar.mapNotNull { oturum ->
+                val kategori = tuketimKategorisi(oturum.paketAdi, esleyici)
+                    ?: return@mapNotNull null
+                KullanimOlay(oturum.paketAdi, kategori, oturum.baslangic, oturum.bitis)
+            }
+
+            // Ön plandaki uygulamayı kontrol et: UsageStatsManager olayları
+            // gecikebilir; hâlâ açık olan tüketim uygulaması için son
+            // oturumun bitişini şimdiye uzat.
+            val guncelTuketim = if (suAnTuketimdeMi) onPlanTuketimUzat(tuketimOlaylari, simdi) else tuketimOlaylari
+
+            val sonuc = Tetikleyici.degerlendir(guncelTuketim, simdi, sonEylem, suAnTuketimdeMi)
+            Log.d(
+                TAG,
+                "poll: oturum=${oturumlar.size} tuketim=${guncelTuketim.size} " +
+                    "onPlan=$onPlanPaketi tuketimde=$suAnTuketimdeMi sonuc=$sonuc",
+            )
+
+            if (sonuc == TetikSonucu.GOSTER) {
+                overlayiGoster()
+                // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
+                // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
+                // "neden mola önerdi" sorusunun cevabını saklıyor.
+                bildirimDeposu.molaHatirlatildi(
+                    NudgeSabitleri.ESIK.toMinutes().toInt(),
                 )
-                val hamOlaylar = kullanimOkuyucu.sonPencereOlaylari(pencere, simdi)
-                val oturumlar = OturumCikar.cikar(hamOlaylar, simdi.minus(pencere), simdi)
-
-                val sonOturum = oturumlar.maxByOrNull { it.bitis }
-                val suAnTuketimdeMi = sonOturum != null && esleyici.bul(
-                    sonOturum.paketAdi,
-                    kullanimOkuyucu.androidKategorisi(sonOturum.paketAdi),
-                ).anahtar in Sabitler.TUKETIM
-
-                val tuketimOlaylari = oturumlar.mapNotNull { oturum ->
-                    val kategori = esleyici.bul(
-                        oturum.paketAdi,
-                        kullanimOkuyucu.androidKategorisi(oturum.paketAdi),
-                    )
-                    if (kategori.anahtar !in Sabitler.TUKETIM) return@mapNotNull null
-                    KullanimOlay(oturum.paketAdi, kategori, oturum.baslangic, oturum.bitis)
-                }
-
-                // Ön plandaki uygulamayı kontrol et: UsageStatsManager olayları
-                // gecikebilir; hâlâ açık olan tüketim uygulaması için son
-                // oturumun bitişini şimdiye uzat.
-                val guncelTuketim = if (suAnTuketimdeMi) onPlanTuketimUzat(tuketimOlaylari, simdi) else tuketimOlaylari
-
-                val sonuc = Tetikleyici.degerlendir(guncelTuketim, simdi, sonEylem, suAnTuketimdeMi)
-                Log.d(TAG, "poll: oturum=${oturumlar.size} tuketim=${guncelTuketim.size} sonuc=$sonuc")
-
-                if (sonuc == TetikSonucu.GOSTER) {
-                    overlayiGoster()
-                    // Overlay 3-5 saniye görünüp kayboluyor; kullanıcı ekrana
-                    // bakmıyorsa kaçırıyor. Bildirim defterine düşmesi,
-                    // "neden mola önerdi" sorusunun cevabını saklıyor.
-                    bildirimDeposu.molaHatirlatildi(
-                        NudgeSabitleri.ESIK.toMinutes().toInt(),
-                    )
-                }
             }
             delay(NudgeSabitleri.POLL_ARALIGI.toMillis())
         }
+    }
+
+    /**
+     * Paket nudge'ın saydığı "tüketim"e giriyor mu — giriyorsa kategorisi.
+     *
+     * Hem "şu an tüketimde miyiz" sorusu hem blok süresini besleyen olay
+     * listesi buradan geçiyor ki tanım tek yerde kalsın.
+     *
+     * **Kendi paketimiz açıkça dışarıda.** Kategori tablosunda yer almadığı
+     * için zaten `VARSAYILAN`'a düşüyor, ama nudge'ın kendi uygulamasının
+     * (hatta kendi nefes egzersizinin) üstünde çıkması T4-003'ün ta
+     * kendisiydi; bu kez varsayıma değil yazılı bir satıra dayanıyor.
+     */
+    private fun tuketimKategorisi(paketAdi: String, esleyici: KategoriEsleyici): Kategori? {
+        if (paketAdi == packageName) return null
+        val kategori = esleyici.bul(paketAdi, kullanimOkuyucu.androidKategorisi(paketAdi))
+        return kategori.takeIf { it.anahtar in Sabitler.TUKETIM }
     }
 
     /**
