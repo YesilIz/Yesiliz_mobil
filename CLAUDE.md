@@ -596,7 +596,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
-| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **82 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **117 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
 | `backend/` dağıtım katmanı | Ortam ayrımı + üretim açılış kapısı (`ayarlar.py`) · `/health` (DB kontrollü) · JSON log + `X-Istek-Id` + gizli değer maskesi (`gunluk.py`) · CORS · açılışta migration (`baslat.sh`) · `railway.json` · `.env.ornek` | **23 pytest**; yerel yığında `/health` 200 ve `alembic current` = head |
 | `backend/smoke/` | Canlı ortama karşı uçtan uca akış — `/health` → kayıt → giriş → korumalı uç → `POST /ozet` → `GET /lig` → `DELETE /auth/hesap` temizliği | **canlı ortama karşı koştu** (CI, 5 Ağu); `pytest.ini` normal koşumdan ayırıyor |
 | `.github/workflows/` | `backend.yml` (test → güvenlik kapısı → imaj → Railway → `/health` → smoke) · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | **`main`'de uçtan uca yeşil koştu** (5 Ağu): dağıtım + `/health` + smoke |
@@ -608,12 +608,17 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/depo/SunucuDepolar` | Release'in bağladığı sunucu-yalnız depolar — sahte veri yok, hata indirgeniyor (boş sonuç + `cevrimdisi` + logcat) | release APK'da `10.0.2.2` ve şifresiz adres yok (dex denetlendi) |
 | `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil; uzak seçimler yerele alınır, bekleyen yerel seçimler yeniden gönderilir | **3 cihaz + 2 uzlaştırma testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 484 test** (291 Android birim + 56 cihaz/emülatör + 30 core-risk + 107
-backend pytest). 11 Ağustos 2026'da hepsi koştu: JVM ve backend tarafı tek
-makinede sıfır hatayla, cihaz tarafı hem gerçek telefonda (Samsung SM-A217F ·
-API 31) hem emülatörde (API 36) 44 geçen + 4 `Assume` atlaması ile
-(`KullanimOkuyucuTest`, UsageStats izni verilmeden atlanıyor; `adb shell
-appops … allow` sonrası geçiyor). Zincir uçtan uca çalışıyor:
+**Toplam 518 test** (315 Android birim + 56 cihaz/emülatör + 30 core-risk + 117
+backend pytest). Sayılar **17 Ağustos 2026'da** ölçüldü: JVM tarafı
+`:core-risk:test` + `:app:testDebugUnitTest` (345 test, 0 hata, 1 `Assume`
+atlaması — `TetikleyiciTest`'in "devam et sönümü moladan uzun" senaryosu, `dev`
+dalında iki sönüm de eşiğe eşitlendiği için atlanıyor, §12 K50), backend
+`docker compose exec api pytest -q` (117 passed). Cihaz süiti
+(`connectedDebugAndroidTest`) o gün **koşturulmadı**; en son 11 Ağustos'ta hem
+gerçek telefonda (Samsung SM-A217F · API 31) hem emülatörde (API 36) 44 geçen +
+4 `Assume` atlaması ile koştu (`KullanimOkuyucuTest`, UsageStats izni verilmeden
+atlanıyor; `adb shell appops … allow` sonrası geçiyor). Zincir uçtan uca
+çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
