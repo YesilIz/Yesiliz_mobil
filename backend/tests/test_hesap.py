@@ -313,6 +313,74 @@ def test_profil_avatari_sonraki_giriste_geri_geliyor(istemci, kullanici_kur):
     assert giris["avatar"] == "AGAC"
 
 
+def test_profil_avatarsiz_patch_kayitli_avatari_koruyor(istemci, kullanici_kur, db):
+    """
+    `PATCH` kısmi güncellemedir: gövdede olmayan alan değişmemeli.
+
+    `avatar` şemada `default=""` taşıyordu ve uç bunu koşulsuz atıyordu;
+    yalnızca şifre değiştiren bir istek kayıtlı avatarı **siliyordu**
+    (4. tarama T4-005).
+    """
+    baslik, _ = kullanici_kur()
+    istemci.patch("/auth/profil", json={"ad": "Turan", "avatar": "YAPRAK"}, headers=baslik)
+
+    yanit = istemci.patch(
+        "/auth/profil",
+        json={"ad": "Turan", "mevcutSifre": "parola123", "yeniSifre": "yeniparola1"},
+        headers=baslik,
+    )
+
+    assert yanit.status_code == 200, yanit.text
+    assert yanit.json()["avatar"] == "YAPRAK"
+    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com"))
+    db.refresh(kullanici)
+    assert kullanici.avatar == "YAPRAK"
+
+
+def test_profil_bos_avatar_gonderilince_temizleniyor(istemci, kullanici_kur, db):
+    """"Gönderilmedi" ile "boş gönderildi" farkı korunmalı."""
+    baslik, _ = kullanici_kur()
+    istemci.patch("/auth/profil", json={"ad": "Turan", "avatar": "YAPRAK"}, headers=baslik)
+
+    yanit = istemci.patch("/auth/profil", json={"avatar": ""}, headers=baslik)
+
+    assert yanit.status_code == 200, yanit.text
+    assert yanit.json()["avatar"] == ""
+    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com"))
+    db.refresh(kullanici)
+    assert not kullanici.avatar
+
+
+def test_profil_adsiz_patch_kayitli_adi_koruyor(istemci, kullanici_kur, db):
+    """Aynı kusurun `ad` tarafı: alan zorunluydu, yani `PATCH` PUT gibiydi."""
+    baslik, _ = kullanici_kur()
+    istemci.patch("/auth/profil", json={"ad": "Turan K", "avatar": "AGAC"}, headers=baslik)
+
+    yanit = istemci.patch("/auth/profil", json={"avatar": "YAPRAK"}, headers=baslik)
+
+    assert yanit.status_code == 200, yanit.text
+    assert yanit.json() == {
+        "ad": "Turan K",
+        "eposta": "turan@example.com",
+        "avatar": "YAPRAK",
+    }
+    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com"))
+    db.refresh(kullanici)
+    assert (kullanici.ad, kullanici.avatar) == ("Turan K", "YAPRAK")
+
+
+def test_profil_bos_govde_hicbir_seyi_degistirmiyor(istemci, kullanici_kur, db):
+    baslik, _ = kullanici_kur()
+    istemci.patch("/auth/profil", json={"ad": "Turan K", "avatar": "AGAC"}, headers=baslik)
+
+    yanit = istemci.patch("/auth/profil", json={}, headers=baslik)
+
+    assert yanit.status_code == 200, yanit.text
+    kullanici = db.scalar(select(Kullanici).where(Kullanici.eposta == "turan@example.com"))
+    db.refresh(kullanici)
+    assert (kullanici.ad, kullanici.avatar) == ("Turan K", "AGAC")
+
+
 def test_profilden_sifre_degistirince_yeni_sifre_geciyor(istemci, kullanici_kur):
     baslik, _ = kullanici_kur()
 
