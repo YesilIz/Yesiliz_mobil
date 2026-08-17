@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import tr.org.yesilay.yesiliz.data.depo.BeyanDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
+import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.domain.gorev.UykuAraligi
 import java.time.Clock
 import java.time.LocalDate
@@ -45,8 +46,38 @@ data class EkranSuresiVerisi(
         return if (saat > 0) "${saat}s ${kalan}dk" else "${kalan}dk"
     }
 
-    private companion object {
-        const val DAKIKA_SAAT = 60
+    companion object {
+        private const val DAKIKA_SAAT = 60
+
+        /**
+         * Günlük özet satırından widget verisi — **SAF FONKSİYON**.
+         *
+         * Eşleme buraya ayrıldı ki "satır var, ölçüm yok" durumu Android
+         * olmadan sınanabilsin; kusur tam olarak orada yaşıyordu.
+         *
+         * [GunlukOzetEntity.olayVarMi]'ye bakıyor, `ozet != null`'a **değil**:
+         * gecelik worker ölçüm bulamadığı güne de sıfır dolu bir satır
+         * yazıyor (CLAUDE.md §9 "Satır var ≠ veri var"). Satırın varlığını
+         * veri saymak, widget'ın hiç ölçülmemiş bir gün için `%0 · 0dk`
+         * göstermesi demekti — yani kullanıcıya hedefini tutturmuş gibi
+         * görünen, ölçülmemiş bir sayı (§12 K39). Uygulamanın kendi ana
+         * ekranı (`AnaViewModel`) aynı gün için doğru soruyu soruyordu;
+         * iki yüzey birbirine zıt şey söylüyordu.
+         */
+        fun olustur(ozet: GunlukOzetEntity?, hedefDk: Int): EkranSuresiVerisi {
+            val olculduMu = ozet?.olayVarMi == true
+            return EkranSuresiVerisi(
+                dakika = if (olculduMu && ozet != null) {
+                    (ozet.socialDk + ozet.entertainmentDk + ozet.gamesDk + ozet.communicationDk +
+                        ozet.productivityDk + ozet.educationDk + ozet.healthDk + ozet.otherDk)
+                        .roundToInt()
+                } else {
+                    0
+                },
+                hedefDk = hedefDk,
+                veriVarMi = olculduMu,
+            )
+        }
     }
 }
 
@@ -63,22 +94,17 @@ object WidgetVerisi {
             WidgetGirisNoktasi::class.java,
         )
 
+    /**
+     * Ölçüm yoksa sıfır göstermek yerine "veri yok" — widget'ta uydurma
+     * sayı, ekrandakinden daha yanıltıcı olur (kullanıcı ona bakıp
+     * uygulamayı hiç açmıyor). Karar [EkranSuresiVerisi.olustur]'da.
+     */
     suspend fun ekranSuresi(baglam: Context): EkranSuresiVerisi {
         val g = giris(baglam)
         val bugun = LocalDate.now(g.saat())
-        val ozet = g.ozetDao().getir(bugun)
-        val hedef = g.tercihler().gunlukHedefDk.first()
-
-        // Özet yoksa sıfır göstermek yerine "veri yok" — widget'ta uydurma
-        // sayı, ekrandakinden daha yanıltıcı olur (kullanıcı ona bakıp
-        // uygulamayı hiç açmıyor).
-        return EkranSuresiVerisi(
-            dakika = ozet?.let {
-                (it.socialDk + it.entertainmentDk + it.gamesDk + it.communicationDk +
-                    it.productivityDk + it.educationDk + it.healthDk + it.otherDk).roundToInt()
-            } ?: 0,
-            hedefDk = hedef,
-            veriVarMi = ozet != null,
+        return EkranSuresiVerisi.olustur(
+            ozet = g.ozetDao().getir(bugun),
+            hedefDk = g.tercihler().gunlukHedefDk.first(),
         )
     }
 
