@@ -32,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
+import tr.org.yesilay.yesiliz.ui.EkranDonusTakibi
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.IkincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
@@ -64,7 +65,7 @@ fun OdakEkran(
     // Seans sürerken ekrana dönülmesi = telefonun açılması.
     val sahip = LocalLifecycleOwner.current
     DisposableEffect(sahip, durum.basladi) {
-        val donusTakibi = OdakDonusTakibi()
+        val donusTakibi = EkranDonusTakibi()
         val gozlemci = LifecycleEventObserver { _, olay ->
             when (olay) {
                 Lifecycle.Event.ON_PAUSE,
@@ -80,7 +81,7 @@ fun OdakEkran(
         }
         // Gözlemci seans başladıktan sonra takılıyor. Lifecycle, yeni
         // gözlemciyi mevcut RESUMED durumuna eşitlemek için ilk ON_RESUME'u
-        // hemen gönderebilir; OdakDonusTakibi bunu gerçek dönüşten ayırır.
+        // hemen gönderebilir; EkranDonusTakibi bunu gerçek dönüşten ayırır.
         if (durum.basladi) sahip.lifecycle.addObserver(gozlemci)
         onDispose { sahip.lifecycle.removeObserver(gozlemci) }
     }

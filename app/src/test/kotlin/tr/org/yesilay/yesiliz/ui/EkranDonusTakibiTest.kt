@@ -1,21 +1,21 @@
-package tr.org.yesilay.yesiliz.ui.ekran.odak
+package tr.org.yesilay.yesiliz.ui
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class OdakDonusTakibiTest {
+class EkranDonusTakibiTest {
 
     @Test
     fun `gozlemci eklenirken gelen ilk donus seansi bozmaz`() {
-        val takip = OdakDonusTakibi()
+        val takip = EkranDonusTakibi()
 
         assertFalse(takip.dondu())
     }
 
     @Test
     fun `ekrandan ayrildiktan sonraki donus seansi bozar`() {
-        val takip = OdakDonusTakibi()
+        val takip = EkranDonusTakibi()
 
         takip.ayrildi()
 
@@ -25,7 +25,7 @@ class OdakDonusTakibiTest {
 
     @Test
     fun `birden fazla ayrilis tek donus sayilir`() {
-        val takip = OdakDonusTakibi()
+        val takip = EkranDonusTakibi()
 
         takip.ayrildi()
         takip.ayrildi()

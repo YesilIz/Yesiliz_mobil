@@ -26,6 +26,12 @@ import javax.inject.Inject
  *
  * Erken kapatma (× butonu) puan **vermiyor** — bitirmek gerekiyor,
  * "sadece kazanç" ilkesiyle tutarlı (CLAUDE.md §4).
+ *
+ * Uygulama arka plana düşerse seans **duraklıyor** ([arkaPlanaGitti]) ve
+ * dönüşte kaldığı yerden devam ediyor ([onPlanaDondu]); ayrılışı ekran
+ * `EkranDonusTakibi` ile ayırt ediyor. Denetim olmadan seans arka planda
+ * tamamlanıp puan yazıyordu — kullanıcı ekranı açıp HOME'a basarak 5 puan
+ * alabiliyordu (4. tarama T4-010). Gerekçe [NefesSayac] KDoc'unda.
  */
 @HiltViewModel
 class NefesViewModel @Inject constructor(
@@ -36,7 +42,7 @@ class NefesViewModel @Inject constructor(
     private val _durum = MutableStateFlow(NefesDurum())
     val durum: StateFlow<NefesDurum> = _durum.asStateFlow()
 
-    private var gecenSaniye = 0
+    private val sayac = NefesSayac()
     private var sayacIsi: Job? = null
 
     init {
@@ -45,24 +51,47 @@ class NefesViewModel @Inject constructor(
 
     /** Oynat/duraklat düğmesi. */
     fun oynatDuraklat() {
-        if (_durum.value.oynatiliyor) {
+        if (sayac.calisiyorMu) {
             sayacIsi?.cancel()
-            _durum.update { it.copy(oynatiliyor = false) }
+            sayac.duraklat()
         } else {
-            _durum.update { it.copy(oynatiliyor = true) }
+            sayac.devamEt()
             sayaciBaslat()
         }
+        _durum.update { it.copy(oynatiliyor = sayac.calisiyorMu) }
+    }
+
+    /**
+     * Uygulama arka plana düştü — seans duraklıyor.
+     *
+     * Ekran hâlâ açık ve kullanıcı egzersizi yapıyor olamaz; arka planda
+     * geçen saniye tamamlanmaya sayılmamalı ve puan yazılmamalı
+     * (4. tarama T4-010, [NefesSayac] KDoc'u).
+     */
+    fun arkaPlanaGitti() {
+        if (_durum.value.tamamlandi) return
+        sayacIsi?.cancel()
+        sayac.arkaPlanaGitti()
+        _durum.update { it.copy(oynatiliyor = false) }
+    }
+
+    /** Kullanıcı ekrana döndü — seans kaldığı yerden devam ediyor. */
+    fun onPlanaDondu() {
+        if (_durum.value.tamamlandi) return
+        sayac.onPlanaDondu()
+        if (sayac.calisiyorMu) sayaciBaslat()
+        _durum.update { it.copy(oynatiliyor = sayac.calisiyorMu) }
     }
 
     /** Baştan başlat düğmesi. */
     fun bastanBaslat() {
         sayacIsi?.cancel()
-        gecenSaniye = 0
+        sayac.sifirla()
         _durum.update {
             it.copy(
                 ilerleme = NefesFazHesapla.ilerlemeyiHesapla(
                     it.seansSaniye,
-                    gecenSaniye,
+                    sayac.gecenSaniye,
                     it.fazSaniye,
                 ),
                 oynatiliyor = true,
@@ -85,7 +114,11 @@ class NefesViewModel @Inject constructor(
         _durum.update {
             it.copy(
                 fazSaniye = yeniFazSaniye,
-                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(it.seansSaniye, gecenSaniye, yeniFazSaniye),
+                ilerleme = NefesFazHesapla.ilerlemeyiHesapla(
+                    it.seansSaniye,
+                    sayac.gecenSaniye,
+                    yeniFazSaniye,
+                ),
             )
         }
     }
@@ -103,7 +136,7 @@ class NefesViewModel @Inject constructor(
         val yeniDk = SEANS_SECENEKLERI[(indeks + 1) % SEANS_SECENEKLERI.size]
 
         sayacIsi?.cancel()
-        gecenSaniye = 0
+        sayac.sifirla()
         _durum.update {
             it.copy(
                 seansSaniye = yeniDk * 60,
@@ -117,13 +150,16 @@ class NefesViewModel @Inject constructor(
     }
 
     private fun sayaciBaslat() {
+        sayacIsi?.cancel()
         sayacIsi = viewModelScope.launch {
-            while (gecenSaniye < _durum.value.seansSaniye) {
+            while (!sayac.tamamlandiMi(_durum.value.seansSaniye)) {
                 delay(1_000)
-                gecenSaniye++
+                // Duraklamış sayaçta saniye sayılmaz: arka planda geçen
+                // süre tamamlanmaya girmemeli (T4-010).
+                if (!sayac.tik()) break
                 val ilerleme = NefesFazHesapla.ilerlemeyiHesapla(
                     _durum.value.seansSaniye,
-                    gecenSaniye,
+                    sayac.gecenSaniye,
                     _durum.value.fazSaniye,
                 )
                 _durum.update { it.copy(ilerleme = ilerleme) }
