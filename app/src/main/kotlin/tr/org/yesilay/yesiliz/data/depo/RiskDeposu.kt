@@ -6,7 +6,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
-import tr.org.yesilay.yesiliz.data.yerel.entity.adayBantVeyaNull
+import tr.org.yesilay.yesiliz.data.yerel.entity.histerezisAdayi
 import tr.org.yesilay.yesiliz.domain.kategori.Kategori
 import tr.org.yesilay.yesiliz.risk.Alpha
 import tr.org.yesilay.yesiliz.risk.AnketGirdi
@@ -108,11 +108,14 @@ class RiskDeposu @Inject constructor(
      *
      * [Sabitler.GUN_ASAGI] gün aşağı yönde şart koşuluyor; 30 gün fazlasıyla
      * yeterli ve tek sorgu.
+     *
+     * Yalnızca **ölçülmüş** günler oynatılıyor ([histerezisAdayi]): ölçüm
+     * olmayan günün `AZ` adayı gözlem değil, `R = 0`'ın yan ürünü.
      */
     private suspend fun takipciyiKur(tarih: LocalDate): BantTakipci {
         val takipci = BantTakipci()
         riskDao.oncekiler(tarih, GECMIS_PENCERE_GUN).forEach {
-            it.adayBantVeyaNull()?.let(takipci::guncelle)
+            it.histerezisAdayi()?.let(takipci::guncelle)
         }
         return takipci
     }

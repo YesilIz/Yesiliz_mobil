@@ -75,7 +75,9 @@ class RiskDetayViewModel @Inject constructor(
                                 bantEtiketiKisa = bantKisaEtiket(bant),
                                 aciklama = aciklama(bant),
                                 trendMesaji = trendMesaji(risk.trend.trendVeyaNull()),
-                                oran = (risk.R / 100.0).toFloat().coerceIn(0f, 1f),
+                                // Ham `R / 100` DEĞİL: halka ile ortasındaki
+                                // etiket aynı şeyi söylemek zorunda (§12 K52).
+                                oran = RiskHalkaOrani.hesapla(risk.R, bant),
                                 faktorler = faktorler,
                                 // YEDAM teklifi yalnızca yüksek bantta.
                                 oneriler = if (bant == Bant.COK) {

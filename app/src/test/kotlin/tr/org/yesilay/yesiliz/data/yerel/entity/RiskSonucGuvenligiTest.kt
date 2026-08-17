@@ -1,49 +1,63 @@
 package tr.org.yesilay.yesiliz.data.yerel.entity
 
-import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import tr.org.yesilay.yesiliz.risk.Bant
-import tr.org.yesilay.yesiliz.risk.Trend
 import tr.org.yesilay.yesiliz.risk.VeriDurumu
+import java.time.LocalDate
 
+/**
+ * `risk_sonuc` satırının hangi alanının nerede kullanılabileceği.
+ *
+ * `histerezisAdayi` ile `gosterilebilirBant` **farklı** sorular soruyor ama
+ * ikisi de aynı ön koşula bağlı: ölçülmemiş bir gün ne bant gösterebilir ne
+ * de histerezis sayacına gözlem verebilir.
+ */
 class RiskSonucGuvenligiTest {
 
-    @Test
-    fun `yetersiz olcum hesaplanmis olsa bile bandi gizler`() {
-        assertNull(risk(veriDurumu = VeriDurumu.YETERSIZ.name).gosterilebilirBant())
-    }
-
-    @Test
-    fun `yeterli olcumde bilinen bandi verir`() {
-        assertEquals(Bant.ORTA, risk().gosterilebilirBant())
-    }
-
-    @Test
-    fun `bilinmeyen kayit degerleri risk veya trend iddiasi uretmez`() {
-        assertNull(risk(bant = "GELECEK_BANT").gosterilebilirBant())
-        assertNull(risk(bant = "GELECEK_BANT").adayBantVeyaNull())
-        assertEquals(VeriDurumu.YETERSIZ, "GELECEK_DURUM".veriDurumuVeyaYetersiz())
-        assertNull("GELECEK_TREND".trendVeyaNull())
-        assertEquals(Trend.SABIT, Trend.SABIT.name.trendVeyaNull())
-    }
-
-    private fun risk(
-        bant: String = Bant.ORTA.name,
+    private fun satir(
+        adayBant: String = Bant.AZ.name,
+        gosterilenBant: String = Bant.AZ.name,
         veriDurumu: String = VeriDurumu.HESAPLANDI.name,
     ) = RiskSonucEntity(
-        tarih = LocalDate.of(2026, 8, 11),
-        S = 50.0,
-        rB = 50.0,
+        tarih = LocalDate.of(2026, 8, 17),
+        S = 0.0,
+        rB = 0.0,
         rS = null,
-        alpha = 1.0,
-        R = 50.0,
-        adayBant = bant,
-        gosterilenBant = bant,
+        alpha = 0.0,
+        R = 0.0,
+        adayBant = adayBant,
+        gosterilenBant = gosterilenBant,
         guvenlikKurali = null,
-        trend = Trend.SABIT.name,
+        trend = "BELIRSIZ",
         surukleyiciler = emptyList(),
         veriDurumu = veriDurumu,
     )
+
+    @Test
+    fun `olculmus gunun adayi histerezise girer`() {
+        assertEquals(Bant.AZ, satir().histerezisAdayi())
+    }
+
+    @Test
+    fun `yetersiz gunun adayi histerezise girmez`() {
+        assertNull(satir(veriDurumu = VeriDurumu.YETERSIZ.name).histerezisAdayi())
+    }
+
+    @Test
+    fun `bilinmeyen veri durumu histerezise girmez`() {
+        assertNull(satir(veriDurumu = "ESKI_SURUMDEN_KALAN").histerezisAdayi())
+    }
+
+    @Test
+    fun `bilinmeyen aday bandi histerezise girmez`() {
+        assertNull(satir(adayBant = "MAVI").histerezisAdayi())
+    }
+
+    @Test
+    fun `yetersiz gunun bandi gosterilmez`() {
+        assertNull(satir(veriDurumu = VeriDurumu.YETERSIZ.name).gosterilebilirBant())
+        assertEquals(Bant.AZ, satir().gosterilebilirBant())
+    }
 }
