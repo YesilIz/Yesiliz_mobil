@@ -210,6 +210,68 @@ class RiskDeposuTest {
         assertEquals(ilk.adayBant, ikinci.adayBant)
     }
 
+    /** Ölçüm bulunamamış gün — gecelik worker sıfır dolu satır yazıyor. */
+    private fun olculmemisGun(tarih: LocalDate) = GunlukOzetEntity(
+        tarih = tarih,
+        olayVarMi = false,
+    )
+
+    /**
+     * Ölçülmemiş günler histerezise gözlem olarak girmemeli.
+     *
+     * Gerçek cihazda görülen durum: telefon üç gün kullanılmamış, o günlerin
+     * satırları `R = 0` üzerinden `adayBant = AZ` üretmiş. Kullanıcı anketini
+     * yenileyip 60/60 verdiğinde bugünün adayı `COK` çıkıyor ama takipçide
+     * `mevcutBant = AZ` kurulu olduğu için `GUN_YUKARI = 3` gün bekletiliyor
+     * ve ekranda "Düşük" yazıyordu — hiç ölçülmemiş günler yüzünden.
+     */
+    @Test
+    fun olculmemisGunlerHisterezisiTohumlamaz() = runTest {
+        repeat(3) { i ->
+            val gun = bugun.minusDays((3 - i).toLong())
+            db.gunlukOzetDao().kaydet(olculmemisGun(gun))
+            depo.gunuHesapla(gun)
+        }
+        // Ön koşul: o günler gerçekten yetersiz ve adayları AZ.
+        val onceki = db.riskSonucDao().getir(bugun.minusDays(1))!!
+        assertEquals(Bant.AZ.name, onceki.adayBant)
+
+        // İlk ölçülen gün + tavan anket → aday COK.
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = Sabitler.SASSV_MAKS))
+        db.gunlukOzetDao().kaydet(agirGun(bugun, sosyalDk = 900.0))
+        depo.gunuHesapla(bugun)
+
+        val sonuc = db.riskSonucDao().getir(bugun)!!
+        assertEquals(Bant.COK.name, sonuc.adayBant)
+        assertEquals(
+            "ölçülmemiş günler bandı geri tutmamalı",
+            Bant.COK.name,
+            sonuc.gosterilenBant,
+        )
+    }
+
+    /** Ölçülmüş günler histerezisi kurmaya devam ediyor — kural kaldırılmadı. */
+    @Test
+    fun olculmusGunlerHisterezisiKurmayaDevamEder() = runTest {
+        repeat(2) { i ->
+            val gun = bugun.minusDays((2 - i).toLong())
+            db.gunlukOzetDao().kaydet(hafifGun(gun))
+            depo.gunuHesapla(gun)
+        }
+
+        db.anketYanitDao().ekle(anket(bugun, hamPuan = Sabitler.SASSV_MAKS))
+        db.gunlukOzetDao().kaydet(agirGun(bugun, sosyalDk = 900.0))
+        depo.gunuHesapla(bugun)
+
+        val sonuc = db.riskSonucDao().getir(bugun)!!
+        assertEquals(Bant.COK.name, sonuc.adayBant)
+        assertEquals(
+            "gerçekten ölçülmüş AZ günlerinden sonra histerezis işlemeli",
+            Bant.AZ.name,
+            sonuc.gosterilenBant,
+        )
+    }
+
     /** Ham puanı verilen bir SAS-SV satırı — maddeler eşit dağıtılıyor. */
     private fun anket(tarih: LocalDate, hamPuan: Double): AnketYanitEntity {
         val madde = (hamPuan / 10).toInt()

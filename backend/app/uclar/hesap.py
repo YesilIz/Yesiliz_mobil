@@ -174,6 +174,9 @@ def profil_guncelle(
 
     Şifre değişimi **mevcut şifreyi** şart koşuyor. Erişim jetonu tek başına
     yetseydi, telefonu eline geçiren biri hesabı kalıcı olarak devralırdı.
+
+    Uç `PATCH` semantiğinde: gövdede olmayan alan değişmiyor. Ayrıntı ve
+    gerekçe [ProfilIstek] KDoc'unda.
     """
     kilitli = kullaniciyi_kilitle(db, kullanici.id)
 
@@ -187,8 +190,13 @@ def profil_guncelle(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Mevcut şifre hatalı")
         kilitli.sifre_ozet = sifre_ozetle(istek.yeniSifre)
 
-    kilitli.ad = istek.ad
-    kilitli.avatar = istek.avatar
+    # Kısmi güncelleme: gövdede olmayan alan değişmiyor (T4-005).
+    # `{"avatar": ""}` bilerek temizlemek anlamına gelmeye devam ediyor;
+    # ayrımın gerekçesi `ProfilIstek` KDoc'unda.
+    if istek.ad is not None:
+        kilitli.ad = istek.ad
+    if istek.avatar is not None:
+        kilitli.avatar = istek.avatar
     db.commit()
     db.refresh(kilitli)
     return Profil(ad=kilitli.ad, eposta=kilitli.eposta, avatar=kilitli.avatar or "")

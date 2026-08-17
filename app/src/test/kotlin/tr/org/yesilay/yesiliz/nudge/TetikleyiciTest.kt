@@ -107,6 +107,37 @@ class TetikleyiciTest {
     }
 
     @Test
+    fun `tuketim disina cikildiginda blok suresi buyumez`() {
+        // T4-003: eşiğin bir saniye altında biten blok, kullanıcı başka bir
+        // uygulamaya geçtikten sonra duvar saatiyle büyüyüp eşiği aşıyordu —
+        // "N dakikadır buradasın" iddiası o dakikaların bir kısmı başka
+        // uygulamada geçmişken kuruluyordu. Süre artık ölçülen olaylardan.
+        val blokSonu = esik.minusSeconds(1)
+        val olaylar = listOf(olay(Duration.ZERO, blokSonu))
+        val simdi = an(blokSonu.plus(kisaBosluk))
+
+        val sonuc = Tetikleyici.degerlendir(olaylar, simdi, sonEylem = null)
+
+        assertEquals(TetikSonucu.GOSTERME, sonuc)
+    }
+
+    @Test
+    fun `tuketimde degilken hicbir blok tetiklemez`() {
+        // Kullanıcı Yeşilİz'e (ya da launcher'a) geçti: blok eşiği aşmış
+        // olsa bile nudge çıkmamalı.
+        val olaylar = listOf(olay(Duration.ZERO, uzunBlok))
+
+        val sonuc = Tetikleyici.degerlendir(
+            olaylar,
+            an(uzunBlok),
+            sonEylem = null,
+            suAnTuketimdeMi = false,
+        )
+
+        assertEquals(TetikSonucu.GOSTERME, sonuc)
+    }
+
+    @Test
     fun `mola sonum penceresinde tetiklenmez`() {
         val olaylar = listOf(olay(Duration.ZERO, uzunBlok))
         val simdi = an(uzunBlok)

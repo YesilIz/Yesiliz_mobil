@@ -31,7 +31,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,10 +42,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
 import tr.org.yesilay.yesiliz.ui.EkranAcikTut
+import tr.org.yesilay.yesiliz.ui.EkranDonusTakibi
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
 import tr.org.yesilay.yesiliz.ui.bilesen.MetinBaglanti
@@ -77,6 +82,34 @@ fun NefesEkran(
     val durum by viewModel.durum.collectAsStateWithLifecycle()
     val faz = NefesFazi.entries[durum.ilerleme.fazIndeksi]
     EkranAcikTut(aktif = durum.oynatiliyor && !durum.tamamlandi)
+
+    // Arka plana düşen seans duraklıyor: ön planda geçmemiş süre
+    // tamamlanmaya sayılmamalı (T4-010). Odak ekranıyla aynı desen —
+    // Lifecycle yeni gözlemciyi mevcut RESUMED durumuna eşitlemek için
+    // ilk ON_RESUME'u hemen gönderebilir, `EkranDonusTakibi` bunu gerçek
+    // dönüşten ayırır (CLAUDE.md §9).
+    val sahip = LocalLifecycleOwner.current
+    DisposableEffect(sahip) {
+        val donusTakibi = EkranDonusTakibi()
+        val gozlemci = LifecycleEventObserver { _, olay ->
+            when (olay) {
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP,
+                -> {
+                    donusTakibi.ayrildi()
+                    viewModel.arkaPlanaGitti()
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (donusTakibi.dondu()) viewModel.onPlanaDondu()
+                }
+
+                else -> Unit
+            }
+        }
+        sahip.lifecycle.addObserver(gozlemci)
+        onDispose { sahip.lifecycle.removeObserver(gozlemci) }
+    }
 
     // Nefes al/tut'ta daire büyür, nefes ver/tut'ta küçülür — süre tempoyla eşleniyor.
     val genisMi = faz == NefesFazi.NEFES_AL || faz == NefesFazi.TUT_1

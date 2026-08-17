@@ -86,6 +86,7 @@ import tr.org.yesilay.yesiliz.ui.bilesen.IkonRozeti
 import tr.org.yesilay.yesiliz.ui.bilesen.Kart
 import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YenileDugmesi
+import tr.org.yesilay.yesiliz.ui.bilesen.OrmanZemini
 import tr.org.yesilay.yesiliz.ui.bilesen.SallananYapraklar
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.sureMetni
@@ -166,6 +167,14 @@ fun AnaEkran(
                     .height(380.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                // Ağacın arkasındaki düz yeşil alan derinliksiz duruyordu.
+                // Siluet ağaçtan daha yavaş kayıyor — parallax'ın uzak katmanı.
+                OrmanZemini(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { translationY = agacKaymaY * 0.4f },
+                )
+
                 Box(
                     modifier = Modifier.graphicsLayer {
                         scaleX = agacOlcegi

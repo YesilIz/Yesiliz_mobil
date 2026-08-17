@@ -62,6 +62,15 @@ object Tetikleyici {
      * Blok [simdi]'ye [OruntuCikar.BLOK_TOLERANSI]'ndan daha uzak bir
      * boşlukla bitmişse (kullanıcı tüketim kategorisinden tamamen çıkmış)
      * `Duration.ZERO` döner — blok artık açık sayılmaz.
+     *
+     * Süre **ölçülen olaylardan** çıkıyor, duvar saatinden değil: son
+     * tüketim olayı ile [simdi] arasındaki fark bloğa eklenmiyor. Eskiden
+     * `blokBas → simdi` ölçülüyordu ve kullanıcı tüketim uygulamasından
+     * çıktıktan sonra blok büyümeye devam ediyordu — "45 dakikadır
+     * buradasın" diyen nudge'ın o 45 dakikanın bir kısmını başka bir
+     * uygulamada geçirmiş kullanıcıya çıkmasının sebebi buydu (§12 K51).
+     * Uygulama hâlâ ön plandayken olay akışı geciktiyse bitişi
+     * `NudgeOverlayService.onPlanTuketimUzat` `simdi`'ye çekiyor.
      */
     private fun acikBlokSuresi(olaylar: List<KullanimOlay>, simdi: Instant): Duration {
         if (olaylar.isEmpty()) return Duration.ZERO
@@ -83,6 +92,6 @@ object Tetikleyici {
         val simdiyeBosluk = Duration.between(blokBit, simdi)
         if (simdiyeBosluk > OruntuCikar.BLOK_TOLERANSI) return Duration.ZERO
 
-        return Duration.between(blokBas, simdi)
+        return Duration.between(blokBas, blokBit)
     }
 }

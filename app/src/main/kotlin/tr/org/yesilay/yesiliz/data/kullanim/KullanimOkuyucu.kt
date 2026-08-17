@@ -134,8 +134,36 @@ class KullanimOkuyucu(
     fun sonPencereOlaylari(pencere: Duration, simdi: Instant = Instant.now()): List<HamOlay> =
         olaylariOku(simdi.minus(pencere), simdi)
 
-    /** Sistem olay akışını [HamOlay] listesine çevirir. */
-    private fun olaylariOku(bas: Instant, bit: Instant): List<HamOlay> {
+    /**
+     * Son [pencere] içindeki ham olaylar — **kendi paketimiz dahil**.
+     *
+     * [sonPencereOlaylari] kendi paketimizi eliyor ve o eleme ekran süresi /
+     * risk skoru için doğru (§12 K9 ailesi: kullanıcı Yeşilİz'e baktığı için
+     * cezalandırılmaz). Ama nudge'ın sorduğu soru bunun tam tersini istiyor:
+     * "şu an ön planda ne var". Eleme oradayken kullanıcı tüketim
+     * uygulamasından Yeşilİz'e geçtiğinde geçiş **hiç görünmüyor** —
+     * `OturumCikar` tüketim oturumunu kapatamıyor ve nudge kendi
+     * uygulamamızın (hatta kendi nefes egzersizinin) üstünde tetikleniyordu
+     * (§12 K51).
+     */
+    fun sonPencereHamOlaylari(pencere: Duration, simdi: Instant = Instant.now()): List<HamOlay> =
+        hamOlaylariOku(simdi.minus(pencere), simdi)
+
+    /**
+     * Sistem olay akışını [HamOlay] listesine çevirir; kendi paketimizi eler.
+     *
+     * Eleme burada, [hamOlaylariOku]'nun üstünde: ham okuma her çağıran için
+     * aynı, kimin neyi eleyeceği çağıranın kararı.
+     */
+    private fun olaylariOku(bas: Instant, bit: Instant): List<HamOlay> =
+        hamOlaylariOku(bas, bit).filter { olay ->
+            // Kendi uygulamamız ekran süresi sayılmaz — kullanıcı Yeşilİz'e
+            // baktığı için cezalandırılmamalı.
+            olay.paketAdi != kendiPaketAdi || olay.tur == OlayTuru.EKRAN_KAPANDI
+        }
+
+    /** Sistem olay akışını olduğu gibi [HamOlay] listesine çevirir. */
+    private fun hamOlaylariOku(bas: Instant, bit: Instant): List<HamOlay> {
         val akis: UsageEvents = usageStatsManager.queryEvents(bas.toEpochMilli(), bit.toEpochMilli())
         val sonuc = mutableListOf<HamOlay>()
         val olay = UsageEvents.Event()
@@ -143,11 +171,6 @@ class KullanimOkuyucu(
         while (akis.getNextEvent(olay)) {
             val tur = turuCevir(olay.eventType) ?: continue
             val paket = olay.packageName ?: continue
-
-            // Kendi uygulamamız ekran süresi sayılmaz — kullanıcı Yeşilİz'e
-            // baktığı için cezalandırılmamalı.
-            if (paket == kendiPaketAdi && tur != OlayTuru.EKRAN_KAPANDI) continue
-
             sonuc += HamOlay(paket, tur, Instant.ofEpochMilli(olay.timeStamp))
         }
         return sonuc

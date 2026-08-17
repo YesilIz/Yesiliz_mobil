@@ -52,10 +52,26 @@ class ProfilIstek(BaseModel):
     E-posta giriş kimliği; doğrulama e-postası gönderilemediği sürece
     (A15, sağlayıcı bağlı değil) değiştirilmesi kullanıcıyı ulaşılamaz bir
     adrese kilitler. Alan sunucuda da istemcide de kapalı.
+
+    ## Kısmi güncelleme
+
+    Uç `PATCH`: gövdede **olmayan alan değişmez**. `avatar` eskiden
+    `default=""` taşıyordu ve uç bunu koşulsuz atıyordu, yani avatarını
+    göndermeyen bir istek (ör. yalnızca şifre değiştiren bir istemci)
+    kayıtlı avatarı **siliyordu** — `PATCH` adı taşıyan bir uç `PUT` gibi
+    davranıyordu (4. tarama T4-005). `ad` da aynı sınıftaydı: zorunlu
+    olduğu için sadece şifre değiştirmek isteyen istemci onu da göndermek
+    zorundaydı.
+
+    `None` ile "gönderilmedi" bilerek aynı anlama geliyor; `model_fields_set`
+    ayrımına gerek duyulmadı çünkü bu iki alanın anlamlı bir `null` değeri
+    yok. Korunması gereken tek ayrım "gönderilmedi" ile **"boş gönderildi"**
+    arasında ve onu `None` zaten taşıyor: `{"avatar": ""}` avatarı bilerek
+    temizler, `avatar` alanının hiç bulunmaması ona dokunmaz.
     """
 
-    ad: str = Field(min_length=2, max_length=120)
-    avatar: str = Field(default="", max_length=32)
+    ad: str | None = Field(default=None, min_length=2, max_length=120)
+    avatar: str | None = Field(default=None, max_length=32)
     # Yeni şifre verilirse mevcut şifre ZORUNLU: çalınmış bir telefon
     # yalnızca erişim jetonuyla şifreyi değiştirebilmemeli.
     mevcutSifre: str | None = Field(default=None, max_length=128)

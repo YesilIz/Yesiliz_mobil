@@ -16,9 +16,22 @@ internal fun RiskSonucEntity.gosterilebilirBant(): Bant? {
     return Bant.entries.firstOrNull { it.name == gosterilenBant }
 }
 
-/** Histerezis yeniden oynatımında bilinmeyen eski adaylar atlanır. */
-internal fun RiskSonucEntity.adayBantVeyaNull(): Bant? =
-    Bant.entries.firstOrNull { it.name == adayBant }
+/**
+ * Histerezis yeniden oynatımında bilinmeyen eski adaylar atlanır.
+ *
+ * **Ölçülmemiş gün de atlanır.** Gecelik worker ölçüm bulamadığı güne de
+ * satır yazıyor ve o satırın adayı `R = 0` üzerinden `AZ` çıkıyor; bunlar
+ * gözlem sayılınca takipçide `mevcutBant = AZ` kuruluyor ve gerçekten
+ * ölçülen ilk gün "bant değişimi" sayılıp [Sabitler.GUN_YUKARI] gün
+ * bekletiliyordu — anketini yenileyip `adayBant = COK` üreten kullanıcı
+ * ekranda "Düşük" görüyordu. `alpha`'nın `d` girdisi bu ayrımı zaten
+ * yapıyor (`GunlukOzetDao.gunSayisiEKadar`, `olayVarMi = 1`); histerezis
+ * yapmıyordu (CLAUDE.md §9 "Satır var ≠ veri var", §12 K52).
+ */
+internal fun RiskSonucEntity.histerezisAdayi(): Bant? {
+    if (veriDurumu.veriDurumuVeyaYetersiz() != VeriDurumu.HESAPLANDI) return null
+    return Bant.entries.firstOrNull { it.name == adayBant }
+}
 
 /** Bilinmeyen durum, risk iddiası üretmemek için yetersiz kabul edilir. */
 internal fun String.veriDurumuVeyaYetersiz(): VeriDurumu =

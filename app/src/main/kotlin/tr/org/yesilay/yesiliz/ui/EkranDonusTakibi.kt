@@ -1,11 +1,15 @@
-package tr.org.yesilay.yesiliz.ui.ekran.odak
+package tr.org.yesilay.yesiliz.ui
 
 /**
  * Yaşam döngüsü gözlemcisi eklenirken Android mevcut durumu gözlemciye
  * hemen iletir. Bu ilk `ON_RESUME`, kullanıcının ekrana geri döndüğü anlamına
- * gelmez. Yalnızca gerçek bir ayrılıştan sonraki dönüş odak seansını bozar.
+ * gelmez. Yalnızca gerçek bir ayrılıştan sonraki dönüş sayılır.
+ *
+ * Odak seansı için yazılmıştı (`OdakEkran`, CLAUDE.md §9 "Zaten `RESUMED`
+ * sahibe `LifecycleObserver` eklemek"); nefes ekranı da aynı ayrımı istediği
+ * için `ui/`'ya taşındı. Davranışı taşınırken **değişmedi**.
  */
-internal class OdakDonusTakibi {
+internal class EkranDonusTakibi {
     private var ekrandanAyrildi = false
 
     fun ayrildi() {
