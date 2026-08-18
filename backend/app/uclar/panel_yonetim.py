@@ -13,10 +13,15 @@ yakalanıyor.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
 
 from app.modeller import Personel, PersonelRolu
+from app.panel.gosterge import BANT_ETIKETI, BANTLAR, gostergeyi_hesapla
+from app.panel.grafik import bant_dagilimi_svg
 from app.panel.oturum import personel_gerek
 from app.panel.sablon import yanit
+from app.surum_kapisi import beklenen_revizyon
+from app.veritabani import oturum
 
 yonlendirici = APIRouter(prefix="/yonetim", tags=["panel-yonetim"])
 
@@ -30,9 +35,28 @@ GOSTERGE_ROLLERI = (
 )
 
 
+#: Bant dağılımının bakacağı pencere. 7 gün: cihaz da son 7 günü
+#: gönderiyor (`SenkronDeposu.GUN`), daha geniş bir pencere sunucuda
+#: olmayan veriyi sorardı.
+PENCERE_GUN = 7
+
+
 @yonlendirici.get("/gosterge")
 def gosterge(
     istek: Request,
+    db: Session = Depends(oturum),
     personel: Personel = Depends(personel_gerek(*GOSTERGE_ROLLERI)),
 ):
-    return yanit(istek, "gosterge.html", {"etkin": "gosterge"})
+    g = gostergeyi_hesapla(db, pencere_gun=PENCERE_GUN)
+    return yanit(
+        istek,
+        "gosterge.html",
+        {
+            "etkin": "gosterge",
+            "g": g,
+            "bantlar": [(kod, BANT_ETIKETI[kod]) for kod in BANTLAR],
+            "bant_grafigi": bant_dagilimi_svg(g.bant_dagilimi),
+            "pencere_gun": PENCERE_GUN,
+            "revizyon": beklenen_revizyon(),
+        },
+    )

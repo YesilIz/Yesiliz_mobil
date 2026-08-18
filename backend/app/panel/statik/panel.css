@@ -244,3 +244,39 @@ td.sayi, th.sayi { text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* --- gösterge --- */
+
+.olcum-satiri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bosluk-5);
+  margin-bottom: var(--bosluk-3);
+}
+.olcum { display: flex; flex-direction: column; gap: 2px; }
+.olcum-sayi {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.olcum-etiket { font-size: 13px; color: var(--metin-ucuncul); }
+
+.gosterge-anahtari {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bosluk-3);
+  margin-top: var(--bosluk-2);
+  font-size: 14px;
+}
+.anahtar { display: inline-flex; align-items: center; gap: var(--bosluk-2); }
+.anahtar-kutu {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+/* Renkler CSS'te: satır içi style CSP tarafından yasak. */
+.anahtar-kutu[data-bant="AZ"] { background: #00AE42; }
+.anahtar-kutu[data-bant="ORTA"] { background: #70ab70; }
+.anahtar-kutu[data-bant="COK"] { background: #124734; }

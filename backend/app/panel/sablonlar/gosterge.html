@@ -5,15 +5,87 @@
   <h1>Gösterge</h1>
 
   <div class="kart">
-    <h2>Hoş geldin, {{ personel.ad }}</h2>
-    <p class="yardim" style="margin-top:0">
-      Rol: <span class="cip">{{ personel.rol }}</span>
+    <h2>Kullanıcılar</h2>
+    <div class="olcum-satiri">
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.kullanici_sayisi }}</span>
+        <span class="olcum-etiket">kayıtlı hesap</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.aktif_7 }}</span>
+        <span class="olcum-etiket">son 7 günde sinyal</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.aktif_30 }}</span>
+        <span class="olcum-etiket">son 30 günde sinyal</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.lig_katilimi }}</span>
+        <span class="olcum-etiket">lige katılan</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.ebeveyn_eslesmesi }}</span>
+        <span class="olcum-etiket">ebeveyn eşleşmesi</span>
+      </div>
+    </div>
+    <p class="yardim">
+      Sinyal sayısı yalnızca <strong>Yeşilay ile paylaşım onayı veren</strong>
+      kullanıcıları kapsıyor; onay kapalıyken cihaz sunucuya hiçbir şey
+      göndermiyor. Toplam aktiflik bundan yüksek olabilir.
     </p>
-    {# Metrikler F2'de bağlanıyor. Buraya uydurma sayı YAZILMIYOR
-       (CLAUDE.md §4, K37): olmayan bir ölçümü doluymuş gibi göstermek,
-       panelin ilk gününde tam da kaçınılması gereken şey. #}
-    <p class="bos-durum">
-      Gösterge metrikleri henüz bağlanmadı — F2'de geliyor.
+  </div>
+
+  <div class="kart">
+    <h2>Risk bandı dağılımı</h2>
+    {% if g.bant_toplami %}
+      {{ bant_grafigi }}
+      <div class="gosterge-anahtari">
+        {% for kod, etiket in bantlar %}
+          <span class="anahtar">
+            <span class="anahtar-kutu" data-bant="{{ kod }}"></span>
+            {{ etiket }} · {{ g.bant_dagilimi[kod] }} (%{{ g.bant_yuzdesi(kod) }})
+          </span>
+        {% endfor %}
+      </div>
+      <p class="yardim">
+        Son {{ pencere_gun }} gün · kullanıcı başına en son hesaplanmış bant.
+        Ölçümü yetersiz günler sayılmıyor; {{ g.bandi_olmayan }} kullanıcının
+        bu pencerede hesaplanmış bandı yok.
+      </p>
+    {% else %}
+      <p class="bos-durum">
+        Bu pencerede hesaplanmış risk bandı yok.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>Kullanım</h2>
+    <div class="olcum-satiri">
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.ortalama_ekran_dk }}</span>
+        <span class="olcum-etiket">ort. günlük ekran (dk)</span>
+      </div>
+    </div>
+    <p class="yardim">
+      Son {{ pencere_gun }} günün paylaşılan özetlerinden. Ölçümü sıfır olan
+      günler ortalamaya girmiyor.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Sistem</h2>
+    <table>
+      <tr><th>Sürüm</th><td>{{ surum }}</td></tr>
+      <tr><th>Şema revizyonu</th><td>{{ revizyon }}</td></tr>
+      <tr><th>Veritabanı</th><td><span class="cip">bağlı</span></td></tr>
+    </table>
+    {# Hata sayacı BURADA GÖSTERİLMİYOR: panel API'den ayrı bir süreç ve
+       gunluk.py sayacı tutmuyor, log akışı sağlayıcıda. Uydurma bir "0
+       hata" yazmak, tam da paneli güvenilmez kılacak şey (CLAUDE.md §4). #}
+    <p class="yardim">
+      İstek ve hata günlükleri sağlayıcının log akışında; panel onları
+      okumuyor.
     </p>
   </div>
 {% endblock %}
