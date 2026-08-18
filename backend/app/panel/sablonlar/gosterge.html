@@ -1,0 +1,19 @@
+{% extends "taban.html" %}
+{% block baslik %}Gösterge · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Gösterge</h1>
+
+  <div class="kart">
+    <h2>Hoş geldin, {{ personel.ad }}</h2>
+    <p class="yardim" style="margin-top:0">
+      Rol: <span class="cip">{{ personel.rol }}</span>
+    </p>
+    {# Metrikler F2'de bağlanıyor. Buraya uydurma sayı YAZILMIYOR
+       (CLAUDE.md §4, K37): olmayan bir ölçümü doluymuş gibi göstermek,
+       panelin ilk gününde tam da kaçınılması gereken şey. #}
+    <p class="bos-durum">
+      Gösterge metrikleri henüz bağlanmadı — F2'de geliyor.
+    </p>
+  </div>
+{% endblock %}

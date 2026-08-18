@@ -35,6 +35,9 @@ PANEL_URETIM = {
     "YESILIZ_PANEL_SIRRI": GUVENLI_ANAHTAR,
     "YESILIZ_PANEL_TOTP_ANAHTARI": "a" * 44,
     "YESILIZ_PANEL_TABAN": "https://panel.ornek.com",
+    # `conftest` bunu test ortamı için false yapıyor (TestClient http
+    # konuşuyor); üretim kuralını sınayabilmek için açıkça geri alınıyor.
+    "panel_cerez_guvenli": True,
 }
 
 

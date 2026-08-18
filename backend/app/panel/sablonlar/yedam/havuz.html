@@ -1,0 +1,15 @@
+{% extends "taban.html" %}
+{% block baslik %}YEDAM başvuruları · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>YEDAM başvuruları</h1>
+
+  <div class="kart">
+    {# Boş bir havuz tablosu çizmek "kimse destek istememiş" demek olurdu;
+       akışın arka ucu henüz yok (CLAUDE.md §4, K37). #}
+    <p class="bos-durum">
+      Başvuru akışı henüz açık değil — F3'te geliyor.<br>
+      Şu an uygulamadan YEDAM başvurusu gönderilemiyor.
+    </p>
+  </div>
+{% endblock %}

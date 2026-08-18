@@ -85,6 +85,16 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         openapi_url=None if rol is SunucuRolu.PANEL else "/openapi.json",
     )
 
+    # Middleware sırası: SON eklenen EN DIŞTA koşuyor. İstenen zincir
+    #   CORS → IstekGunlugu → GuvenlikBasliklari → CsrfKapisi → route
+    # yani CSRF reddi de loglanıyor ve güvenlik başlıklarını taşıyor.
+    if rol is SunucuRolu.PANEL:
+        from app.panel.basliklar import GuvenlikBasliklari
+        from app.panel.csrf import CsrfKapisi
+
+        uygulama.add_middleware(CsrfKapisi)
+        uygulama.add_middleware(GuvenlikBasliklari)
+
     uygulama.add_middleware(gunluk.IstekGunlugu)
 
     # Android istemcisi Origin başlığı göndermiyor; panel de sunucu tarafında
@@ -128,7 +138,36 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
                 yanit.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
             return {"durum": "ayakta" if baglandi else "erisim_yok"}
 
-    # Panel router'ları F1'in ilerleyen commit'lerinde bağlanıyor.
+    if rol is SunucuRolu.PANEL:
+        from fastapi.responses import RedirectResponse
+        from fastapi.staticfiles import StaticFiles
+
+        from app.panel.sablon import STATIK_DIZINI
+        from app.uclar import panel_oturum, panel_yedam, panel_yonetim
+
+        uygulama.include_router(panel_oturum.yonlendirici)
+        uygulama.include_router(panel_yonetim.yonlendirici)
+        uygulama.include_router(panel_yedam.yonlendirici)
+
+        # CSS ve htmx depoya alınmış (`panel/statik/HTMX.md`): panel VPN
+        # arkasında dışa çıkışsız olabiliyor ve CDN script'i `script-src
+        # 'self'` CSP'sini gevşetmeyi zorunlu kılardı.
+        uygulama.mount(
+            "/statik", StaticFiles(directory=str(STATIK_DIZINI)), name="statik"
+        )
+
+        @uygulama.get("/", include_in_schema=False)
+        def kok() -> RedirectResponse:
+            """
+            Kök adres girişe düşüyor.
+
+            Rol bazlı hedef `panel_oturum.giris_sonrasi_yol`'da; buradan
+            role bakmak, oturumu iki yerde çözmek demek olurdu.
+            """
+            return RedirectResponse(
+                "/oturum/giris", status_code=status.HTTP_303_SEE_OTHER
+            )
+
 
     @uygulama.get("/health", tags=["sistem"])
     def health(yanit: Response) -> dict[str, str]:
