@@ -254,30 +254,37 @@ private fun AyarSeridi(
     onArttir: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Yaricap.Kart))
-            .background(Yesil50)
-            .padding(Bosluk.S),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
     ) {
-        AyarDugmesi(
-            ikon = Icons.Filled.Remove,
-            aciklama = "Azalt",
-            zemin = Beyaz,
-            renk = MetinBirincil,
-            etkin = deger > enAz,
-            onTikla = onAzalt,
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        AyarDugmesi(
-            ikon = Icons.Filled.Add,
-            aciklama = "Arttır",
-            zemin = YesilAna,
-            renk = Beyaz,
-            etkin = deger < enCok,
-            onTikla = onArttir,
-        )
+        // Şerit değeri yazmayı bırakınca tam genişlikte kalması ortada geniş
+        // bir boşluk bırakıyordu — "kontrol" değil "eksik bir şey" gibi
+        // duruyordu. Bant artık iki düğmeyi sarıyor.
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(Yaricap.Kart))
+                .background(Yesil50)
+                .padding(Bosluk.S),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Olcu.BolumArasi),
+        ) {
+            AyarDugmesi(
+                ikon = Icons.Filled.Remove,
+                aciklama = "Azalt",
+                zemin = Beyaz,
+                renk = MetinBirincil,
+                etkin = deger > enAz,
+                onTikla = onAzalt,
+            )
+            AyarDugmesi(
+                ikon = Icons.Filled.Add,
+                aciklama = "Arttır",
+                zemin = YesilAna,
+                renk = Beyaz,
+                etkin = deger < enCok,
+                onTikla = onArttir,
+            )
+        }
     }
 }
 
