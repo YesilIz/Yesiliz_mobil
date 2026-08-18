@@ -133,6 +133,46 @@ railway run alembic current    # ya da sağlayıcı kabuğundan
 
 ---
 
+### İkinci servis: panel
+
+Panel **aynı imajı** koşuyor; ayrılan tek şey ortam değişkenleri
+(`docs/panel-plani.md §4`, CLAUDE.md §12 K57). Aynı Railway projesinde ikinci
+bir servis açılıyor:
+
+| Ayar | Değer |
+|---|---|
+| Repo / Root Directory | API servisiyle **aynı** (`backend`) |
+| `YESILIZ_ROL` | `panel` |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — aynı veritabanı |
+| `JWT_SECRET` | API ile aynı değer |
+| `PANEL_SECRET` · `PANEL_TOTP_KEY` · `PANEL_BASE_URL` | §1'deki üretim zorunluları |
+| Domain | ayrı alt alan adı (ör. `panel.<alan>`) |
+| Healthcheck | `/health` — API ile aynı, `railway.json` değişmiyor |
+
+**Panel migration koşturmuyor.** `baslat.sh` rolü Python'a soruyor ve panel
+rolünde `alembic upgrade` yerine `app/surum_kapisi.py` çalışıyor: şema head'de
+değilse 10 × 6 sn bekliyor, hâlâ değilse uvicorn hiç başlamıyor. İki servisin
+aynı anda `alembic upgrade` koşması çakışma demek olurdu.
+
+Bu yüzden **dağıtım sırası da sabit**: önce API (migration), sonra panel. CI
+bunu `deploy-panel: needs: deploy` ile zorluyor.
+
+> **Ağ kısıtı.** Panel servisi kurum ağı / VPN arkasına alınmalı (G3). Bu
+> kimlik doğrulamasının **önündeki** ikinci kapı; TOTP ve hesap kilidi onun
+> yerini tutmuyor.
+
+İlk personel hesabı:
+
+```bash
+railway run --service <panel-servisi> \
+  python -m app.personel_ekle --eposta admin@yesilay.org.tr \
+  --ad "Ad Soyad" --rol admin
+```
+
+Komut TOTP sırrını ve kurtarma kodlarını bir kez yazdırıyor.
+
+---
+
 ## 3. Sağlık kontrolü
 
 ```http
@@ -306,9 +346,15 @@ indirgeniyor: boş sonuç + `cevrimdisi` bayrağı + logcat izi
 
 ## 7. CI/CD
 
-`.github/workflows/backend.yml`: test → üretim güvenlik kapısı → Docker
-imajı → (yalnızca `main`) Railway dağıtımı → `/health` bekleme → smoke.
-Herhangi bir adım düşerse sonraki koşmuyor.
+`.github/workflows/backend.yml`: test → üretim güvenlik kapısı → panel
+kapısı → Docker imajı → (yalnızca `main`) **API dağıtımı** → `/health` →
+**panel dağıtımı** → panel `/health` → smoke. Herhangi bir adım düşerse
+sonraki koşmuyor.
+
+**Panel API'den sonra dağıtılıyor ve bu sıra pazarlık edilemez:**
+migration'ın tek sahibi API servisi, panel yalnızca şemayı doğruluyor. Panel
+önce kalkarsa sürüm kapısı düşer ve servis crash-loop'a girer. CI bunu
+`deploy-panel: needs: deploy` ile zorluyor.
 
 Depo ayarları (Settings › Secrets and variables › Actions):
 
@@ -317,6 +363,8 @@ Depo ayarları (Settings › Secrets and variables › Actions):
 | secret | `RAILWAY_TOKEN` | Railway proje jetonu |
 | variable | `RAILWAY_SERVICE` | Railway'deki servis adı |
 | variable | `CANLI_TABAN` | `https://<alan-adi>` |
+| variable | `RAILWAY_PANEL_SERVICE` | Panel servisinin Railway'deki adı |
+| variable | `PANEL_TABAN` | `https://panel.<alan-adi>` |
 
 Dağıtım işi `environment: production` kullanıyor; jeton yalnızca oradan
 okunabiliyor.

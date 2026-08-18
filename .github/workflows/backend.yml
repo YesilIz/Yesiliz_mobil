@@ -68,6 +68,33 @@ jobs:
             DATABASE_URL=sqlite+pysqlite:///./y.db \
             python -c "from app.ayarlar import ayarlar; ayarlar().dogrula()"
 
+      - name: Panel kapısı — varsayılan oturum sırrıyla başlamamalı
+        run: |
+          ! ENVIRONMENT=production SERVER_ROLE=panel \
+            JWT_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))") \
+            DATABASE_URL=postgresql://k:p@sunucu:5432/d \
+            PANEL_TOTP_KEY=$(python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())") \
+            PANEL_BASE_URL=https://panel.ornek.com \
+            python -c "from app.ayarlar import ayarlar; ayarlar().dogrula()"
+
+      - name: Panel kapısı — Secure olmayan çerezle başlamamalı
+        run: |
+          ! ENVIRONMENT=production SERVER_ROLE=panel \
+            JWT_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))") \
+            DATABASE_URL=postgresql://k:p@sunucu:5432/d \
+            PANEL_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(32))") \
+            PANEL_TOTP_KEY=$(python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())") \
+            PANEL_BASE_URL=https://panel.ornek.com \
+            YESILIZ_PANEL_CEREZ_GUVENLI=false \
+            python -c "from app.ayarlar import ayarlar; ayarlar().dogrula()"
+
+      - name: Panel import zinciri kırık değil
+        # Bu adım `!` taşımıyor: başarı bekleniyor. jinja2/cryptography
+        # eksikse ya da panel modülleri birbirini bulamıyorsa burada düşer,
+        # dağıtımda değil.
+        run: |
+          SERVER_ROLE=panel python -c "import app.main"
+
       - name: Secret depoya girmemiş
         run: |
           if git ls-files --error-unmatch backend/.env >/dev/null 2>&1; then
@@ -129,9 +156,51 @@ jobs:
           cat /tmp/saglik.json || true
           exit 1
 
+  deploy-panel:
+    name: Panel servisini dağıt
+    # **Sıra pazarlık edilemez.** Migration'ın tek sahibi API servisi;
+    # panel yalnızca şemayı doğruluyor (`app/surum_kapisi.py`). Panel önce
+    # kalkarsa sürüm kapısı düşer ve servis crash-loop'a girer.
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install -g @railway/cli
+
+      # API dağıtımıyla aynı imaj ve aynı proje jetonu; ayrılan tek şey
+      # servis adı ve o servisin `YESILIZ_ROL=panel` değişkeni.
+      # `railway up` yine depo kökünden koşuyor (Root Directory `/backend`).
+      - name: Dağıtım
+        working-directory: .
+        run: railway up --service "${{ vars.RAILWAY_PANEL_SERVICE }}" --ci
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Panel /health bekleniyor
+        run: |
+          taban="${{ vars.PANEL_TABAN }}"
+          for i in $(seq 1 20); do
+            kod=$(curl -s -o /tmp/panel-saglik.json -w "%{http_code}" "$taban/health" || true)
+            if [ "$kod" = "200" ]; then
+              echo "panel sağlık kontrolü geçti:"; cat /tmp/panel-saglik.json; exit 0
+            fi
+            echo "deneme $i — durum: $kod"
+            sleep 15
+          done
+          echo "::error::Panel /health 5 dakikada 200 dönmedi. Son yanıt:"
+          cat /tmp/panel-saglik.json || true
+          exit 1
+
   smoke:
     name: Canlı ortam smoke testleri
-    needs: deploy
+    needs: [deploy, deploy-panel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -146,3 +215,4 @@ jobs:
         run: python -m pytest smoke -q
         env:
           YESILIZ_SMOKE_TABAN: ${{ vars.CANLI_TABAN }}
+          YESILIZ_SMOKE_PANEL_TABAN: ${{ vars.PANEL_TABAN }}

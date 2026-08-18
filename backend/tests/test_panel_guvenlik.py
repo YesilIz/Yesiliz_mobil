@@ -106,6 +106,28 @@ def test_kendi_originimiz_kabul_ediliyor(girisli, monkeypatch):
     assert yanit.status_code == 303
 
 
+def test_basliksiz_oturumsuz_post_normal_yonlendirmeye_dusuyor(
+    panel_istemci, monkeypatch
+):
+    """
+    `Origin` yokluğu tek başına red sebebi değil.
+
+    Red sayılsaydı panele atılan her tarayıcı dışı POST — var olmayan bir
+    yola atılan dahil — 404 yerine 403 dönerdi ve rol ayrımının "cihaz ucu
+    panelde yok" iddiası dışarıdan doğrulanamazdı.
+    """
+    a = panel_oturum.ayarlar()
+    monkeypatch.setattr(a, "panel_taban_url", "https://panel.yesilay.org.tr")
+    assert panel_istemci.post("/auth/giris", json={}).status_code == 404
+
+
+def test_oturumlu_istekte_jeton_hala_zorunlu(girisli, monkeypatch):
+    """Origin gevşetmesi jeton kontrolünü zayıflatmamalı."""
+    a = panel_oturum.ayarlar()
+    monkeypatch.setattr(a, "panel_taban_url", "https://panel.yesilay.org.tr")
+    assert girisli.post("/oturum/cikis", data={}).status_code == 403
+
+
 def test_giris_postu_jetonsuz_gecebiliyor(panel_istemci):
     """
     Giriş oturum açılmadan geldiği için CSRF jetonu taşıyamaz.

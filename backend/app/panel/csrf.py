@@ -82,11 +82,19 @@ class CsrfKapisi(BaseHTTPMiddleware):
 
     def _kaynak_sorunu(self, istek: Request) -> str | None:
         """
-        `Origin` yoksa `Referer`'a düşülüyor; ikisi de yoksa reddediliyor.
+        `Origin` yoksa `Referer`'a düşülüyor; **ikisi de yoksa reddedilmiyor.**
 
-        Tarayıcılar güvensiz metotlarda `Origin`'i gönderiyor. İkisi de
-        gelmiyorsa istek bir tarayıcı formundan gelmiyor demektir ve panelin
-        tarayıcı dışı bir istemcisi yok.
+        Başlığın yokluğu tek başına red sebebi değil, çünkü CSRF doğası
+        gereği kurbanın tarayıcısını gerektiriyor ve tarayıcılar güvensiz
+        metotlarda `Origin`'i her zaman gönderiyor. Başlıksız bir istek
+        tarayıcıdan gelmiyor demektir; oturum çerezi de taşımıyorsa
+        koruyacak bir şey yok, taşıyorsa jeton kontrolü (aşağıda) zaten
+        devrede.
+
+        Yokluğu red saymak somut bir zarar veriyordu: panele atılan her
+        tarayıcı dışı POST — var olmayan bir yola atılan dahil — 404 yerine
+        403 dönüyordu, yani rol ayrımının "cihaz ucu panelde yok" iddiası
+        dışarıdan doğrulanamıyordu.
         """
         taban = ayarlar().panel_taban_url
         if not taban:
@@ -98,7 +106,7 @@ class CsrfKapisi(BaseHTTPMiddleware):
             deger = istek.headers.get(baslik)
             if deger:
                 return None if urlsplit(deger).netloc == beklenen else "kaynak"
-        return "kaynak_yok"
+        return None
 
     async def _jetonu_oku(self, istek: Request) -> str | None:
         basliktan = istek.headers.get(BASLIK_ADI)
