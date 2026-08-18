@@ -174,8 +174,7 @@ private fun LigKurallari(durum: LigDurum, onKapat: () -> Unit) {
         listOf(
             "Her hafta pazartesi yeni bir tur başlıyor; sıralama haftalık " +
                 "puanına göre kuruluyor.",
-            "Hafta sonunda ilk ${durum.yukselen} kişi bir üst lige geçiyor, " +
-                "son ${durum.dusen} kişi bir alt lige iniyor.",
+            ligTerfiMetni(yukselen = durum.yukselen, dusen = durum.dusen),
             "Ligler: Fidan → Filiz → Ağaç → Koru → Orman.",
             "Düşmek puan kaybettirmiyor. Kazandığın hiçbir puan geri " +
                 "alınmıyor; yalnızca haftaya hangi grupta yarışacağın " +
@@ -439,20 +438,27 @@ private fun LigBasligi(durum: LigDurum, onKuralAcikla: () -> Unit) {
         // -- ve filtre sanılıyordu; hiçbiri tıklanmıyordu (`debug.md` O-16).
         // Aslında bilgi etiketi olduklarına göre yapacakları en doğru şey
         // ne anlama geldiklerini anlatmak.
+        // Sıfır, kuralın kendisi değil YOKLUĞU: "Son 0 düşer" kullanıcıya
+        // hiçbir şey söylemiyor ve tek kişilik bir ligde düşme fikrini boş
+        // yere gündeme getiriyor (CLAUDE.md §4, 5. tarama G5-030).
         Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
-            Cip(
-                metin = "İlk ${durum.yukselen} yükselir",
-                ikon = Icons.Filled.ArrowUpward,
-                zemin = YesilNane,
-                onTikla = onKuralAcikla,
-            )
-            Cip(
-                metin = "Son ${durum.dusen} düşer",
-                ikon = Icons.Filled.ArrowDownward,
-                zemin = Yesil50,
-                renk = MetinUcuncul,
-                onTikla = onKuralAcikla,
-            )
+            if (durum.yukselen > 0) {
+                Cip(
+                    metin = "İlk ${durum.yukselen} yükselir",
+                    ikon = Icons.Filled.ArrowUpward,
+                    zemin = YesilNane,
+                    onTikla = onKuralAcikla,
+                )
+            }
+            if (durum.dusen > 0) {
+                Cip(
+                    metin = "Son ${durum.dusen} düşer",
+                    ikon = Icons.Filled.ArrowDownward,
+                    zemin = Yesil50,
+                    renk = MetinUcuncul,
+                    onTikla = onKuralAcikla,
+                )
+            }
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
     }
@@ -506,3 +512,19 @@ private fun LigSatiri(satir: LigSatiriModel) {
 }
 
 private val SiraGenisligi = Bosluk.L
+
+/**
+ * Lig terfi/tenzil kuralı — sıfır kolu hiç söylenmez.
+ *
+ * Tek kişilik bir ligde `dusen = 0` oluyor ve "son 0 kişi bir alt lige
+ * iniyor" hem bilgi vermiyor hem de olmayan bir cezayı gündeme getiriyor
+ * (CLAUDE.md §4, 5. tarama G5-030).
+ */
+internal fun ligTerfiMetni(yukselen: Int, dusen: Int): String = when {
+    yukselen > 0 && dusen > 0 ->
+        "Hafta sonunda ilk $yukselen kişi bir üst lige geçiyor, " +
+            "son $dusen kişi bir alt lige iniyor."
+    yukselen > 0 -> "Hafta sonunda ilk $yukselen kişi bir üst lige geçiyor."
+    dusen > 0 -> "Hafta sonunda son $dusen kişi bir alt lige iniyor."
+    else -> "Bu turda lig değişimi yok; sıralama yalnızca haftalık puanı gösteriyor."
+}

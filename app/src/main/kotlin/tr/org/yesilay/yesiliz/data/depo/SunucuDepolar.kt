@@ -12,7 +12,6 @@ import tr.org.yesilay.yesiliz.domain.hesap.Oturum
 import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -111,9 +110,6 @@ class SunucuLigDeposu @Inject constructor(
     // geçersiz kod için "eklendi" der. ViewModel beklenen HTTP/ağ hatalarını
     // alan bazında gösteriyor.
     override suspend fun davetGonder(kod: String) = uzak.davetGonder(kod)
-
-    /** Öneri listesi sunucuda yok; rehber de okunmuyor (§12 K14). */
-    override suspend fun onerilenler(): List<OnerilenKisi> = emptyList()
 
     private companion object {
         val BOS_LIG = LigOzeti(

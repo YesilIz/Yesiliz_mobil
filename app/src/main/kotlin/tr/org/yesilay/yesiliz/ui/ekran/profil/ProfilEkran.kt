@@ -69,7 +69,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,7 +78,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
-import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
@@ -300,18 +298,6 @@ fun ProfilEkran(
                     etiket = "Ligde görün",
                     acik = durum.ligdeGorun,
                     onDegis = viewModel::ligdeGorun,
-                )
-                KartAyraci()
-                AnahtarSatiri(
-                    ikon = Icons.Filled.SelfImprovement,
-                    etiket = "Mola hatırlatıcı",
-                    acik = durum.molaHatirlaticiAcik,
-                    onDegis = { acik ->
-                        viewModel.molaHatirlaticiAyarla(acik)
-                        if (acik && !NudgeIzni.verildiMi(context) && NudgeIzni.ayarEkraniVarMi(context)) {
-                            context.startActivity(NudgeIzni.ayarIntent(context))
-                        }
-                    },
                 )
             }
 

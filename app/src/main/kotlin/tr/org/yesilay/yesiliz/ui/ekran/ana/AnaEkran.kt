@@ -358,13 +358,19 @@ fun AnaEkran(
                         color = Beyaz,
                     )
                 }
-                Cip(
-                    onTikla = onIstatistik,
-                    metin = durum.seriEtiketi,
-                    ikon = Icons.Filled.LocalFireDepartment,
-                    zemin = Beyaz.copy(alpha = YariSaydam),
-                    renk = Beyaz,
-                )
+                // Seri 0 iken çip bir eksikliği duyuruyor, bilgi vermiyor —
+                // üstelik K40'a göre 0 çoğu zaman "gün henüz ölçülmedi"
+                // demek. İlk seri gününde belirmesi küçük bir ödül anı
+                // yaratıyor (5. tarama G5-032).
+                if (durum.serideGun > 0) {
+                    Cip(
+                        onTikla = onIstatistik,
+                        metin = durum.seriEtiketi,
+                        ikon = Icons.Filled.LocalFireDepartment,
+                        zemin = Beyaz.copy(alpha = YariSaydam),
+                        renk = Beyaz,
+                    )
+                }
                 YenileDugmesi(
                     onTikla = viewModel::tazele,
                     donuyor = durum.tazeleniyor,

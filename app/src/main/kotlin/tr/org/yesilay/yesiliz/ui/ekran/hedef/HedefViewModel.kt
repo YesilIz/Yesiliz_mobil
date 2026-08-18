@@ -120,6 +120,24 @@ class HedefViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Mola hatırlatıcıyı açar/kapatır.
+     *
+     * Anahtar eskiden Profil › Gizlilik'teydi, eşik ise burada: tek bir
+     * özelliğin açma düğmesi ile ayarı iki ayrı ekranda, iki ayrı kategori
+     * altındaydı — üstelik mola hatırlatıcı bir gizlilik ayarı değil,
+     * cihazdan hiçbir veri çıkarmıyor (5. tarama G5-034). Anahtar eşiğin
+     * yanına geldi; yazma tek yerden, `MainActivity` tercihi dinlediği
+     * için servis başlatma/durdurma kendiliğinden çalışıyor.
+     *
+     * **Kaydet düğmesini beklemiyor**: hedef ve eşik taslak değerler
+     * (`secilen`/`secilenNudge`) üzerinden ilerliyor, bu ise bir anahtar —
+     * kullanıcı dokunduğu anda uygulanmasını bekler.
+     */
+    fun molaHatirlaticiAyarla(acik: Boolean) {
+        viewModelScope.launch { tercihler.molaHatirlaticiAyarla(acik) }
+    }
+
     fun kaydet() {
         val anlik = durum.value
         viewModelScope.launch {

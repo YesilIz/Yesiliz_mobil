@@ -50,6 +50,11 @@ import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.SelfImprovement
+import tr.org.yesilay.yesiliz.ui.bilesen.Kart
+import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
+import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 
 /** Günlük hedef — `docs/tasarim-referans.md §2 / 34`. */
 @Composable
@@ -120,15 +125,23 @@ fun HedefEkran(
                         HizliCip(
                             dakika = dakika,
                             secili = dakika == durum.secilenDk,
+                            // Listeye kayıtlı hedef de ekleniyor (HedefSinir);
+                            // hiçbir şey değiştirilmemişken o çip "seçili"
+                            // görünüyor ama KAYITLI değer olduğu anlaşılmıyordu.
+                            kayitliMi = dakika == durum.kayitliHedefDk,
                             onTikla = { viewModel.ayarla(dakika) },
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
 
-                MolaEsigiBolumu(durum = durum, viewModel = viewModel)
-
+                // Şerit yalnızca GÜNLÜK HEDEF için doğru. Mola eşiği anında
+                // geçerli oluyor (§12 K53: servis eşiği her poll turunda
+                // okuyor), yani şerit mola bölümünün altındayken yapılan
+                // işi yapılmamış gösteriyordu (5. tarama G5-029).
                 BilgiSeridi(ebeveynAktifMi = durum.ebeveynAktifMi)
+
+                MolaEsigiBolumu(durum = durum, viewModel = viewModel)
 
                 BirincilButon(
                     metin = if (durum.kaydedildi) "Kaydedildi" else "Kaydet",
@@ -149,7 +162,31 @@ fun HedefEkran(
  */
 @Composable
 private fun MolaEsigiBolumu(durum: HedefDurum, viewModel: HedefViewModel) {
+    val baglam = LocalContext.current
+
     BolumBasligi("Mola hatırlatıcı")
+
+    // Anahtar Profil › Gizlilik'ten buraya taşındı: açma düğmesi ile eşiği
+    // iki ayrı ekranda tutmak, tek bir özelliği ikiye bölüyordu. Ayrıca bu
+    // bir gizlilik ayarı değil — cihazdan hiçbir veri çıkarmıyor, yanındaki
+    // iki satır (Yeşilay paylaşımı, ligde görün) ise gerçek rıza kapısıydı
+    // ve aynı başlık altında durmak ikisinin ağırlığını bulandırıyordu
+    // (5. tarama G5-034).
+    Kart(icBosluk = Olcu.Aralik) {
+        AnahtarSatiri(
+            ikon = Icons.Filled.SelfImprovement,
+            etiket = "Mola hatırlatıcı",
+            acik = durum.molaHatirlaticiAcik,
+            onDegis = { acik ->
+                viewModel.molaHatirlaticiAyarla(acik)
+                // Overlay izni olmadan popup çizilemiyor; anahtarı açan
+                // kullanıcıyı sistem ekranına bir kez yönlendiriyoruz.
+                if (acik && !NudgeIzni.verildiMi(baglam) && NudgeIzni.ayarEkraniVarMi(baglam)) {
+                    baglam.startActivity(NudgeIzni.ayarIntent(baglam))
+                }
+            },
+        )
+    }
 
     Text(
         text = "Kesintisiz ${durum.secilenNudgeDk.sureMetni()} ekranda kalınca " +
@@ -190,17 +227,24 @@ private fun MolaEsigiBolumu(durum: HedefDurum, viewModel: HedefViewModel) {
 
     // Hatırlatıcı kapalıyken eşiğin bir etkisi yok; bunu söylememek,
     // çalışmayan bir ayarı çalışıyormuş gibi göstermek olurdu (§12 K37).
+    // Anahtar artık hemen yukarıda, o yüzden yönlendirme metni gerekmiyor.
     if (!durum.molaHatirlaticiAcik) {
         Text(
-            text = "Mola hatırlatıcı şu anda kapalı. Profil › Gizlilik'teki " +
-                "\"Mola hatırlatıcı\" anahtarını açtığında bu eşik geçerli olur.",
+            text = "Hatırlatıcı kapalıyken bu eşik uygulanmıyor.",
             style = MaterialTheme.typography.bodySmall,
             color = MetinUcuncul,
         )
     }
 }
 
-/** `−` (beyaz) · değer · `+` (YesilAna) — tasarım 34'teki şerit. */
+/**
+ * `−` … `+` şeridi — tasarım 34.
+ *
+ * **Değeri yazmıyor.** Ekran aynı sayıyı üç kez gösteriyordu (halka "4s 45dk",
+ * şerit "4 saat 45 dakika", seçili çip "4s 45dk") ve ikisi farklı yazım
+ * kuralındaydı. Değeri günlük hedefte halka, mola bölümünde üstteki cümle
+ * söylüyor; şerit yalnızca kontrol (5. tarama G5-028).
+ */
 @Composable
 private fun AyarSeridi(
     deger: Int,
@@ -225,14 +269,7 @@ private fun AyarSeridi(
             etkin = deger > enAz,
             onTikla = onAzalt,
         )
-        Text(
-            text = uzunSure(deger),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MetinBirincil,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
-        )
+        Spacer(modifier = Modifier.weight(1f))
         AyarDugmesi(
             ikon = Icons.Filled.Add,
             aciklama = "Arttır",
@@ -275,6 +312,7 @@ private fun HizliCip(
     secili: Boolean,
     onTikla: () -> Unit,
     modifier: Modifier = Modifier,
+    kayitliMi: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -289,12 +327,21 @@ private fun HizliCip(
             .clickable(onClick = onTikla),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = dakika.sureMetni(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (secili) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (secili) YesilAna else MetinIkincil,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = dakika.sureMetni(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (secili) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (secili) YesilAna else MetinIkincil,
+            )
+            if (kayitliMi) {
+                Text(
+                    text = "kayıtlı",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MetinUcuncul,
+                )
+            }
+        }
     }
 }
 
@@ -335,14 +382,3 @@ internal fun hedefBilgiMetni(ebeveynAktifMi: Boolean): String =
     } else {
         "Değişiklikler yarından itibaren geçerli olur."
     }
-
-/** "4 saat 45 dakika" — şeritteki uzun biçim. */
-private fun uzunSure(dakika: Int): String {
-    val saat = dakika / 60
-    val kalan = dakika % 60
-    return when {
-        saat == 0 -> "$kalan dakika"
-        kalan == 0 -> "$saat saat"
-        else -> "$saat saat $kalan dakika"
-    }
-}

@@ -12,7 +12,6 @@ import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.LigSatiri
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -98,11 +97,6 @@ class YerelSahteLigDeposu @Inject constructor(
         )
     }
 
-    override suspend fun onerilenler(): List<OnerilenKisi> {
-        val mevcut = arkadasDao.hepsiAkisi().first().map { it.isim }.toSet()
-        return ORNEK_ONERILER.map { it.copy(davetGonderildiMi = it.isim in mevcut) }
-    }
-
     /**
      * Sıralamayı kurar.
      *
@@ -156,22 +150,6 @@ class YerelSahteLigDeposu @Inject constructor(
             "İrem" to 1_140,
             "Deniz" to 1_040,
             "Ada" to 980,
-        )
-
-        /**
-         * Önerilen kişiler — **rehberden okunmuyor** (CLAUDE.md §4).
-         *
-         * Alt metinler "3 ortak arkadaş" / "1 ortak arkadaş" idi ve bu,
-         * aynı ekranda verilen "rehberine erişmiyoruz" sözüyle doğrudan
-         * çelişiyordu: ortak arkadaş sayısını bilmek ya rehbere ya da
-         * sosyal grafiğe erişmeyi gerektirir, ikisi de yok
-         * (`debug.md` O-13). Uydurma isim tolere edilebilir; uydurma
-         * ilişki bilgisi mahremiyet sözünü yalanlıyor.
-         */
-        val ORNEK_ONERILER = listOf(
-            OnerilenKisi("Ece Kılıç", "Örnek kişi"),
-            OnerilenKisi("Mert Aydın", "Örnek kişi"),
-            OnerilenKisi("Selin Öz", "Örnek kişi"),
         )
     }
 }

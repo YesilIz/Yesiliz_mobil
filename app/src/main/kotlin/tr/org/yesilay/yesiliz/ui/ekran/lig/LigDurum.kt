@@ -1,6 +1,5 @@
 package tr.org.yesilay.yesiliz.ui.ekran.lig
 
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 
 /**
  * Lig ekranı durumu — `docs/tasarim-referans.md §2 / 10` ve boş durum **37**.
@@ -63,15 +62,6 @@ data class ArkadasEkleDurum(
     val kodHatasi: String? = null,
     val kodIslemde: Boolean = false,
     val kodlaEklendi: Boolean = false,
-    val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
-    /**
-     * Daveti gönderilmekte olan isimler.
-     *
-     * Sunucuya ulaşılamayan bir telefonda gönderim beş saniye sürüyor;
-     * o süre boyunca çipin "Ekle" demeye devam etmesi, kullanıcının
-     * tekrar tekrar dokunmasına yol açıyordu (`debug.md` Y-10).
-     */
-    val gonderiliyor: Set<String> = emptySet(),
     val yukleniyor: Boolean = true,
 )

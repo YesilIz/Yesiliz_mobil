@@ -133,9 +133,8 @@ fun IstatistikEkran(
                 // okur.
                 if (durum.olculenGunSayisi in 1 until durum.gunSayisi) {
                     UyariSeridi(
-                        metin = "${durum.gunSayisi} günün ${durum.olculenGunSayisi} tanesi " +
-                            "ölçüldü. Ortalama yalnızca o günlerden hesaplandı; " +
-                            "ölçülemeyen günler grafikte boş görünüyor.",
+                        metin = "Son ${durum.gunSayisi} günün ${durum.olculenGunSayisi}'i " +
+                            "ölçüldü; ortalama yalnızca o günlerden.",
                     )
                 }
 
