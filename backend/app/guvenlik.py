@@ -1,14 +1,16 @@
-"""Şifre özetleme ve JWT."""
+"""Şifre özetleme, JWT ve panel sırlarının şifrelenmesi."""
 
 from __future__ import annotations
 
 import datetime as dt
 import hashlib
 import secrets
+from functools import lru_cache
 
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -60,6 +62,50 @@ def rastgele_jeton() -> str:
 def jeton_ozetle(jeton: str) -> str:
     """Tek kullanımlı ve yenileme sırlarını veritabanında düz tutma."""
     return hashlib.sha256(jeton.encode("utf-8")).hexdigest()
+
+
+class SirCozulemedi(RuntimeError):
+    """Şifreli sır bu anahtarla açılamıyor — anahtar değişmiş olabilir."""
+
+
+@lru_cache
+def _fernet() -> Fernet:
+    return Fernet(ayarlar().panel_totp_anahtari.encode("ascii"))
+
+
+def sir_sifrele(duz: str) -> str:
+    """
+    Personel TOTP sırrını veritabanına yazmadan önce şifreler.
+
+    Parola `argon2id` ile **özetleniyor** çünkü geri okunması gerekmiyor;
+    TOTP sırrı ise her doğrulamada okunmak zorunda, yani özet işe yaramaz —
+    tersine çevrilebilir şifreleme gerekiyor. Anahtar veritabanında değil
+    ortam değişkeninde (`PANEL_TOTP_KEY`), böylece veritabanı yedeğini
+    okuyan biri ikinci faktörü baypas edemiyor.
+
+    `jeton_ozetle` ile karıştırılmaz: o tek yönlü, bu iki yönlü. Seçim
+    verinin okunmaya ihtiyacı olup olmamasına göre yapılıyor.
+    """
+    return _fernet().encrypt(duz.encode("utf-8")).decode("ascii")
+
+
+def sir_coz(sifreli: str) -> str:
+    """
+    [sir_sifrele] ile yazılmış değeri açar.
+
+    Anahtar döndürülmüş ya da kaybolmuşsa açık bir hata veriyor; sessizce
+    boş sır dönmek, TOTP doğrulamasının **her kodu reddetmesi** demek olurdu
+    ve sebebi hiçbir yerde görünmezdi (§9 `runCatching{}.getOrDefault`
+    tuzağının sunucu karşılığı).
+    """
+    try:
+        return _fernet().decrypt(sifreli.encode("ascii")).decode("utf-8")
+    except (InvalidToken, ValueError) as hata:
+        raise SirCozulemedi(
+            "TOTP sırrı çözülemedi; PANEL_TOTP_KEY değişmiş olabilir. "
+            "Anahtar geri getirilemiyorsa personelin 2FA'yı yeniden kurması "
+            "gerekiyor (docs/dagitim.md §1)."
+        ) from hata
 
 
 def erisim_jetonu(kullanici_id: int) -> str:
