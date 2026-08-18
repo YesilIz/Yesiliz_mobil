@@ -1,6 +1,6 @@
 # Dağıtım — backend ve Android
 
-> Görev 1'in dokümanı. Kaynak: `gorev1.md`, `CLAUDE.md` §5 ve §12 K18/K24.
+> Dağıtım dokümanı. Kaynak: `CLAUDE.md` §5 ve §12 K18/K24/K29.
 >
 > **Buraya gerçek parola ya da secret yazılmaz.** Değişkenlerin adları var,
 > değerleri yok; değerler sağlayıcı panelinde ve `.env`'de (gitignore'da).
@@ -135,7 +135,7 @@ curl -s localhost:8000/health
 YESILIZ_SMOKE_TABAN=https://<alan-adi> python -m pytest smoke -q
 ```
 
-Smoke testleri (`backend/smoke/test_duman.py`) `gorev1.md §9`'un adım
+Smoke testleri (`backend/smoke/test_duman.py`) kabul kriterlerinin adım
 listesini izliyor: `/health` → benzersiz test kullanıcısı → giriş →
 korumalı uç (jetonsuz 401 dâhil) → `POST /ozet` → `GET /lig` →
 `DELETE /auth/hesap` ile temizlik. Temizlik `finally` içinde, test düşse
@@ -227,7 +227,7 @@ keytool -genkeypair -keystore app/yesiliz-release.jks -alias yesiliz \
 
 ### Release APK doğrulaması
 
-**Otomatik (`gorev2.md` §11):**
+**Otomatik (CLAUDE.md §12 K32):**
 
 ```bash
 ./gradlew :app:dogrulaReleaseApk

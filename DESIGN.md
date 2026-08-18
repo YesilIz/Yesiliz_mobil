@@ -218,6 +218,14 @@ Screen:
 
 ## 4. AĞAÇ METAFORU — SPEK
 
+> **TARİHSEL — kod bu bölümü izlemiyor.** Aşağıdaki tablo ağacı **risk bandına**
+> ve beş duruma bağlıyor; uygulama ağacı **TOPLAM PUANA** ve **dokuz evreye**
+> bağlıyor (`AnaViewModel.agacEvresi`, `EVRE2_PUAN = 100` … `EVRE9_PUAN = 10.000`).
+> Risk bandına bağlamak bilinçli olarak reddedildi: kötü bir günde ağacı
+> kurutmak cezalandırma olurdu (CLAUDE.md §4 "ceza puanı yok", §12 K2).
+> **Çelişkide kod kazanıyor.** Bölümün geri kalanı — ağacın hiçbir zaman ölü
+> görünmemesi, yumuşak geçişler, palet — hâlâ geçerli.
+
 Ana ekranın merkezindeki görsel. Kullanıcının durumu tek bakışta görünür.
 
 | Durum | Görsel tanım |

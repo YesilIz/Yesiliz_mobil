@@ -1,6 +1,6 @@
 # Backend — test, güvenlik kapısı, dağıtım, smoke.
 #
-# Sıra `gorev1.md §5` ile birebir: test → yapılandırma/güvenlik kontrolü →
+# Sıra: test → yapılandırma/güvenlik kontrolü →
 # imaj → dağıtım → migration → /health → smoke. Herhangi bir adım düşerse
 # sonraki adım koşmuyor (`needs:`), yani dağıtım DURUYOR.
 #
