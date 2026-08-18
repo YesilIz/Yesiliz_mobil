@@ -23,12 +23,33 @@ adları değiştirilemiyor.
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `YESILIZ_ERISIM_DAKIKA` | hayır | Erişim jetonu ömrü, varsayılan 30 |
 | — | `YESILIZ_SAAT_DILIMI` | hayır | Lig haftası ve ebeveyn "bugün" penceresi; varsayılan `Europe/Istanbul` |
 | `PORT` | — | hayır | Sağlayıcı enjekte ediyor; yerelde 8000 |
+| `SERVER_ROLE` | `YESILIZ_ROL` | hayır | `api` (varsayılan) · `panel`. Hangi router kümesinin mount edileceğini belirliyor — §2.1 |
+
+**Yalnızca `rol = panel` servisinde:** aşağıdakiler API servisinde tanımsız
+kalabilir; açılış kapısı onları yalnızca panel rolünde arıyor.
+
+| Standart ad | Önekli ad | Zorunlu mu | Ne işe yarıyor |
+|---|---|---|---|
+| `PANEL_SECRET` | `YESILIZ_PANEL_SIRRI` | üretimde **evet** | Oturum çerezi ve CSRF jetonunun türetildiği sır, ≥ 32 karakter |
+| `PANEL_TOTP_KEY` | `YESILIZ_PANEL_TOTP_ANAHTARI` | üretimde **evet** | Personel TOTP sırlarını şifreleyen Fernet anahtarı |
+| `PANEL_BASE_URL` | `YESILIZ_PANEL_TABAN` | üretimde **evet** | Panelin kendi HTTPS adresi; `Origin` denetimi ve TOTP kurulumu kullanıyor |
+| — | `YESILIZ_PANEL_CEREZ_GUVENLI` | hayır | Varsayılan `true`. Yalnızca yerel http geliştirmede `false` |
+| — | `YESILIZ_PANEL_OTURUM_MUTLAK_SAAT` | hayır | Vardiya uzunluğu, varsayılan 8 |
+| — | `YESILIZ_PANEL_OTURUM_HAREKETSIZLIK_DAKIKA` | hayır | Varsayılan 30 |
 
 Örnek dosya: `backend/.env.ornek`. Anahtar üretmek için:
 
 ```bash
+# JWT ve panel sırrı
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Panel TOTP anahtarı (Fernet)
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
+
+> **TOTP anahtarı kaybolursa** kayıtlı bütün personel sırları çözülemez ve
+> herkes 2FA'yı yeniden kurmak zorunda kalır. Anahtarı sağlayıcı panelinde
+> tanımlayın ve ayrıca güvenli bir yerde saklayın.
 
 ### Üretim açılış kapısı
 
@@ -37,7 +58,18 @@ ve şu üç durumda **uygulama başlamıyor**:
 
 - JWT anahtarı depodaki varsayılan değerde,
 - JWT anahtarı 32 karakterden kısa,
-- `DATABASE_URL` bir SQLite adresi.
+- `DATABASE_URL` bir SQLite adresi,
+- `ALLOWED_ORIGINS` joker (`*`) içeriyor.
+
+`rol = panel` iken ayrıca dört kural daha (`Ayarlar._panel_sorunlari`):
+
+- panel oturum sırrı varsayılanda ya da 32 karakterden kısa,
+- panel TOTP anahtarı varsayılanda,
+- panel çerezi `Secure` değil,
+- `PANEL_BASE_URL` boş ya da `https://` ile başlamıyor.
+
+**API rolüne yeni kural eklenmedi** — canlıdaki mevcut servisin kapısı
+bit-birebir aynı, panel ayarlarının hiçbirini tanımlamasına gerek yok.
 
 Uyarı basıp devam etmiyor: uyarı sağlayıcı log akışında kaybolur ve sunucu
 haftalarca varsayılan anahtarla çalışır. Hata mesajı anahtarın kendisini

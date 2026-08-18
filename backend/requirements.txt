@@ -10,7 +10,16 @@ email-validator==2.3.0
 pydantic-settings==2.11.0
 argon2-cffi==25.1.0
 pyjwt==2.10.1
+# Panel formları multipart gönderiyor; zaten buradaydı.
 python-multipart==0.0.20
+
+# panel (YESILIZ_ROL=panel) — sunucu tarafında render
+# Şablon motoru. Panel bir SPA değil (docs/panel-plani.md §3), yani bu
+# olmadan hiçbir sayfa çizilmiyor.
+jinja2==3.1.6
+# Personel TOTP sırlarını şifreliyor (Fernet). Veritabanı yedeğini okuyan
+# birinin ikinci faktörü baypas edememesi için — docs/panel-plani.md §1.1.
+cryptography==46.0.2
 
 # test
 pytest==8.4.2

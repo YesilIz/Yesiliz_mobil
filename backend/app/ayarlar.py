@@ -19,6 +19,12 @@ başlayan bir üretim sunucusu, imzası herkesçe bilinen jetonlar dağıtırdı
 Doğrulama [ayarlar] içinde çağrılıyor, `Ayarlar` kurucusunda değil: ayarları
 okuyan **her** yol (uvicorn, alembic, worker) kapıdan geçiyor ama testler
 geçersiz bir yapılandırmayı kurup davranışını sınayabiliyor.
+
+**Aynı imaj iki servis koşuyor** (`docs/panel-plani.md §4`, CLAUDE.md §12 K57).
+`YESILIZ_ROL` hangi router'ların mount edileceğini belirliyor: `api` cihaz
+uçlarını, `panel` yönetim ve YEDAM panelini. Panel uçları API alan adında
+**hiç** mount edilmiyor, yani yanlış yazılmış bir yetki kontrolü bile
+internete açık olmuyor — yol 404 dönüyor.
 """
 
 from __future__ import annotations
@@ -36,6 +42,16 @@ VARSAYILAN_JWT_ANAHTARI = "gelistirme-anahtari-uretimde-degistir"
 #: 32 bayt (`secrets.token_urlsafe(32)` ≈ 43 karakter) altındaki bir HS256
 #: anahtarı kaba kuvvete açık; üretimde asgari sınır.
 ASGARI_ANAHTAR_UZUNLUGU = 32
+
+#: Panel oturum çerezinin ve CSRF jetonunun türetildiği sır. Üretimde
+#: `panel` rolünde bu değerle başlanamaz.
+VARSAYILAN_PANEL_SIRRI = "gelistirme-panel-sirri-uretimde-degistir"
+
+#: Personel TOTP sırlarını şifreleyen Fernet anahtarı. Üretimde `panel`
+#: rolünde bu değerle başlanamaz.
+#: Üretmek için: `python3 -c "from cryptography.fernet import Fernet;
+#: print(Fernet.generate_key().decode())"`
+VARSAYILAN_PANEL_TOTP_ANAHTARI = "Z2VsaXN0aXJtZS1hbmFodGFyaS1kZWdpc3Rpci0wMDA="
 
 SURUM = "0.1.0"
 
@@ -55,6 +71,24 @@ class Ortam(str, enum.Enum):
     GELISTIRME = "development"
     TEST = "test"
     URETIM = "production"
+
+
+class SunucuRolu(str, enum.Enum):
+    """
+    Aynı imajı koşan iki servisi ayıran anahtar (`docs/panel-plani.md §4`).
+
+    `api`: cihazın konuştuğu uçlar — mevcut davranış, varsayılan.
+    `panel`: yönetim ve YEDAM danışman paneli (SSR).
+
+    **Varsayılanın `api` olması zorunlu:** canlıdaki mevcut Railway servisi
+    `YESILIZ_ROL` tanımlamıyor ve dokunulmadan çalışmaya devam etmeli.
+
+    Tanınmayan bir değer pydantic'te `ValidationError` üretiyor, yani servis
+    hiç açılmıyor — yanlış yazılmış bir rol sessizce API'ye düşmüyor.
+    """
+
+    API = "api"
+    PANEL = "panel"
 
 
 def _veritabani_url_duzelt(url: str) -> str:
@@ -91,6 +125,11 @@ class Ayarlar(BaseSettings):
     ortam: Ortam = Field(
         default=Ortam.GELISTIRME,
         validation_alias=AliasChoices("YESILIZ_ORTAM", "ENVIRONMENT"),
+    )
+
+    rol: SunucuRolu = Field(
+        default=SunucuRolu.API,
+        validation_alias=AliasChoices("YESILIZ_ROL", "SERVER_ROLE"),
     )
 
     # Varsayılan SQLite: Docker yokken de testler koşabilsin. docker-compose
@@ -147,6 +186,43 @@ class Ayarlar(BaseSettings):
     lig_yukselen: int = 3
     lig_dusen: int = 3
 
+    # --- panel (yalnızca `rol = panel` iken anlamlı) ---
+    #
+    # Bu beş ayar API servisinde tanımsız kalabilir; `dogrula` onları
+    # yalnızca panel rolünde arıyor. Böylece canlıdaki mevcut API servisine
+    # hiç dokunmadan panel servisi ayağa kalkabiliyor.
+
+    # Oturum çerezinin ve CSRF jetonunun türetildiği sır.
+    panel_oturum_sirri: str = Field(
+        default=VARSAYILAN_PANEL_SIRRI,
+        validation_alias=AliasChoices("YESILIZ_PANEL_SIRRI", "PANEL_SECRET"),
+    )
+
+    # Personel TOTP sırlarını şifreleyen Fernet anahtarı (kullanıcı kararı,
+    # `docs/panel-plani.md §1.1`): veritabanı yedeğini okuyan biri ikinci
+    # faktörü baypas edememeli.
+    panel_totp_anahtari: str = Field(
+        default=VARSAYILAN_PANEL_TOTP_ANAHTARI,
+        validation_alias=AliasChoices("YESILIZ_PANEL_TOTP_ANAHTARI", "PANEL_TOTP_KEY"),
+    )
+
+    # Panelin kendi adresi. `Origin`/`Referer` denetimi ve TOTP kurulum
+    # bağlantısındaki `otpauth://` issuer'ı bundan geliyor.
+    panel_taban_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("YESILIZ_PANEL_TABAN", "PANEL_BASE_URL"),
+    )
+
+    # Yerel geliştirmede http üzerinden çalışabilmek için gevşetilebiliyor;
+    # üretimde `dogrula` False'u reddediyor.
+    panel_cerez_guvenli: bool = True
+
+    # Vardiya uzunluğu. `personel_oturum.mutlak_bitis` bu değerden **satır
+    # yazılırken** hesaplanıyor: ayar sonradan büyütülürse yaşayan oturumlar
+    # geriye dönük uzamıyor.
+    panel_oturum_mutlak_saat: int = 8
+    panel_oturum_hareketsizlik_dakika: int = 30
+
     # Sürücü düzeltmesi okuma anında yapılıyor: alembic, uvicorn ve testler
     # ayarları aynı yerden alsın, üçünde ayrı ayrı düzeltilmesin.
     _url_duzelt = field_validator("veritabani_url")(
@@ -165,6 +241,14 @@ class Ayarlar(BaseSettings):
     @property
     def uretim_mi(self) -> bool:
         return self.ortam is Ortam.URETIM
+
+    @property
+    def panel_mi(self) -> bool:
+        return self.rol is SunucuRolu.PANEL
+
+    @property
+    def api_mi(self) -> bool:
+        return self.rol is SunucuRolu.API
 
     @property
     def izinli_kaynak_listesi(self) -> list[str]:
@@ -211,11 +295,67 @@ class Ayarlar(BaseSettings):
                 "panel kaynaklarını açıkça yazın."
             )
 
+        # Panel rolüne özel kurallar. **API rolüne yeni kural eklenmiyor** —
+        # canlıdaki mevcut servisin üretim kapısı bit-birebir aynı kalıyor.
+        if self.panel_mi:
+            sorunlar.extend(self._panel_sorunlari())
+
         if sorunlar:
             raise YapilandirmaHatasi(
                 "Üretim yapılandırması eksik ya da güvensiz:\n- "
                 + "\n- ".join(sorunlar)
             )
+
+
+    def _panel_sorunlari(self) -> list[str]:
+        """
+        Panel servisinin üretimde reddettikleri.
+
+        Panel, personel kimliği ve sağlık verisine yakın bir yüzey taşıyor;
+        API'den daha sıkı bir kapıyı hak ediyor. Ayrı bir yardımcıya
+        çıkarılmasının sebebi [dogrula]'nın okunabilir kalması.
+        """
+        sorunlar: list[str] = []
+
+        if self.panel_oturum_sirri == VARSAYILAN_PANEL_SIRRI:
+            sorunlar.append(
+                "Panel oturum sırrı depodaki varsayılan değerde. "
+                "PANEL_SECRET'i ortam değişkeni olarak tanımlayın "
+                "(`python3 -c \"import secrets;print(secrets.token_urlsafe(32))\"`)."
+            )
+        elif len(self.panel_oturum_sirri) < ASGARI_ANAHTAR_UZUNLUGU:
+            sorunlar.append(
+                f"Panel oturum sırrı {ASGARI_ANAHTAR_UZUNLUGU} karakterden kısa "
+                f"({len(self.panel_oturum_sirri)})."
+            )
+
+        if self.panel_totp_anahtari == VARSAYILAN_PANEL_TOTP_ANAHTARI:
+            sorunlar.append(
+                "Panel TOTP anahtarı depodaki varsayılan değerde. "
+                "PANEL_TOTP_KEY'i tanımlayın (`python3 -c \"from "
+                'cryptography.fernet import Fernet;'
+                "print(Fernet.generate_key().decode())\"`)."
+            )
+
+        # Çerez `Secure` olmazsa oturum jetonu şifresiz bir bağlantıda
+        # yakalanabilir; panelin bütün yetki modeli o çereze bağlı.
+        if not self.panel_cerez_guvenli:
+            sorunlar.append(
+                "Üretimde panel çerezi Secure olmalı; "
+                "YESILIZ_PANEL_CEREZ_GUVENLI=false yalnızca yerel geliştirme için."
+            )
+
+        # `Origin`/`Referer` denetimi bu adrese dayanıyor. Boşsa CSRF
+        # savunmasının ikinci ayağı sessizce devre dışı kalırdı.
+        if not self.panel_taban_url:
+            sorunlar.append(
+                "Panel adresi tanımsız; PANEL_BASE_URL panelin kendi HTTPS "
+                "adresi olmalı (Origin denetimi ve TOTP kurulumu bunu kullanıyor)."
+            )
+        elif not self.panel_taban_url.startswith("https://"):
+            sorunlar.append("Üretimde PANEL_BASE_URL https:// ile başlamalı.")
+
+        return sorunlar
 
 
 @lru_cache
