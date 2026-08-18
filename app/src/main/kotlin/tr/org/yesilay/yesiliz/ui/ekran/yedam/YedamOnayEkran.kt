@@ -40,6 +40,8 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
+import tr.org.yesilay.yesiliz.domain.yedam.Yedam
+import tr.org.yesilay.yesiliz.ui.bilesen.YedamAraButonu
 
 /**
  * Yüksek riskte gösterilen YEDAM köprüsü.
@@ -101,25 +103,17 @@ fun YedamOnayEkran(
 
                 BilgiSeridi(
                     metin = "Bu ekrandan YEDAM'a hiçbir veri veya iletişim talebi " +
-                        "gönderilmez. 115'e dokunduğunda yalnızca telefon " +
-                        "çeviricisi açılır; aramayı sen başlatırsın.",
+                        "gönderilmez. ${Yedam.NUMARA}'e dokunduğunda yalnızca " +
+                        "telefon çeviricisi açılır; aramayı sen başlatırsın.",
                 )
 
                 Text(
-                    text = "115 çalışma saatleri: hafta içi 08:30–00:00, " +
-                        "cumartesi 08:30–17:30.",
+                    text = Yedam.CALISMA_SAATLERI,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MetinIkincil,
                 )
 
-                BirincilButon(
-                    metin = "115'i ara",
-                    onTikla = {
-                        context.startActivity(
-                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:115")),
-                        )
-                    },
-                )
+                YedamAraButonu()
                 MetinBaglanti(
                     metin = "Şimdi değil",
                     onTikla = onGeri,

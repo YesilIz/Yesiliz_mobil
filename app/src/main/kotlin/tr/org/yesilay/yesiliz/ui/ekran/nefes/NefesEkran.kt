@@ -64,6 +64,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 import tr.org.yesilay.yesiliz.ui.tema.Beyaz
+import tr.org.yesilay.yesiliz.ui.sayacMetni
 
 /**
  * Nefes egzersizi — kutu nefesi. `docs/tasarim-referans.md §2 / 16`,
@@ -345,11 +346,7 @@ private fun NefesKontrolu(
     }
 }
 
-private fun kalanMetni(toplamSaniye: Int): String {
-    val dakika = toplamSaniye / 60
-    val saniye = toplamSaniye % 60
-    return "%d:%02d kaldı".format(dakika, saniye)
-}
+private fun kalanMetni(toplamSaniye: Int): String = "${toplamSaniye.sayacMetni()} kaldı"
 
 /** Nefes ver/tut fazlarında dairenin küçüldüğü ölçek. */
 private const val DaralmaOlcegi = 0.75f

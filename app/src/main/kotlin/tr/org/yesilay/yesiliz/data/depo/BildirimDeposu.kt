@@ -10,6 +10,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import tr.org.yesilay.yesiliz.ui.sureMetni
 
 /**
  * Uygulama içi bildirim defteri (tasarım 35).
@@ -62,7 +63,7 @@ class BildirimDeposu @Inject constructor(
     suspend fun hedefTutturuldu(ekranDk: Int, hedefDk: Int) = birKezGunde(
         tur = BildirimTuru.HEDEF,
         baslik = "Ekran süresi hedefine ulaştın",
-        govde = "Bugün ${sureMetni(ekranDk)} ile hedefinin altındasın.",
+        govde = "Bugün ${ekranDk.sureMetni()} ile hedefinin altındasın.",
     )
 
     suspend fun seriIlerledi(gun: Int) = birKezGunde(
@@ -109,15 +110,8 @@ class BildirimDeposu @Inject constructor(
         yaz(tur, baslik, govde)
     }
 
-    private fun sureMetni(dakika: Int): String {
-        val saatKismi = dakika / DAKIKA_SAAT
-        val dakikaKismi = dakika % DAKIKA_SAAT
-        return if (saatKismi > 0) "${saatKismi}s ${dakikaKismi}dk" else "${dakikaKismi}dk"
-    }
-
     private companion object {
         const val LISTE_ADET = 50
         const val SAKLAMA_GUN = 60L
-        const val DAKIKA_SAAT = 60
     }
 }

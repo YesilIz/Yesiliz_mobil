@@ -120,6 +120,8 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
+import tr.org.yesilay.yesiliz.domain.yedam.Yedam
+import tr.org.yesilay.yesiliz.ui.bilesen.YedamAraButonu
 
 /**
  * Profil ve ayarlar — `docs/tasarim-referans.md §2 / 12`.
@@ -1305,7 +1307,7 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(Olcu.Aralik))
             Text(
-                text = "115 — ücretsiz ve gizli YEDAM Hattı",
+                text = "${Yedam.NUMARA} — ücretsiz ve gizli YEDAM Hattı",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MetinBirincil,
@@ -1324,27 +1326,13 @@ private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
             color = MetinIkincil,
         )
         Text(
-            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
-                "cumartesi 08:30–17:30.",
+            text = Yedam.CALISMA_SAATLERI,
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
 
-        // ACTION_DIAL: numarayı çevirici uygulamasına yazıyor ama kendisi
-        // aramıyor. ACTION_CALL izin isterdi ve kullanıcının onayı olmadan
-        // arama başlatmak bu ekranın işi değil.
-        BirincilButon(
-            metin = "115'i ara",
-            onTikla = {
-                context.startActivity(
-                    android.content.Intent(
-                        android.content.Intent.ACTION_DIAL,
-                        android.net.Uri.parse("tel:115"),
-                    ),
-                )
-            },
-        )
+        YedamAraButonu()
     }
 }
 
