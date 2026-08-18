@@ -14,11 +14,19 @@ hesaplanıyor; sunucu yalnızca saklıyor ve ebeveyn/lig için okuyor.
 
 Bu, cihaz şemasının (`DB.md`) kopyası **değil**: burada kullanıcı kimliği,
 lig üyeliği ve ebeveyn bağlantısı var; orada ham olaylar var.
+
+**Panel tabloları dosyanın sonunda** (`personel`, `personel_oturum`,
+`denetim_kaydi`, …). Sözleşmeyi değiştirmiyorlar: personel kimliği ve
+denetim izi taşıyorlar, davranış verisi değil. Ayrı bir modül dosyasına
+konmadılar çünkü `alembic/env.py` yalnızca `app.modeller`'i import ediyor —
+ikinci bir dosya orada da bildirilmezse autogenerate o tabloları görmez ve
+**silmeye kalkar**.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import enum
 
 from sqlalchemy import (
     text,
@@ -294,3 +302,205 @@ class Heartbeat(Taban):
 
     kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), primary_key=True)
     son_sinyal: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+# ---------------------------------------------------------------------------
+# PANEL — personel kimliği ve denetim
+#
+# `docs/panel-plani.md §2` (CLAUDE.md §12 K57): personel hesapları son
+# kullanıcıdan **ayrı tabloda**. `Kullanici.rol` kolonu bu iş için
+# KULLANILMIYOR ve kullanılmayacak. Dört gerekçe:
+#
+#   1. KVKK'da son kullanıcı *veri sahibi*, personel *veri işleyen* — iki
+#      ayrı rejim, iki ayrı aydınlatma metni, iki ayrı saklama süresi.
+#   2. Personelin ekran süresi, lig üyeliği, ödül kademesi, serisi
+#      OLMAMALI. Aynı tabloda olsalardı her uçta "bu kullanıcı personel mi"
+#      diye sormak gerekirdi ve bir uçta unutmak danışmanı ligde gösterirdi.
+#   3. `rol` kolonuyla ayrım her uç için ayrı ayrı doğru yazılmak zorunda;
+#      ayrı tabloyla ayrım yabancı anahtar seviyesinde fiziksel.
+#   4. Aynı kişi hem danışman hem kullanıcı olabilir — iki ayrı hesap açar.
+#
+# Bu tabloların hiçbiri `kullanici.id`'ye yabancı anahtar VERMİYOR;
+# `denetim_kaydi.hedef_id` bilerek düz `Integer` (aşağıda gerekçesi).
+# ---------------------------------------------------------------------------
+
+
+class PersonelRolu(str, enum.Enum):
+    """
+    En az yetki ilkesi (`docs/panel-plani.md §2`).
+
+    Bir rolün göremediği veri ekranda gri de görünmüyor: uç 403 dönüyor ve
+    arayüzde o bölüm hiç çizilmiyor.
+    """
+
+    ADMIN = "admin"
+    OPERASYON = "operasyon"
+    YEDAM_YONETICI = "yedam_yonetici"
+    YEDAM_DANISMAN = "yedam_danisman"
+    GOZLEMCI = "gozlemci"
+
+
+class PersonelDurumu(str, enum.Enum):
+    AKTIF = "aktif"
+    ASKIDA = "askida"
+
+
+class Personel(Taban):
+    """
+    Panel kullanıcısı. Son kullanıcı DEĞİL — yukarıdaki blok neden.
+
+    Parola `argon2id` ile özetleniyor (`kullanici` ile aynı), TOTP sırrı ise
+    **şifreleniyor** (`guvenlik.sir_sifrele`): sır her doğrulamada okunmak
+    zorunda olduğu için özet işe yaramıyor.
+    """
+
+    __tablename__ = "personel"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    eposta: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    ad: Mapped[str] = mapped_column(String(120))
+    sifre_ozet: Mapped[str] = mapped_column(String(255))
+    rol: Mapped[str] = mapped_column(String(20))
+    durum: Mapped[str] = mapped_column(
+        String(20), default=PersonelDurumu.AKTIF.value, server_default=text("'aktif'")
+    )
+
+    # Fernet ile şifrelenmiş base32 sır. Boş = 2FA henüz kurulmadı; ilk
+    # girişte kurulum ekranına yönlendiriliyor.
+    totp_sir: Mapped[str] = mapped_column(String(255), default="", server_default=text("''"))
+
+    # Doğrulanan son TOTP sayacı. Aynı kodun ikinci kez kullanılması
+    # reddediliyor — omuz üstünden okunan bir kod 30 sn geçerli kalmamalı.
+    son_totp_sayaci: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+
+    # Kaba kuvvete karşı hesap kilidi (`docs/panel-plani.md §1.1 U5`).
+    # Redis yerine bu seçildi: paylaşımlı kurum NAT'ının arkasında IP
+    # tabanlı bir sınır zaten tek bir adrese bakıyor olurdu.
+    basarisiz_deneme: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    kilit_bitis: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    son_giris: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    olusturma: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+class PersonelOturum(Taban):
+    """
+    Sunucu tarafı oturum. JWT **değil**, çünkü JWT tarayıcıda iptal edilemez.
+
+    Personel hesabı askıya alındığında oturumun o anda düşmesi gerekiyor;
+    bu tablo bunu tek `UPDATE` ile yapıyor.
+
+    Jeton çereze **ham** yazılıyor, buraya SHA-256 özeti — `YenilemeJetonu`
+    ile aynı sözleşme (CLAUDE.md §12 K36): veritabanı sızıntısı oturum ele
+    geçirmiyor.
+
+    İki adımlı giriş **tek satırda**: parola doğrulanınca satır
+    `totp_dogrulandi = False` ve 5 dakikalık `mutlak_bitis` ile açılıyor,
+    TOTP doğrulanınca bayrak dönüyor ve süre vardiya uzunluğuna çekiliyor.
+    İkinci bir tablo ve ikinci bir çerez yok; yarım kalmış giriş de
+    listelenebilir ve düşürülebilir bir oturum.
+    """
+
+    __tablename__ = "personel_oturum"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"), index=True)
+    jeton_ozet: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    totp_dogrulandi: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    ip: Mapped[str] = mapped_column(String(45), default="", server_default=text("''"))
+    tarayici: Mapped[str] = mapped_column(String(255), default="", server_default=text("''"))
+
+    olusturma: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+    son_erisim: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+    # Kolon, ayardan türetilen anlık değer DEĞİL: `panel_oturum_mutlak_saat`
+    # sonradan büyütülürse yaşayan oturumlar geriye dönük uzamasın.
+    mutlak_bitis: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+
+    iptal: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class PersonelKurtarmaKodu(Taban):
+    """
+    Telefonunu kaybeden personelin tek kullanımlık giriş kodu.
+
+    Kodun kendisi değil SHA-256 özeti saklanıyor (`PersonelOturum` ile aynı
+    gerekçe). Kurulumda 8 tane üretiliyor ve **bir kez** gösteriliyor.
+    """
+
+    __tablename__ = "personel_kurtarma_kodu"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"), index=True)
+    kod_ozet: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    kullanildi: Mapped[bool] = mapped_column(Boolean, default=False)
+    olusturma: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+class DenetimKaydi(Taban):
+    """
+    Her personel yazma eyleminin silinemez izi (`docs/panel-plani.md §7`).
+
+    **`hedef_id` kasten yabancı anahtar DEĞİL.** Kullanıcı silinince
+    (`DELETE /auth/hesap`) cascade baskısı doğmasın ve denetim satırı hayatta
+    kalsın diye. Silmeden sonra `hedef_id` takma-adlaşmış bir sayıya
+    dönüşüyor: hangi kaydın kastedildiği artık çözülemiyor ama eylemin
+    yapıldığı ve kim tarafından yapıldığı duruyor.
+
+    **Satır yazma `db.commit()`'ten ÖNCE çağrılıyor** (`panel/denetim.py`):
+    denetim kaydı ve etkisi aynı transaction'da, yani "gerçekleşmiş ama kaydı
+    olmayan eylem" fiziksel olarak imkânsız.
+
+    Silinemezlik üç katmanlı: kod disiplini (hiçbir `delete`/`update` yok,
+    test tarıyor) · veritabanı tetikleyicisi (migration) · F6'da ayrı DB
+    rolü.
+    """
+
+    __tablename__ = "denetim_kaydi"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"), index=True)
+
+    # Örn. "kullanici.askiya_al", "puan.duzelt", "yedam.basvuru.ata".
+    eylem: Mapped[str] = mapped_column(String(60), index=True)
+    # Örn. "kullanici", "personel", "yedam_basvuru".
+    hedef_tur: Mapped[str] = mapped_column(String(40))
+    hedef_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+
+    # Zorunlu ve serbest metin. Uçlar en az 20 karakter arıyor: "düzeltme"
+    # diyen bir eylemin niçini kaydın kendisinde durmalı.
+    gerekce: Mapped[str] = mapped_column(String(500), default="", server_default=text("''"))
+
+    ip: Mapped[str] = mapped_column(String(45), default="", server_default=text("''"))
+    detay: Mapped[str] = mapped_column(String(2000), default="", server_default=text("''"))
+    zaman: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi, index=True)
+
+
+class OzellikBayragi(Taban):
+    """
+    Panelden yönetilen sunucu tarafı anahtarlar.
+
+    **Risk motoru sabitleri buraya GİRMİYOR** (CLAUDE.md §12 K17): skorlama
+    cihazda ve `core-risk` referans Python ile birebir doğrulanmış durumda.
+    Sunucudan sabit dağıtmak o doğrulamayı bozardı. Panel onları yalnızca
+    gösteriyor.
+
+    Buraya giren şeyler sunucu davranışını kontrol ediyor: maddi ödül
+    kapısı (K28), YEDAM köprüsünün açık olup olmadığı, 18 altı ebeveyn
+    onayı kuralı, bakım modu.
+    """
+
+    __tablename__ = "ozellik_bayragi"
+
+    anahtar: Mapped[str] = mapped_column(String(60), primary_key=True)
+    deger: Mapped[str] = mapped_column(String(200))
+    aciklama: Mapped[str] = mapped_column(String(300), default="", server_default=text("''"))
+    guncelleyen_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personel.id"), nullable=True
+    )
+    guncelleme: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, onupdate=_simdi
+    )
