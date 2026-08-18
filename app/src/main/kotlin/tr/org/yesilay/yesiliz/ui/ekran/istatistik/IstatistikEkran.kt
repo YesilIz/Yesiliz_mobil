@@ -133,8 +133,12 @@ fun IstatistikEkran(
                 // okur.
                 if (durum.olculenGunSayisi in 1 until durum.gunSayisi) {
                     UyariSeridi(
-                        metin = "Son ${durum.gunSayisi} günün ${durum.olculenGunSayisi}'i " +
-                            "ölçüldü; ortalama yalnızca o günlerden.",
+                        // "2'i" değil "2 tanesi": Türkçede iyelik eki sayıya göre
+                        // değişiyor (1'i · 2'si · 3'ü · 6'sı) ve sabit ek yazmak
+                        // ekranda bozuk Türkçe üretiyor — `TurkceMetin.kt`'nin
+                        // büyük harf tuzağıyla (§9) aynı sınıf.
+                        metin = "Son ${durum.gunSayisi} günün ${durum.olculenGunSayisi} " +
+                            "tanesi ölçüldü; ortalama yalnızca o günlerden.",
                     )
                 }
 
