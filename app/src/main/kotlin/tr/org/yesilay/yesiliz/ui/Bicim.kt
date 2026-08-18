@@ -45,15 +45,12 @@ fun Int.sureMetni(): String {
     }
 }
 
-/** Grafik ekseni için kısa süre: `480` → `8s`. */
-fun Int.kisaSaat(): String = "${this / 60}s"
-
 /**
  * Grafik ekseni için süre — bir saatin ALTINI da gösterir.
  *
- * [kisaSaat] tam bölme yaptığı için 8 dakikayı "0s" yazıyordu; ekseni
- * verinin kendi ölçeğinden türetince (grafiğin tepesi 8 dakika olabiliyor)
- * üç etiket birden "0s" çıkıyordu.
+ * Selefi tam bölme yaptığı için 8 dakikayı "0s" yazıyordu; ekseni verinin
+ * kendi ölçeğinden türetince (grafiğin tepesi 8 dakika olabiliyor) üç
+ * etiket birden "0s" çıkıyordu (CLAUDE.md §12 K49).
  */
 fun Int.eksenSuresi(): String = when {
     this <= 0 -> "0"

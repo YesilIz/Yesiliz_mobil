@@ -64,9 +64,6 @@ interface GunlukOzetDao {
     @Query("SELECT * FROM gunluk_ozet ORDER BY tarih DESC LIMIT :gun")
     suspend fun sonGunler(gun: Int): List<GunlukOzetEntity>
 
-    @Query("SELECT * FROM gunluk_ozet ORDER BY tarih DESC LIMIT :gun")
-    fun sonGunlerAkisi(gun: Int): Flow<List<GunlukOzetEntity>>
-
     /** Alpha eğrisinin `d` girdisi — kaç gün veri birikmiş (spec-risk.md §4.5). */
     @Query("SELECT COUNT(*) FROM gunluk_ozet")
     suspend fun gunSayisi(): Int
@@ -399,9 +396,6 @@ interface ArkadasDao {
 
     @Query("SELECT * FROM arkadas ORDER BY eklenmeTarihi DESC, isim ASC")
     fun hepsiAkisi(): Flow<List<ArkadasEntity>>
-
-    @Query("SELECT COUNT(*) FROM arkadas")
-    fun sayiAkisi(): Flow<Int>
 
     @Query("DELETE FROM arkadas WHERE isim = :isim")
     suspend fun sil(isim: String)

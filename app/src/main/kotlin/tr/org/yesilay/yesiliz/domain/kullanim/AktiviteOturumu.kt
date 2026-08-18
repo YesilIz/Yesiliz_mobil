@@ -5,7 +5,7 @@ import java.time.Instant
 
 /**
  * Ortak aktivite oturumu modeli — uygulamanın kendi yürüyüşü ile Health
- * Connect egzersiz kaydı aynı tipten geçiyor (`gorev2.md` §4).
+ * Connect egzersiz kaydı aynı tipten geçiyor (CLAUDE.md §12 K31).
  *
  * [AktiviteTekillestir] bunları zaman örtüşmesine göre birleştiriyor;
  * aynı yürüyüş iki kaynakta da varsa yalnızca bir kez sayılsın diye.
@@ -32,7 +32,7 @@ data class AktiviteOturumu(
         get() = Duration.between(baslangic, bitis).toMillis() / 60_000.0
 }
 
-/** Aktivite oturumunun kaynağı — `gorev2.md` §4 örneğindeki adlarla aynı fikir. */
+/** Aktivite oturumunun kaynağı — CLAUDE.md §12 K31 örneğindeki adlarla aynı fikir. */
 enum class AktiviteKaynagi {
     /** `YuruyusServisi`'nde tamamlanan aktif yürüyüş. */
     UYGULAMA_YURUYUSU,

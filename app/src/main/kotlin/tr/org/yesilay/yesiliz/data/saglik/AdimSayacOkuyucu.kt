@@ -45,7 +45,7 @@ import kotlin.coroutines.resume
  */
 /**
  * [AdimSayacOkuyucu]'nun soyutlaması — `AdimDeposu`'nun testinde sensöre
- * ihtiyaç duymadan sahte bir kaynak takılabilsin diye (`gorev2.md` §3:
+ * ihtiyaç duymadan sahte bir kaynak takılabilsin diye (CLAUDE.md §12 K33:
  * izin kaldırma/verme, yeniden başlatma gibi senaryolar gerçek sensör
  * olmadan da test edilebilmeli).
  */

@@ -110,7 +110,6 @@ object Rota {
     const val YEDAM_ONAY = "yedam/onay"
 
     // --- hesap (akış dışı) ---
-    const val HESAP = "hesap"
     const val GIRIS = "hesap/giris"
     const val KAYIT = "hesap/kayit"
     const val SIFRE = "hesap/sifre"

@@ -54,7 +54,7 @@ private val YesilizRenkSemasi = lightColorScheme(
  * Material 3'te karşılığı olmayan Yeşilİz'e özel renkler.
  *
  * Risk bandı renkleri `ColorScheme`'e sığmıyor (M3'ün böyle bir slotu yok),
- * ama ekran içinde hardcoded yazmak da §14 yasağı. Bu yüzden ayrı bir
+ * ama ekran içinde hardcoded yazmak da §7 yasağı. Bu yüzden ayrı bir
  * CompositionLocal ile taşınıyorlar: `YesilizTema.risk.cok` gibi.
  */
 data class RiskRenkleri(

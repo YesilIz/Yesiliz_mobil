@@ -147,7 +147,7 @@ val GECIS_5_6 = object : Migration(5, 6) {
  * Sürüm 6 → 7 (6 Ağustos 2026).
  *
  * `aktivite_oturumu` eklendi — uygulamanın kendi yürüyüş oturumları artık
- * kalıcı (`gorev2.md` §4). Var olan hiçbir tablo değişmediği için veri
+ * kalıcı (CLAUDE.md §12 K31). Var olan hiçbir tablo değişmediği için veri
  * taşıma adımı yok.
  */
 val GECIS_6_7 = object : Migration(6, 7) {

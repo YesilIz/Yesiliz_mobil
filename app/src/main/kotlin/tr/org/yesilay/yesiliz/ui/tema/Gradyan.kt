@@ -12,11 +12,6 @@ import androidx.compose.ui.graphics.Brush
  */
 object Gradyan {
 
-    /** Ana sayfa / İstatistik / Lig / Profil yeşil başlığı. */
-    val Baslik: Brush = Brush.verticalGradient(
-        listOf(YesilAna, YesilAna),
-    )
-
     /**
      * Ana sayfadaki ağaç alanı — yeşil başlıktan açık yeşile sönüyor.
      * Ağaç illüstrasyonu açık zemin için üretildiği için geçiş şart.

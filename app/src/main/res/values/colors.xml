@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  XML tarafı SADECE launcher ikonu ve açılış teması için gereken renkleri taşır.
-  Uygulama içi her renk Compose tarafında: ui/tema/Renk.kt (CLAUDE.md §14).
+  XML tarafı SADECE launcher ikonu ve açılış temasının gerçekten kullandığı
+  renkleri taşır ; buradaki her değerin bir `@color/` çağıranı var.
+  Uygulama içi her renk Compose tarafında: ui/tema/Renk.kt (CLAUDE.md §7).
   Buradaki değerler oradakilerle aynı olmak zorunda.
 -->
 <resources>
-    <color name="yesil_ana">#FF00AE42</color>
-    <color name="yesil_koyu">#FF124734</color>
+    <!-- Açılış teması ; themes.xml. -->
     <color name="yesil_50">#FFEDF7EF</color>
-    <color name="beyaz">#FFFFFFFF</color>
     <!-- Launcher ikonunun zemini ; yeni logonun kendi açık yeşili. -->
     <color name="logo_zemini">#FFE7F7EA</color>
 </resources>

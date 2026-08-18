@@ -53,13 +53,13 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
  * kuponu yerine fidan bağışı gibi alternatif seçenekler.
  *
  * **Sürüm 6** (5 Ağu 2026): risk_sonuc.veriDurumu — yetersiz ölçümlü bir
- * günün "AZ RİSKLİ" olarak gösterilmesini engelliyor (`gorev2.md` §8,
+ * günün "AZ RİSKLİ" olarak gösterilmesini engelliyor (CLAUDE.md §12 K30,
  * `Gecisler.kt` GECIS_5_6).
  *
  * **Sürüm 7** (6 Ağu 2026): aktivite_oturumu — uygulamanın kendi yürüyüş
  * oturumları artık kalıcı; Health Connect'in egzersiz kayıtlarıyla birlikte
  * [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e giriyor
- * (`gorev2.md` §4-§6, `Gecisler.kt` GECIS_6_7).
+ * (CLAUDE.md §12 K31, `Gecisler.kt` GECIS_6_7).
  *
  * **Sürüm 8** (11 Ağu 2026): eski sürümün gerçek bir ağ işlemi olmadan
  * yazdığı yanıltıcı “ebeveyn paneline gönderildi” bildirimleri temizlendi.

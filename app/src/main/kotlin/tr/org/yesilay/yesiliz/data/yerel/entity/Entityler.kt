@@ -45,7 +45,7 @@ data class KullanimOlayEntity(
  * Uygulamanın kendi kaydettiği aktivite oturumu (şu an yalnızca aktif
  * yürüyüş, `YuruyusServisi`) — Health Connect'ten canlı okunan egzersiz
  * kayıtlarıyla birlikte [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e
- * giriyor (`gorev2.md` §4-§6). Health Connect'in kendi kayıtları burada
+ * giriyor (CLAUDE.md §12 K31). Health Connect'in kendi kayıtları burada
  * ayrıca SAKLANMIYOR — Health Connect zaten kendi kaynağı, tekrar
  * tutmak veri çatallanması yaratırdı; yalnızca uygulamanın kendi
  * ölçtüğü oturumlar burada.
@@ -168,7 +168,7 @@ data class RiskSonucEntity(
     /**
      * [tr.org.yesilay.yesiliz.risk.VeriDurumu] adı — `YETERSIZ` iken
      * [gosterilenBant] hesaplanmış olsa da UI'da GÖSTERİLMEMELİ
-     * (gorev2.md §8, `RiskDeposu.gunuHesapla`).
+     * (CLAUDE.md §12 K30, `RiskDeposu.gunuHesapla`).
      */
     val veriDurumu: String = "HESAPLANDI",
 )

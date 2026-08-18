@@ -71,22 +71,10 @@ class BildirimDeposu @Inject constructor(
         govde = "Serin sürüyor, çarpanın da onunla büyüyor.",
     )
 
-    suspend fun ligSirasi(sira: Int, ligAdi: String) = birKezGunde(
-        tur = BildirimTuru.LIG,
-        baslik = "Ligde $sira. sıraya yükseldin",
-        govde = "$ligAdi'nde harika gidiyorsun.",
-    )
-
     suspend fun molaHatirlatildi(dakika: Int) = yaz(
         tur = BildirimTuru.MOLA,
         baslik = "Mola vakti",
         govde = "$dakika dakikadır aralıksız ekrandasın. Kısa bir ara iyi gelebilir.",
-    )
-
-    suspend fun degerlendirmeYenilenebilir(gecenGun: Int) = birKezGunde(
-        tur = BildirimTuru.DEGERLENDIRME,
-        baslik = "Değerlendirmeni yenileyebilirsin",
-        govde = "Son değerlendirmenin üzerinden $gecenGun gün geçti.",
     )
 
     suspend fun hatirlatma(baslik: String, govde: String) =

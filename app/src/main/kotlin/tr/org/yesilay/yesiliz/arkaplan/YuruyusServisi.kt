@@ -182,7 +182,7 @@ class YuruyusServisi : Service() {
             // Gerçek yürünen süre — duraklatılan aralıkları saymaz (sayaç
             // yalnızca çalışırken artıyor). Hedefe ulaşılmasa bile (`puanVer
             // = false`, kullanıcı elle bitirdi) yürünen süre gerçek: spor
-            // dakikasına yansımalı (`gorev2.md` §5). Aralık "şimdi"den geriye
+            // dakikasına yansımalı (CLAUDE.md §12 K31). Aralık "şimdi"den geriye
             // doğru kuruluyor — gerçek başlangıç zamanını tutmak, duraklatma
             // sırasında geçen zamanı da (yanlışlıkla) süreye katardı.
             if (gecenSaniye > 0) {

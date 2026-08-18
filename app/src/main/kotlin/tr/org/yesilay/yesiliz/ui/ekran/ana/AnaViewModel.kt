@@ -111,7 +111,7 @@ class AnaViewModel @Inject constructor(
                 Ara(
                     ozet = ozet,
                     // Yetersiz ölçümlü bir gün bandı da uydurmasın
-                    // (`gorev2.md` §8) — Ana Sayfa kartı `RiskDetayEkran`
+                    // (CLAUDE.md §12 K30) — Ana Sayfa kartı `RiskDetayEkran`
                     // ile aynı kuralı izliyor. `ESKI` burada süzülmüyor:
                     // kart zaten "son bilinen" bandı gösteriyor, risk
                     // detayının aksine güncellik iddiası taşımıyor.

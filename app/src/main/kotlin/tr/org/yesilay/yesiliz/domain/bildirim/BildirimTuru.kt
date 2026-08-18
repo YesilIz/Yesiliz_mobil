@@ -18,17 +18,11 @@ enum class BildirimTuru(val anahtar: String) {
     /** Seri ilerledi (3, 7, 14, 30, 60. gün). */
     SERI("seri"),
 
-    /** Lig sırası yükseldi ya da yeni lig başladı. */
-    LIG("lig"),
-
     /** Mola hatırlatıcı tetiklendi. */
     MOLA("mola"),
 
     /** Günlük hatırlatma (bildirim saatleri ayarı). */
     HATIRLATMA("hatirlatma"),
-
-    /** 4 hafta doldu, değerlendirme yenilenebilir. */
-    DEGERLENDIRME("degerlendirme"),
 
     /**
      * Eski sürümün sahte “gönderildi” kaydını okuyabilmek için korunur.

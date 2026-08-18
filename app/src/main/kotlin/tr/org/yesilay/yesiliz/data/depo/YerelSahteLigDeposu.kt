@@ -23,15 +23,20 @@ internal const val ORNEK_LIG_YUKSELEN = 3
 internal const val ORNEK_LIG_DUSEN = 3
 
 /**
- * [LigDeposu]'nun MVP uygulaması — CLAUDE.md §12 K7'de vaat edilen sınıf.
+ * [LigDeposu]'nun çevrimdışı uygulaması — CLAUDE.md §12 K7'de vaat edilen sınıf.
  *
- * Sıralama **bilinçli olarak sahte** (backend Faz 2). Arkadaş defteri ve
- * davet kodu ise gerçek: Room ve DataStore'da yaşıyor, uygulama yeniden
- * açıldığında duruyor. Böylece Lig sekmesinin boş/dolu geçişi ve davet
- * akışı demo gününde gerçekten çalışıyor.
+ * **Artık birincil yol değil.** `RetrofitLigDeposu` 5 Ağustos 2026'dan beri
+ * canlı backend'e bağlı ve sıralamayı gerçekten sunucudan getiriyor; K7'nin
+ * "backend gelince yalnızca DI bağlaması değişir" vaadi tuttu, hiçbir
+ * ViewModel ya da Composable değişmedi.
  *
- * Faz 2'de `RetrofitLigDeposu` bu sınıfın yerine geçiyor; `LigViewModel`
- * ve ekranlar değişmiyor.
+ * Bu sınıf **yalnızca debug derlemesinde** ve **yalnızca ağ hatasında**
+ * devreye giriyor (`YedekliLigDeposu`, K18): demo günü sunucuya ulaşılamazsa
+ * Lig sekmesi boş kalmasın diye. Release'de hiç örneklenmiyor (K18'in
+ * 5 Ağu daraltması) — sıralaması sahte olduğu için yayınlanan sürümde
+ * gösterilmesi uydurma veriyi gerçekmiş gibi sunmak olurdu.
+ *
+ * Arkadaş defteri ve davet kodu sahte değil: Room ve DataStore'da yaşıyor.
  */
 @Singleton
 class YerelSahteLigDeposu @Inject constructor(

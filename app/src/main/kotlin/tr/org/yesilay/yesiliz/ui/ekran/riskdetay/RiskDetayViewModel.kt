@@ -57,7 +57,7 @@ class RiskDetayViewModel @Inject constructor(
                         // Yetersiz/eski ölçüme dayanan bir bant, "veri yok"
                         // ekranından daha yanıltıcı olurdu — 34 saniyelik
                         // kullanımı olan biri "AZ RİSKLİ" görmemeli
-                        // (`gorev2.md` §8, aynı sınıf hata: debug.md K-7).
+                        // (CLAUDE.md §12 K30, aynı sınıf hata: debug.md K-7).
                         VeriDurumu.YETERSIZ -> RiskDetayDurum(veriVarMi = true)
                         VeriDurumu.ESKI -> RiskDetayDurum(
                             veriVarMi = true,

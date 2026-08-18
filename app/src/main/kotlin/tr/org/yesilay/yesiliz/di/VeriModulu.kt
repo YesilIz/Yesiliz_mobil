@@ -103,7 +103,7 @@ object VeriModulu {
 
     /**
      * `AdimDeposu` sahte bir kaynakla test edilebilsin diye somut sınıf
-     * yerine arayüz istiyor (`AdimDeposuTest`, `gorev2.md` §3).
+     * yerine arayüz istiyor (`AdimDeposuTest`, CLAUDE.md §12 K33).
      */
     @Provides
     fun adimKaynagi(okuyucu: AdimSayacOkuyucu): AdimKaynagi = okuyucu

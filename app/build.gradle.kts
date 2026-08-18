@@ -87,7 +87,7 @@ android {
     // imza şart koşuyor. Debug'da Android Studio kendi anahtarını üretiyor,
     // release'de üretmiyor; bu blok olmadan `assembleRelease` çıktısı
     // `app-release-unsigned.apk` oluyor ve gerçek cihaz doğrulaması
-    // (`gorev1.md` son iki kriter) hiç yapılamıyor.
+    // (imzasız APK'nın telefonda doğrulanması) hiç yapılamıyor.
     //
     // Keystore ve parolalar depoda değil: `local.properties` (gitignore'da)
     // ya da ortam değişkeni. Değerler yoksa blok hiç tanımlanmıyor.
@@ -199,8 +199,8 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }
         }
     }
 
-// gorev2.md §11 "Release APK içeriğini kontrol eden otomatik bir test
-// eklenmeli ve yasaklı debug adreslerinin bulunmadığı doğrulanmalıdır."
+// Release APK içeriğini kontrol eden otomatik denetim: yasaklı debug
+// adresleri gerçekten üretilen ikilide var mı (CLAUDE.md §12 K32).
 //
 // `android-ağ-güvenliği` CI'ı (`.github/workflows/android-ag-guvenligi.yml`)
 // KAYNAK düzeyinde bakıyor — `.kt` dosyalarında "10.0.2.2" string sabiti
@@ -272,7 +272,7 @@ abstract class ReleaseApkAgGuvenligiDenetimi : DefaultTask() {
 // (aynı gerekçe, satır ~160'taki `assembleRelease` doFirst bloğu).
 tasks.register<ReleaseApkAgGuvenligiDenetimi>("dogrulaReleaseApk") {
     group = "verification"
-    description = "Release APK'da emülatör adresi/şifresiz HTTP yok, canlı HTTPS adresi gömülü mü denetler (gorev2.md §11)."
+    description = "Release APK'da emülatör adresi/şifresiz HTTP yok, canlı HTTPS adresi gömülü mü denetler (CLAUDE.md §12 K32)."
     dependsOn("assembleRelease")
     apkDizini.set(layout.buildDirectory.dir("outputs/apk/release"))
     yasakliDesenler.set(listOf("10.0.2.2"))
@@ -308,8 +308,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Tek Activity + NavHost (CLAUDE.md §6). ViewModel'ler henüz Hilt'siz —
-    // `viewModel()` fabrikası yetiyor, DI sırası arka plan işleriyle gelecek.
+    // Tek Activity + NavHost (CLAUDE.md §6).
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

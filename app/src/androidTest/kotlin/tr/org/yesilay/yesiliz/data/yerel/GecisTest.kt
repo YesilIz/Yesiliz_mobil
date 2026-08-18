@@ -176,7 +176,7 @@ class GecisTest {
     }
 
     /**
-     * 5 → 6: `risk_sonuc.veriDurumu` (`gorev2.md` §8/§10 — dolu veritabanı ile).
+     * 5 → 6: `risk_sonuc.veriDurumu` (CLAUDE.md §12 K30/K33 — dolu veritabanı ile).
      *
      * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
      * ettiği şey geçişin **1'den 6'ya kadar** zincirlenmesi ve Room'un
@@ -193,7 +193,7 @@ class GecisTest {
 
     /**
      * Dolu veritabanı: iki günlük gerçek geçmiş (biri ölçülmüş, biri boş
-     * telafi günü) + ikisinin `risk_sonuc` satırı — `gorev2.md` §10
+     * telafi günü) + ikisinin `risk_sonuc` satırı — CLAUDE.md §12 K33
      * "gerçek kullanıcı geçmişine benzeyen dolu bir veritabanı". Geçiş
      * sonrası eski satırlar kaybolmamalı ve `veriDurumu`
      * `gunluk_ozet.olayVarMi`'ye göre doğru ayrılmalı.
@@ -225,7 +225,7 @@ class GecisTest {
     }
 
     /**
-     * 6 → 7: `aktivite_oturumu` tablosu (`gorev2.md` §4).
+     * 6 → 7: `aktivite_oturumu` tablosu (CLAUDE.md §12 K31).
      *
      * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
      * ettiği şey geçişin **1'den 7'ye kadar** zincirlenmesi ve Room'un
@@ -353,8 +353,8 @@ class GecisTest {
     }
 
     /**
-     * Kapsamlı dolu veritabanı — `gorev2.md` §10 "gerçek kullanıcı geçmişine
-     * benzeyen dolu bir veritabanı": üç günlük geçmiş, dört tablo birden
+     * Kapsamlı dolu veritabanı (CLAUDE.md §12 K33) — gerçek kullanıcı
+     * geçmişine benzeyen dolu bir şema: üç günlük geçmiş, dört tablo birden
      * (`gunluk_ozet`, `risk_sonuc`, `adim_sayac`) — sürüm 4'te (adım sayacı
      * eklendikten sonra) kurulup 9'a kadar TÜM geçişlerden (5→6, 6→7, 7→8 ve
      * 8→9 dahil) geçiriliyor. Doğrulanan üç şey: hiçbir satır kaybolmuyor, yeni

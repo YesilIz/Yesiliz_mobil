@@ -5,7 +5,7 @@ import java.time.Instant
 
 /**
  * Uygulama yürüyüşü ile Health Connect kaydının aynı aktivite olup
- * olmadığını belirler ve örtüşenleri tek sayar (`gorev2.md` §6).
+ * olmadığını belirler ve örtüşenleri tek sayar (CLAUDE.md §12 K31).
  *
  * **SAF FONKSİYON** — Android'e bağımlı değil, `core-risk`'teki desenin
  * aynısı: girdi → çıktı, yan etki yok, emülatörsüz test edilebilir.
@@ -23,9 +23,8 @@ object AktiviteTekillestir {
      * Çakışma oranı eşiği — iki kaydın zaman aralığı, KISA olanın süresine
      * göre bu oranın altında örtüşüyorsa ayrı aktivite sayılır.
      *
-     * Merkezi ve tek yerde: `gorev2.md` §6 "kullanılan çakışma toleransı
-     * sabit bir sayı olarak kodun farklı yerlerine yazılmamalı" uyarısının
-     * karşılığı.
+     * Merkezi ve tek yerde tutuluyor: tolerans kodun farklı yerlerine
+     * ayrı ayrı yazılırsa iki taraf sessizce ayrışır (CLAUDE.md §12 K31).
      */
     const val CAKISMA_ORANI_ESIGI = 0.5
 
@@ -34,7 +33,7 @@ object AktiviteTekillestir {
      *
      * Kural sırası:
      * 1. Aynı [AktiviteOturumu.disKimlik] → tek kayıt (aynı Health Connect
-     *    kaydının tekrar senkronize edilmesi, `gorev2.md` §6 son madde).
+     *    kaydının tekrar senkronize edilmesi, CLAUDE.md §12 K31 son madde).
      * 2. Zaman aralığı, KISA kaydın süresinin en az [CAKISMA_ORANI_ESIGI]
      *    kadarıyla örtüşüyorsa → aynı aktivite kabul edilir, süreler
      *    TOPLANMAZ (ikisinin birleşimi/union'ı tek kayıt gibi sayılır).

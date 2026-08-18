@@ -19,7 +19,7 @@ import javax.inject.Singleton
  *
  * | | verileri sil | hesabı sil |
  * |---|---|---|
- * | Room (12 tablo) | ✓ | ✓ |
+ * | Room (tüm tablolar) | ✓ | ✓ |
  * | `Tercihler` DataStore | ✓ | ✓ |
  * | JWT (`jetonlar` DataStore) | ✓ | ✓ |
  * | Sunucudaki hesap | — | ✓ (`DELETE /auth/hesap`) |

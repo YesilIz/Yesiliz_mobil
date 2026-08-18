@@ -13,7 +13,6 @@ object Bosluk {
     val M = 16.dp
     val L = 24.dp
     val Xl = 32.dp
-    val Xxl = 48.dp
 }
 
 object Olcu {
@@ -41,12 +40,6 @@ object Olcu {
 
     /** ilerleme çubuğu yüksekliği */
     val IlerlemeYuksekligi = 8.dp
-
-    /** girdi alanı kenarlık kalınlığı */
-    val GirdiKenarligi = 1.5.dp
-
-    /** görev kartı sol öncelik şeridi */
-    val GorevSeridi = 4.dp
 
     // --- teslim edilen tasarımdan (docs/tasarim-referans.md) ---
 
@@ -86,9 +79,8 @@ object Olcu {
     /** kart kenarlığı — gölge tek başına Yesil50 zeminde ayırmıyor */
     val KartKenarligi = 1.dp
 
-    /** çubuk grafiğin sağındaki eksen etiketi sütunu */
     /**
-     * Grafik eksen sütunu.
+     * Çubuk grafiğin sağındaki eksen etiketi sütunu.
      *
      * 28dp idi ve eksen sabit etiketler ("8s") taşıdığı sürece yetiyordu.
      * Etiketler artık veriden türüyor ve "11dk" gibi dört karaktere
@@ -138,7 +130,4 @@ object Olcu {
  */
 object Golge {
     val Kart = 2.dp
-
-    /** basılıyken kart batmaz, hafifçe küçülür (%98) */
-    const val BasiliOlcek = 0.98f
 }

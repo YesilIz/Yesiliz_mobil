@@ -33,7 +33,7 @@ import javax.inject.Singleton
  * oturumları (`AktiviteOturumuDeposu`) [AktiviteTekillestir]'den geçiyor.
  * Aynı yürüyüş iki kaynakta da varsa (kullanıcı hem uygulamayı açık
  * tutup hem saatini takmışsa) yalnızca bir kez sayılıyor; farklı iki
- * yürüyüşse ikisi de sayılıyor (`gorev2.md` §5-§6). Aktivite skoru
+ * yürüyüşse ikisi de sayılıyor (CLAUDE.md §12 K31). Aktivite skoru
  * **düşürüyor** (`docs/spec-risk.md`, sönümleme tavanı %15), yani
  * şişirilen her dakika riski haksız yere aşağı çeker.
  */

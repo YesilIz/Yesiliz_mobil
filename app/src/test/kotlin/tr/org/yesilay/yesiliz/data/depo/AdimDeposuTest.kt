@@ -17,7 +17,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
- * `AdimDeposu.ornekle()` — `gorev2.md` §3'ün `AdimBirikimTest`'te
+ * `AdimDeposu.ornekle()` — CLAUDE.md §12 K33'ün `AdimBirikimTest`'te
  * (saf `adimBirikimGuncelle` fonksiyonu) test edilemeyen, ÇAĞRILAR ARASI
  * senaryoları: gün/saat dilimi değişimi, sensör erişiminin kesilip
  * geri gelmesi. `AdimSayacOkuyucu` somut ve Android'e bağlı olduğu için

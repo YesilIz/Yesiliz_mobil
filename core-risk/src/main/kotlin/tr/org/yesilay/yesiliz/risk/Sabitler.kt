@@ -145,8 +145,8 @@ object Sabitler {
     const val FAKTOR_ASGARI_DK = 15.0
 
     // ---------------------------------------------------------------
-    // Veri yeterliliği — [VeriDurumu]. gorev2.md §8: "yetersiz veri düşük
-    // risk sayılmaz."
+    // Veri yeterliliği — [VeriDurumu]. Yetersiz ölçüm düşük risk sayılmaz:
+    // hiç kullanılmayan gün "AZ RİSKLİ" diye gösterilemez (CLAUDE.md §12 K30).
     // ---------------------------------------------------------------
     /**
      * Günün TOPLAM ölçümü bunun altındaysa [VeriDurumu.YETERSIZ] — bant
@@ -159,8 +159,7 @@ object Sabitler {
     /**
      * Bu kadar günden eski hesaplanmış bir sonuç [VeriDurumu.ESKI] sayılır.
      * Kullanıcı birkaç gündür uygulamayı açmadıysa ekranda hâlâ günler
-     * önceki bandın GÜNCELMİŞ gibi durması yanıltıcı (`gorev2.md` §8-9
-     * "STALE_DATA").
+     * önceki bandın GÜNCELMİŞ gibi durması yanıltıcı (CLAUDE.md §12 K30).
      */
     const val VERI_ESKI_ESIK_GUN = 3
 }

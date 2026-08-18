@@ -120,8 +120,8 @@ fun BildirimEkran(
                 Column(modifier = Modifier.padding(vertical = Olcu.EkranKenari)) {
                     BosDurum(
                         baslik = "Henüz bildirim yok",
-                        aciklama = "Görev tamamladıkça, hedefini tutturdukça ve ligde " +
-                            "sıran değiştikçe buraya düşecek.",
+                        aciklama = "Görev tamamladıkça ve hedefini tutturdukça " +
+                            "buraya düşecek.",
                     )
                 }
                 return@YesilBaslikliEkran

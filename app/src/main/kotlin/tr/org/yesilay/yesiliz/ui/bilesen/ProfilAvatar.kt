@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 
@@ -26,7 +25,6 @@ data class ProfilAvatarSecenegi(
     val baslik: String,
     val ikon: ImageVector? = null,
     val zeminRenk: Color = YesilAna,
-    val ikonRenk: Color = Beyaz,
 )
 
 val TUM_AVATARLAR = listOf(

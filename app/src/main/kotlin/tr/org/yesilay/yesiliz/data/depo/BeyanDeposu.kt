@@ -33,8 +33,6 @@ class BeyanDeposu @Inject constructor(
     /** Günün üç penceresindeki kayıtlar; yazılmamış pencere listede yok. */
     fun ruhHaliAkisi(tarih: LocalDate): Flow<List<RuhHaliEntity>> = ruhHaliDao.gununAkisi(tarih)
 
-    fun uykuAkisi(tarih: LocalDate): Flow<UykuBeyaniEntity?> = uykuDao.gununAkisi(tarih)
-
     /**
      * Ruh halini o anki pencereye kaydeder; pencere ilk kez doluyorsa görev
      * puanı verir.

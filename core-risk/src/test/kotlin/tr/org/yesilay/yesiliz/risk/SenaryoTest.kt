@@ -199,12 +199,12 @@ class SenaryoTest {
         assertEquals(0.0, sonuc.rB, 0.0)
         assertEquals(Bant.AZ, sonuc.bant)
         assertTrue(sonuc.surukleyiciler.isEmpty())
-        // Hiç veri yok — `AZ RİSKLİ` iddiası UI'da GÖSTERİLMEMELİ (gorev2.md §8/§9).
+        // Hiç veri yok — `AZ RİSKLİ` iddiası UI'da GÖSTERİLMEMELİ (CLAUDE.md §12 K30).
         assertEquals(VeriDurumu.YETERSIZ, sonuc.veriDurumu)
     }
 
     // -----------------------------------------------------------------
-    // VeriDurumu — gorev2.md §8/§9: yetersiz veri düşük risk sayılmaz,
+    // VeriDurumu — CLAUDE.md §12 K30: yetersiz veri düşük risk sayılmaz,
     // eski hesap güncelmiş gibi gösterilmez.
     // -----------------------------------------------------------------
     @Test
@@ -271,7 +271,7 @@ class SenaryoTest {
     }
 
     // -----------------------------------------------------------------
-    // Sınır değerler — gorev2.md §9: eşiğin hemen altı, tam değeri, hemen üstü
+    // Sınır değerler — CLAUDE.md §12 K30: eşiğin hemen altı, tam değeri, hemen üstü
     // -----------------------------------------------------------------
     @Test
     fun `gun asgari dk sinirinda tam deger yeterli sayilir`() {

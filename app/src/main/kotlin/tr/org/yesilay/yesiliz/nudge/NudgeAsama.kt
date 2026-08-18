@@ -12,8 +12,3 @@ enum class NudgeAsama {
     /** "5 dk mola ver" sonrası — "Nefes egzersizi yapmak ister misin?". */
     MOLA_SORUSU,
 }
-
-data class NudgeDurum(
-    val asama: NudgeAsama = NudgeAsama.ANA_KART,
-    val esikSaniye: Long = NudgeSabitleri.ESIK.seconds,
-)
