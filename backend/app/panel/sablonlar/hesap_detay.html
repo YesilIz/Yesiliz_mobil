@@ -145,6 +145,67 @@
         oturumlar hemen düşüyor, kullanıcı uygulamada gerekçeyi görüyor.
       </p>
     {% endif %}
+
+    {% if d.ebeveyn_bagi_var %}
+      <hr>
+      <form method="post" action="/yonetim/kullanici/{{ d.id }}/ebeveyn-bagi-kaldir">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Ebeveyn bağını kaldırma gerekçesi (en az 20 karakter)</span>
+          <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+        </label>
+        <button type="submit">Ebeveyn bağını kaldır</button>
+      </form>
+      <p class="yardim">
+        Bağ iki kullanıcıyı birden ilgilendiriyor: kaldırılınca ebeveynin
+        çocuğun özetine erişimi kesiliyor.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>KVKK talepleri</h2>
+
+    <p class="yardim">
+      <strong>Veri dışa aktarma normalde buradan yapılmaz.</strong> Kullanıcı
+      kendi verisini uygulamadan indiriyor (Profil › Gizlilik) ve dosya
+      panele hiç düşmüyor. Aşağıdaki yol yalnızca kullanıcı uygulamaya
+      erişemiyorsa (telefonu yok, hesabı askıda) kullanılır.
+    </p>
+
+    <form method="post" action="/yonetim/kullanici/{{ d.id }}/veri-disa-aktar">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Dışa aktarma gerekçesi (en az 20 karakter)</span>
+        <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+      </label>
+      <label class="tek-satir">
+        <input type="checkbox" name="onay" value="evet" required>
+        <span>Kullanıcı uygulamadan indiremiyor; bu istisnayı üstleniyorum.</span>
+      </label>
+      <button type="submit">Verilerini indir</button>
+    </form>
+
+    <hr>
+
+    <form method="post" action="/yonetim/kullanici/{{ d.id }}/sil">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Silme gerekçesi (en az 20 karakter)</span>
+        <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+      </label>
+      <label class="alan">
+        <span>Onay için hesabın e-postasını yaz</span>
+        <input type="text" name="onay_eposta" autocomplete="off"
+               placeholder="{{ d.eposta }}" required>
+      </label>
+      <button type="submit">Hesabı kalıcı olarak sil</button>
+    </form>
+    <p class="yardim">
+      Silme <strong>geri alınamaz</strong> ve sunucudaki her satırı
+      kaldırır. Yumuşak silme yok: veri sunucuda kalırsa talep
+      karşılanmamış olur. Yedeklerden silme ayrı bir prosedür.
+    </p>
   </div>
 
   {# Davranış verisi (kategori dakikası, örüntü, risk skoru/bandı) BURADA

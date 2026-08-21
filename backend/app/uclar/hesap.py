@@ -22,6 +22,7 @@ from app.guvenlik import (
     sifre_ozetle,
 )
 from app.kullanici_silme import kullaniciyi_tamamen_sil
+from app.veri_disa_aktar import kullanici_verisi
 from app.modeller import Kullanici, SifreSifirlama, YenilemeJetonu
 from app.semalar import (
     GirisIstek,
@@ -321,6 +322,24 @@ def sifre_yenile(istek: SifreYenileIstek, db: Session = Depends(oturum)) -> dict
 
     db.commit()
     return {"durum": "tamam"}
+
+
+@yonlendirici.get("/verilerim")
+def verilerim(
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict:
+    """
+    KVKK erişim hakkı — sunucudaki kendi verisi.
+
+    **Varsayılan yol bu.** Dosya panele hiç düşmüyor: kullanıcı kendi
+    cihazından, kendi oturumuyla indiriyor (`docs/panel-plani.md §5.2`).
+    Personelin indirmesi ayrı ve gerekçeli bir istisna.
+
+    Cihazdaki yerel veri buraya girmiyor — `DisaAktarDeposu` onu Room'dan
+    üretiyor ve ham olaylar sunucuya hiç çıkmıyor (CLAUDE.md §4).
+    """
+    return kullanici_verisi(db, kullanici)
 
 
 @yonlendirici.delete("/hesap")

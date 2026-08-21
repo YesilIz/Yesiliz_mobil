@@ -160,6 +160,24 @@ def eslestir(
     return {"durum": "eslesti"}
 
 
+def bagi_kaldir(db: Session, kullanici_id: int) -> None:
+    """
+    Kullanıcının ebeveyn–çocuk bağını iki uçtan da siler; commit etmez.
+
+    Panel de aynı işi yapıyor (`docs/panel-plani.md §5.2`, destek talebi
+    senaryosu). Tek tanım, çünkü "hangi satırlar bu bağa ait" sorusunun
+    iki cevabı olmamalı.
+    """
+    db.execute(
+        delete(EbeveynBaglanti).where(
+            or_(
+                EbeveynBaglanti.ebeveyn_id == kullanici_id,
+                EbeveynBaglanti.cocuk_id == kullanici_id,
+            )
+        )
+    )
+
+
 @yonlendirici.delete("/eslesme")
 def eslesmeyi_kaldir(
     db: Session = Depends(oturum),
@@ -173,14 +191,7 @@ def eslesmeyi_kaldir(
     diğer cihazın erişimi sürerken "bağ kesildi" denmez.
     """
     kullaniciyi_kilitle(db, kullanici.id)
-    db.execute(
-        delete(EbeveynBaglanti).where(
-            or_(
-                EbeveynBaglanti.ebeveyn_id == kullanici.id,
-                EbeveynBaglanti.cocuk_id == kullanici.id,
-            )
-        )
-    )
+    bagi_kaldir(db, kullanici.id)
     db.commit()
     return {"durum": "kaldirildi"}
 
