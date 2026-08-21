@@ -287,3 +287,40 @@ data class OdulKademeDurumuDto(
     val secenekId: String,
     val acik: Boolean,
 )
+
+
+// --- içerik ve duyuru (§5.5, §5.6) ---
+
+/**
+ * Bilgi bankası yazısı — `assets/bilgi_bankasi.json` ile **aynı alan
+ * adları**, çünkü ikisi de aynı modele çözülüyor (S5: gömülü set
+ * çevrimdışı yedek kalıyor).
+ */
+@Serializable
+data class BilgiYazisiDto(
+    val id: String,
+    val baslik: String,
+    val ozet: String,
+    val kategori: String,
+    val okumaDk: Int,
+    val govde: List<String>,
+)
+
+/**
+ * [surum] cihazın önbelleğini geçersiz kılıyor: değişmediyse yeniden
+ * yazmaya gerek yok. "Hangi sürümü gördü" sorusunun cevabı da bu.
+ */
+@Serializable
+data class BilgiBankasiYanit(val surum: Int, val yazilar: List<BilgiYazisiDto>)
+
+/**
+ * Uygulama içi duyuru. **Push yok** (§5.6): senkronla iniyor, kullanıcı
+ * uygulamayı açtığında bildirim defterinde görüyor.
+ */
+@Serializable
+data class DuyuruDto(
+    val id: Int,
+    val baslik: String,
+    val metin: String,
+    val yayinZamani: String,
+)

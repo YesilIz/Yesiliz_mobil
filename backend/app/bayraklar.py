@@ -80,7 +80,27 @@ MADDI_ODUL = Bayrak(
     secenekler=("evet", "hayir"),
 )
 
+#: Bakım modu (`docs/panel-plani.md §5.7`).
+#:
+#: Açıkken cihaz API'si `503` + açıklayıcı gövde dönüyor ve uygulama
+#: bunu **çevrimdışı saymıyor**: kullanıcı bakımın sürdüğünü görüyor.
+#: Sessizce "sunucuya ulaşılamıyor" demek, geçici bir durumu kalıcı bir
+#: arıza gibi göstermek olurdu.
+#:
+#: **Panel bu kapının dışında**: bakım sırasında da yönetilebilmeli,
+#: zaten bakımı açan/kapatan yer orası.
+BAKIM_MODU = Bayrak(
+    anahtar="sunucu.bakim",
+    varsayilan="hayir",
+    aciklama=(
+        "Bakım modu. Açıkken cihaz API'si 503 dönüyor ve uygulama "
+        "açıklayıcı bir ekran gösteriyor. Panel etkilenmiyor."
+    ),
+    secenekler=("evet", "hayir"),
+)
+
 TUMU: tuple[Bayrak, ...] = (
+    BAKIM_MODU,
     YEDAM_ACIK,
     YEDAM_EBEVEYN_ONAYI,
     DANISMAN_NOTU,

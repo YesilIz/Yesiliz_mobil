@@ -78,6 +78,14 @@ class Tercihler @Inject constructor(
      */
     val enYuksekToplamPuan: Flow<Int> = depo.data.map { it[EN_YUKSEK_PUAN] ?: 0 }
 
+    /**
+     * Bildirim defterine yazılmış en son duyurunun id'si (§5.6).
+     *
+     * Cihaz yalnızca bundan büyüklerini çekiyor: aynı duyuruyu ikinci kez
+     * bildirmek, kullanıcıya aynı şeyi iki kez söylemek olurdu.
+     */
+    val sonDuyuruId: Flow<Int> = depo.data.map { it[SON_DUYURU] ?: 0 }
+
     // --- alpha eğrisinin girdileri ---
 
     /** Uygulamanın ilk açıldığı gün; `d` bu tarihten bugüne geçen gün sayısı. */
@@ -225,6 +233,14 @@ class Tercihler @Inject constructor(
         depo.edit { p ->
             val eski = p[EN_YUKSEK_PUAN] ?: 0
             if (guncelToplam > eski) p[EN_YUKSEK_PUAN] = guncelToplam
+        }
+    }
+
+    suspend fun sonDuyuruIdKaydet(id: Int) {
+        depo.edit { p ->
+            // Yalnızca ileri: sunucudan gelen eski bir id işareti geri
+            // almasın ve duyurular yeniden bildirilmesin.
+            if (id > (p[SON_DUYURU] ?: 0)) p[SON_DUYURU] = id
         }
     }
 
@@ -530,6 +546,7 @@ class Tercihler @Inject constructor(
         private val SON_ANKET = longPreferencesKey("son_anket_gunu")
         private val BEYAN_YAS = intPreferencesKey("beyan_yas")
         private val EN_YUKSEK_PUAN = intPreferencesKey("en_yuksek_toplam_puan")
+        private val SON_DUYURU = intPreferencesKey("son_duyuru_id")
         private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
         private val SUNUCU_TABANI_SURUM = intPreferencesKey("sunucu_tabani_surum")

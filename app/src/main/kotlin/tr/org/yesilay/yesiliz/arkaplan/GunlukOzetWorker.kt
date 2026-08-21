@@ -11,6 +11,8 @@ import dagger.assisted.AssistedInject
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
 import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
+import tr.org.yesilay.yesiliz.data.depo.BilgiDeposu
+import tr.org.yesilay.yesiliz.data.depo.DuyuruDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDuzeltmeDeposu
 import tr.org.yesilay.yesiliz.data.depo.YedamDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
@@ -69,6 +71,8 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val senkronDeposu: SenkronDeposu,
     private val yedamDeposu: YedamDeposu,
     private val puanDuzeltmeDeposu: PuanDuzeltmeDeposu,
+    private val bilgiDeposu: BilgiDeposu,
+    private val duyuruDeposu: DuyuruDeposu,
     private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
     private val isPlanlayici: IsPlanlayici,
@@ -178,6 +182,10 @@ class GunlukOzetWorker @AssistedInject constructor(
             // bağlı değil: kullanıcının kendi bakiyesine yapılmış bir
             // işlem, davranışsal veri değil.
             puanDuzeltmeDeposu.senkronEt()
+            // İçerik ve duyuru (§5.5, §5.6). İkisi de rıza kapısının
+            // dışında: veri **indiriliyor**, gönderilmiyor.
+            bilgiDeposu.tazele()
+            duyuruDeposu.senkronEt()
 
             Result.success()
         } catch (iptal: CancellationException) {

@@ -16,6 +16,15 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.BakimSeridi
+import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -282,11 +291,30 @@ internal fun disHedefRotasiniDogrula(eylem: String?, hamRota: String?): String? 
 private fun AskiKapisi(gorunum: AskidaViewModel = hiltViewModel()) {
     val hal by gorunum.hal.collectAsState()
     val deneniyor by gorunum.deneniyor.collectAsState()
+    val bakim by gorunum.bakim.collectAsState()
+    var bakimKapatildi by remember { mutableStateOf(false) }
+
     hal?.let {
         AskidaEkran(
             sebep = it.sebep,
             onTekrarDene = gorunum::tekrarDene,
             deneniyor = deneniyor,
         )
+        return
+    }
+
+    // Bakım **engelleyici değil** (M9): ölçüm, görevler ve aktiviteler
+    // cihazda çalışmaya devam ediyor. Kullanıcıyı yapabileceği şeylerden
+    // alıkoymanın gerekçesi yok — bilgilendirme yeter ve kapatılabiliyor.
+    bakim?.takeIf { !bakimKapatildi }?.let { mesaj ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(Olcu.EkranKenari),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            BakimSeridi(mesaj = mesaj, onKapat = { bakimKapatildi = true })
+        }
     }
 }

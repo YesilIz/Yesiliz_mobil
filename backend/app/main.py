@@ -113,6 +113,13 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         uygulama.add_middleware(CsrfKapisi)
         uygulama.add_middleware(GuvenlikBasliklari)
 
+    # Bakım kapısı yalnızca cihaz API'sinde: bakımı açan ve kapatan yer
+    # panel, kendini kilitleyen bir anahtar işe yaramaz (`app/bakim.py`).
+    if rol is SunucuRolu.API:
+        from app.bakim import BakimKapisi
+
+        uygulama.add_middleware(BakimKapisi)
+
     uygulama.add_middleware(gunluk.IstekGunlugu)
 
     # Android istemcisi Origin başlığı göndermiyor; panel de sunucu tarafında

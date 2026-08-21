@@ -96,6 +96,15 @@ class BildirimDeposu @Inject constructor(
         govde = "${if (delta > 0) "+" else ""}$delta puan. Gerekçe: $gerekce",
     )
 
+    /**
+     * Panelden yayımlanan duyuru (§5.6).
+     *
+     * `birKezGunde` kullanılmıyor: aynı gün birden çok duyuru
+     * yayımlanabilir. Tekrar koruması `Tercihler.sonDuyuruId`'de.
+     */
+    suspend fun duyuru(baslik: String, metin: String) =
+        yaz(BildirimTuru.DUYURU, baslik, metin)
+
     suspend fun hatirlatma(baslik: String, govde: String) =
         yaz(BildirimTuru.HATIRLATMA, baslik, govde)
 

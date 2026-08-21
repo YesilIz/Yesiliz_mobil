@@ -63,3 +63,44 @@ class AskiTespitTest {
         assertEquals("S", askiSebebiCoz(govde))
     }
 }
+
+/**
+ * Bakım gövdesinin çözümlenmesi (M9, `docs/panel-plani.md §5.7`).
+ *
+ * Bakım **askıdan da çevrimdışından da farklı**: askı hesaba özel ve
+ * kalıcı, çevrimdışı sunucunun sessiz kalması, bakım ise sunucunun
+ * "geçici olarak kapalıyım" demesi. Üçünü ayırmak, kullanıcıya doğru
+ * şeyi söylemenin tek yolu.
+ */
+class BakimTespitTest {
+
+    @Test
+    fun `bakım gövdesi mesajı veriyor`() {
+        val govde = """{"hata":"bakim","mesaj":"Kısa bir bakım var."}"""
+        assertEquals("Kısa bir bakım var.", bakimMesajiCoz(govde))
+    }
+
+    @Test
+    fun `askı gövdesi bakım sayılmıyor`() {
+        // Askı `detail` sarmalayıcısıyla geliyor (HTTPException), bakım
+        // düz gövdeyle (middleware). İkisi karışmamalı.
+        val govde = """{"detail":{"hata":"hesap_askida","sebep":"x"}}"""
+        assertNull(bakimMesajiCoz(govde))
+    }
+
+    @Test
+    fun `başka bir 503 bakım sayılmıyor`() {
+        assertNull(bakimMesajiCoz("""{"detail":"Maddi ödül teslimatı etkin değil"}"""))
+    }
+
+    @Test
+    fun `mesaj yoksa boş dize dönüyor, null değil`() {
+        // Ayrım önemli: null "bakım değil", boş dize "bakım ama mesaj yok".
+        assertEquals("", bakimMesajiCoz("""{"hata":"bakim"}"""))
+    }
+
+    @Test
+    fun `bozuk gövde çökmüyor`() {
+        assertNull(bakimMesajiCoz("<html>502</html>"))
+    }
+}

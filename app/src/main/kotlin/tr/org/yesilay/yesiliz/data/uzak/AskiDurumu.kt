@@ -34,6 +34,34 @@ import javax.inject.Singleton
 @Singleton
 class AskiDurumu @Inject constructor() {
 
+    /**
+     * Sunucu bakımda mı? (`docs/panel-plani.md §5.7`)
+     *
+     * Askıyla aynı sınıfta bir durum ama **farklı bir şey söylüyor**:
+     * askı hesaba özel ve kalıcı, bakım herkese ve geçici. İkisini aynı
+     * ekrana indirgemek, kullanıcıya hesabının kapandığını sandırırdı.
+     *
+     * Bakım da **çevrimdışıyla karıştırılmamalı**: sunucu cevap veriyor
+     * ve ne olduğunu söylüyor. Sessizce "ulaşılamıyor" demek, geçici bir
+     * durumu kalıcı bir arıza gibi göstermek olurdu (§4).
+     */
+    private val _bakim = MutableStateFlow<String?>(null)
+    val bakim: StateFlow<String?> = _bakim.asStateFlow()
+
+    fun bakimBildir(mesaj: String) {
+        if (_bakim.value != mesaj) {
+            Log.w(ETIKET, "Sunucu bakımda")
+            _bakim.value = mesaj
+        }
+    }
+
+    fun bakimBitti() {
+        if (_bakim.value != null) {
+            Log.i(ETIKET, "Bakım bitmiş görünüyor")
+            _bakim.value = null
+        }
+    }
+
     private val _hal = MutableStateFlow<Hal?>(null)
 
     /** `null` ise hesap askıda değil (ya da henüz bilinmiyor). */
@@ -70,6 +98,26 @@ class AskiDurumu @Inject constructor() {
 
 /** 403 gövdesindeki ayırt edici kod — sunucudaki `ASKIDA_KODU` ile aynı. */
 private const val ASKIDA_KODU = "hesap_askida"
+
+/** 503 gövdesindeki bakım kodu — sunucudaki `bakim.BAKIM_KODU` ile aynı. */
+private const val BAKIM_KODU = "bakim"
+
+/**
+ * 503 gövdesindeki bakım mesajı; bakım değilse `null`.
+ *
+ * Sunucu bakım gövdesini `{"hata": "bakim", "mesaj": "..."}` biçiminde
+ * yolluyor — askıdan farklı olarak `detail` sarmalayıcısı **yok**, çünkü
+ * bunu bir middleware üretiyor, `HTTPException` değil.
+ */
+internal fun bakimMesajiCoz(govde: String, onHata: (Throwable) -> Unit = {}): String? =
+    runCatching {
+        val kok = Json.parseToJsonElement(govde).jsonObject
+        if (kok["hata"]?.jsonPrimitive?.content != BAKIM_KODU) return@runCatching null
+        kok["mesaj"]?.jsonPrimitive?.content.orEmpty()
+    }.getOrElse {
+        onHata(it)
+        null
+    }
 
 /**
  * Gövdeyi çözer: askı ise sebep (boş olabilir), değilse `null`.
@@ -111,8 +159,18 @@ internal fun askiInterceptor(durum: AskiDurumu) = Interceptor { zincir ->
                 ?.let { askiSebebiCoz(it) { hata -> Log.d(ETIKET_AG, "403 askı değil", hata) } }
                 ?.let(durum::bildir)
         }
-        // Sunucu iş görüyor ve hesap çalışıyor: askı kalkmış.
-        yanit.isSuccessful -> durum.temizle()
+        yanit.code == KOD_BAKIM -> {
+            val govde = runCatching { yanit.peekBody(GOVDE_SINIRI).string() }
+                .getOrElse { Log.w(ETIKET_AG, "503 gövdesi okunamadı", it); null }
+            govde
+                ?.let { bakimMesajiCoz(it) { hata -> Log.d(ETIKET_AG, "503 bakım değil", hata) } }
+                ?.let(durum::bakimBildir)
+        }
+        // Sunucu iş görüyor ve hesap çalışıyor: askı ve bakım bitmiş.
+        yanit.isSuccessful -> {
+            durum.temizle()
+            durum.bakimBitti()
+        }
     }
     yanit
 }
@@ -120,6 +178,8 @@ internal fun askiInterceptor(durum: AskiDurumu) = Interceptor { zincir ->
 private const val ETIKET_AG = "AskiDurumu"
 
 private const val KOD_YASAK = 403
+
+private const val KOD_BAKIM = 503
 
 /** Hata gövdeleri küçük; 8 KB'den fazlasını belleğe almanın anlamı yok. */
 private const val GOVDE_SINIRI = 8L * 1024

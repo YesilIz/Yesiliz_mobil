@@ -113,6 +113,22 @@ interface YesilizApi {
     @POST("ebeveyn/yedam-onay")
     suspend fun yedamOnayi(@Body istek: EbeveynYedamOnayIstek): Map<String, String>
 
+    // --- içerik ve duyuru (§5.5, §5.6) ---
+
+    /**
+     * Bilgi bankası. **Kimlik istemiyor** — misafir kullanıcı da okuyor.
+     *
+     * Boş liste dönerse cihaz gömülü sete düşüyor (S5): sunucuda içerik
+     * yokken boş bir banka göstermek, var olan bir özelliği yok gibi
+     * sunmak olurdu.
+     */
+    @GET("icerik/bilgi-bankasi")
+    suspend fun bilgiBankasi(): BilgiBankasiYanit
+
+    /** `sonrasi`'ndan büyük id'ler — aynı duyuru iki kez bildirilmesin. */
+    @GET("icerik/duyuru")
+    suspend fun duyurular(@Query("sonrasi") sonrasi: Int): List<DuyuruDto>
+
     // --- puan düzeltmesi (K56) ---
 
     /**

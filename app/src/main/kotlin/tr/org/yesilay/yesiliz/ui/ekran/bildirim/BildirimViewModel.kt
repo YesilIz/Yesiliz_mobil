@@ -2,6 +2,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.bildirim
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.FamilyRestroom
@@ -137,5 +138,6 @@ private fun ikonu(turAnahtari: String): ImageVector =
         BildirimTuru.HATIRLATMA -> Icons.Filled.Notifications
         // Nötr bir ikon: düzeltme bir uyarı ya da ceza değil (K56).
         BildirimTuru.DUZELTME -> Icons.Filled.Balance
+        BildirimTuru.DUYURU -> Icons.Filled.Campaign
         null -> Icons.Filled.CheckCircle
     }

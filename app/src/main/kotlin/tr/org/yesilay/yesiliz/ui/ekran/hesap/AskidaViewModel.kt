@@ -32,6 +32,9 @@ class AskidaViewModel @Inject constructor(
 
     val hal: StateFlow<AskiDurumu.Hal?> = askiDurumu.hal
 
+    /** Sunucu bakımda mı? `null` ise değil (M9, §5.7). */
+    val bakim: StateFlow<String?> = askiDurumu.bakim
+
     private val _deneniyor = MutableStateFlow(false)
     val deneniyor: StateFlow<Boolean> = _deneniyor.asStateFlow()
 

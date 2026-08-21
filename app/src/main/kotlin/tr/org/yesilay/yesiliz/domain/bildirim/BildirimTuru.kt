@@ -34,6 +34,14 @@ enum class BildirimTuru(val anahtar: String) {
     DUZELTME("duzeltme"),
 
     /**
+     * Panelden yayımlanan duyuru (`docs/panel-plani.md §5.6`).
+     *
+     * **Push değil:** senkronla iniyor, kullanıcı uygulamayı açtığında
+     * defterde görüyor.
+     */
+    DUYURU("duyuru"),
+
+    /**
      * Eski sürümün sahte “gönderildi” kaydını okuyabilmek için korunur.
      * Yeni kayıt üretilmez; 7→8 geçişi var olanları temizler.
      */

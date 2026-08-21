@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -149,5 +152,52 @@ fun AskidaEkran(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+
+/**
+ * Sunucu bakımdayken görünen bilgilendirme (M9).
+ *
+ * [AskidaEkran] ile aynı desende ama **farklı bir şey söylüyor**: askı
+ * hesaba özel ve kalıcı, bakım herkese ve geçici. İkisini aynı ekrana
+ * indirgemek, kullanıcıya hesabının kapandığını sandırırdı.
+ *
+ * **Engelleyici değil.** Askı erişimi gerçekten kapatıyor; bakımda ise
+ * uygulamanın büyük kısmı çalışmaya devam ediyor (ölçüm, görevler,
+ * aktiviteler hepsi cihazda). Bu yüzden ekran kapatılabiliyor: kullanıcıyı
+ * yapabileceği şeylerden alıkoymanın gerekçesi yok.
+ */
+@Composable
+fun BakimSeridi(
+    mesaj: String,
+    onKapat: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Kart(modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Build,
+                contentDescription = null,
+                tint = YesilAna,
+            )
+            Spacer(Modifier.width(Bosluk.S))
+            Text(
+                text = "Sunucuda bakım var",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MetinBirincil,
+            )
+        }
+        Spacer(Modifier.height(Bosluk.S))
+        Text(
+            // Mesaj **sunucudan** geliyor: bakımın ne kadar süreceğini ya
+            // da neyi etkilediğini cihaz bilemez, uydurmuyor.
+            text = mesaj,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MetinIkincil,
+        )
+        Spacer(Modifier.height(Bosluk.S))
+        IkincilButon(metin = "Anladım", onTikla = onKapat)
     }
 }
