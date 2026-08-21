@@ -29,8 +29,14 @@
         {% if personel and personel.rol in ("admin", "yedam_yonetici", "yedam_danisman") %}
           <a href="/yedam/havuz"{% if etkin == "yedam" %} aria-current="page"{% endif %}>YEDAM başvuruları</a>
         {% endif %}
-        {% if personel and personel.rol == "admin" %}
+        {# Denetim kaydı `operasyon`a da açık: uç ona **kendi** kayıtlarını
+           gösteriyor (`panel_yonetim.denetim_kaydi`). Link yalnızca
+           admin'de olsaydı, var olan ama ulaşılamayan bir özellik
+           kalırdı — ekran zaten "Kendi kayıtlarını görüyorsun" diyor. #}
+        {% if personel and personel.rol in ("admin", "operasyon") %}
           <a href="/yonetim/denetim"{% if etkin == "denetim" %} aria-current="page"{% endif %}>Denetim kaydı</a>
+        {% endif %}
+        {% if personel and personel.rol == "admin" %}
           <a href="/yonetim/personel"{% if etkin == "personel" %} aria-current="page"{% endif %}>Personel</a>
           <a href="/yonetim/bayrak"{% if etkin == "bayrak" %} aria-current="page"{% endif %}>Bayraklar</a>
         {% endif %}

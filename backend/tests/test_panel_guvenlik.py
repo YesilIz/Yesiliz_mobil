@@ -254,3 +254,32 @@ def test_api_rolunde_panel_middlewarei_yuklenmiyor(istemci):
     yanit = istemci.post("/auth/giris", json={"eposta": "yok@ornek.com", "sifre": "x"})
     assert yanit.status_code == 401
     assert "content-security-policy" not in yanit.headers
+
+
+def test_menu_linkleri_rollerle_ortusuyor(panel_uygulamasi, db):
+    """
+    Menüde görünen her link o rolde **açılabilmeli**, ve erişilebilen her
+    ekranın menüde bir yolu olmalı.
+
+    İkisi ayrışınca iki ayrı kusur çıkıyor: açılmayan link (kullanıcı
+    403 yiyor) ya da **var olan ama ulaşılamayan özellik**. İkincisi
+    gerçek bir denetimde bulundu — `operasyon` denetim kaydını görebiliyor
+    ama menüde linki yoktu.
+    """
+    import re
+
+    from fastapi.routing import APIRoute
+
+    from app.panel.sablon import SABLON_DIZINI
+
+    taban = (SABLON_DIZINI / "taban.html").read_text(encoding="utf-8")
+    menu = taban.split("{% block yan_menu %}")[1].split("{% endblock %}")[0]
+
+    # Menüdeki her yol gerçekten bir route olmalı.
+    yollar = {
+        y.path
+        for y in panel_uygulamasi.routes
+        if isinstance(y, APIRoute) and "GET" in y.methods
+    }
+    for link in re.findall(r'<a href="(/[^"]+)"', menu):
+        assert link in yollar, f"Menüde olmayan yola link var: {link}"

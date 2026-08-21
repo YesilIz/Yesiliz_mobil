@@ -160,7 +160,19 @@ duyuru inmedi, yayımlanan indi.
 - [x] **I5** `duyuru` tablosu + `GET/POST /yonetim/duyuru` + cihazda `GET /duyuru`. **FCM YOK** (§5.6 kararı): duyuru senkronla `BildirimDeposu`'na iner, kullanıcı uygulamayı açınca görür
 - [x] **I6** Duyuru metni denetimi — §4 "emir kipi / korkutma yok"
 - [x] **I7** `GET/POST /yonetim/bayrak` — özellik bayrağı arayüzü. **Risk motoru sabitleri yalnızca gösterilir, değiştirilemez** (K17)
-- [x] **I8** Asgari istemci sürümü + bakım modu (§5.7) → cihaz tarafı M9
+- [x] **I8a** Bakım modu (§5.7) → cihaz tarafı M9 — ✅ `4bf7be0`
+- [ ] **I8b** *(bilinçli olarak ertelendi)* Asgari istemci sürümü
+      ("bu sürümü güncelle"). **Yapılmadı ve şimdilik yapılmamalı:**
+      uygulama henüz Play Store'da değil, yani "güncelle" düğmesinin
+      gösterecek bir yeri yok. Hiçbir yere gitmeyen bir güncelleme çağrısı
+      §4'ün "yapılmayan işi yapıldı gösterme" kuralına girer. Mağaza
+      listelemesi açıldığında yazılır; bayrak mekanizması (`bayraklar.py`)
+      zaten hazır
+- [ ] **I9** *(§5.7'nin son kalemi)* Test hesabı üretimi — **yalnızca
+      `staging` ortamında**. Yapılmadı; ortada bir staging ortamı da yok
+      (tek dağıtım hedefi üretim). Ortam açıldığında yazılır. Üretimde
+      sahte veri üretimi **yasak** kalıyor — `CLAUDE.md` §11'in demo
+      tohumunu `src/debug`'da tutmasıyla aynı gerekçe
 
 ---
 

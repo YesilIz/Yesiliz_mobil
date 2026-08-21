@@ -162,7 +162,19 @@ jobs:
     # panel yalnızca şemayı doğruluyor (`app/surum_kapisi.py`). Panel önce
     # kalkarsa sürüm kapısı düşer ve servis crash-loop'a girer.
     needs: deploy
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # **Yapılandırılmamışsa atlanıyor, düşmüyor.** Panel servisi Yeşilay
+    # tarafında henüz açılmadı (`docs/panel-plani.md §14 S6`) ve o iki
+    # değişken tanımlı değilken `railway up --service ""` düşerdi. Tanımsız
+    # bir servis için hattı kırmızıya çevirmek, kırmızıyı anlamsız kılar —
+    # ve API dağıtımı zaten bu işten önce bitmiş oluyor.
+    #
+    # Değişkenler tanımlanınca job kendiliğinden devreye giriyor; ayrıca
+    # bir şey açmak gerekmiyor.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name != 'pull_request'
+      && vars.RAILWAY_PANEL_SERVICE != ''
+      && vars.PANEL_TABAN != ''
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -201,6 +213,16 @@ jobs:
   smoke:
     name: Canlı ortam smoke testleri
     needs: [deploy, deploy-panel]
+    # `deploy-panel` **atlandığında da** koşuyor: panel yapılandırılmamış
+    # olabilir ama API dağıtımının smoke'u yine de yapılmalı. Varsayılan
+    # davranışta atlanan bir `needs` bağımlı job'u da atlatıyordu, yani
+    # panel açılana kadar canlı ortam hiç sınanmamış olurdu.
+    #
+    # Panel **düşerse** smoke koşmuyor: o gerçek bir hata.
+    if: >-
+      always()
+      && needs.deploy.result == 'success'
+      && needs.deploy-panel.result != 'failure'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
