@@ -404,6 +404,14 @@ class Personel(Taban):
     # girişte kurulum ekranına yönlendiriliyor.
     totp_sir: Mapped[str] = mapped_column(String(255), default="", server_default=text("''"))
 
+    # Panelden açılan hesap geçici parolayla geliyor ve o parola bir
+    # insan kanalından (kurumsal e-posta, elden) geçiyor. İlk girişte
+    # değiştirilmesi zorunlu: aksi hâlde geçici parola kalıcı olur ve
+    # onu ileten kanalda süresiz durur.
+    parola_degistirmeli: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+
     # Doğrulanan son TOTP sayacı. Aynı kodun ikinci kez kullanılması
     # reddediliyor — omuz üstünden okunan bir kod 30 sn geçerli kalmamalı.
     son_totp_sayaci: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))

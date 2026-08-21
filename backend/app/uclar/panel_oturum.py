@@ -21,6 +21,7 @@ from app.ayarlar import ayarlar
 from app.guvenlik import (
     jeton_ozetle,
     sifre_dogrula,
+    sifre_ozetle,
     sir_coz,
     sir_sifrele,
 )
@@ -34,6 +35,7 @@ from app.panel import oturum as panel_oturum
 from app.panel.sablon import yanit, yonlendir
 from app.totp import dogrula as totp_dogrula
 from app.totp import otpauth_uri, sir_uret
+from app.personel_ekle import ASGARI_SIFRE as ASGARI_PANEL_SIFRE
 from app.veritabani import oturum
 
 gunluk = logging.getLogger(__name__)
@@ -54,6 +56,20 @@ _YEDAM_ROLLERI = {PersonelRolu.YEDAM_YONETICI.value, PersonelRolu.YEDAM_DANISMAN
 
 def giris_sonrasi_yol(rol: str) -> str:
     return "/yedam/havuz" if rol in _YEDAM_ROLLERI else "/yonetim/gosterge"
+
+
+def _giris_hedefi(personel: Personel) -> str:
+    """
+    TOTP geçildikten sonra nereye?
+
+    Geçici parolayla açılmış hesap önce parolasını değiştiriyor
+    (`docs/panel-plani.md §5`, S1). `personel_oturumu` bağımlılığı bunu
+    zaten zorluyor; buradaki dal yalnızca kullanıcıyı gereksiz bir
+    yönlendirme sekmesinden kurtarıyor.
+    """
+    if personel.parola_degistirmeli:
+        return panel_oturum.PAROLA_YOLU
+    return giris_sonrasi_yol(personel.rol)
 
 
 # --- 1. adım: parola ---
@@ -152,7 +168,7 @@ def totp_formu(istek: Request, db: Session = Depends(oturum)):
     if not personel.totp_sir:
         return yonlendir(istek, "/oturum/totp-kur")
     if kayit.totp_dogrulandi:
-        return yonlendir(istek, giris_sonrasi_yol(personel.rol))
+        return yonlendir(istek, _giris_hedefi(personel))
     return yanit(istek, "totp.html", {"hata": None, "csrf": _csrf(kayit)})
 
 
@@ -201,7 +217,7 @@ def totp_dogrulama(
 
     panel_oturum.totp_dogrulandi_isaretle(kayit)
     panel_oturum.denemeleri_sifirla(db, personel)
-    return yonlendir(istek, giris_sonrasi_yol(personel.rol))
+    return yonlendir(istek, _giris_hedefi(personel))
 
 
 def _kurtarma_koduyla_gec(db: Session, personel: Personel, kod: str) -> bool:
@@ -288,7 +304,7 @@ def totp_kurulum(
     personel.son_totp_sayaci = sayac
     panel_oturum.totp_dogrulandi_isaretle(kayit)
     panel_oturum.denemeleri_sifirla(db, personel)
-    return yonlendir(istek, giris_sonrasi_yol(personel.rol))
+    return yonlendir(istek, _giris_hedefi(personel))
 
 
 # --- çıkış ---
@@ -302,3 +318,74 @@ def cikis(istek: Request, db: Session = Depends(oturum)):
     cevap = yonlendir(istek, "/oturum/giris")
     panel_oturum.cerezi_sil(cevap)
     return cevap
+
+
+# --- zorunlu parola değişimi ---
+
+
+@yonlendirici.get(panel_oturum.PAROLA_YOLU.removeprefix("/oturum"))
+def parola_degistir_formu(
+    istek: Request,
+    personel: Personel = Depends(panel_oturum.personel_oturumu),
+):
+    """
+    Geçici parolayla açılmış hesabın ilk durağı.
+
+    Bu route rol kapısı **taşımıyor** ve taşımamalı: her rolden personel
+    buraya düşebiliyor ve kapıdan geçmeden panelin hiçbir yerine
+    gidemiyor.
+    """
+    return yanit(istek, "parola_degistir.html", {"hata": None})
+
+
+@yonlendirici.post(panel_oturum.PAROLA_YOLU.removeprefix("/oturum"))
+def parola_degistir(
+    istek: Request,
+    mevcut: str = Form(...),
+    yeni: str = Form(...),
+    yeni_tekrar: str = Form(...),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(panel_oturum.personel_oturumu),
+):
+    """
+    Parolayı değiştirir ve `parola_degistirmeli` bayrağını düşürür.
+
+    **Mevcut parola şart.** Oturum çerezi tek başına yetseydi, panelin
+    açık kaldığı bir bilgisayarı eline geçiren biri hesabı devralırdı
+    (`CLAUDE.md` §12 K38'in panel karşılığı).
+
+    Bütün oturumlar düşürülüyor — **bu oturum dahil**. Parola değişimi
+    "bu kimlik bilgisi artık geçersiz" demek; geçici parolayı bilen
+    başkasının açık bir oturumu varsa o da bitmeli.
+    """
+    hata = _parola_hatasi(personel, mevcut, yeni, yeni_tekrar)
+    if hata is not None:
+        return yanit(
+            istek,
+            "parola_degistir.html",
+            {"hata": hata},
+            durum=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+
+    personel.sifre_ozet = sifre_ozetle(yeni)
+    personel.parola_degistirmeli = False
+    panel_oturum.oturumlari_dusur(db, personel.id)
+    db.commit()
+
+    cevap = yonlendir(istek, panel_oturum.GIRIS_YOLU)
+    panel_oturum.cerezi_sil(cevap)
+    return cevap
+
+
+def _parola_hatasi(personel: Personel, mevcut: str, yeni: str, tekrar: str) -> str | None:
+    if not sifre_dogrula(personel.sifre_ozet, mevcut):
+        return "Mevcut parola hatalı."
+    if yeni != tekrar:
+        return "Yeni parolalar birbirini tutmuyor."
+    if len(yeni) < ASGARI_PANEL_SIFRE:
+        return f"Yeni parola en az {ASGARI_PANEL_SIFRE} karakter olmalı."
+    if yeni == mevcut:
+        # Geçici parolayı "değiştirdim" diye yeniden yazmak, bayrağı
+        # düşürüp asıl amacı boşa çıkarırdı.
+        return "Yeni parola geçici parolayla aynı olamaz."
+    return None

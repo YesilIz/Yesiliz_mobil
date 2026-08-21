@@ -39,6 +39,10 @@ MUAF = {
     ("POST", "/oturum/totp"),
     ("POST", "/oturum/totp-kur"),
     ("POST", "/oturum/cikis"),
+    # Personelin KENDİ parolasını değiştirmesi de aynı sınıf: hedefi bir
+    # kullanıcı değil, kendisi. İz `personel_oturum` tarafında kalıyor —
+    # değişim bütün oturumları iptal ediyor ve bu tabloda görünüyor.
+    ("POST", "/oturum/parola-degistir"),
 }
 
 

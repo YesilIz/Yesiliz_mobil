@@ -19,7 +19,7 @@ import logging
 from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
@@ -33,6 +33,8 @@ CEREZ_ADI = "yesiliz_panel"
 
 GIRIS_YOLU = "/oturum/giris"
 TOTP_YOLU = "/oturum/totp"
+#: Geçici parolayla açılmış hesabın ilk durağı.
+PAROLA_YOLU = "/oturum/parola-degistir"
 
 #: Parola doğrulandıktan sonra TOTP adımı için tanınan süre. Kısa: yarım
 #: kalmış bir giriş saatlerce açık bir kapı bırakmamalı.
@@ -220,6 +222,13 @@ def personel_oturumu(
     if not kayit.totp_dogrulandi:
         raise _yonlendir(istek, TOTP_YOLU)
 
+    # Geçici parola kalıcıya dönüşmesin: değiştirilene kadar panelin geri
+    # kalanı kapalı. Karar burada, tek yerde — her route'un ayrı ayrı
+    # sorması gerekseydi biri unutulur ve o sayfa geçici parolayla
+    # kullanılabilir olurdu (rol kapısıyla aynı gerekçe).
+    if personel.parola_degistirmeli and istek.url.path != PAROLA_YOLU:
+        raise _yonlendir(istek, PAROLA_YOLU)
+
     # İstek boyunca gereken yan bilgiler; ayrı bir dependency açmaya değmez.
     # `sablon.yanit` ikisini de buradan okuyor, route'lar tekrarlamıyor.
     istek.state.oturum = kayit
@@ -274,3 +283,27 @@ def denemeleri_sifirla(db: Session, personel: Personel) -> None:
     personel.kilit_bitis = None
     personel.son_giris = _simdi()
     db.commit()
+
+
+def oturumlari_dusur(db: Session, personel_id: int, haric: int | None = None) -> int:
+    """
+    Personelin açık oturumlarını iptal eder; commit etmez. Kaç tane olduğunu döndürür.
+
+    `haric` verilirse o oturum ayakta kalıyor — "diğer cihazlardan çık"
+    senaryosu. Parola değişiminde **hiçbiri** korunmuyor: parola değişimi
+    "bu kimlik bilgisi artık geçersiz" demek ve onu bilen başkasının açık
+    oturumu da bitmeli.
+
+    Askıya alınan personelin oturumu zaten `personel_oturumu` bağımlılığında
+    her istekte kontrol ediliyor; bu, o kontrolün tamamlayıcısı — bekleyen
+    bir isteğin arada geçmesini de engelliyor.
+    """
+    kosullar = [
+        PersonelOturum.personel_id == personel_id,
+        PersonelOturum.iptal.is_(False),
+    ]
+    if haric is not None:
+        kosullar.append(PersonelOturum.id != haric)
+
+    sonuc = db.execute(update(PersonelOturum).where(*kosullar).values(iptal=True))
+    return sonuc.rowcount or 0
