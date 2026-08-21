@@ -25,7 +25,8 @@ mümkün değildi, yani "API alan adında panel yolu 404" iddiası hiç
 sınanamıyordu. Fabrika rolü parametre olarak da alıyor.
 """
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,7 +49,24 @@ async def yasam(_: FastAPI):
     düşüyor ve hatalı sürüm devreye alınmıyor.
     """
     gunluk.kur()
-    yield
+
+    # YEDAM rıza bakımı yalnızca API rolünde: iki servis aynı imajı
+    # paylaşıyor (K57) ve ikisi birden koşarsa aynı satırları iki kez
+    # işlemeye çalışırlar. Silme idempotent, yani zarar vermezdi — ama
+    # gereksiz ve log'u kirletirdi.
+    bakim = None
+    if ayarlar().rol is SunucuRolu.API:
+        from app import yedam_bakim
+
+        bakim = asyncio.create_task(yedam_bakim.dongu())
+
+    try:
+        yield
+    finally:
+        if bakim is not None:
+            bakim.cancel()
+            with suppress(asyncio.CancelledError):
+                await bakim
 
 
 def _veritabani_ayakta() -> bool:
