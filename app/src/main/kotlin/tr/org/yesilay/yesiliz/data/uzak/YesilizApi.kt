@@ -109,6 +109,17 @@ interface YesilizApi {
     @POST("ebeveyn/yedam-onay")
     suspend fun yedamOnayi(@Body istek: EbeveynYedamOnayIstek): Map<String, String>
 
+    // --- puan düzeltmesi (K56) ---
+
+    /**
+     * Panelden yapılmış düzeltmeler.
+     *
+     * Rıza kapısına bağlı **değil** (K19 istisnası): davranışsal veri
+     * değil, kullanıcının kendi bakiyesine yapılmış işlem.
+     */
+    @GET("puan/duzeltmeler")
+    suspend fun puanDuzeltmeleri(): List<PuanDuzeltmeDto>
+
     // --- YEDAM ---
 
     @POST("yedam/basvuru")

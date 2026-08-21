@@ -92,6 +92,14 @@ data class SenkronIstek(
     val riskler: List<RiskSonucDto> = emptyList(),
     val haftalikPuan: Int = 0,
     /**
+     * Toplam puan — **bilgilendirici** (U7).
+     *
+     * Panelin puan düzeltme formu mevcut toplamı gösteriyor ve sunucu onu
+     * başka türlü bilemiyor. Otorite değil: puanı cihaz hesaplıyor ve
+     * A13 (istemci beyanlı lig puanı) burada da geçerli.
+     */
+    val toplamPuan: Int? = null,
+    /**
      * "Ligde görün" tercihi.
      *
      * Geriye uyumluluk için senkron gövdesinde de taşınır. Güncel istemci
@@ -246,3 +254,21 @@ data class YedamGecmisIstek(
 
 @Serializable
 data class EbeveynYedamOnayIstek(val rizaId: Int, val onay: Boolean)
+
+
+// --- puan düzeltmesi (K56) ---
+
+/**
+ * Panelden yapılmış tekil düzeltme.
+ *
+ * [id] **sunucu id'si** ve cihazda birincil anahtar oluyor: aynı deltanın
+ * iki kez uygulanması fiziksel olarak imkânsız kalsın diye. Personelin
+ * adı taşınmıyor — kullanıcıya kimin yaptığı değil, ne yapıldığı ve niçin.
+ */
+@Serializable
+data class PuanDuzeltmeDto(
+    val id: Int,
+    val delta: Int,
+    val gerekce: String,
+    val zaman: String,
+)

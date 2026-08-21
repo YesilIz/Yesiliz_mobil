@@ -11,6 +11,7 @@ import dagger.assisted.AssistedInject
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
 import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
+import tr.org.yesilay.yesiliz.data.depo.PuanDuzeltmeDeposu
 import tr.org.yesilay.yesiliz.data.depo.YedamDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
@@ -67,6 +68,7 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val bildirimDeposu: BildirimDeposu,
     private val senkronDeposu: SenkronDeposu,
     private val yedamDeposu: YedamDeposu,
+    private val puanDuzeltmeDeposu: PuanDuzeltmeDeposu,
     private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
     private val isPlanlayici: IsPlanlayici,
@@ -172,6 +174,10 @@ class GunlukOzetWorker @AssistedInject constructor(
             // Rıza yoksa sunucu 403 dönüyor ve depo bunu beklenen durum
             // sayıp sessizce geçiyor: her kullanıcının YEDAM rızası yok.
             yedamDeposu.surukleyicileriGonder()
+            // Panelden yapılan puan düzeltmeleri (K56). Rıza kapısına
+            // bağlı değil: kullanıcının kendi bakiyesine yapılmış bir
+            // işlem, davranışsal veri değil.
+            puanDuzeltmeDeposu.senkronEt()
 
             Result.success()
         } catch (iptal: CancellationException) {

@@ -159,6 +159,16 @@ class SenkronIstek(BaseModel):
     haftalikPuan: int = Field(default=0, ge=0, le=2000)
     # "Ligde görün" tercihi. None = değiştirme (eski istemciler).
     ligdeGorunur: bool | None = None
+    # Cihazın TOPLAM puanı — **bilgilendirici, otorite değil** (U7).
+    #
+    # Panelin puan düzeltme formu "mevcut toplam · delta · önizleme"
+    # gösteriyor ve o toplamı sunucu başka türlü bilemiyor: skoru da
+    # puanı da cihaz hesaplıyor (K17 ailesi). A13 aynen geçerli — sayı
+    # istemci beyanlı ve form bunu ekranda yazıyor.
+    #
+    # `None` = eski istemci; alanı sıfırla doldurmak "puanı yok" demek
+    # olurdu ve panel bunu yanlış okurdu (§9).
+    toplamPuan: int | None = Field(default=None, ge=0, le=1_000_000)
 
 
 class SenkronYanit(BaseModel):

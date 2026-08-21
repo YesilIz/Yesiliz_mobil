@@ -63,6 +63,21 @@ class Tercihler @Inject constructor(
      */
     val beyanYas: Flow<Int?> = depo.data.map { it[BEYAN_YAS] }
 
+    /**
+     * Şimdiye kadar ulaşılan **en yüksek** toplam puan (U6).
+     *
+     * Ağaç evresi (K2) ve ödül kademesi (K28) bu değerden türüyor;
+     * ekrandaki bakiye güncel toplamı gösteriyor. Panelden yapılan bir
+     * düşürme (K56) bakiyeyi değiştiriyor ama **kazanılmışı geri
+     * almıyor**: kötü bir sonuçla ağacın kuruması tam da K2'nin
+     * reddettiği şey, kademenin geri gitmesi de K28'in.
+     *
+     * İkisi için ayrı anahtar tutulmuyor: evre saklanırsa kademe için
+     * ikinci bir anahtar gerekir ve ikisi ayrışabilir. **Ham toplamı**
+     * saklayınca ikisi de aynı sayıdan türüyor.
+     */
+    val enYuksekToplamPuan: Flow<Int> = depo.data.map { it[EN_YUKSEK_PUAN] ?: 0 }
+
     // --- alpha eğrisinin girdileri ---
 
     /** Uygulamanın ilk açıldığı gün; `d` bu tarihten bugüne geçen gün sayısı. */
@@ -201,6 +216,18 @@ class Tercihler @Inject constructor(
      * girdiğinde yaşı bir kez soruluyor; onboarding'i baştan koşturmak
      * gerekmiyor.
      */
+    /**
+     * Yüksek-su-seviyesini günceller — **yalnızca yükseltir**.
+     *
+     * Düşürmenin yolu yok: kazanılmışı geri almamanın tek garantisi bu.
+     */
+    suspend fun enYuksekPuaniGuncelle(guncelToplam: Int) {
+        depo.edit { p ->
+            val eski = p[EN_YUKSEK_PUAN] ?: 0
+            if (guncelToplam > eski) p[EN_YUKSEK_PUAN] = guncelToplam
+        }
+    }
+
     suspend fun beyanYasiKaydet(yas: Int) {
         depo.edit { it[BEYAN_YAS] = yas }
     }
@@ -502,6 +529,7 @@ class Tercihler @Inject constructor(
         private val GECMIS_GUN_HESAPLANDI = booleanPreferencesKey("gecmis_gun_hesaplandi")
         private val SON_ANKET = longPreferencesKey("son_anket_gunu")
         private val BEYAN_YAS = intPreferencesKey("beyan_yas")
+        private val EN_YUKSEK_PUAN = intPreferencesKey("en_yuksek_toplam_puan")
         private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
         private val SUNUCU_TABANI_SURUM = intPreferencesKey("sunucu_tabani_surum")

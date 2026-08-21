@@ -276,6 +276,43 @@ class GecisTest {
         yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun gecis9dan10aSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 9).close()
+        yardimci.runMigrationsAndValidate(TEST_DB, 10, true, GECIS_9_10)
+    }
+
+    /**
+     * Puan düzeltme tablosu boş açılıyor ve var olan puanlara dokunmuyor.
+     *
+     * Düzeltme `puan_gunluk`'a yazılsaydı `gunuYenidenHesaplaIc`'in
+     * `@Upsert`'ü onu bir sonraki gecelik işte silerdi (K56).
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis9dan10aVarOlanPuanaDokunmuyor() {
+        yardimci.createDatabase(TEST_DB, 9).apply {
+            execSQL(
+                "INSERT INTO puan_gunluk " +
+                    "(tarih, puanBrut, puanNet, carpan, seriGun, hedefTutturuldu, jokerKullanildi) " +
+                    "VALUES ('2026-08-20', 40, 40, 1.0, 3, 1, 0)",
+            )
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 10, true, GECIS_9_10)
+
+        db.query("SELECT puanNet FROM puan_gunluk").use { imlec ->
+            assertTrue("puan satırı kaybolmuş", imlec.moveToFirst())
+            assertEquals(40, imlec.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM puan_duzeltme").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals("düzeltme tablosu boş açılmalı", 0, imlec.getInt(0))
+        }
+    }
+
     /**
      * `geceOlculduMu` geriye dönük `olayVarMi`'den dolduruluyor.
      *
@@ -385,8 +422,9 @@ class GecisTest {
         }
 
         val db = yardimci.runMigrationsAndValidate(
-            TEST_DB, 9, true,
-            GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7, GECIS_7_8, GECIS_8_9,
+            TEST_DB, 10, true,
+            GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7, GECIS_7_8,
+            GECIS_8_9, GECIS_9_10,
         )
 
         db.query("SELECT COUNT(*) FROM gunluk_ozet").use { imlec ->

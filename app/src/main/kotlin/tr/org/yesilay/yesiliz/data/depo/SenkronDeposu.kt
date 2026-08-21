@@ -77,6 +77,9 @@ class SenkronDeposu @Inject constructor(
                     // bu filtre eski sunuculara karşı da fail-closed'dur.
                     riskler = riskDao.sonGunler(GUN).paylasilabilirRiskler().map { it.dto() },
                     haftalikPuan = haftalikPuan(),
+                    // Panelin düzeltme formu mevcut toplamı gösteriyor ve
+                    // sunucu onu başka türlü bilemiyor (U7). Bilgilendirici.
+                    toplamPuan = puanDao.toplamPuan(),
                     // Eski sunucularla geriye uyum için bu alan özet
                     // senkronunda da taşınır. Güncel istemci değişikliği
                     // ayrıca özel görünürlük ucuna anında yollar.

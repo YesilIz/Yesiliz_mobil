@@ -104,10 +104,16 @@ class AnaViewModel @Inject constructor(
             combine(
                 ozetDao.gununAkisi(bugun),
                 riskDao.sonuncuAkisi(),
-                puanDeposu.toplamPuan,
+                // Bakiye ve kazanılmış AYRI (U6, K56): ekrandaki puan
+                // güncel toplam, ağaç evresi ise şimdiye kadarki en
+                // yüksekten türüyor. Panelden yapılan bir düşürme bakiyeyi
+                // değiştiriyor ama ağacı kurutmuyor — kötü bir sonuçla
+                // ağacın geri gitmesi tam da K2'nin reddettiği şey.
+                combine(puanDeposu.toplamPuan, puanDeposu.kazanilmisPuan, ::Pair),
                 puanDao.gununAkisi(bugun),
                 tercihler.gunlukHedefDk,
-            ) { ozet, risk, toplamPuan, gunlukPuan, hedef ->
+            ) { ozet, risk, puanlar, gunlukPuan, hedef ->
+                val (toplamPuan, kazanilmis) = puanlar
                 Ara(
                     ozet = ozet,
                     // Yetersiz ölçümlü bir gün bandı da uydurmasın
@@ -117,6 +123,7 @@ class AnaViewModel @Inject constructor(
                     // detayının aksine güncellik iddiası taşımıyor.
                     bant = risk?.gosterilebilirBant(),
                     toplamPuan = toplamPuan,
+                    kazanilmisPuan = kazanilmis,
                     seriGun = gunlukPuan?.seriGun ?: 0,
                     seriJokerli = gunlukPuan?.jokerKullanildi == true,
                     hedefDk = hedef,
@@ -178,7 +185,7 @@ class AnaViewModel @Inject constructor(
                         avatarId = ara.avatarId,
                         serideGun = ara.seriGun,
                         seriJokerli = ara.seriJokerli,
-                        agacEvresi = agacEvresi(ara.toplamPuan),
+                        agacEvresi = agacEvresi(ara.kazanilmisPuan),
                         puan = ara.toplamPuan,
                         ekranDakika = ara.ozet?.toplamEkranDk()?.roundToInt() ?: 0,
                         hedefDakika = ara.hedefDk,
@@ -353,6 +360,8 @@ class AnaViewModel @Inject constructor(
         val ozet: GunlukOzetEntity?,
         val bant: Bant?,
         val toplamPuan: Int,
+        /** Ağaç evresinin okuduğu yüksek-su-seviyesi (U6). */
+        val kazanilmisPuan: Int = 0,
         val seriGun: Int,
         val seriJokerli: Boolean = false,
         val hedefDk: Int,

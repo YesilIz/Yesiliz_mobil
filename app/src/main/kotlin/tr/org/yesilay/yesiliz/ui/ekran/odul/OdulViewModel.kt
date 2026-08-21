@@ -52,7 +52,9 @@ class OdulViewModel @Inject constructor(
 ) : ViewModel() {
 
     val durum: StateFlow<OdulDurum> = combine(
-        puanDeposu.toplamPuan,
+        // Kademe **kazanılmıştan** okunuyor (U6, K28): hak edilmiş bir
+        // ödül panelden yapılan bir düşürmeyle geri gitmiyor.
+        puanDeposu.kazanilmisPuan,
         puanDeposu.aktifGunSayisi,
         combine(puanDeposu.sonKayitlar(), guncelGun.akis) { kayitlar, bugun ->
             kayitlar.map { it.kaydaCevir(bugun) }
