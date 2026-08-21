@@ -38,6 +38,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -547,3 +548,248 @@ class OzellikBayragi(Taban):
     guncelleme: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=_simdi, onupdate=_simdi
     )
+
+
+# ---------------------------------------------------------------------------
+# YEDAM — rıza, başvuru, temas, erişim izi
+#
+# `docs/panel-plani.md §6, §7` · rıza metni `docs/yedam-riza-metni-v1.md`.
+#
+# **İki rıza bağımsız.** "Yeşilay ile paylaşım" (K19) günlük özetin sunucuya
+# gitmesini yönetiyor; YEDAM rızası danışmanın görmesini. Paylaşımı kapalı
+# bir kullanıcı YEDAM desteği isteyebiliyor ve o durumda danışman davranış
+# bölümünü BOŞ görüyor — rıza metni bunu açıkça söylüyor.
+#
+# **Silme asimetrik ve bilinçli** (rıza metni §3): rıza bitince
+# `risk_surukleyici` ve `anket_yanit` SİLİNİYOR; `yedam_basvuru`,
+# `yedam_temas`, `danisman_notu` ve `erisim_kaydi` KALIYOR. Sonuncular bir
+# danışmanlık ilişkisinin kaydı ve erişim izi — silinmeleri, geçmişte ne
+# olduğunu kullanıcının da görememesi demek olurdu.
+# ---------------------------------------------------------------------------
+
+
+class BasvuruDurumu(str, enum.Enum):
+    """`docs/panel-plani.md §6.3`."""
+
+    YENI = "yeni"
+    ATANDI = "atandi"
+    TEMAS_KURULDU = "temas_kuruldu"
+    KAPANDI = "kapandi"
+    ULASILAMADI = "ulasilamadi"
+    RIZA_GERI_CEKILDI = "riza_geri_cekildi"
+    SURESI_DOLDU = "suresi_doldu"
+    #: Kapıda bekleyen 18 altı başvuru. **Hiçbir danışman görmüyor.**
+    EBEVEYN_ONAYI_BEKLIYOR = "ebeveyn_onayi_bekliyor"
+
+
+#: Danışmanın havuzda görebileceği durumlar. Bekleyen ve kapanmış
+#: başvurular dışarıda: onay beklerken veri görünmemeli.
+HAVUZDA_GORUNEN = (
+    BasvuruDurumu.YENI.value,
+    BasvuruDurumu.ATANDI.value,
+    BasvuruDurumu.TEMAS_KURULDU.value,
+    BasvuruDurumu.ULASILAMADI.value,
+)
+
+#: Başvurunun kapanmış sayıldığı durumlar — yeni başvuru açılabilir.
+KAPANMIS = (
+    BasvuruDurumu.KAPANDI.value,
+    BasvuruDurumu.RIZA_GERI_CEKILDI.value,
+    BasvuruDurumu.SURESI_DOLDU.value,
+)
+
+
+class TemasTuru(str, enum.Enum):
+    ARANDI = "arandi"
+    ULASILAMADI = "ulasilamadi"
+    GORUSULDU = "gorusuldu"
+
+
+class YedamRiza(Taban):
+    """
+    Açık rıza kaydı (`docs/yedam-riza-metni-v1.md`).
+
+    `metin_surumu` **birebir** o belgedeki sürüm. Metnin kapsamı değişirse
+    sürüm `v2` olur ve daha önce rıza vermiş herkesten yeniden rıza
+    isteniyor — eski rıza yeni kapsamı karşılamaz. Bu yüzden sürüm bir
+    kolon: "hangi metne rıza verildi" sorusunun cevabı kayıtta durmalı.
+
+    `kapsam` virgülle ayrılmış anahtar listesi (`kimlik,risk,surukleyici,
+    anket,not`). Liste olarak saklanıyor çünkü ileride bir madde
+    çıkarılabilir ve o zaman eski rızaların neyi kapsadığı hâlâ okunabilir
+    olmalı.
+    """
+
+    __tablename__ = "yedam_riza"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    metin_surumu: Mapped[str] = mapped_column(String(20))
+    kapsam: Mapped[str] = mapped_column(String(300))
+
+    verilme: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+    son_gecerlilik: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), index=True)
+    geri_cekme: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    #: 18 altı kullanıcıda onayı beklenen ebeveyn; yoksa `None`.
+    ebeveyn_id: Mapped[int | None] = mapped_column(
+        ForeignKey("kullanici.id"), nullable=True
+    )
+    ebeveyn_onay_tarihi: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: Beyan edilen yaş — kararın hangi bilgiyle verildiği kayıtta dursun.
+    #: Doğrulanabilir DEĞİL (CLAUDE.md §12 K26).
+    beyan_yas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class YedamBasvuru(Taban):
+    """Destek talebi. Kullanıcı başına aynı anda **en fazla bir açık** başvuru."""
+
+    __tablename__ = "yedam_basvuru"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    riza_id: Mapped[int] = mapped_column(ForeignKey("yedam_riza.id"))
+
+    durum: Mapped[str] = mapped_column(
+        String(30), default=BasvuruDurumu.YENI.value, index=True
+    )
+    #: `telefon` | `eposta`
+    iletisim_turu: Mapped[str] = mapped_column(String(20))
+    iletisim_degeri: Mapped[str] = mapped_column(String(320))
+    kullanici_notu: Mapped[str] = mapped_column(String(1000), default="", server_default=text("''"))
+
+    atanan_personel_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personel.id"), nullable=True, index=True
+    )
+    olusturma: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, index=True
+    )
+    kapanis: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    kapanis_nedeni: Mapped[str] = mapped_column(String(300), default="", server_default=text("''"))
+
+    #: Ulaşılamadı sayacı — 3'ten sonra durum `ulasilamadi`'ya çekiliyor.
+    ulasilamadi_sayisi: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+
+
+class YedamTemas(Taban):
+    """
+    Görüşme kaydı. Kullanıcı **görüyor** (şeffaflık), içeriği yok.
+
+    Serbest metin taşımıyor: o `danisman_notu`'nun işi ve ayrı bir rejime
+    bağlı (S4). Buradaki kayıt "arandı / ulaşılamadı / görüşüldü"den ibaret.
+    """
+
+    __tablename__ = "yedam_temas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    basvuru_id: Mapped[int] = mapped_column(ForeignKey("yedam_basvuru.id"), index=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"))
+    tur: Mapped[str] = mapped_column(String(20))
+    zaman: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+class DanismanNotu(Taban):
+    """
+    Klinik not. Kullanıcıya **gösterilmiyor**.
+
+    Saklama süresi ve erişim rejimi açık (`docs/panel-plani.md §14 S4`);
+    o karar gelene kadar özellik bayrağı (`yedam.danisman_notu`) **kapalı**
+    ve bu tabloya satır yazılmıyor. Tablo şimdiden var çünkü bayrak
+    açıldığında migration beklemek istemiyoruz.
+    """
+
+    __tablename__ = "danisman_notu"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    basvuru_id: Mapped[int] = mapped_column(ForeignKey("yedam_basvuru.id"), index=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"))
+    metin: Mapped[str] = mapped_column(Text)
+    zaman: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+class ErisimKaydi(Taban):
+    """
+    "Danışman X, 14 Ağustos 10:32'de risk detayına baktı."
+
+    Kullanıcıya gösterilen şeffaflık kaydı ve rıza metninin verdiği sözün
+    ta kendisi: *"Danışman bilgilerine her baktığında uygulamada bir kayıt
+    görürsün."* Rıza geri çekilse de **silinmiyor** — silinmesi, geçmişte
+    kimin baktığını kullanıcının da görememesi demek olurdu.
+
+    `denetim_kaydi`'ndan ayrı: o personeli denetliyor ve personel görüyor;
+    bu kullanıcıya gösteriliyor. Aynı olayın iki farklı izleyicisi var ve
+    tek tabloda tutmak, birini diğerinin erişim kurallarına tabi kılardı.
+    """
+
+    __tablename__ = "erisim_kaydi"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"))
+    basvuru_id: Mapped[int | None] = mapped_column(
+        ForeignKey("yedam_basvuru.id"), nullable=True
+    )
+    #: Hangi bölümler görüntülendi (`risk,surukleyici,anket,davranis`).
+    kapsam: Mapped[str] = mapped_column(String(300), default="", server_default=text("''"))
+    zaman: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, index=True
+    )
+
+
+class RiskSurukleyici(Taban):
+    """
+    Skoru en çok yükselten faktörler — **cihazda hesaplanmış** çıktı.
+
+    Sunucu bunu ÜRETMİYOR, saklıyor (CLAUDE.md §12 K17). `core-risk`
+    referans Python ile birebir doğrulanmış motorun `surukleyiciler`
+    çıktısı burada duruyor.
+
+    Yalnızca geçerli YEDAM rızası varken dolu; rıza bitince **satırlar
+    siliniyor** (rıza metni §3). Cihazda zaten duruyorlar; sunucuda
+    tutmanın gerekçesi rızaydı, gerekçe bitince veri de bitiyor.
+    """
+
+    __tablename__ = "risk_surukleyici"
+    __table_args__ = (
+        UniqueConstraint(
+            "kullanici_id", "tarih", "faktor", name="uq_surukleyici_kullanici_tarih_faktor"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    tarih: Mapped[dt.date] = mapped_column(Date, index=True)
+    #: Örn. "social", "gece", "oturum" — cihazdaki faktör anahtarı.
+    faktor: Mapped[str] = mapped_column(String(40))
+    katki: Mapped[float] = mapped_column(Float)
+
+
+class AnketYanit(Taban):
+    """
+    SAS-SV yanıt geçmişi. Sunucuda **yeni** — YEDAM paneli için.
+
+    Madde puanları tek tek taşınıyor: danışman "hangi maddede yüksek"
+    sorusunu soruyor ve toplam puan onu cevaplamıyor. Ölçek birebir
+    korunmak zorunda (`docs/spec-anket.md §6.1`, K12).
+
+    Rıza kapılı: rıza bitince siliniyor.
+    """
+
+    __tablename__ = "anket_yanit"
+    __table_args__ = (
+        UniqueConstraint("kullanici_id", "tarih", name="uq_anket_kullanici_tarih"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    tarih: Mapped[dt.date] = mapped_column(Date, index=True)
+    #: 10 maddenin Likert puanları, virgülle ayrılmış (`1,3,2,...`).
+    madde_puanlari: Mapped[str] = mapped_column(String(60))
+    ham_puan: Mapped[float] = mapped_column(Float)
+    r_s: Mapped[float] = mapped_column(Float)

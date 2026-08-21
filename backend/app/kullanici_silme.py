@@ -19,13 +19,16 @@ gerekçe: gerçekleşmiş ama kaydı olmayan eylem mümkün olmasın).
 
 from __future__ import annotations
 
-from sqlalchemy import delete, or_
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.modeller import (
+    AnketYanit,
     Arkadaslik,
+    DanismanNotu,
     DavetKodu,
     EbeveynBaglanti,
+    ErisimKaydi,
     EslestirmeKodu,
     GunlukOzet,
     Heartbeat,
@@ -33,7 +36,11 @@ from app.modeller import (
     LigUyelik,
     OdulSecimi,
     RiskSonuc,
+    RiskSurukleyici,
     SifreSifirlama,
+    YedamBasvuru,
+    YedamRiza,
+    YedamTemas,
     YenilemeJetonu,
 )
 
@@ -49,6 +56,21 @@ _TEK_KOLONLU = (
     (EslestirmeKodu, EslestirmeKodu.ureten_id),
     (SifreSifirlama, SifreSifirlama.kullanici_id),
     (YenilemeJetonu, YenilemeJetonu.kullanici_id),
+    (RiskSurukleyici, RiskSurukleyici.kullanici_id),
+    (AnketYanit, AnketYanit.kullanici_id),
+    (ErisimKaydi, ErisimKaydi.kullanici_id),
+)
+
+#: Başvuruya bağlı tablolar. Kullanıcıya doğrudan bakmıyorlar ama
+#: başvurusu silinince öksüz kalırlar; `yedam_basvuru`'dan ÖNCE
+#: silinmeleri gerekiyor (yabancı anahtar).
+#:
+#: Rıza metni §3 bunların rıza geri çekilince **kalmasını** söylüyor —
+#: ama hesabın tamamen silinmesi o ayrımı tanımıyor: KVKK silme hakkı her
+#: şeyi siler, danışman notu dahil.
+_BASVURUYA_BAGLI = (
+    (YedamTemas, YedamTemas.basvuru_id),
+    (DanismanNotu, DanismanNotu.basvuru_id),
 )
 
 #: İki uçlu bağlar: kullanıcı her iki kolonda da geçebilir, ikisinden de
@@ -62,6 +84,8 @@ _CIFT_KOLONLU = (
 KAPSANAN_TABLOLAR = frozenset(
     [model.__tablename__ for model, _ in _TEK_KOLONLU]
     + [model.__tablename__ for model, _, _ in _CIFT_KOLONLU]
+    + [model.__tablename__ for model, _ in _BASVURUYA_BAGLI]
+    + [YedamBasvuru.__tablename__, YedamRiza.__tablename__]
 )
 
 
@@ -77,6 +101,8 @@ def kullaniciyi_tamamen_sil(db: Session, kullanici: Kullanici) -> None:
     """
     kid = kullanici.id
 
+    _yedami_sil(db, kid)
+
     for model, kolon in _TEK_KOLONLU:
         db.execute(delete(model).where(kolon == kid))
 
@@ -84,3 +110,28 @@ def kullaniciyi_tamamen_sil(db: Session, kullanici: Kullanici) -> None:
         db.execute(delete(model).where(or_(sol == kid, sag == kid)))
 
     db.delete(kullanici)
+
+
+def _yedami_sil(db: Session, kid: int) -> None:
+    """
+    YEDAM zinciri — yabancı anahtar sırası: temas/not → başvuru → rıza.
+
+    Bir incelik: `yedam_riza.ebeveyn_id` de kullanıcıya bakıyor. Silinen
+    kişi **başkasının ebeveyni** ise o çocuğun rıza satırı silinmemeli,
+    yalnızca ebeveyn alanı boşaltılmalı — çocuğun rızası kendi kaydı ve
+    ebeveynin hesabını kapatması onu yok etmez. Onay tarihi de düşüyor:
+    onayı veren hesap artık yok, o onayın geçerli sayılması yanlış olurdu.
+    """
+    basvurular = select(YedamBasvuru.id).where(YedamBasvuru.kullanici_id == kid)
+
+    for model, kolon in _BASVURUYA_BAGLI:
+        db.execute(delete(model).where(kolon.in_(basvurular)))
+
+    db.execute(delete(YedamBasvuru).where(YedamBasvuru.kullanici_id == kid))
+    db.execute(delete(YedamRiza).where(YedamRiza.kullanici_id == kid))
+
+    db.execute(
+        update(YedamRiza)
+        .where(YedamRiza.ebeveyn_id == kid)
+        .values(ebeveyn_id=None, ebeveyn_onay_tarihi=None)
+    )
