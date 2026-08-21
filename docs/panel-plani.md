@@ -1,8 +1,9 @@
 # panel-plani.md — Yönetim Paneli ve YEDAM Paneli
 
 > **Durum:** uygulanıyor · 18 Ağustos 2026 · dal `feature/panel`
-> **F0, F1 ve F2 kapandı** (21 Ağustos 2026). Kalan kalemler
-> `docs/panel-yapilacaklar.md`'de; sıradaki faz F3 (YEDAM).
+> **F0, F1, F2 ve F3 kapandı** (21 Ağustos 2026). Kalan kalemler
+> `docs/panel-yapilacaklar.md`'de; sıradaki faz F4 (puan ve ödül).
+> F3'ün gerçek cihaz turu **henüz koşulmadı** — o belgenin §10'u.
 > Bu belge kararları ve iş sırasını kaydeder. Uygulama sırasında ortaya çıkan
 > yedi gerekçeli sapma **§1.1**'de (`U1`–`U7`).
 > Kaynak: `CLAUDE.md` §4 (mutlak kurallar), §6 (mimari), §12 (kararlar),
@@ -181,7 +182,7 @@ Toplu ve anonim; tekil kullanıcı yok.
 - risk bandı dağılımı (yalnızca `veri_durumu = HESAPLANDI` satırlardan — `CLAUDE.md` §12 K30)
 - ortalama günlük ekran süresi **ve trend** (önceki eşit pencereyle fark; karşılaştırma yoksa sayı uydurulmuyor)
 - lig katılımı, aktif grup sayısı
-- açık YEDAM başvurusu sayısı ve en eski başvurunun yaşı — **F3** (tablo henüz yok)
+- açık YEDAM başvurusu sayısı ve en eski başvurunun yaşı — tablo geldi (F3), göstergeye bağlanması **F4'e** kaldı
 - çalışan sürüm + şema revizyonu **kod ve veritabanı yan yana** — uyuşmazlıkta uyarı şeridi (panel migration koşturmuyor, K57)
 - ~~son 24 saatteki 5xx sayısı~~ → **F6'ya ertelendi (21 Ağu):** JSON log kalıcı değil ve sorgulanamıyor; gerçek yeri izleme/alarm kalemi. Gösterge uydurma bir "0 hata" yazmıyor
 

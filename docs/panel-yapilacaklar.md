@@ -2,7 +2,7 @@
 
 > **Türetildi:** `docs/panel-plani.md` (572 satır, 16 bölüm) ile `feature/panel`
 > dalının kod durumu karşılaştırılarak · 21 Ağustos 2026
-> **F0, F1 ve F2 kapandı** (21 Ağustos 2026). Sıradaki faz **F3 (YEDAM)**.
+> **F0, F1, F2 ve F3 kapandı** (21 Ağustos 2026). Sıradaki faz **F4 (puan ve ödül)**.
 > Numaralar plan belgesinin bölümlerine bağlı — bir kalemin *niçini* için
 > oradaki bölüme bak, burada yalnızca *ne* ve *nerede* var.
 
@@ -70,51 +70,55 @@ ortalama ekran süresi, lig katılımı, ebeveyn eşleşmesi, bandı olmayan.
 
 ---
 
-## 2. F3 · YEDAM UÇTAN UCA — açık, en büyük kalem
+## 2. F3 · YEDAM UÇTAN UCA — ✅ KAPANDI (21 Ağu 2026)
 
 **Bitiş ölçütü (plan §13):** gerçek bir telefonda rıza verilip başvuru
 açılıyor, danışman görüyor, kullanıcı "bakıldı" kaydını görüyor, geri
 çekince erişim kesiliyor.
 
-Bugün `uclar/panel_yedam.py` **36 satır ve tek rota** (`GET /havuz`),
-şablon iskelet hâlinde.
+**Kapanış commit'leri:** `76b8d97` (F3/1 bayrak·kapı·yaş) · `de5656c`
+(F3/2 tablolar) · `e108e3a` (F3/3 cihaz uçları) · `3a90cb2` (F3/4 danışman
+paneli) · `4bdb2fe` (F3/5 rıza bakımı) · `d0383ba` (F3/6 Android M1–M6).
+
+Gerçek bir cihazda uçtan uca doğrulama **yapılmadı** — emülatör/telefon
+turu kalan tek kalem (aşağıda).
 
 ### 2.1 Ön koşullar — plan §1.1'in "kod tabanında çıkan bulgu"ları
 
-- [ ] **D1** `Tercihler.beyanYas` — **yaş bugün hiçbir yere yazılmıyor**, `OnboardingDurum.yas` yalnızca ViewModel state'i. §6.2'nin "yaş bandı" satırı ve 18 altı kapısı bu olmadan render edilemez
-- [ ] **D2** `app/yedam_kapisi.py` — S2 kararının tek fonksiyonu (`eslesmisse` / `her_zaman` / `hicbir_zaman`), `ozellik_bayragi` ile değiştirilebilir. **Dosya yok**
-- [ ] **D3** `OzellikBayragi` modeli var ama **hiçbir yerde okunmuyor** — okuma yardımcısı + önbellek yazılacak
+- [x] **D1** `Tercihler.beyanYas` — **yaş bugün hiçbir yere yazılmıyor**, `OnboardingDurum.yas` yalnızca ViewModel state'i. §6.2'nin "yaş bandı" satırı ve 18 altı kapısı bu olmadan render edilemez
+- [x] **D2** `app/yedam_kapisi.py` — S2 kararının tek fonksiyonu (`eslesmisse` / `her_zaman` / `hicbir_zaman`), `ozellik_bayragi` ile değiştirilebilir. **Dosya yok**
+- [x] **D3** `OzellikBayragi` modeli var ama **hiçbir yerde okunmuyor** — okuma yardımcısı + önbellek yazılacak
 
 ### 2.2 Tablolar (§7) — on bir tablonun hiçbiri yok
 
-- [ ] **D4** `yedam_riza` · `yedam_basvuru` · `yedam_temas` · `danisman_notu` · `erisim_kaydi` · `risk_surukleyici` · `anket_yanit` — tek Alembic revizyonu
-- [ ] **D5** **Veri minimizasyonu işi:** rıza süresi dolduğunda / geri çekildiğinde `risk_surukleyici` ve `anket_yanit` **satırları silinir**, erişim kapatılmakla yetinilmez (§7). Süre dolumu için zamanlanmış iş gerekiyor — bugün böyle bir iş yok
+- [x] **D4** `yedam_riza` · `yedam_basvuru` · `yedam_temas` · `danisman_notu` · `erisim_kaydi` · `risk_surukleyici` · `anket_yanit` — tek Alembic revizyonu
+- [x] **D5** **Veri minimizasyonu işi:** rıza süresi dolduğunda / geri çekildiğinde `risk_surukleyici` ve `anket_yanit` **satırları silinir**, erişim kapatılmakla yetinilmez (§7). Süre dolumu için zamanlanmış iş gerekiyor — bugün böyle bir iş yok
 
 ### 2.3 Cihaz uçları (§11, API servisi)
 
-- [ ] **D6** `POST /yedam/basvuru` — rıza + iletişim tercihi + not
-- [ ] **D7** `DELETE /yedam/riza` — geri çekme, erişim **aynı saniyede** kesilir
-- [ ] **D8** `GET /yedam/basvurum` — durum takibi
-- [ ] **D9** `GET /yedam/erisim-kaydim` — şeffaflık
-- [ ] **D10** `POST /yedam/gecmis` — rıza anındaki tek seferlik yükleme (rıza başına bir kez)
-- [ ] **D11** `POST /yedam/surukleyici` — **U1: `/ozet`'ten AYRI uç.** İki rıza kapısı bağımsız: Yeşilay paylaşımı kapalı kullanıcı YEDAM desteği isteyebilir
-- [ ] **D12** `POST /ebeveyn/yedam-onay` — 18 altı, eşleşmiş ebeveynin onayı (mevcut router genişler)
+- [x] **D6** `POST /yedam/basvuru` — rıza + iletişim tercihi + not
+- [x] **D7** `DELETE /yedam/riza` — geri çekme, erişim **aynı saniyede** kesilir
+- [x] **D8** `GET /yedam/basvurum` — durum takibi
+- [x] **D9** `GET /yedam/erisim-kaydim` — şeffaflık
+- [x] **D10** `POST /yedam/gecmis` — rıza anındaki tek seferlik yükleme (rıza başına bir kez)
+- [x] **D11** `POST /yedam/surukleyici` — **U1: `/ozet`'ten AYRI uç.** İki rıza kapısı bağımsız: Yeşilay paylaşımı kapalı kullanıcı YEDAM desteği isteyebilir
+- [x] **D12** `POST /ebeveyn/yedam-onay` — 18 altı, eşleşmiş ebeveynin onayı (mevcut router genişler)
 
 ### 2.4 Panel uçları (§11, panel servisi)
 
-- [ ] **D13** `GET /yedam/havuz` — **iskelet var, doldurulacak**
-- [ ] **D14** `GET /yedam/basvuru/{id}` — **`erisim_kaydi` YAZAR**; §6.2'nin yedi bölümü
-- [ ] **D15** `POST /yedam/basvuru/{id}/ata`
-- [ ] **D16** `POST /yedam/basvuru/{id}/temas` — `arandi` / `ulasilamadi` / `gorusuldu`
-- [ ] **D17** `POST /yedam/basvuru/{id}/not` — klinik not, kullanıcıya gösterilmiyor
-- [ ] **D18** `POST /yedam/basvuru/{id}/kapat`
-- [ ] **D19** Durum makinesi: `yeni` → `atandi` → `temas_kuruldu` → `kapandi`; ek durumlar `ulasilamadi` (3 denemeden sonra) · `riza_geri_cekildi` (otomatik) · `suresi_doldu` (90 gün)
+- [x] **D13** `GET /yedam/havuz` — **iskelet var, doldurulacak**
+- [x] **D14** `GET /yedam/basvuru/{id}` — **`erisim_kaydi` YAZAR**; §6.2'nin yedi bölümü
+- [x] **D15** `POST /yedam/basvuru/{id}/ata`
+- [x] **D16** `POST /yedam/basvuru/{id}/temas` — `arandi` / `ulasilamadi` / `gorusuldu`
+- [x] **D17** `POST /yedam/basvuru/{id}/not` — klinik not, kullanıcıya gösterilmiyor
+- [x] **D18** `POST /yedam/basvuru/{id}/kapat`
+- [x] **D19** Durum makinesi: `yeni` → `atandi` → `temas_kuruldu` → `kapandi`; ek durumlar `ulasilamadi` (3 denemeden sonra) · `riza_geri_cekildi` (otomatik) · `suresi_doldu` (90 gün)
 
 ### 2.5 Danışman ekranının yasakları (§6.2) — teste bağlanmalı
 
-- [ ] **D20** Uygulama adı / oturum dökümü **sunucuda hiç yok** — regresyon testi
-- [ ] **D21** Teşhis etiketi yok (`CLAUDE.md` §4 panelde de geçerli)
-- [ ] **D22** Danışman **arama yapamaz** — yalnızca kendisine atanmış başvuruyu açar. 403 testi
+- [x] **D20** Uygulama adı / oturum dökümü **sunucuda hiç yok** — regresyon testi
+- [x] **D21** Teşhis etiketi yok (`CLAUDE.md` §4 panelde de geçerli)
+- [x] **D22** Danışman **arama yapamaz** — yalnızca kendisine atanmış başvuruyu açar. 403 testi
 
 ---
 
@@ -172,16 +176,16 @@ Bugün `ui/ekran/yedam/` altında **tek dosya** var (`YedamOnayEkran.kt`) ve
 `YesilizApi.kt`'de tek bir `yedam` / `duzeltme` / `icerik` ucu yok.
 M8 F2 turunda yazıldı; kalan dokuz kalem F3–F5'e bağlı.
 
-- [ ] **M1** YEDAM rıza ekranı gerçek hâle gelir — madde madde metin, sürüm numarası, kabul kutusu. Şu an yalnızca 115'i çeviricide açıyor
-- [ ] **M2** Sürükleyici gönderimi — **U1: `POST /yedam/surukleyici`**, `/ozet` gövdesine değil
-- [ ] **M3** Rıza anında geçmiş yükleme — 30 günlük `risk_sonuc` tek seferlik. Yoksa danışman ilk gün hiçbir şey görmüyor
-- [ ] **M4** Başvuru durumu ekranı — durum sunucudan, **uydurma durum yok** (K37)
-- [ ] **M5** "Verilerine kim baktı" ekranı — Profil › Gizlilik
-- [ ] **M6** Rızayı geri çekme — tek dokunuş + onay
+- [x] **M1** YEDAM rıza ekranı gerçek hâle gelir — madde madde metin, sürüm numarası, kabul kutusu. Şu an yalnızca 115'i çeviricide açıyor
+- [x] **M2** Sürükleyici gönderimi — **U1: `POST /yedam/surukleyici`**, `/ozet` gövdesine değil
+- [x] **M3** Rıza anında geçmiş yükleme — 30 günlük `risk_sonuc` tek seferlik. Yoksa danışman ilk gün hiçbir şey görmüyor
+- [x] **M4** Başvuru durumu ekranı — durum sunucudan, **uydurma durum yok** (K37)
+- [x] **M5** "Verilerine kim baktı" ekranı — Profil › Gizlilik
+- [x] **M6** Rızayı geri çekme — tek dokunuş + onay
 - [ ] **M7** Puan düzeltmesini çekme ve gösterme — F4/P4 ile aynı iş
 - [x] **M8** Askıya alınmış hesap ekranı — ✅ `ef1ac18`. 403 + `hesap_askida` bir OkHttp interceptor'ında tek yerde yakalanıyor; ekran gezinmenin üstünde
 - [ ] **M9** Bakım modu ekranı — 503 + bakım gövdesi
-- [ ] **M10** `Tercihler.beyanYas` (= D1) — onboarding'de sorulan yaş kalıcı hâle gelir
+- [x] **M10** `Tercihler.beyanYas` (= D1) — onboarding'de sorulan yaş kalıcı hâle gelir
 
 ---
 
@@ -203,7 +207,7 @@ Plan §14'ün sekiz maddesinden üçü (S2, S3, S5) kapandı. Kalanlar:
 | # | Soru | Kim | Neyi tıkıyor |
 |---|---|---|---|
 | ~~S1~~ | **Kapandı (21 Ağu):** Yeşilay kendi açacak → panelde personel yönetimi yazıldı (`41100ca`) | — | — |
-| S4 | Danışman notunun saklama süresi. **Karar (21 Ağu):** F3'te bayrakla **kapalı** gelecek; süre kararı hukuktan bekleniyor | Yeşilay + hukuk | D17, G7 |
+| S4 | Danışman notu **bayrakla kapalı geldi** (`yedam.danisman_notu`, varsayılan `hayir`); uç 503 dönüyor ve satır yazmıyor. Saklama süresi kararı hâlâ hukuktan bekleniyor — geldiğinde tek bayrak değişiyor | Yeşilay + hukuk | G7 |
 | S6 | Panel alan adı ve barındırma | Yeşilay | **Kod hazır:** CI `vars.RAILWAY_PANEL_SERVICE` ve `vars.PANEL_TABAN` bekliyor |
 | ~~S7~~ | **Kapandı (21 Ağu): hayır** — iletişim telefon/e-posta ile. F3'ün kapsamı daraldı | — | — |
 | S8 | `gozlemci` rolü gerçekten gerekli mi, dışa aktarma yeter mi? | ekip | Y15'in matrisi |
@@ -213,10 +217,35 @@ Plan §14'ün sekiz maddesinden üçü (S2, S3, S5) kapandı. Kalanlar:
 ## 9. SIRA ÖNERİSİ
 
 1. ~~**Y5–Y12**~~ ✅ **bitti** (21 Ağu) — Y13/Y14 de S1 kararıyla birlikte kapandı
-2. **D1/D2/D3** (yaş, kapı, bayrak okuma) — küçük ama F3'ün üçü de ön koşulu
-3. **D4–D19 + M1–M6** — F3'ün gövdesi, en büyük kalem. **G9 tatbikatı bununla birlikte** (§15)
+2. ~~**D1/D2/D3**~~ ✅ **bitti** (21 Ağu)
+3. ~~**D4–D19 + M1–M6**~~ ✅ **bitti** (21 Ağu). **G9 tatbikatı hâlâ yapılmadı** —
+   §15 onu F3 ile birlikte istiyordu; danışman notu bayrakla kapalı olduğu için
+   şu an geri getirilemez veri yok, ama bayrak açılmadan önce tatbikat şart
 4. **F4** — K56 kararı zaten yazılı, kodu yok; ödül kapısı A4'ün teknik ayağını kapatıyor
 5. **F5**, sonra **F6**
 
 > Y13/Y14 (personel yönetimi) 1. adıma da 2. adıma da alınabilir; bugün tek
 > yol `python -m app.personel_ekle` ve bu, S1 cevaplanana kadar yeterli.
+
+
+---
+
+## 10. F3 SONRASI — GERÇEK CİHAZ DOĞRULAMASI
+
+Plan §13'ün F3 bitiş ölçütü: *"gerçek bir telefonda rıza verilip başvuru
+açılıyor, danışman görüyor, kullanıcı 'bakıldı' kaydını görüyor, geri
+çekince erişim kesiliyor."*
+
+Kod tarafı tamam ve testlerle örtülü, ama **bu tur hiç koşulmadı**:
+
+- [ ] **V1** Telefonda rıza ver → başvuru aç → panelde havuzda gör
+- [ ] **V2** Panelden ata → detayı aç → telefonda "bakıldı" kaydı görünsün
+- [ ] **V3** Temas kaydı ekle → telefonda görüşme kaydı görünsün
+- [ ] **V4** Telefondan rızayı geri çek → panelde veri bölümleri boşalsın
+- [ ] **V5** 18 altı senaryosu: eşleşmiş ebeveynle başvuru → onay bekliyor →
+      ebeveyn onaylayınca havuza düşsün
+- [ ] **V6** Migration'ları **gerçek PostgreSQL'de** koştur — zincir SQLite'ta
+      uçtan uca koşturulamıyor (`c84f32a1e907` PostgreSQL'e özgü SQL kullanıyor,
+      mevcut bir migration)
+- [ ] **G9** Yedek + geri yükleme tatbikatı — plan §15 bunu F3 ile birlikte
+      istiyor; danışman notu açılmadan önce şart
