@@ -23,6 +23,7 @@
         {% endif %}
         {% if personel and personel.rol in ("admin", "operasyon") %}
           <a href="/yonetim/kullanici"{% if etkin == "kullanici" %} aria-current="page"{% endif %}>Hesaplar</a>
+          <a href="/yonetim/odul"{% if etkin == "odul" %} aria-current="page"{% endif %}>Ödüller</a>
         {% endif %}
         {% if personel and personel.rol in ("admin", "yedam_yonetici", "yedam_danisman") %}
           <a href="/yedam/havuz"{% if etkin == "yedam" %} aria-current="page"{% endif %}>YEDAM başvuruları</a>

@@ -18,6 +18,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -51,6 +52,21 @@ class OdulViewModel @Inject constructor(
     guncelGun: GuncelGun,
 ) : ViewModel() {
 
+    /**
+     * Sunucudan gelen açık ödül seçenekleri (K28 kapısı).
+     *
+     * Boş başlıyor ve boş kalırsa kademe **kapalı** görünüyor: sunucuya
+     * ulaşılamadığında karşılanamayacak bir ödülü seçtirmemek için
+     * fail-closed (§4, K37).
+     */
+    private val _acikSecenekler = MutableStateFlow<Set<Pair<String, String>>>(emptySet())
+
+    init {
+        viewModelScope.launch {
+            _acikSecenekler.value = odulDeposu.acikSecenekler()
+        }
+    }
+
     val durum: StateFlow<OdulDurum> = combine(
         // Kademe **kazanılmıştan** okunuyor (U6, K28): hak edilmiş bir
         // ödül panelden yapılan bir düşürmeyle geri gitmiyor.
@@ -60,9 +76,22 @@ class OdulViewModel @Inject constructor(
             kayitlar.map { it.kaydaCevir(bugun) }
         },
         odulDeposu.secimlerAkisi,
-        tercihler.oturum,
-    ) { puan, aktifGun, gecmis, secimler, oturum ->
-        val ham = KADEMELER.map { it.duruma(puan, aktifGun, secimler[it.id]) }
+        // `combine` en fazla beş akış için tipli; altıncısı çiftleniyor.
+        combine(tercihler.oturum, _acikSecenekler, ::Pair),
+    ) { puan, aktifGun, gecmis, secimler, oturumVeStok ->
+        val (oturum, acikSecenekler) = oturumVeStok
+        // Maddi ödül kapısı artık derlemeye gömülü değil, sunucudaki stok
+        // (K28, A4'ün teknik ayağı). Ulaşılamazsa kapalı: "bilmiyoruz"u
+        // "açık" saymak, karşılanamayacak bir ödülü seçtirmek olurdu.
+        val ham = KADEMELER.map { kademe ->
+            kademe
+                .copy(
+                    teslimatEtkinMi = kademe.secenekler.any {
+                        (kademe.id to it.id) in acikSecenekler
+                    },
+                )
+                .duruma(puan, aktifGun, secimler[kademe.id])
+        }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
         // gösterilen, kullanıcının hedeflediği ödül bu. Seçim bekleyen bir
         // kademe zaten kazanılmış sayılıyor, "sıradaki" olamaz.

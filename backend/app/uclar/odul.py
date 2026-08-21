@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.guvenlik import mevcut_kullanici
-from app.modeller import Kullanici, OdulSecimi
-from app.semalar import OdulSecimIstek, OdulSecimiDto
+from app import odul_stogu
+from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
+from app.modeller import Kullanici, OdulSecimi, OdulTeslimat
+from app.semalar import OdulKademeDurumuDto, OdulSecimIstek, OdulSecimiDto
 from app.veritabani import oturum
 
 yonlendirici = APIRouter(prefix="/odul", tags=["odul"])
@@ -21,9 +22,14 @@ SECILEBILIR_ODULLER = {
     "kupon_spor": {"kupon_spor_kitap", "fidan_bagisi"},
 }
 
-# A4 (sponsorluk/teslimat) açık ve sunucu puan hak edişini bağımsız
-# doğrulamıyor. Bu kapı açılmadan istemciden maddi hak kaydı kabul edilmez.
-MADDI_ODUL_TESLIMATI_ETKIN = False
+# Kapı artık sabit değil **stoğun kendisi** (`app/odul_stogu.py`,
+# `docs/panel-plani.md §5.4`): panelden parti yüklenince kademe açılıyor,
+# stok bitince kapanıyor. A4'ün teknik ayağı böyle çözüldü; finansman
+# ayağı hâlâ Yeşilay'da.
+#
+# Sabit `MADDI_ODUL_TESLIMATI_ETKIN = False` kaldırıldı. Stok satırı
+# yoksa kapı yine kapalı — "satır yok" "sınırsız" demek değil (fail-closed,
+# §4/K37), yani hiç parti yüklenmemiş bir kurulumda davranış aynı.
 
 
 @yonlendirici.post("/sec", response_model=OdulSecimiDto, status_code=status.HTTP_201_CREATED)
@@ -35,17 +41,16 @@ def sec(
     """
     Bir kademe için seçim **bir kez** yapılır.
 
-    Maddi ödül teslimatı ve sunucu tarafı hak-ediş doğrulaması birlikte
-    devreye alınana kadar geçerli görünen seçimler de fail-closed reddedilir.
+    Seçim **stoktan düşüyor**: yoksa stok biterken aynı anda gelen iki
+    seçim ikisi de kabul edilir ve karşılanamayan bir vaat üretilirdi.
+    K28 seçimi geri alınamaz kıldığı için bu düzeltilemezdi.
+
+    Stok yoksa `503` ve **hiçbir satır yazılmıyor** — fail-closed.
     """
     if istek.secenekId not in SECILEBILIR_ODULLER.get(istek.kademeId, set()):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Geçersiz ödül seçimi")
 
-    if not MADDI_ODUL_TESLIMATI_ETKIN:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Maddi ödül teslimatı henüz etkin değil",
-        )
+    kullaniciyi_kilitle(db, kullanici.id)
 
     var = db.scalar(
         select(OdulSecimi).where(
@@ -56,12 +61,24 @@ def sec(
     if var is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Bu kademe için seçim zaten yapılmış")
 
+    if not odul_stogu.dus(db, istek.kademeId, istek.secenekId):
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Bu ödül şu anda karşılanamıyor. Stok geldiğinde yeniden seçebilirsin.",
+        )
+
     kayit = OdulSecimi(
         kullanici_id=kullanici.id,
         kademe_id=istek.kademeId,
         secenek_id=istek.secenekId,
     )
     db.add(kayit)
+    db.flush()
+    # Teslimat kaydı seçimle **birlikte** açılıyor: panelin "kimin
+    # kuponu bekliyor" listesi bunun üzerinden ve sonradan açmak, arada
+    # kalan seçimleri listede görünmez bırakırdı.
+    db.add(OdulTeslimat(odul_secimi_id=kayit.id))
     db.commit()
     db.refresh(kayit)
     return OdulSecimiDto(kademeId=kayit.kademe_id, secenekId=kayit.secenek_id)
@@ -77,3 +94,26 @@ def secimlerim(
         select(OdulSecimi).where(OdulSecimi.kullanici_id == kullanici.id)
     ).all()
     return [OdulSecimiDto(kademeId=k.kademe_id, secenekId=k.secenek_id) for k in kayitlar]
+
+
+@yonlendirici.get("/durum", response_model=list[OdulKademeDurumuDto])
+def kademe_durumlari(db: Session = Depends(oturum)) -> list[OdulKademeDurumuDto]:
+    """
+    Hangi kademe/seçenek şu an **seçilebilir**?
+
+    Cihaz bunu seçim ekranını çizmeden önce soruyor: kapalı bir seçeneği
+    sunup 503 ile reddetmek, olmayan bir eylemi sunmak olurdu (§4, K37).
+    Kullanıcı kademeyi görüyor ama "şu anda karşılanamıyor" yazısıyla.
+
+    Kimlik **istemiyor**: hangi ödüllerin stokta olduğu kişisel bir bilgi
+    değil ve misafir kullanıcı da kademeleri görüyor.
+    """
+    return [
+        OdulKademeDurumuDto(
+            kademeId=kademe_id,
+            secenekId=secenek_id,
+            acik=odul_stogu.acik_mi(db, kademe_id, secenek_id),
+        )
+        for kademe_id, secenekler in SECILEBILIR_ODULLER.items()
+        for secenek_id in sorted(secenekler)
+    ]

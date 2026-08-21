@@ -388,3 +388,17 @@ class PuanDuzeltmeDto(BaseModel):
     delta: int
     gerekce: str
     zaman: dt.datetime
+
+
+class OdulKademeDurumuDto(BaseModel):
+    """
+    Bir ödül seçeneğinin **şu anki** seçilebilirliği (K28, A4).
+
+    Kapı stoğun kendisi: parti yüklenince açılıyor, bitince kapanıyor.
+    Cihaz bunu seçim ekranını çizmeden önce soruyor — kapalı bir seçeneği
+    sunup 503 ile reddetmek, olmayan bir eylemi sunmak olurdu (§4).
+    """
+
+    kademeId: str
+    secenekId: str
+    acik: bool

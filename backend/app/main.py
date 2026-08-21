@@ -163,11 +163,18 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         from fastapi.staticfiles import StaticFiles
 
         from app.panel.sablon import STATIK_DIZINI
-        from app.uclar import panel_oturum, panel_personel, panel_yedam, panel_yonetim
+        from app.uclar import (
+            panel_odul,
+            panel_oturum,
+            panel_personel,
+            panel_yedam,
+            panel_yonetim,
+        )
 
         uygulama.include_router(panel_oturum.yonlendirici)
         uygulama.include_router(panel_yonetim.yonlendirici)
         uygulama.include_router(panel_personel.yonlendirici)
+        uygulama.include_router(panel_odul.yonlendirici)
         uygulama.include_router(panel_yedam.yonlendirici)
 
         # CSS ve htmx depoya alınmış (`panel/statik/HTMX.md`): panel VPN

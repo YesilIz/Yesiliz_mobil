@@ -91,6 +91,10 @@ interface YesilizApi {
     @GET("odul/secimlerim")
     suspend fun odulSecimlerim(): List<OdulSecimiDto>
 
+    /** Hangi kademe/seçenek şu an seçilebilir? Kimlik istemiyor. */
+    @GET("odul/durum")
+    suspend fun odulDurumlari(): List<OdulKademeDurumuDto>
+
     // --- ebeveyn ---
 
     @POST("ebeveyn/kod")

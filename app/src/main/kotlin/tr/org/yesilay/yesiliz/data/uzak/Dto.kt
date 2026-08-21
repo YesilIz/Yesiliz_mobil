@@ -272,3 +272,18 @@ data class PuanDuzeltmeDto(
     val gerekce: String,
     val zaman: String,
 )
+
+
+/**
+ * Bir ödül seçeneğinin **şu anki** seçilebilirliği (K28, A4).
+ *
+ * Kapı stoğun kendisi: panelden parti yüklenince açılıyor, bitince
+ * kapanıyor. Cihaz bunu seçim ekranını çizmeden önce soruyor — kapalı bir
+ * seçeneği sunup reddedilmek, olmayan bir eylemi sunmak olurdu (§4, K37).
+ */
+@Serializable
+data class OdulKademeDurumuDto(
+    val kademeId: String,
+    val secenekId: String,
+    val acik: Boolean,
+)

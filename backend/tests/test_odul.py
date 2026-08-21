@@ -16,8 +16,10 @@ def test_teslimat_yokken_yeni_secim_fail_closed(istemci, kullanici_kur, db):
         headers=basliklar,
     )
 
+    # Kapı artık stoğun kendisi (F4/3): parti yüklenmemişse kapalı.
+    # "Stok satırı yok" "sınırsız" demek değil — fail-closed.
     assert yanit.status_code == 503
-    assert "henüz etkin değil" in yanit.json()["detail"]
+    assert "karşılanamıyor" in yanit.json()["detail"]
     assert db.scalar(select(OdulSecimi)) is None
 
 
