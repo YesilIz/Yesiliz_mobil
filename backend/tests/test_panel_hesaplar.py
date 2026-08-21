@@ -301,8 +301,16 @@ def test_detay_sayfasi_davranis_verisi_basmiyor(girisli, kur, db):
     db.commit()
 
     sayfa = girisli(PersonelRolu.ADMIN).get(f"/yonetim/kullanici/{k.id}").text
-    assert "444" not in sayfa
-    assert "COK" not in sayfa
+
+    # CSRF jetonu rastgele hex ve "444" gibi bir rakam dizisi orada da
+    # geçebiliyor — testin ilk hâli bu yüzden kararsızdı ve konteynerde
+    # rastgele düştü. Jetonlar aranmadan önce çıkarılıyor: aranan şey
+    # ekrandaki **veri**, sayfanın rastgele parçaları değil.
+    import re as _re
+
+    govde = _re.sub(r'value="[0-9a-f]{16,}"', 'value="..."', sayfa)
+    assert "444" not in govde
+    assert "COK" not in govde
 
 
 def test_htmx_istegi_yalnizca_parcayi_donduruyor(girisli, kur):

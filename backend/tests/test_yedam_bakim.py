@@ -10,6 +10,7 @@ söylüyor.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
 
 import pytest
@@ -25,6 +26,9 @@ from app.modeller import (
 from app.yedam_riza_yonetimi import GECERLILIK_GUN, gecerli_riza
 
 SIMDI = dt.datetime.now(dt.timezone.utc)
+
+#: `patlayan` içinden erişilen olay; `kos` her koşumda tazeliyor.
+dongu_olayi: asyncio.Event | None = None
 
 
 def _dolmus_riza(db) -> Kullanici:
@@ -107,28 +111,36 @@ def test_ilk_tur_hemen_kosmuyor():
 
 
 def test_dongu_hatada_olmuyor(monkeypatch):
-    """Geçici bir kesinti bakımı kalıcı olarak durdurmamalı."""
+    """
+    Geçici bir kesinti bakımı kalıcı olarak durdurmamalı.
+
+    Bekleme `asyncio.sleep(0)` turlarıyla yapılıyordu ve tur **iş
+    parçacığında** koştuğu için (`asyncio.to_thread`) bazen iki çağrıya
+    yetişmiyordu; test konteynerde rastgele düşüyordu. Artık ikinci çağrı
+    bir `Event` ile bekleniyor: zamanlamaya değil olaya bağlı.
+    """
     cagri = {"n": 0}
+    ikinci = asyncio.Event()
 
     def patlayan():
         cagri["n"] += 1
+        if cagri["n"] >= 2:
+            dongu_olayi.set()
         raise RuntimeError("veritabanı yok")
 
     monkeypatch.setattr(yedam_bakim, "bir_tur", patlayan)
     monkeypatch.setattr(yedam_bakim, "ILK_GECIKME_SN", 0)
 
     async def kos():
+        global dongu_olayi
+        dongu_olayi = ikinci
         gorev = asyncio.create_task(yedam_bakim.dongu(aralik_sn=0))
-        # Birkaç turluk fırsat ver, sonra iptal et.
-        for _ in range(20):
-            await asyncio.sleep(0)
-            if cagri["n"] >= 2:
-                break
-        gorev.cancel()
         try:
-            await gorev
-        except asyncio.CancelledError:
-            pass
+            await asyncio.wait_for(ikinci.wait(), timeout=5)
+        finally:
+            gorev.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await gorev
 
     asyncio.run(kos())
     assert cagri["n"] >= 2, "Döngü ilk hatadan sonra durmamalı"
