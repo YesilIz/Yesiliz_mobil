@@ -104,4 +104,32 @@ interface YesilizApi {
 
     @GET("ebeveyn/ozet")
     suspend fun ebeveynOzeti(): EbeveynOzetDto
+
+    /** 18 altı çocuğun YEDAM başvurusuna eşleşmiş ebeveynin onayı. */
+    @POST("ebeveyn/yedam-onay")
+    suspend fun yedamOnayi(@Body istek: EbeveynYedamOnayIstek): Map<String, String>
+
+    // --- YEDAM ---
+
+    @POST("yedam/basvuru")
+    suspend fun yedamBasvur(@Body istek: YedamBasvuruIstek): YedamBasvuruYanit
+
+    @GET("yedam/basvurum")
+    suspend fun yedamDurumu(): YedamDurumYanit
+
+    /** Erişim **aynı saniyede** kesilir, rıza kapsamındaki veri silinir. */
+    @DELETE("yedam/riza")
+    suspend fun yedamRizasiniGeriCek(): Map<String, String>
+
+    /** Şeffaflık kaydı — rıza geri çekilse de okunabiliyor. */
+    @GET("yedam/erisim-kaydim")
+    suspend fun yedamErisimKaydim(): List<ErisimKaydiDto>
+
+    /** Günlük gönderim. `/ozet`'ten AYRI: iki rıza bağımsız (U1). */
+    @POST("yedam/surukleyici")
+    suspend fun yedamSurukleyici(@Body istek: SurukleyiciIstek): Map<String, Int>
+
+    /** Rıza anındaki tek seferlik geçmiş yüklemesi. */
+    @POST("yedam/gecmis")
+    suspend fun yedamGecmis(@Body istek: YedamGecmisIstek): Map<String, Int>
 }

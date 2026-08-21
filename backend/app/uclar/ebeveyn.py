@@ -321,7 +321,7 @@ def yedam_onayi(
     bitiriyor. Belirsiz bekleyen bir kayıt bırakmak, çocuğun "başvurum ne
     oldu" sorusunu cevapsız bırakırdı.
     """
-    riza = db.get(YedamRiza, istek.riza_id)
+    riza = db.get(YedamRiza, istek.rizaId)
     if riza is None or riza.ebeveyn_id != kullanici.id:
         # 404: onaylayamayacağı bir rızanın var olup olmadığını da
         # söylemiyoruz.

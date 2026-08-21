@@ -30,12 +30,12 @@ from app.modeller import (
 )
 
 BASVURU = {
-    "metin_surumu": "v1",
+    "metinSurumu": "v1",
     "kapsam": ["kimlik", "risk", "surukleyici", "anket", "not"],
-    "iletisim_turu": "telefon",
-    "iletisim_degeri": "05551112233",
-    "kullanici_notu": "Gece kullanımım arttı.",
-    "beyan_yas": 25,
+    "iletisimTuru": "telefon",
+    "iletisimDegeri": "05551112233",
+    "kullaniciNotu": "Gece kullanımım arttı.",
+    "beyanYas": 25,
 }
 
 
@@ -57,7 +57,7 @@ def test_resit_kullanici_basvuru_acabiliyor(db, istemci, kullanici_kur):
 
     govde = yanit.json()
     assert govde["durum"] == "yeni"
-    assert govde["ebeveyn_onayi_bekleniyor"] is False
+    assert govde["ebeveynOnayiBekleniyor"] is False
 
     riza = db.query(YedamRiza).one()
     assert riza.metin_surumu == "v1"
@@ -93,7 +93,7 @@ def test_kopru_kapaliyken_basvuru_acilmiyor(db, istemci, kullanici_kur):
 def test_metin_surumu_cihazdan_geliyor(db, istemci, kullanici_kur):
     """Kullanıcı hangi metni okuduysa onun sürümü kaydedilmeli."""
     baslik, _ = kullanici_kur()
-    _basvur(istemci, baslik, metin_surumu="v2")
+    _basvur(istemci, baslik, metinSurumu="v2")
     assert db.query(YedamRiza).one().metin_surumu == "v2"
 
 
@@ -102,7 +102,7 @@ def test_metin_surumu_cihazdan_geliyor(db, istemci, kullanici_kur):
 
 def test_18_alti_eslesme_yoksa_dogrudan_aciliyor(db, istemci, kullanici_kur):
     baslik, _ = kullanici_kur()
-    yanit = _basvur(istemci, baslik, beyan_yas=15)
+    yanit = _basvur(istemci, baslik, beyanYas=15)
     assert yanit.status_code == 201
     assert yanit.json()["durum"] == "yeni"
 
@@ -116,9 +116,9 @@ def test_18_alti_eslesme_varsa_onay_bekliyor(db, istemci, kullanici_kur):
     db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn.id, cocuk_id=cocuk_id))
     db.commit()
 
-    yanit = _basvur(istemci, baslik, beyan_yas=15)
+    yanit = _basvur(istemci, baslik, beyanYas=15)
     assert yanit.status_code == 201
-    assert yanit.json()["ebeveyn_onayi_bekleniyor"] is True
+    assert yanit.json()["ebeveynOnayiBekleniyor"] is True
     assert db.query(YedamBasvuru).one().durum == "ebeveyn_onayi_bekliyor"
 
 
@@ -132,15 +132,15 @@ def test_yas_gonderilmezse_cocuk_muamelesi(db, istemci, kullanici_kur):
     db.add(EbeveynBaglanti(ebeveyn_id=ebeveyn.id, cocuk_id=cocuk_id))
     db.commit()
 
-    yanit = _basvur(istemci, baslik, beyan_yas=None)
-    assert yanit.json()["ebeveyn_onayi_bekleniyor"] is True
+    yanit = _basvur(istemci, baslik, beyanYas=None)
+    assert yanit.json()["ebeveynOnayiBekleniyor"] is True
 
 
 # --- sürükleyici ve geçmiş ---
 
 
-def _surukleyici(tarih="2026-08-20", faktor="social", katki=0.42):
-    return {"tarih": tarih, "faktor": faktor, "katki": katki}
+def _surukleyici(tarih="2026-08-20", faktor="social", sira=1):
+    return {"tarih": tarih, "faktor": faktor, "sira": sira}
 
 
 def test_rizasiz_surukleyici_reddediliyor(db, istemci, kullanici_kur):
@@ -181,10 +181,10 @@ def test_ayni_surukleyici_iki_kez_gonderilince_cogalmiyor(db, istemci, kullanici
 
     for _ in range(2):
         istemci.post(
-            "/yedam/surukleyici", json={"kayitlar": [_surukleyici(katki=0.5)]}, headers=baslik
+            "/yedam/surukleyici", json={"kayitlar": [_surukleyici(sira=2)]}, headers=baslik
         )
     assert db.query(RiskSurukleyici).count() == 1
-    assert db.query(RiskSurukleyici).one().katki == 0.5
+    assert db.query(RiskSurukleyici).one().sira == 2
 
 
 def test_gecmis_yuklemesi_anketi_de_yaziyor(db, istemci, kullanici_kur):
@@ -194,13 +194,13 @@ def test_gecmis_yuklemesi_anketi_de_yaziyor(db, istemci, kullanici_kur):
     yanit = istemci.post(
         "/yedam/gecmis",
         json={
-            "surukleyiciler": [_surukleyici(), _surukleyici(faktor="gece", katki=0.3)],
+            "surukleyiciler": [_surukleyici(), _surukleyici(faktor="gece", sira=2)],
             "anketler": [
                 {
                     "tarih": "2026-08-01",
-                    "madde_puanlari": [3, 4, 2, 5, 1, 6, 3, 2, 4, 1],
-                    "ham_puan": 31.0,
-                    "r_s": 52.5,
+                    "maddePuanlari": [3, 4, 2, 5, 1, 6, 3, 2, 4, 1],
+                    "hamPuan": 31.0,
+                    "rS": 52.5,
                 }
             ],
         },
@@ -222,9 +222,9 @@ def test_gecersiz_likert_reddediliyor(db, istemci, kullanici_kur):
             "anketler": [
                 {
                     "tarih": "2026-08-01",
-                    "madde_puanlari": [9, 4, 2, 5, 1, 6, 3, 2, 4, 1],
-                    "ham_puan": 37.0,
-                    "r_s": 60.0,
+                    "maddePuanlari": [9, 4, 2, 5, 1, 6, 3, 2, 4, 1],
+                    "hamPuan": 37.0,
+                    "rS": 60.0,
                 }
             ]
         },
@@ -247,9 +247,9 @@ def test_geri_cekme_veriyi_siliyor(db, istemci, kullanici_kur):
             "anketler": [
                 {
                     "tarih": "2026-08-01",
-                    "madde_puanlari": [3] * 10,
-                    "ham_puan": 30.0,
-                    "r_s": 50.0,
+                    "maddePuanlari": [3] * 10,
+                    "hamPuan": 30.0,
+                    "rS": 50.0,
                 }
             ],
         },
@@ -316,7 +316,7 @@ def test_basvuru_yoksa_bos_donuyor(db, istemci, kullanici_kur):
     """Uydurma durum yok (§4, K37)."""
     baslik, _ = kullanici_kur()
     govde = istemci.get("/yedam/basvurum", headers=baslik).json()
-    assert govde["basvuru_id"] is None and govde["durum"] == ""
+    assert govde["basvuruId"] is None and govde["durum"] == ""
 
 
 def test_durum_temaslari_tasiyor_ama_danisman_adini_tasimiyor(

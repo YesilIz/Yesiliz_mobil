@@ -257,7 +257,7 @@ def test_rizasi_gecersizse_veri_gosterilmiyor(db, panel_istemci, girisli, basvur
     b = basvuru(atanan=ben, durum=BasvuruDurumu.ATANDI, geri_cekildi=True)
     db.add(
         RiskSurukleyici(
-            kullanici_id=b.kullanici_id, tarih=dt.date(2026, 8, 20), faktor="social", katki=0.9
+            kullanici_id=b.kullanici_id, tarih=dt.date(2026, 8, 20), faktor="social", sira=1
         )
     )
     db.commit()

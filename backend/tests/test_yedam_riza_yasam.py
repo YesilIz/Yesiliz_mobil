@@ -66,7 +66,7 @@ def kur(db):
         db.add_all(
             [
                 RiskSurukleyici(
-                    kullanici_id=k.id, tarih=dt.date(2026, 8, 20), faktor="social", katki=0.4
+                    kullanici_id=k.id, tarih=dt.date(2026, 8, 20), faktor="social", sira=1
                 ),
                 AnketYanit(
                     kullanici_id=k.id,
@@ -221,15 +221,15 @@ def onay_kurulumu(db, istemci, kullanici_kur):
         yanit = istemci.post(
             "/yedam/basvuru",
             json={
-                "metin_surumu": "v1",
+                "metinSurumu": "v1",
                 "kapsam": ["kimlik", "risk"],
-                "iletisim_turu": "telefon",
-                "iletisim_degeri": "05551112233",
-                "beyan_yas": 15,
+                "iletisimTuru": "telefon",
+                "iletisimDegeri": "05551112233",
+                "beyanYas": 15,
             },
             headers=cocuk_baslik,
         )
-        assert yanit.json()["ebeveyn_onayi_bekleniyor"] is True
+        assert yanit.json()["ebeveynOnayiBekleniyor"] is True
         riza_id = db.query(YedamRiza).one().id
         return cocuk_baslik, ebeveyn_baslik, riza_id
 
@@ -240,7 +240,7 @@ def test_ebeveyn_onaylayinca_basvuru_havuza_giriyor(db, istemci, onay_kurulumu):
     _, ebeveyn_baslik, riza_id = onay_kurulumu()
 
     yanit = istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": True}, headers=ebeveyn_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": True}, headers=ebeveyn_baslik
     )
     assert yanit.status_code == 200
 
@@ -254,7 +254,7 @@ def test_ebeveyn_reddedince_basvuru_kapaniyor(db, istemci, onay_kurulumu):
     _, ebeveyn_baslik, riza_id = onay_kurulumu()
 
     yanit = istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": False}, headers=ebeveyn_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": False}, headers=ebeveyn_baslik
     )
     assert yanit.json()["durum"] == "reddedildi"
 
@@ -271,7 +271,7 @@ def test_baskasi_onaylayamiyor(db, istemci, onay_kurulumu, kullanici_kur):
     )
 
     yanit = istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": True}, headers=yabanci_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": True}, headers=yabanci_baslik
     )
     assert yanit.status_code == 404
 
@@ -282,7 +282,7 @@ def test_baskasi_onaylayamiyor(db, istemci, onay_kurulumu, kullanici_kur):
 def test_cocuk_kendi_basvurusunu_onaylayamiyor(db, istemci, onay_kurulumu):
     cocuk_baslik, _, riza_id = onay_kurulumu()
     yanit = istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": True}, headers=cocuk_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": True}, headers=cocuk_baslik
     )
     assert yanit.status_code == 404
 
@@ -290,9 +290,9 @@ def test_cocuk_kendi_basvurusunu_onaylayamiyor(db, istemci, onay_kurulumu):
 def test_ikinci_onay_reddediliyor(db, istemci, onay_kurulumu):
     _, ebeveyn_baslik, riza_id = onay_kurulumu()
     istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": True}, headers=ebeveyn_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": True}, headers=ebeveyn_baslik
     )
     ikinci = istemci.post(
-        "/ebeveyn/yedam-onay", json={"riza_id": riza_id, "onay": True}, headers=ebeveyn_baslik
+        "/ebeveyn/yedam-onay", json={"rizaId": riza_id, "onay": True}, headers=ebeveyn_baslik
     )
     assert ikinci.status_code == 409

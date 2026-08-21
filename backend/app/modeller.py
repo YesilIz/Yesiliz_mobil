@@ -767,7 +767,15 @@ class RiskSurukleyici(Taban):
     tarih: Mapped[dt.date] = mapped_column(Date, index=True)
     #: Örn. "social", "gece", "oturum" — cihazdaki faktör anahtarı.
     faktor: Mapped[str] = mapped_column(String(40))
-    katki: Mapped[float] = mapped_column(Float)
+    #: 1 = en çok katkı yapan. **Katkı DEĞERİ değil sırası** saklanıyor:
+    #: `core-risk` sürükleyicileri sıralı bir isim listesi olarak veriyor
+    #: (`RiskHesapla.surukleyiciler`), değeri hesaplayıp atıyor. Sıradan
+    #: bir "katkı yüzdesi" uydurmak, ölçülmemiş bir sayıyı ölçülmüş gibi
+    #: göstermek olurdu (CLAUDE.md §9). Motoru değiştirip değeri de
+    #: döndürmek mümkün ama o, referans Python ile birebir doğrulanmış
+    #: çıktıyı değiştirmek demek (§7) — rıza metni de yalnızca
+    #: "kategoriler" vaat ediyor.
+    sira: Mapped[int] = mapped_column(Integer)
 
 
 class AnketYanit(Taban):

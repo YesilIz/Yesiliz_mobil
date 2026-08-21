@@ -104,7 +104,7 @@ def basvuru_ac(
             status.HTTP_409_CONFLICT, "Zaten açık bir YEDAM başvurun var"
         )
 
-    karar = yedam_kapisi.degerlendir(db, kullanici.id, istek.beyan_yas)
+    karar = yedam_kapisi.degerlendir(db, kullanici.id, istek.beyanYas)
     if not karar.acilabilir:
         # Sebebi söyleniyor: "başvuru açılamadı" deyip susmak, kullanıcının
         # ne yapması gerektiğini bilmemesi demek (§4).
@@ -121,12 +121,12 @@ def basvuru_ac(
     simdi = _simdi()
     riza = YedamRiza(
         kullanici_id=kullanici.id,
-        metin_surumu=istek.metin_surumu,
+        metin_surumu=istek.metinSurumu,
         kapsam=",".join(sorted(set(istek.kapsam))),
         verilme=simdi,
         son_gecerlilik=simdi + dt.timedelta(days=GECERLILIK_GUN),
         ebeveyn_id=karar.ebeveyn_id,
-        beyan_yas=istek.beyan_yas,
+        beyan_yas=istek.beyanYas,
     )
     db.add(riza)
     db.flush()
@@ -140,9 +140,9 @@ def basvuru_ac(
             if onay_bekliyor
             else BasvuruDurumu.YENI.value
         ),
-        iletisim_turu=istek.iletisim_turu,
-        iletisim_degeri=istek.iletisim_degeri,
-        kullanici_notu=istek.kullanici_notu,
+        iletisim_turu=istek.iletisimTuru,
+        iletisim_degeri=istek.iletisimDegeri,
+        kullanici_notu=istek.kullaniciNotu,
         olusturma=simdi,
     )
     db.add(basvuru)
@@ -153,10 +153,10 @@ def basvuru_ac(
         extra={"basvuru": basvuru.id, "onay_bekliyor": onay_bekliyor},
     )
     return YedamBasvuruYanit(
-        basvuru_id=basvuru.id,
+        basvuruId=basvuru.id,
         durum=basvuru.durum,
-        riza_son_gecerlilik=riza.son_gecerlilik,
-        ebeveyn_onayi_bekleniyor=onay_bekliyor,
+        rizaSonGecerlilik=riza.son_gecerlilik,
+        ebeveynOnayiBekleniyor=onay_bekliyor,
     )
 
 
@@ -188,10 +188,10 @@ def basvurum(
     ).all()
 
     return YedamDurumYanit(
-        basvuru_id=basvuru.id,
+        basvuruId=basvuru.id,
         durum=basvuru.durum,
         olusturma=basvuru.olusturma,
-        riza_son_gecerlilik=riza.son_gecerlilik if riza is not None else None,
+        rizaSonGecerlilik=riza.son_gecerlilik if riza is not None else None,
         ebeveyn_onayi_bekleniyor=(
             basvuru.durum == BasvuruDurumu.EBEVEYN_ONAYI_BEKLIYOR.value
         ),
@@ -321,11 +321,11 @@ def _surukleyici_yaz(db: Session, kullanici_id: int, kayitlar) -> int:
                     kullanici_id=kullanici_id,
                     tarih=kayit.tarih,
                     faktor=kayit.faktor,
-                    katki=kayit.katki,
+                    sira=kayit.sira,
                 )
             )
         else:
-            satir.katki = kayit.katki
+            satir.sira = kayit.sira
         yazilan += 1
     return yazilan
 
@@ -338,20 +338,20 @@ def _anket_yaz(db: Session, kullanici_id: int, kayitlar) -> int:
                 AnketYanit.kullanici_id == kullanici_id, AnketYanit.tarih == kayit.tarih
             )
         )
-        puanlar = ",".join(str(p) for p in kayit.madde_puanlari)
+        puanlar = ",".join(str(p) for p in kayit.maddePuanlari)
         if satir is None:
             db.add(
                 AnketYanit(
                     kullanici_id=kullanici_id,
                     tarih=kayit.tarih,
                     madde_puanlari=puanlar,
-                    ham_puan=kayit.ham_puan,
-                    r_s=kayit.r_s,
+                    ham_puan=kayit.hamPuan,
+                    r_s=kayit.rS,
                 )
             )
         else:
             satir.madde_puanlari = puanlar
-            satir.ham_puan = kayit.ham_puan
-            satir.r_s = kayit.r_s
+            satir.ham_puan = kayit.hamPuan
+            satir.r_s = kayit.rS
         yazilan += 1
     return yazilan

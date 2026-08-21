@@ -82,14 +82,19 @@
       {% if d.surukleyiciler %}
         <div class="kaydir">
           <table>
-            <thead><tr><th>Faktör</th><th>Ortalama katkı</th></tr></thead>
+            <thead><tr><th>Sıra</th><th>Faktör</th></tr></thead>
             <tbody>
               {% for s in d.surukleyiciler %}
-                <tr><td>{{ s.faktor }}</td><td>{{ s.katki }}</td></tr>
+                <tr><td>{{ s.sira }}</td><td>{{ s.faktor }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        <p class="yardim">
+          <strong>Sıra</strong>, katkı yüzdesi değil: motor sürükleyicileri
+          sıralı bir liste olarak veriyor. Yüzde göstermek, ölçülmemiş bir
+          sayıyı ölçülmüş gibi sunmak olurdu.
+        </p>
       {% elif "surukleyici" in d.riza_kapsam %}
         <p class="bos-durum">Henüz sürükleyici verisi gelmedi.</p>
       {% else %}

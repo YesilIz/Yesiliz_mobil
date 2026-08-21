@@ -177,7 +177,7 @@ def test_yedam_zinciri_bastan_sona_siliniyor(db):
             DanismanNotu(basvuru_id=basvuru.id, personel_id=p.id, metin="not"),
             ErisimKaydi(kullanici_id=k.id, personel_id=p.id, basvuru_id=basvuru.id),
             RiskSurukleyici(
-                kullanici_id=k.id, tarih=dt.date(2026, 8, 20), faktor="social", katki=0.4
+                kullanici_id=k.id, tarih=dt.date(2026, 8, 20), faktor="social", sira=1
             ),
             AnketYanit(
                 kullanici_id=k.id,

@@ -167,3 +167,82 @@ data class EbeveynOzetDto(
     val trend: String? = null,
     val sonSinyalSaatOnce: Int? = null,
 )
+
+// --- YEDAM ---
+//
+// `docs/panel-plani.md §11` · rıza metni `docs/yedam-riza-metni-v1.md`.
+//
+// **İki rıza bağımsız.** "Yeşilay ile paylaşım" günlük özetin sunucuya
+// gitmesini yönetiyor (K19); YEDAM rızası danışmanın görmesini. Bu yüzden
+// sürükleyici gönderimi `/ozet`'e eklenmedi, ayrı uç oldu — `/ozet`
+// paylaşımı kapalı kullanıcıda hiç çağrılmıyor ve özellik tam da korumak
+// istediği kişide sessizce ölü kalırdı.
+
+@Serializable
+data class YedamBasvuruIstek(
+    /** Kullanıcının okuduğu rıza metninin sürümü — cihaz koyuyor. */
+    val metinSurumu: String,
+    val kapsam: List<String>,
+    /** `telefon` | `eposta` */
+    val iletisimTuru: String,
+    val iletisimDegeri: String,
+    val kullaniciNotu: String = "",
+    /** Beyan edilen yaş; `null` ise sunucu **reşit saymıyor** (K26, §9). */
+    val beyanYas: Int? = null,
+)
+
+@Serializable
+data class YedamBasvuruYanit(
+    val basvuruId: Int,
+    val durum: String,
+    val rizaSonGecerlilik: String,
+    val ebeveynOnayiBekleniyor: Boolean = false,
+)
+
+@Serializable
+data class YedamTemasDto(val tur: String, val zaman: String)
+
+@Serializable
+data class YedamDurumYanit(
+    val basvuruId: Int? = null,
+    val durum: String = "",
+    val olusturma: String? = null,
+    val rizaSonGecerlilik: String? = null,
+    val ebeveynOnayiBekleniyor: Boolean = false,
+    val temaslar: List<YedamTemasDto> = emptyList(),
+)
+
+/** "14 Ağustos 10:32'de bakıldı." Danışmanın adı **taşınmıyor**. */
+@Serializable
+data class ErisimKaydiDto(val zaman: String, val kapsam: String)
+
+/**
+ * Sürükleyici — **sıra taşıyor, katkı değeri değil**.
+ *
+ * `core-risk` sürükleyicileri sıralı bir isim listesi olarak veriyor
+ * (`RiskHesapla.surukleyiciler`); katkıyı hesaplayıp atıyor. Sıradan bir
+ * yüzde uydurmak, ölçülmemiş sayıyı ölçülmüş gibi göstermek olurdu (§9).
+ */
+@Serializable
+data class SurukleyiciDto(val tarih: String, val faktor: String, val sira: Int)
+
+@Serializable
+data class SurukleyiciIstek(val kayitlar: List<SurukleyiciDto>)
+
+@Serializable
+data class AnketYanitDto(
+    val tarih: String,
+    /** 10 maddenin Likert puanları; ölçek birebir korunuyor (K12). */
+    val maddePuanlari: List<Int>,
+    val hamPuan: Double,
+    val rS: Double,
+)
+
+@Serializable
+data class YedamGecmisIstek(
+    val surukleyiciler: List<SurukleyiciDto> = emptyList(),
+    val anketler: List<AnketYanitDto> = emptyList(),
+)
+
+@Serializable
+data class EbeveynYedamOnayIstek(val rizaId: Int, val onay: Boolean)

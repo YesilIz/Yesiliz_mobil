@@ -124,7 +124,7 @@ def upgrade() -> None:
         sa.Column("kullanici_id", sa.Integer(), nullable=False),
         sa.Column("tarih", sa.Date(), nullable=False),
         sa.Column("faktor", sa.String(length=40), nullable=False),
-        sa.Column("katki", sa.Float(), nullable=False),
+        sa.Column("sira", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["kullanici_id"], ["kullanici.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(

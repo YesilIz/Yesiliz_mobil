@@ -50,7 +50,7 @@ def _dolmus_riza(db) -> Kullanici:
                 iletisim_degeri="0555",
             ),
             RiskSurukleyici(
-                kullanici_id=k.id, tarih=dt.date(2026, 5, 1), faktor="social", katki=0.4
+                kullanici_id=k.id, tarih=dt.date(2026, 5, 1), faktor="social", sira=1
             ),
             AnketYanit(
                 kullanici_id=k.id,

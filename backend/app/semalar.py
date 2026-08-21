@@ -262,27 +262,27 @@ class EbeveynOzetYanit(BaseModel):
 
 
 class YedamBasvuruIstek(BaseModel):
-    metin_surumu: str = Field(min_length=1, max_length=20)
+    metinSurumu: str = Field(min_length=1, max_length=20)
     #: Kullanıcının onayladığı kapsam anahtarları.
     kapsam: list[str] = Field(min_length=1, max_length=10)
-    iletisim_turu: Literal["telefon", "eposta"]
-    iletisim_degeri: str = Field(min_length=3, max_length=320)
-    kullanici_notu: str = Field(default="", max_length=1000)
+    iletisimTuru: Literal["telefon", "eposta"]
+    iletisimDegeri: str = Field(min_length=3, max_length=320)
+    kullaniciNotu: str = Field(default="", max_length=1000)
     #: Beyan edilen yaş. `None` ise sunucu **reşit saymıyor** (K26, §9).
-    beyan_yas: int | None = Field(default=None, ge=5, le=120)
+    beyanYas: int | None = Field(default=None, ge=5, le=120)
 
-    @field_validator("iletisim_degeri", mode="before")
+    @field_validator("iletisimDegeri", mode="before")
     @classmethod
     def temizle(cls, deger: object) -> object:
         return deger.strip() if isinstance(deger, str) else deger
 
 
 class YedamBasvuruYanit(BaseModel):
-    basvuru_id: int
+    basvuruId: int
     durum: str
-    riza_son_gecerlilik: dt.datetime
+    rizaSonGecerlilik: dt.datetime
     #: 18 altı ve bağlı ebeveyn varsa onay bekleniyor.
-    ebeveyn_onayi_bekleniyor: bool = False
+    ebeveynOnayiBekleniyor: bool = False
 
 
 class YedamDurumYanit(BaseModel):
@@ -292,11 +292,11 @@ class YedamDurumYanit(BaseModel):
     kimliğini başvuru daha görüşmeye dönüşmeden açardı.
     """
 
-    basvuru_id: int | None = None
+    basvuruId: int | None = None
     durum: str = ""
     olusturma: dt.datetime | None = None
-    riza_son_gecerlilik: dt.datetime | None = None
-    ebeveyn_onayi_bekleniyor: bool = False
+    rizaSonGecerlilik: dt.datetime | None = None
+    ebeveynOnayiBekleniyor: bool = False
     #: Görüşme kayıtları — tür ve zaman, içerik yok.
     temaslar: list["YedamTemasDto"] = Field(default_factory=list)
 
@@ -316,7 +316,9 @@ class ErisimKaydiDto(BaseModel):
 class SurukleyiciDto(BaseModel):
     tarih: dt.date
     faktor: str = Field(min_length=1, max_length=40)
-    katki: float
+    #: 1 = en çok katkı yapan. Cihazdaki `surukleyiciler` listesinin sırası;
+    #: katkı DEĞERİ taşınmıyor (bkz. `modeller.RiskSurukleyici.sira`).
+    sira: int = Field(ge=1, le=10)
 
 
 class SurukleyiciIstek(BaseModel):
@@ -334,11 +336,11 @@ class SurukleyiciIstek(BaseModel):
 class AnketYanitDto(BaseModel):
     tarih: dt.date
     #: 10 maddenin Likert puanları. Ölçek birebir korunuyor (K12).
-    madde_puanlari: list[int] = Field(min_length=10, max_length=10)
-    ham_puan: float
-    r_s: float
+    maddePuanlari: list[int] = Field(min_length=10, max_length=10)
+    hamPuan: float
+    rS: float
 
-    @field_validator("madde_puanlari")
+    @field_validator("maddePuanlari")
     @classmethod
     def araligi_dogrula(cls, deger: list[int]) -> list[int]:
         if any(p < 1 or p > 6 for p in deger):
@@ -354,5 +356,5 @@ class YedamGecmisIstek(BaseModel):
 
 
 class EbeveynYedamOnayIstek(BaseModel):
-    riza_id: int
+    rizaId: int
     onay: bool

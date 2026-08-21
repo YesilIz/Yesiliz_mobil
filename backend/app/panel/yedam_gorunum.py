@@ -76,7 +76,7 @@ class BantNoktasi:
 @dataclass(frozen=True)
 class SurukleyiciSatiri:
     faktor: str
-    katki: float
+    sira: int
 
 
 @dataclass(frozen=True)
@@ -302,15 +302,24 @@ def _bant_cizgisi(db: Session, kullanici_id: int, bas: dt.date) -> list[BantNokt
 
 
 def _surukleyiciler(db: Session, kullanici_id: int, bas: dt.date) -> list[SurukleyiciSatiri]:
-    """Penceredeki faktörlerin ortalama katkısı, en yüksekten."""
+    """
+    Penceredeki faktörler, **ortalama sıralarına** göre.
+
+    Ortalama sıra bir katkı değeri değil: "bu faktör pencerede genellikle
+    kaçıncıydı" sorusunu cevaplıyor. Danışmana gösterilen de bu — sıra,
+    yüzde değil.
+    """
     satirlar = db.execute(
-        select(RiskSurukleyici.faktor, func.avg(RiskSurukleyici.katki))
+        select(RiskSurukleyici.faktor, func.avg(RiskSurukleyici.sira))
         .where(RiskSurukleyici.kullanici_id == kullanici_id, RiskSurukleyici.tarih >= bas)
         .group_by(RiskSurukleyici.faktor)
-        .order_by(func.avg(RiskSurukleyici.katki).desc())
+        .order_by(func.avg(RiskSurukleyici.sira).asc())
         .limit(SURUKLEYICI_SAYISI)
     ).all()
-    return [SurukleyiciSatiri(faktor=f, katki=round(k, 3)) for f, k in satirlar]
+    return [
+        SurukleyiciSatiri(faktor=f, sira=sira)
+        for sira, (f, _) in enumerate(satirlar, start=1)
+    ]
 
 
 def _anketler(db: Session, kullanici_id: int) -> list[AnketSatiri]:
