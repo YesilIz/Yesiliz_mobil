@@ -157,7 +157,7 @@ def test_silme_denetim_kaydi_hayatta_kaliyor(
 
     db.expire_all()
     kayit = db.query(DenetimKaydi).one()
-    assert kayit.eylem == "kullanici_sil"
+    assert kayit.eylem == "kullanici.sil"
     assert kayit.hedef_id == kid
     assert kayit.gerekce == GEREKCE
 
@@ -256,7 +256,7 @@ def test_panel_disa_aktarma_denetim_kaydi_yaziyor(
         onay="evet",
     )
     kayit = db.query(DenetimKaydi).one()
-    assert kayit.eylem == "veri_disa_aktar"
+    assert kayit.eylem == "kullanici.veri_disa_aktar"
     assert kayit.gerekce == GEREKCE
 
 

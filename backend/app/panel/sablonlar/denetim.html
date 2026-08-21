@@ -1,0 +1,67 @@
+{% extends "taban.html" %}
+{% block baslik %}Denetim kaydı · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Denetim kaydı</h1>
+
+  <div class="kart">
+    <form hx-get="/yonetim/denetim" hx-target="#denetim-sonuc" hx-push-url="true">
+      {# Kendi kaydıyla sınırlı personele bu liste HİÇ çizilmiyor:
+         başkasının adını açılır listede göstermek, satırları gizlemenin
+         anlamını ortadan kaldırırdı (§2 "göremediği veri gri de
+         görünmez"). #}
+      {% if not kendi_kaydiyla_sinirli %}
+        <label class="alan">
+          <span>Personel</span>
+          <select name="personel_id">
+            <option value="">Hepsi</option>
+            {% for pid, etiket in personeller %}
+              <option value="{{ pid }}"
+                {% if filtre.personel_id == pid %}selected{% endif %}>{{ etiket }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
+
+      <label class="alan">
+        <span>Eylem</span>
+        <select name="eylem">
+          <option value="">Hepsi</option>
+          {% for e in eylemler %}
+            <option value="{{ e }}" {% if filtre.eylem == e %}selected{% endif %}>{{ e }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="alan">
+        <span>Kullanıcı no</span>
+        <input type="number" name="kullanici_id" min="1"
+               value="{{ filtre.kullanici_id if filtre.kullanici_id is not none else '' }}">
+      </label>
+
+      <label class="alan">
+        <span>Başlangıç</span>
+        <input type="date" name="baslangic"
+               value="{{ filtre.baslangic.isoformat() if filtre.baslangic else '' }}">
+      </label>
+
+      <label class="alan">
+        <span>Bitiş (dâhil)</span>
+        <input type="date" name="bitis"
+               value="{{ filtre.bitis.isoformat() if filtre.bitis else '' }}">
+      </label>
+
+      <button type="submit">Filtrele</button>
+    </form>
+
+    {% if kendi_kaydiyla_sinirli %}
+      <p class="yardim">
+        Kendi kayıtlarını görüyorsun. Bütün kayıtlara erişim yöneticide.
+      </p>
+    {% endif %}
+  </div>
+
+  <div id="denetim-sonuc">
+    {% include "parca/denetim_sonuc.html" %}
+  </div>
+{% endblock %}

@@ -120,7 +120,7 @@ def test_askiya_alma_denetim_kaydi_yaziyor(db, panel_istemci, panel_girisli, kul
     assert k.askiya_alan_id is not None
 
     kayit = db.query(DenetimKaydi).one()
-    assert kayit.eylem == "kullanici_askiya_al"
+    assert kayit.eylem == "kullanici.askiya_al"
     assert kayit.hedef_id == kid
     assert kayit.gerekce == GEREKCE
 

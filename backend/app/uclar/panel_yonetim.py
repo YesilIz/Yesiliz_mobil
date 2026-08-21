@@ -16,6 +16,8 @@ yakalanıyor.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -26,6 +28,13 @@ from app.panel.gosterge import BANT_ETIKETI, BANTLAR, gostergeyi_hesapla
 from app.panel.grafik import bant_dagilimi_svg
 from app.kullanici_silme import kullaniciyi_tamamen_sil
 from app.panel.denetim import ASGARI_GEREKCE, denetle
+from app.panel.denetim_gorunum import (
+    SAYFA_BOYU as DENETIM_SAYFA_BOYU,
+    Filtre,
+    eylem_secenekleri,
+    listele,
+    personel_secenekleri,
+)
 from app.panel.hesaplar import SAYFA_BOYU, ara, askiya_al, askiyi_kaldir, detay
 from app.panel.oturum import personel_gerek
 from app.panel.sablon import yanit, yonlendir
@@ -49,6 +58,14 @@ GOSTERGE_ROLLERI = (
 #: Tekil hesabı görebilenler. `GOZLEMCI` **yok**: rolün tanımı toplu ve
 #: anonim istatistik (§2 "Roller"), tekil hesap detayı o tanımın dışında.
 HESAP_ROLLERI = (
+    PersonelRolu.ADMIN,
+    PersonelRolu.OPERASYON,
+)
+
+
+#: Denetim kaydını görebilenler. `OPERASYON` yalnızca kendi kayıtlarını
+#: görüyor (uç içinde daraltılıyor); bütünü `ADMIN` görüyor.
+DENETIM_ROLLERI = (
     PersonelRolu.ADMIN,
     PersonelRolu.OPERASYON,
 )
@@ -182,7 +199,7 @@ def kullanici_askiya_al(
     denetle(
         db,
         personel,
-        eylem="kullanici_askiya_al",
+        eylem="kullanici.askiya_al",
         hedef_tur="kullanici",
         hedef_id=kullanici_id,
         gerekce=gerekce,
@@ -210,7 +227,7 @@ def kullanici_askiyi_kaldir(
     denetle(
         db,
         personel,
-        eylem="kullanici_askiyi_kaldir",
+        eylem="kullanici.askiyi_kaldir",
         hedef_tur="kullanici",
         hedef_id=kullanici_id,
         gerekce=gerekce,
@@ -241,7 +258,7 @@ def kullanici_ebeveyn_bagi_kaldir(
     denetle(
         db,
         personel,
-        eylem="ebeveyn_bagi_kaldir",
+        eylem="kullanici.ebeveyn_bagi_kaldir",
         hedef_tur="kullanici",
         hedef_id=kullanici_id,
         gerekce=gerekce,
@@ -288,7 +305,7 @@ def kullanici_veri_disa_aktar(
     denetle(
         db,
         personel,
-        eylem="veri_disa_aktar",
+        eylem="kullanici.veri_disa_aktar",
         hedef_tur="kullanici",
         hedef_id=kullanici_id,
         gerekce=gerekce,
@@ -342,7 +359,7 @@ def kullanici_sil(
     denetle(
         db,
         personel,
-        eylem="kullanici_sil",
+        eylem="kullanici.sil",
         hedef_tur="kullanici",
         hedef_id=kullanici_id,
         gerekce=gerekce,
@@ -352,3 +369,57 @@ def kullanici_sil(
     kullaniciyi_tamamen_sil(db, kullanici)
     db.commit()
     return yonlendir(istek, "/yonetim/kullanici")
+
+
+@yonlendirici.get("/denetim")
+def denetim_kaydi(
+    istek: Request,
+    personel_id: int | None = Query(None),
+    kullanici_id: int | None = Query(None),
+    eylem: str = Query(""),
+    baslangic: dt.date | None = Query(None),
+    bitis: dt.date | None = Query(None),
+    sayfa: int = Query(0, ge=0),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*DENETIM_ROLLERI)),
+):
+    """
+    Denetim kaydı görüntüleyici — **yalnızca okuma** (`§5.8`).
+
+    `OPERASYON` yalnızca **kendi** kayıtlarını görüyor: denetim izi
+    personeli de denetliyor ve herkesin herkesi izleyebilmesi, kaydın
+    caydırıcılığından çok bir gözetim yüzeyi üretirdi. Bütünü görmek
+    `ADMIN`'in işi.
+    """
+    kendiyle_sinirli = personel.rol == PersonelRolu.OPERASYON.value
+    if kendiyle_sinirli:
+        personel_id = personel.id
+
+    filtre = Filtre(
+        personel_id=personel_id,
+        kullanici_id=kullanici_id,
+        eylem=eylem,
+        baslangic=baslangic,
+        bitis=bitis,
+    )
+    satirlar, toplam = listele(db, filtre, sayfa)
+
+    return yanit(
+        istek,
+        "denetim.html",
+        {
+            "etkin": "denetim",
+            "satirlar": satirlar,
+            "toplam": toplam,
+            "sayfa": sayfa,
+            "sayfa_boyu": DENETIM_SAYFA_BOYU,
+            "filtre": filtre,
+            # Kendi kaydıyla sınırlı personel, DİĞER personelin adını
+            # filtre listesinde de görmemeli: satırları gizleyip adı
+            # açılır listede bırakmak sızıntının kendisi.
+            "personeller": [] if kendiyle_sinirli else personel_secenekleri(db),
+            "eylemler": eylem_secenekleri(db),
+            "kendi_kaydiyla_sinirli": kendiyle_sinirli,
+        },
+        parca="parca/denetim_sonuc.html",
+    )

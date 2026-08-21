@@ -1,0 +1,59 @@
+{# Denetim satırları — tam sayfada include, HTMX'te tek başına render. #}
+{% if not satirlar %}
+  <p class="bos-durum">Bu filtreyle eşleşen kayıt yok.</p>
+{% else %}
+  <div class="kart">
+    <p class="yardim">
+      {{ toplam }} kayıt. Denetim kaydı <strong>silinemez</strong> ve
+      değiştirilemez; bu ekran yalnızca okuyor.
+    </p>
+    <div class="kaydir">
+      <table>
+        <thead>
+          <tr>
+            <th>Zaman</th><th>Personel</th><th>Eylem</th>
+            <th>Hedef</th><th>Gerekçe</th><th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in satirlar %}
+            <tr>
+              <td>{{ s.zaman.strftime("%d.%m.%Y %H:%M") }}</td>
+              <td>{{ s.personel_ad }}</td>
+              <td><span class="cip">{{ s.eylem }}</span></td>
+              <td>
+                {% if s.hedef_id is not none %}
+                  {% if s.hedef_tur == "kullanici" %}
+                    <a href="/yonetim/kullanici/{{ s.hedef_id }}">#{{ s.hedef_id }}</a>
+                  {% else %}
+                    {{ s.hedef_tur }} #{{ s.hedef_id }}
+                  {% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>{{ s.gerekce }}</td>
+              <td>{{ s.ip }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="yardim">
+      Silinmiş bir hesabın numarası artık çözülemiyor: <code>hedef_id</code>
+      yabancı anahtar değil, böylece kullanıcı silinse de eylemin kaydı
+      hayatta kalıyor.
+    </p>
+
+    {% if toplam > sayfa_boyu %}
+      <div class="tek-satir">
+        {% if sayfa > 0 %}
+          <a href="/yonetim/denetim?sayfa={{ sayfa - 1 }}">← Önceki</a>
+        {% endif %}
+        {% if (sayfa + 1) * sayfa_boyu < toplam %}
+          <a href="/yonetim/denetim?sayfa={{ sayfa + 1 }}">Sonraki →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
