@@ -19,6 +19,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modeller import (
+    HAVUZDA_GORUNEN,
+    YedamBasvuru,
     EbeveynBaglanti,
     GunlukOzet,
     Heartbeat,
@@ -50,6 +52,10 @@ class Gosterge:
     #: Askıya alınmış hesap sayısı. Operasyonun görmesi gereken bir
     #: sayı: askıda unutulmuş bir hesap sessizce kullanıcı kaybıdır.
     askidaki_hesap: int = 0
+    #: Havuzda bekleyen YEDAM başvurusu ve en eskisinin yaşı (gün).
+    #: `None` = hiç açık başvuru yok — sıfırla karıştırılmamalı.
+    acik_yedam: int = 0
+    en_eski_yedam_gun: int | None = None
     lig_katilimi: int = 0
     ebeveyn_eslesmesi: int = 0
     #: Ölçüm penceresi içinde hiç `HESAPLANDI` risk satırı olmayan kullanıcı.
@@ -163,6 +169,37 @@ def _ortalama_aralikta(db: Session, bas: dt.date, bit: dt.date) -> int | None:
     return round(ortalama) if ortalama else None
 
 
+def _acik_yedam(db: Session) -> int:
+    """Havuzda bekleyen başvuru sayısı. Onay bekleyenler dışarıda."""
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(YedamBasvuru)
+            .where(YedamBasvuru.durum.in_(HAVUZDA_GORUNEN))
+        )
+        or 0
+    )
+
+
+def _en_eski_yedam(db: Session, simdi: dt.datetime) -> int | None:
+    """
+    En eski açık başvurunun yaşı (gün); açık başvuru yoksa `None`.
+
+    Sıfır dönmüyor: "hiç başvuru yok" ile "bugün gelmiş bir başvuru var"
+    aynı şey değil ve gösterge ikisini aynı sayıyla göstermemeli.
+    """
+    en_eski = db.scalar(
+        select(func.min(YedamBasvuru.olusturma)).where(
+            YedamBasvuru.durum.in_(HAVUZDA_GORUNEN)
+        )
+    )
+    if en_eski is None:
+        return None
+    if en_eski.tzinfo is None:
+        en_eski = en_eski.replace(tzinfo=dt.timezone.utc)
+    return max(0, (simdi - en_eski).days)
+
+
 def gostergeyi_hesapla(
     db: Session,
     simdi: dt.datetime | None = None,
@@ -186,6 +223,8 @@ def gostergeyi_hesapla(
             bugun - dt.timedelta(days=2 * pencere_gun - 1),
             bugun - dt.timedelta(days=pencere_gun),
         ),
+        acik_yedam=_acik_yedam(db),
+        en_eski_yedam_gun=_en_eski_yedam(db, simdi),
         askidaki_hesap=db.scalar(
             select(func.count())
             .select_from(Kullanici)

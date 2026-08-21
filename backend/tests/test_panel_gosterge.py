@@ -267,3 +267,49 @@ def test_askidaki_hesap_sayiliyor(db, kullanici):
     g = gostergeyi_hesapla(db, SIMDI)
     assert g.askidaki_hesap == 1
     assert g.kullanici_sayisi == 2, "Askıdaki hesap toplamdan düşmüyor"
+
+
+# --- F4: açık YEDAM başvurusu ---
+
+
+def test_acik_yedam_sayiliyor_bekleyen_sayilmiyor(db, kullanici):
+    """Ebeveyn onayı bekleyen başvuru hiçbir danışmana görünmüyor."""
+    from app.modeller import BasvuruDurumu, YedamBasvuru, YedamRiza
+
+    def basvuru(durum):
+        k = kullanici()
+        riza = YedamRiza(
+            kullanici_id=k.id,
+            metin_surumu="v1",
+            kapsam="kimlik",
+            son_gecerlilik=SIMDI + dt.timedelta(days=90),
+        )
+        db.add(riza)
+        db.flush()
+        db.add(
+            YedamBasvuru(
+                kullanici_id=k.id,
+                riza_id=riza.id,
+                durum=durum.value,
+                iletisim_turu="telefon",
+                iletisim_degeri="0555",
+                olusturma=SIMDI - dt.timedelta(days=4),
+            )
+        )
+        db.commit()
+
+    basvuru(BasvuruDurumu.YENI)
+    basvuru(BasvuruDurumu.ATANDI)
+    basvuru(BasvuruDurumu.EBEVEYN_ONAYI_BEKLIYOR)
+    basvuru(BasvuruDurumu.KAPANDI)
+
+    g = gostergeyi_hesapla(db, SIMDI)
+    assert g.acik_yedam == 2
+    assert g.en_eski_yedam_gun == 4
+
+
+def test_acik_basvuru_yoksa_yas_none(db):
+    """"Hiç başvuru yok" ile "bugün gelmiş bir başvuru var" aynı şey değil."""
+    g = gostergeyi_hesapla(db, SIMDI)
+    assert g.acik_yedam == 0
+    assert g.en_eski_yedam_gun is None

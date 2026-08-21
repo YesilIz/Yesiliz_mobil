@@ -31,6 +31,15 @@
         <span class="olcum-sayi">{{ g.askidaki_hesap }}</span>
         <span class="olcum-etiket">askıdaki hesap</span>
       </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.acik_yedam }}</span>
+        <span class="olcum-etiket">
+          açık YEDAM başvurusu
+          {%- if g.en_eski_yedam_gun is not none %}
+            · en eskisi {{ g.en_eski_yedam_gun }} gün
+          {%- endif %}
+        </span>
+      </div>
     </div>
     <p class="yardim">
       Sinyal sayısı yalnızca <strong>Yeşilay ile paylaşım onayı veren</strong>

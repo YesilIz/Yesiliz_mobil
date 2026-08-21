@@ -2,7 +2,7 @@
 
 > **Türetildi:** `docs/panel-plani.md` (572 satır, 16 bölüm) ile `feature/panel`
 > dalının kod durumu karşılaştırılarak · 21 Ağustos 2026
-> **F0, F1, F2 ve F3 kapandı** (21 Ağustos 2026). Sıradaki faz **F4 (puan ve ödül)**.
+> **F0–F4 kapandı** (21 Ağustos 2026). Sıradaki faz **F5 (içerik ve duyuru)**.
 > Numaralar plan belgesinin bölümlerine bağlı — bir kalemin *niçini* için
 > oradaki bölüme bak, burada yalnızca *ne* ve *nerede* var.
 
@@ -41,7 +41,7 @@ ortalama ekran süresi, lig katılımı, ebeveyn eşleşmesi, bandı olmayan.
 
 - [x] **Y1** `/health` durumu, çalışan sürüm, son migration revizyonu — `surum_kapisi.py` zaten head'i biliyor, göstergeye bağlanacak
 - [ ] **Y2** *(F6'ya ertelendi)* Son 24 saatteki 5xx sayısı — `gunluk.py`'nin JSON log'undan. *Not: log kalıcı değilse ayrı bir sayaç gerekiyor; kalemi açmadan önce karar ver*
-- [ ] **Y3** *(F3'e bağlı)* Açık YEDAM başvurusu sayısı + en eski başvurunun yaşı — **F3'e bağımlı**, tablo yok
+- [x] **Y3** Açık YEDAM başvurusu sayısı + en eskisinin yaşı — ✅ `F4/4` + en eski başvurunun yaşı — **F3'e bağımlı**, tablo yok
 - [x] **Y4** Ekran süresi trendi (§5.1 "ortalama günlük ekran süresi, **trend**") — şu an yalnızca ortalama var
 
 ### 1.2 Hesap yönetimi (§5.2) — hiçbiri yazılmadı
@@ -122,25 +122,27 @@ turu kalan tek kalem (aşağıda).
 
 ---
 
-## 3. F4 · PUAN VE ÖDÜL — açık
+## 3. F4 · PUAN VE ÖDÜL — ✅ KAPANDI (21 Ağu 2026)
 
 **Bitiş ölçütü:** panelden verilen puan telefonda görünüyor; bir kupon
 teslimatı uçtan uca işaretleniyor.
 
-> **Dikkat:** `CLAUDE.md` §12 K56 `puan_duzeltme` tablosunu ve `GECIS_9_10`'u
-> **karar olarak** yazıyor; kod hâlâ **Room sürüm 9**. Karar yazılı, kod yok —
-> K56'yı okuyup "yapılmış" sanma.
+**Kapanış commit'leri:** `4ea2297` (F4/1 sunucu) · `fc61840` (F4/2 cihaz,
+Room 10) · `e838a7c` (F4/3 ödül stoğu).
 
-- [ ] **P1** Sunucu: `puan_duzeltme` tablosu + `POST /yonetim/kullanici/{id}/puan-duzeltme`. Gerekçe **en az 20 karakter**, denetim kaydı zorunlu
-- [ ] **P2** Tek kullanımlık işlem anahtarı — **U2'nin istisnası**: CSRF genelde oturuma bağlı HMAC, puan düzeltme formu idempotency anahtarı taşır
-- [ ] **P3** `GET /puan/duzeltmeler` (cihaz ucu)
-- [ ] **P4** Cihaz: `puan_duzeltme` Room tablosu, **birincil anahtar sunucu id'si** (aynı delta iki kez uygulanamaz), `GECIS_9_10`, Room 10
-- [ ] **P5** Cihaz: `Tercihler.enYuksekToplamPuan` (**U6**) — ağaç evresi ve ödül kademesi `maxOf(guncel, enYuksek)` okur; bakiye güncel toplamı gösterir
-- [ ] **P6** `SenkronIstek.toplamPuan` alanı (**U7**) — §5.3'ün önizleme formu bugünkü şemayla yazılamıyor. Değer **bilgilendirici, otorite değil**; form bunu ekranda yazar (A13 aynen geçerli)
-- [ ] **P7** Bildirim dili: *"Puanında bir düzeltme yapıldı: −120. Gerekçe: …"* — "ceza" kelimesi geçmez, emir kipi yok
-- [ ] **P8** `odul_stok` + `odul_teslimat` tabloları; `GET/POST /yonetim/odul/stok`, `/teslimat`
-- [ ] **P9** **K28 kapısının stoğa bağlanması** (§5.4 kararı): parti yüklenince kademe otomatik açılır, stok bitince kapanır. `MADDI_ODUL_TESLIMATI_ETKIN` sabiti → `ozellik_bayragi`. A4'ün teknik ayağı burada kapanıyor
-- [ ] **P10** Teslimat durumu `bekliyor` → `gönderildi` → `teslim edildi`
+K56'nın "Room 10, GECIS_9_10" kararı artık gerçekten kodda. **A4'ün teknik
+ayağı çözüldü:** kapı stoğun kendisi. Finansman ayağı Yeşilay'da.
+
+- [x] **P1** Sunucu: `puan_duzeltme` tablosu + `POST /yonetim/kullanici/{id}/puan-duzeltme`. Gerekçe **en az 20 karakter**, denetim kaydı zorunlu
+- [x] **P2** Tek kullanımlık işlem anahtarı — **U2'nin istisnası**: CSRF genelde oturuma bağlı HMAC, puan düzeltme formu idempotency anahtarı taşır
+- [x] **P3** `GET /puan/duzeltmeler` (cihaz ucu)
+- [x] **P4** Cihaz: `puan_duzeltme` Room tablosu, **birincil anahtar sunucu id'si** (aynı delta iki kez uygulanamaz), `GECIS_9_10`, Room 10
+- [x] **P5** Cihaz: `Tercihler.enYuksekToplamPuan` (**U6**) — ağaç evresi ve ödül kademesi `maxOf(guncel, enYuksek)` okur; bakiye güncel toplamı gösterir
+- [x] **P6** `SenkronIstek.toplamPuan` alanı (**U7**) — §5.3'ün önizleme formu bugünkü şemayla yazılamıyor. Değer **bilgilendirici, otorite değil**; form bunu ekranda yazar (A13 aynen geçerli)
+- [x] **P7** Bildirim dili: *"Puanında bir düzeltme yapıldı: −120. Gerekçe: …"* — "ceza" kelimesi geçmez, emir kipi yok
+- [x] **P8** `odul_stok` + `odul_teslimat` tabloları; `GET/POST /yonetim/odul/stok`, `/teslimat`
+- [x] **P9** **K28 kapısının stoğa bağlanması** (§5.4 kararı): parti yüklenince kademe otomatik açılır, stok bitince kapanır. `MADDI_ODUL_TESLIMATI_ETKIN` sabiti → `ozellik_bayragi`. A4'ün teknik ayağı burada kapanıyor
+- [x] **P10** Teslimat durumu `bekliyor` → `gönderildi` → `teslim edildi`
 
 ---
 
@@ -182,7 +184,7 @@ M8 F2 turunda yazıldı; kalan dokuz kalem F3–F5'e bağlı.
 - [x] **M4** Başvuru durumu ekranı — durum sunucudan, **uydurma durum yok** (K37)
 - [x] **M5** "Verilerine kim baktı" ekranı — Profil › Gizlilik
 - [x] **M6** Rızayı geri çekme — tek dokunuş + onay
-- [ ] **M7** Puan düzeltmesini çekme ve gösterme — F4/P4 ile aynı iş
+- [x] **M7** Puan düzeltmesini çekme ve gösterme — F4/P4 ile aynı iş
 - [x] **M8** Askıya alınmış hesap ekranı — ✅ `ef1ac18`. 403 + `hesap_askida` bir OkHttp interceptor'ında tek yerde yakalanıyor; ekran gezinmenin üstünde
 - [ ] **M9** Bakım modu ekranı — 503 + bakım gövdesi
 - [x] **M10** `Tercihler.beyanYas` (= D1) — onboarding'de sorulan yaş kalıcı hâle gelir
@@ -249,3 +251,8 @@ Kod tarafı tamam ve testlerle örtülü, ama **bu tur hiç koşulmadı**:
       mevcut bir migration)
 - [ ] **G9** Yedek + geri yükleme tatbikatı — plan §15 bunu F3 ile birlikte
       istiyor; danışman notu açılmadan önce şart
+- [ ] **V7** Puan düzeltmesi telefonda: panelden −120 → bildirim defterinde
+      "düzeltme" görünsün, bakiye düşsün, **ağaç evresi ve ödül kademesi geri
+      gitmesin** (U6'nın asıl sınandığı yer)
+- [ ] **V8** Ödül stoğu: panelden parti yükle → telefonda kademe açılsın →
+      seç → panelde teslimat "bekliyor" görünsün
