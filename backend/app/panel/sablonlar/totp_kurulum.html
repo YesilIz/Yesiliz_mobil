@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>İki adımlı kurulum · Yeşilİz Panel</title>
+  <link rel="stylesheet" href="/statik/panel.css">
+</head>
+<body class="giris-sayfa">
+  <main class="giris-kart">
+    <div class="marka">
+      <span class="marka-ad">Yeşilİz</span>
+      <span class="marka-alt">panel</span>
+    </div>
+
+    <h2>İki adımlı doğrulamayı kur</h2>
+    <p class="serit serit-uyari">
+      Bu hesapta ikinci faktör tanımlı değil. Kurmadan panele giremezsin.
+    </p>
+
+    {% if hata %}<p class="serit serit-kritik">{{ hata }}</p>{% endif %}
+
+    <p class="yardim" style="margin-top:0">
+      Doğrulayıcı uygulamana (Google Authenticator, Microsoft Authenticator)
+      aşağıdaki sırrı ya da bağlantıyı elle ekle, sonra ürettiği kodu gir.
+    </p>
+
+    <p><strong>Sır</strong></p>
+    <p class="tek-satir">{{ sir }}</p>
+
+    <p><strong>Bağlantı</strong></p>
+    <p class="tek-satir">{{ uri }}</p>
+
+    <form method="post" action="/oturum/totp-kur">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <input type="hidden" name="sir" value="{{ sir }}">
+      <div class="alan">
+        <label for="kod">Doğrulayıcının verdiği kod</label>
+        <input id="kod" name="kod" class="kod-alani" type="text"
+               inputmode="numeric" autocomplete="one-time-code"
+               maxlength="10" required autofocus>
+      </div>
+      <button type="submit">Kurulumu tamamla</button>
+    </form>
+  </main>
+</body>
+</html>

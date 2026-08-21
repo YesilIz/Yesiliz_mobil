@@ -78,6 +78,33 @@ class BildirimDeposu @Inject constructor(
         govde = "$dakika dakikadır aralıksız ekrandasın. Kısa bir ara iyi gelebilir.",
     )
 
+    /**
+     * Panelden yapılan puan düzeltmesi (K56).
+     *
+     * **Dil bilinçli:** "ceza" kelimesi geçmiyor, emir kipi ve suçlayıcı
+     * ton yok (§4 "Emir kipi / korkutma"). Gerekçe olduğu gibi
+     * gösteriliyor — gerekçesiz bir düşürme, kuralın yasakladığı cezanın
+     * ta kendisi olurdu.
+     *
+     * `birKezGunde` **kullanılmıyor**: aynı gün birden çok düzeltme
+     * yapılabilir ve her biri kullanıcının görmesi gereken ayrı bir
+     * karar. Tekrar koruması `puan_duzeltme.bildirildi` bayrağında.
+     */
+    suspend fun puanDuzeltildi(delta: Int, gerekce: String) = yaz(
+        tur = BildirimTuru.DUZELTME,
+        baslik = "Puanında bir düzeltme yapıldı",
+        govde = "${if (delta > 0) "+" else ""}$delta puan. Gerekçe: $gerekce",
+    )
+
+    /**
+     * Panelden yayımlanan duyuru (§5.6).
+     *
+     * `birKezGunde` kullanılmıyor: aynı gün birden çok duyuru
+     * yayımlanabilir. Tekrar koruması `Tercihler.sonDuyuruId`'de.
+     */
+    suspend fun duyuru(baslik: String, metin: String) =
+        yaz(BildirimTuru.DUYURU, baslik, metin)
+
     suspend fun hatirlatma(baslik: String, govde: String) =
         yaz(BildirimTuru.HATIRLATMA, baslik, govde)
 

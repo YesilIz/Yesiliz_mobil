@@ -1,14 +1,17 @@
 package tr.org.yesilay.yesiliz.data.depo
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import androidx.room.withTransaction
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.yerel.YesilizDb
 import tr.org.yesilay.yesiliz.data.yerel.dao.GorevTamamlamaDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.PuanDuzeltmeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.PuanDuzeltmeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.domain.gorev.DogrulamaTuru
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
@@ -37,11 +40,49 @@ class PuanDeposu @Inject constructor(
     private val puanDao: PuanGunlukDao,
     private val ozetDao: GunlukOzetDao,
     private val tercihler: Tercihler,
+    private val duzeltmeDao: PuanDuzeltmeDao,
     private val saat: Clock,
 ) {
 
-    val toplamPuan: Flow<Int> = puanDao.toplamPuanAkisi()
+    /**
+     * Görevlerden kazanılan puan **artı** panelden yapılan düzeltmeler (K56).
+     *
+     * Düzeltme ayrı bir tabloda çünkü `gunuYenidenHesaplaIc` her koşumda
+     * `puan_gunluk`'u eziyor; toplama burada, okuma anında ekleniyor.
+     */
+    val toplamPuan: Flow<Int> =
+        combine(puanDao.toplamPuanAkisi(), duzeltmeDao.toplamDeltaAkisi()) { kazanc, delta ->
+            // Bakiye negatife düşmüyor: "-40 puanın var" ekranı, K56'nın
+            // kaçınmak istediği ceza duygusunun ta kendisi olurdu.
+            (kazanc + delta).coerceAtLeast(0)
+        }
+
+    /**
+     * Ağaç evresi ve ödül kademesinin okuduğu değer (U6).
+     *
+     * **Kazanılmış geri alınmıyor:** güncel toplam ile şimdiye kadarki en
+     * yüksek toplamın büyüğü. Bir düşürme bakiyeyi değiştiriyor ama ağacı
+     * kurutmuyor (K2) ve kademeyi geri almıyor (K28).
+     */
+    val kazanilmisPuan: Flow<Int> =
+        combine(toplamPuan, tercihler.enYuksekToplamPuan) { guncel, enYuksek ->
+            maxOf(guncel, enYuksek)
+        }
+
     val aktifGunSayisi: Flow<Int> = puanDao.aktifGunAkisi()
+
+    /** Panelden gelen düzeltmeler — Profil'de gösteriliyor. */
+    val duzeltmeler: Flow<List<PuanDuzeltmeEntity>> = duzeltmeDao.hepsiAkisi()
+
+    /**
+     * Yüksek-su-seviyesini tazeler.
+     *
+     * Puan yazan her yoldan sonra çağrılıyor. `Tercihler` yalnızca
+     * yükseltiyor, yani sıralama yarışında bile değer geri gitmiyor.
+     */
+    suspend fun kazanilmisiTazele() {
+        tercihler.enYuksekPuaniGuncelle(toplamPuan.first())
+    }
 
     fun gununGorevleri(tarih: LocalDate): Flow<List<GorevTamamlamaEntity>> =
         gorevDao.gununAkisi(tarih)

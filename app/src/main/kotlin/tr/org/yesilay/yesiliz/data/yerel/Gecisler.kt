@@ -200,6 +200,33 @@ val GECIS_7_8 = object : Migration(7, 8) {
  * (kopyala → sil → yeniden adlandır); Room'un beklediği şema ile birebir
  * aynı olmalı, yoksa açılışta doğrulama hatası verir.
  */
+/**
+ * Puan düzeltmesi tablosu (`CLAUDE.md §12 K56`).
+ *
+ * **Niçin ayrı tablo:** `PuanDeposu.gunuYenidenHesaplaIc` her koşumda
+ * `puan_gunluk` satırını `@Upsert` ile eziyor; düzeltmeyi oraya yazmak
+ * bir sonraki gecelik işte kaybolması demekti.
+ *
+ * Birincil anahtar **sunucu id'si**: aynı düzeltmenin ikinci kez
+ * indirilmesi no-op. Bir deltayı iki kez uygulamak geri dönülemez.
+ */
+val GECIS_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `puan_duzeltme` (
+                `id` INTEGER NOT NULL,
+                `delta` INTEGER NOT NULL,
+                `gerekce` TEXT NOT NULL,
+                `zaman` INTEGER NOT NULL,
+                `bildirildi` INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent(),
+        )
+    }
+}
+
 val GECIS_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -243,4 +270,5 @@ val TUM_GECISLER = arrayOf(
     GECIS_6_7,
     GECIS_7_8,
     GECIS_8_9,
+    GECIS_9_10,
 )

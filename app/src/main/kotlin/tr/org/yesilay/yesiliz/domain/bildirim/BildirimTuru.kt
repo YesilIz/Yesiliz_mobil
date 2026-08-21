@@ -25,6 +25,23 @@ enum class BildirimTuru(val anahtar: String) {
     HATIRLATMA("hatirlatma"),
 
     /**
+     * Panelden yapılan puan **düzeltmesi** (CLAUDE.md §12 K56).
+     *
+     * "Ceza" değil "düzeltme": kullanıcı gerekçeyi okuyor, suçlayıcı dil
+     * ve emir kipi yok (§4). Ayrı bir tür çünkü [PUAN]'dan farklı bir
+     * şey söylüyor — o kazanç, bu bir insanın kararı.
+     */
+    DUZELTME("duzeltme"),
+
+    /**
+     * Panelden yayımlanan duyuru (`docs/panel-plani.md §5.6`).
+     *
+     * **Push değil:** senkronla iniyor, kullanıcı uygulamayı açtığında
+     * defterde görüyor.
+     */
+    DUYURU("duyuru"),
+
+    /**
      * Eski sürümün sahte “gönderildi” kaydını okuyabilmek için korunur.
      * Yeni kayıt üretilmez; 7→8 geçişi var olanları temizler.
      */

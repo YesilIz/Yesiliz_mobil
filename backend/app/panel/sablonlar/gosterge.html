@@ -1,0 +1,135 @@
+{% extends "taban.html" %}
+{% block baslik %}Gösterge · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Gösterge</h1>
+
+  <div class="kart">
+    <h2>Kullanıcılar</h2>
+    <div class="olcum-satiri">
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.kullanici_sayisi }}</span>
+        <span class="olcum-etiket">kayıtlı hesap</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.aktif_7 }}</span>
+        <span class="olcum-etiket">son 7 günde sinyal</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.aktif_30 }}</span>
+        <span class="olcum-etiket">son 30 günde sinyal</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.lig_katilimi }}</span>
+        <span class="olcum-etiket">lige katılan</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.ebeveyn_eslesmesi }}</span>
+        <span class="olcum-etiket">ebeveyn eşleşmesi</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.askidaki_hesap }}</span>
+        <span class="olcum-etiket">askıdaki hesap</span>
+      </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.acik_yedam }}</span>
+        <span class="olcum-etiket">
+          açık YEDAM başvurusu
+          {%- if g.en_eski_yedam_gun is not none %}
+            · en eskisi {{ g.en_eski_yedam_gun }} gün
+          {%- endif %}
+        </span>
+      </div>
+    </div>
+    <p class="yardim">
+      Sinyal sayısı yalnızca <strong>Yeşilay ile paylaşım onayı veren</strong>
+      kullanıcıları kapsıyor; onay kapalıyken cihaz sunucuya hiçbir şey
+      göndermiyor. Toplam aktiflik bundan yüksek olabilir.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Risk bandı dağılımı</h2>
+    {% if g.bant_toplami %}
+      {{ bant_grafigi }}
+      <div class="gosterge-anahtari">
+        {% for kod, etiket in bantlar %}
+          <span class="anahtar">
+            <span class="anahtar-kutu" data-bant="{{ kod }}"></span>
+            {{ etiket }} · {{ g.bant_dagilimi[kod] }} (%{{ g.bant_yuzdesi(kod) }})
+          </span>
+        {% endfor %}
+      </div>
+      <p class="yardim">
+        Son {{ pencere_gun }} gün · kullanıcı başına en son hesaplanmış bant.
+        Ölçümü yetersiz günler sayılmıyor; {{ g.bandi_olmayan }} kullanıcının
+        bu pencerede hesaplanmış bandı yok.
+      </p>
+    {% else %}
+      <p class="bos-durum">
+        Bu pencerede hesaplanmış risk bandı yok.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>Kullanım</h2>
+    <div class="olcum-satiri">
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.ortalama_ekran_dk }}</span>
+        <span class="olcum-etiket">ort. günlük ekran (dk)</span>
+      </div>
+    </div>
+    <p class="yardim">
+      Son {{ pencere_gun }} günün paylaşılan özetlerinden. Ölçümü sıfır olan
+      günler ortalamaya girmiyor.
+      {% set fark = g.ekran_farki_dk %}
+      {% if fark is none %}
+        Önceki {{ pencere_gun }} günde karşılaştırılacak ölçüm yok.
+      {% elif fark == 0 %}
+        Önceki {{ pencere_gun }} güne göre değişmedi.
+      {% else %}
+        Önceki {{ pencere_gun }} güne göre
+        <strong>{{ fark if fark > 0 else -fark }} dk
+        {{ "arttı" if fark > 0 else "azaldı" }}</strong>.
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Sistem</h2>
+    <table>
+      <tr><th>Sürüm</th><td>{{ surum }}</td></tr>
+      <tr><th>Şema revizyonu (kod)</th><td>{{ revizyon }}</td></tr>
+      <tr>
+        <th>Şema revizyonu (veritabanı)</th>
+        <td>
+          {% if not db_revizyonu %}
+            <span class="cip cip-uyari">okunamadı</span>
+          {% elif db_revizyonu == revizyon %}
+            <span class="cip">{{ db_revizyonu }}</span>
+          {% else %}
+            <span class="cip cip-kritik">{{ db_revizyonu }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th>Veritabanı</th><td><span class="cip">bağlı</span></td></tr>
+    </table>
+    {# Hata sayacı BURADA GÖSTERİLMİYOR: panel API'den ayrı bir süreç ve
+       gunluk.py sayacı tutmuyor, log akışı sağlayıcıda. Uydurma bir "0
+       hata" yazmak, tam da paneli güvenilmez kılacak şey (CLAUDE.md §4). #}
+    {% if db_revizyonu and db_revizyonu != revizyon %}
+      <div class="serit serit-kritik">
+        Veritabanı şeması koddan farklı. Panel migration koşturmuyor — API
+        servisi açılışta koşturuyor. Dağıtım yarım kalmış olabilir;
+        gösterge sayıları güvenilmez.
+      </div>
+    {% endif %}
+    <p class="yardim">
+      İstek ve hata günlükleri sağlayıcının log akışında; panel onları
+      okumuyor. Son 24 saatteki 5xx sayacı F6'ya (izleme ve alarm) bırakıldı:
+      log kalıcı değil ve uydurma bir "0 hata" yazmak paneli güvenilmez
+      kılardı.
+    </p>
+  </div>
+{% endblock %}

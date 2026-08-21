@@ -1,0 +1,163 @@
+{% extends "taban.html" %}
+{% block baslik %}Personel · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Personel</h1>
+
+  {% if gecici_sifre %}
+    <div class="serit serit-uyari">
+      <strong>{{ yeni_personel.eposta }} için geçici parola:</strong>
+      <div class="kod-alani">{{ gecici_sifre }}</div>
+      Bu parola <strong>bir daha gösterilmeyecek</strong> — veritabanında
+      yalnızca özeti duruyor. Kurumsal bir kanaldan ilet. Personel ilk
+      girişte hem parolasını değiştirecek hem iki adımlı doğrulamayı
+      kuracak; ikisi de atlanamıyor.
+    </div>
+  {% endif %}
+
+  <div class="kart">
+    <h2>Yeni personel</h2>
+    <form method="post" action="/yonetim/personel">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>E-posta</span>
+        <input type="email" name="eposta" required autocomplete="off">
+      </label>
+      <label class="alan">
+        <span>Ad Soyad</span>
+        <input type="text" name="ad" required autocomplete="off">
+      </label>
+      <label class="alan">
+        <span>Rol</span>
+        <select name="rol" required>
+          {% for deger, etiket in roller %}
+            <option value="{{ deger }}">{{ etiket }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Hesabı aç ve geçici parola üret</button>
+    </form>
+    <p class="yardim">
+      E-posta daveti gönderilmiyor: sistemde e-posta sağlayıcısı yok.
+      Geçici parolayı sen iletiyorsun.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Hesaplar</h2>
+    <div class="kaydir">
+      <table>
+        <thead>
+          <tr>
+            <th>Ad</th><th>E-posta</th><th>Rol</th><th>Durum</th>
+            <th>2FA</th><th>Son giriş</th><th>Denetim</th><th>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in satirlar %}
+            <tr>
+              <td>{{ s.ad }}{% if s.id == ben.id %} <span class="cip">sen</span>{% endif %}</td>
+              <td>{{ s.eposta }}</td>
+              <td>
+                {% if s.id == ben.id %}
+                  <span class="cip">{{ s.rol }}</span>
+                {% else %}
+                  <form method="post" action="/yonetim/personel/{{ s.id }}/rol">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <select name="rol" onchange="this.form.requestSubmit()">
+                      {% for deger, etiket in roller %}
+                        <option value="{{ deger }}"
+                          {% if s.rol == deger %}selected{% endif %}>{{ etiket }}</option>
+                      {% endfor %}
+                    </select>
+                  </form>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.durum == "askida" %}
+                  <span class="cip cip-uyari">askıda</span>
+                {% else %}
+                  <span class="cip">aktif</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.totp_kurulu %}
+                  <span class="cip">kurulu</span>
+                {% else %}
+                  <span class="cip cip-uyari">kurulmadı</span>
+                {% endif %}
+                {% if s.parola_bekliyor %}
+                  <span class="cip cip-uyari">parola bekliyor</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.son_giris %}{{ s.son_giris.strftime("%d.%m.%Y %H:%M") }}{% else %}—{% endif %}
+              </td>
+              <td>{{ s.denetim_sayisi }}</td>
+              <td>
+                {% if s.id != ben.id %}
+                  <form method="post" action="/yonetim/personel/{{ s.id }}/durum">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <input type="hidden" name="durum"
+                           value="{{ 'aktif' if s.durum == 'askida' else 'askida' }}">
+                    <button type="submit">
+                      {{ "Geri aç" if s.durum == "askida" else "Askıya al" }}
+                    </button>
+                  </form>
+                  <form method="post" action="/yonetim/personel/{{ s.id }}/sifre-sifirla">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <button type="submit">Parolayı sıfırla</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="yardim">
+      Personel <strong>silinmiyor, askıya alınıyor</strong>: denetim kaydı
+      personele bağlı ve silinemez olmalı. Ayrılan personelin satırları
+      kimin ne yaptığını okunabilir tutuyor.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Kendi açık oturumların</h2>
+    {% if oturumlar %}
+      <div class="kaydir">
+        <table>
+          <thead>
+            <tr><th>Başlangıç</th><th>Son erişim</th><th>IP</th><th>Tarayıcı</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for o in oturumlar %}
+              <tr>
+                <td>{{ o.olusturma.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td>{{ o.son_erisim.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td>{{ o.ip }}</td>
+                <td>{{ o.tarayici }}</td>
+                <td>
+                  {% if o.bu_oturum %}
+                    <span class="cip">bu cihaz</span>
+                  {% else %}
+                    <form method="post" action="/yonetim/oturum/{{ o.id }}/dusur">
+                      <input type="hidden" name="_csrf" value="{{ csrf }}">
+                      <button type="submit">Kapat</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="yardim">
+        Dizüstünü kaybettiysen buradaki oturumu kapat; o cihazdaki panel
+        bir sonraki istekte giriş ekranına düşer.
+      </p>
+    {% else %}
+      <p class="bos-durum">Açık oturum yok.</p>
+    {% endif %}
+  </div>
+{% endblock %}

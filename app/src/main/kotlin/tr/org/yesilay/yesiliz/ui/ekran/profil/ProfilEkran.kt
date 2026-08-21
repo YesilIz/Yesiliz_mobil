@@ -129,6 +129,7 @@ import androidx.compose.runtime.setValue
 fun ProfilEkran(
     onGeri: () -> Unit,
     onEbeveyn: () -> Unit,
+    onYedamGizlilik: () -> Unit,
     onGunlukHedef: () -> Unit,
     onKategoriler: () -> Unit,
     onAnketYenile: () -> Unit,
@@ -298,6 +299,17 @@ fun ProfilEkran(
                     etiket = "Ligde görün",
                     acik = durum.ligdeGorun,
                     onDegis = viewModel::ligdeGorun,
+                )
+                KartAyraci()
+                // YEDAM rızası **ayrı bir kapı** (K19 ailesi): yukarıdaki
+                // "Yeşilay ile paylaşım" onu açmıyor, o da bunu. Bu yüzden
+                // anahtar değil, kendi ekranına giden bir satır — geri
+                // çekme onay istiyor ve erişim kaydı da orada.
+                AyarSatiri(
+                    Icons.Filled.Visibility,
+                    "YEDAM ve verilerin",
+                    altMetin = "Kim baktı, rızanı geri çek",
+                    onTikla = onYedamGizlilik,
                 )
             }
 

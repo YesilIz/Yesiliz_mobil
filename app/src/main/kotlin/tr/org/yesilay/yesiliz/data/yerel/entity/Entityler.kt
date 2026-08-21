@@ -385,3 +385,28 @@ data class OdulSecimiEntity(
     val secenekId: String,
     val tarih: LocalDate,
 )
+
+
+/**
+ * Panelden yapılmış puan düzeltmesi (`CLAUDE.md §12 K56`).
+ *
+ * **Ayrı tablo olmasının sebebi:** `PuanDeposu.gunuYenidenHesaplaIc` her
+ * koşumda `puan_gunluk` satırını `@Upsert` ile eziyor. Düzeltmeyi oraya
+ * yazmak, bir sonraki gecelik işte kaybolması demekti.
+ *
+ * **Birincil anahtar sunucu id'si.** Aynı düzeltmenin ikinci kez
+ * indirilmesi no-op oluyor; bir deltayı iki kez uygulamak geri dönülemez
+ * bir kullanıcı zararı ve koruma tek bir bayrağa bırakılamaz.
+ */
+@Entity(tableName = "puan_duzeltme")
+data class PuanDuzeltmeEntity(
+    /** Sunucudaki `puan_duzeltme.id` — tekrar koruması bu. */
+    @PrimaryKey val id: Int,
+    /** Pozitif ekler, negatif düşürür. */
+    val delta: Int,
+    /** Kullanıcıya **gösteriliyor**; gerekçesiz düzeltme "ceza" olurdu. */
+    val gerekce: String,
+    val zaman: Instant,
+    /** Bildirim defterine yazıldı mı? Aynı düzeltme iki kez bildirilmesin. */
+    val bildirildi: Boolean = false,
+)

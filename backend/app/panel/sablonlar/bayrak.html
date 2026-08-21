@@ -1,0 +1,64 @@
+{% extends "taban.html" %}
+{% block baslik %}Özellik bayrakları · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Özellik bayrakları</h1>
+
+  <p class="yardim">
+    Bayrak tanımları <strong>kodda</strong> (<code>app/bayraklar.py</code>);
+    buradan yalnızca değerleri eziliyor. Serbest bir anahtar alanı, yazım
+    hatasıyla sessizce varsayılana düşen ve kimsenin fark etmediği bir bayrak
+    üretirdi. Tabloda satır yoksa varsayılan geçerli.
+  </p>
+
+  {% for b, deger in bayraklar %}
+    <div class="kart">
+      <h2>{{ b.anahtar }}</h2>
+      <p class="yardim">{{ b.aciklama }}</p>
+      <table>
+        <tr><th>Etkin değer</th><td><span class="cip">{{ deger }}</span></td></tr>
+        <tr><th>Varsayılan</th><td>{{ b.varsayilan }}</td></tr>
+      </table>
+
+      <form method="post" action="/yonetim/bayrak">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <input type="hidden" name="anahtar" value="{{ b.anahtar }}">
+        <label class="alan">
+          <span>Yeni değer</span>
+          <select name="deger" required>
+            {% for secenek in b.secenekler %}
+              <option value="{{ secenek }}"
+                {% if secenek == deger %}selected{% endif %}>{{ secenek }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="alan">
+          <span>Gerekçe (en az 20 karakter)</span>
+          <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+        </label>
+        <button type="submit">Değiştir</button>
+      </form>
+    </div>
+  {% endfor %}
+
+  <div class="kart">
+    <h2>Risk motoru sabitleri</h2>
+    <div class="serit serit-bilgi">
+      <strong>Bunlar buradan değiştirilemez.</strong> Skorlama cihazda ve
+      <code>core-risk</code> referans Python ile birebir doğrulanmış durumda;
+      sunucudan sabit dağıtmak o doğrulamayı bozardı
+      (<code>CLAUDE.md</code> §12 K17). Aşağıdaki değerler
+      <strong>bilgi amaçlı</strong> — otorite cihazın kendi derlemesi.
+    </div>
+    <div class="kaydir">
+      <table>
+        <thead><tr><th>Sabit</th><th>Değer</th><th>Ne işe yarıyor</th></tr></thead>
+        <tbody>
+          {% for ad, deger, aciklama in risk_sabitleri %}
+            <tr><td><code>{{ ad }}</code></td><td>{{ deger }}</td><td>{{ aciklama }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

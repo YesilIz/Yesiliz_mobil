@@ -11,6 +11,10 @@ import dagger.assisted.AssistedInject
 import tr.org.yesilay.yesiliz.data.depo.BildirimDeposu
 import tr.org.yesilay.yesiliz.data.depo.KullanimDeposu
 import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
+import tr.org.yesilay.yesiliz.data.depo.BilgiDeposu
+import tr.org.yesilay.yesiliz.data.depo.DuyuruDeposu
+import tr.org.yesilay.yesiliz.data.depo.PuanDuzeltmeDeposu
+import tr.org.yesilay.yesiliz.data.depo.YedamDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
 import tr.org.yesilay.yesiliz.data.depo.RiskDeposu
 import tr.org.yesilay.yesiliz.data.kullanim.KullanimIzni
@@ -65,6 +69,10 @@ class GunlukOzetWorker @AssistedInject constructor(
     private val olayDao: KullanimOlayDao,
     private val bildirimDeposu: BildirimDeposu,
     private val senkronDeposu: SenkronDeposu,
+    private val yedamDeposu: YedamDeposu,
+    private val puanDuzeltmeDeposu: PuanDuzeltmeDeposu,
+    private val bilgiDeposu: BilgiDeposu,
+    private val duyuruDeposu: DuyuruDeposu,
     private val tercihler: tr.org.yesilay.yesiliz.data.tercih.Tercihler,
     private val saat: Clock,
     private val isPlanlayici: IsPlanlayici,
@@ -161,6 +169,23 @@ class GunlukOzetWorker @AssistedInject constructor(
             // ağ kesintisinden sonra da sonunda uygulanmalı.
             senkronDeposu.ligGorunurlugunuSenkronEt()
             senkronDeposu.heartbeat()
+            // YEDAM sürükleyicileri **ayrı uçtan** gidiyor (M2, U1).
+            // `senkronEt` "Yeşilay ile paylaşım" rızasına bağlı ve o
+            // kapalıysa ilk satırda dönüyor; sürükleyicileri oraya
+            // eklemek, özelliği tam da korumak istediği kullanıcıda
+            // sessizce ölü bırakırdı. İki rıza bağımsız (K19).
+            //
+            // Rıza yoksa sunucu 403 dönüyor ve depo bunu beklenen durum
+            // sayıp sessizce geçiyor: her kullanıcının YEDAM rızası yok.
+            yedamDeposu.surukleyicileriGonder()
+            // Panelden yapılan puan düzeltmeleri (K56). Rıza kapısına
+            // bağlı değil: kullanıcının kendi bakiyesine yapılmış bir
+            // işlem, davranışsal veri değil.
+            puanDuzeltmeDeposu.senkronEt()
+            // İçerik ve duyuru (§5.5, §5.6). İkisi de rıza kapısının
+            // dışında: veri **indiriliyor**, gönderilmiyor.
+            bilgiDeposu.tazele()
+            duyuruDeposu.senkronEt()
 
             Result.success()
         } catch (iptal: CancellationException) {

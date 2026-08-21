@@ -159,6 +159,16 @@ class SenkronIstek(BaseModel):
     haftalikPuan: int = Field(default=0, ge=0, le=2000)
     # "Ligde görün" tercihi. None = değiştirme (eski istemciler).
     ligdeGorunur: bool | None = None
+    # Cihazın TOPLAM puanı — **bilgilendirici, otorite değil** (U7).
+    #
+    # Panelin puan düzeltme formu "mevcut toplam · delta · önizleme"
+    # gösteriyor ve o toplamı sunucu başka türlü bilemiyor: skoru da
+    # puanı da cihaz hesaplıyor (K17 ailesi). A13 aynen geçerli — sayı
+    # istemci beyanlı ve form bunu ekranda yazıyor.
+    #
+    # `None` = eski istemci; alanı sıfırla doldurmak "puanı yok" demek
+    # olurdu ve panel bunu yanlış okurdu (§9).
+    toplamPuan: int | None = Field(default=None, ge=0, le=1_000_000)
 
 
 class SenkronYanit(BaseModel):
@@ -251,3 +261,188 @@ class EbeveynOzetYanit(BaseModel):
     bant: str | None
     trend: str | None
     sonSinyalSaatOnce: int | None
+
+
+# --- YEDAM ---
+#
+# `docs/panel-plani.md §6` · rıza metni `docs/yedam-riza-metni-v1.md`.
+# Metnin sürümü isteğe **cihaz tarafından** konuyor: kullanıcı hangi metni
+# okuduysa onun sürümü kaydedilmeli. Sunucu kendi bildiği sürümü yazsaydı,
+# eski bir APK yeni metne rıza vermiş gibi görünürdü.
+
+
+class YedamBasvuruIstek(BaseModel):
+    metinSurumu: str = Field(min_length=1, max_length=20)
+    #: Kullanıcının onayladığı kapsam anahtarları.
+    kapsam: list[str] = Field(min_length=1, max_length=10)
+    iletisimTuru: Literal["telefon", "eposta"]
+    iletisimDegeri: str = Field(min_length=3, max_length=320)
+    kullaniciNotu: str = Field(default="", max_length=1000)
+    #: Beyan edilen yaş. `None` ise sunucu **reşit saymıyor** (K26, §9).
+    beyanYas: int | None = Field(default=None, ge=5, le=120)
+
+    @field_validator("iletisimDegeri", mode="before")
+    @classmethod
+    def temizle(cls, deger: object) -> object:
+        return deger.strip() if isinstance(deger, str) else deger
+
+
+class YedamBasvuruYanit(BaseModel):
+    basvuruId: int
+    durum: str
+    rizaSonGecerlilik: dt.datetime
+    #: 18 altı ve bağlı ebeveyn varsa onay bekleniyor.
+    ebeveynOnayiBekleniyor: bool = False
+
+
+class YedamDurumYanit(BaseModel):
+    """`GET /yedam/basvurum` — cihazın durum takibi.
+
+    Danışmanın adı **yok**: kullanıcıya "sana X atandı" demek, danışmanın
+    kimliğini başvuru daha görüşmeye dönüşmeden açardı.
+    """
+
+    basvuruId: int | None = None
+    durum: str = ""
+    olusturma: dt.datetime | None = None
+    rizaSonGecerlilik: dt.datetime | None = None
+    ebeveynOnayiBekleniyor: bool = False
+    #: Görüşme kayıtları — tür ve zaman, içerik yok.
+    temaslar: list["YedamTemasDto"] = Field(default_factory=list)
+
+
+class YedamTemasDto(BaseModel):
+    tur: str
+    zaman: dt.datetime
+
+
+class ErisimKaydiDto(BaseModel):
+    """"14 Ağustos 10:32'de bakıldı." Danışmanın adı taşınmıyor."""
+
+    zaman: dt.datetime
+    kapsam: str
+
+
+class SurukleyiciDto(BaseModel):
+    tarih: dt.date
+    faktor: str = Field(min_length=1, max_length=40)
+    #: 1 = en çok katkı yapan. Cihazdaki `surukleyiciler` listesinin sırası;
+    #: katkı DEĞERİ taşınmıyor (bkz. `modeller.RiskSurukleyici.sira`).
+    sira: int = Field(ge=1, le=10)
+
+
+class SurukleyiciIstek(BaseModel):
+    """
+    `POST /yedam/surukleyici` — **`/ozet`'ten AYRI uç** (U1).
+
+    `/ozet` "Yeşilay ile paylaşım" rızasına bağlı (K19) ve o kapalıysa
+    hiç çağrılmıyor; sürükleyicileri oraya eklemek, özelliği tam da
+    korumak istediği kullanıcıda sessizce ölü bırakırdı.
+    """
+
+    kayitlar: list[SurukleyiciDto] = Field(min_length=1, max_length=400)
+
+
+class AnketYanitDto(BaseModel):
+    tarih: dt.date
+    #: 10 maddenin Likert puanları. Ölçek birebir korunuyor (K12).
+    maddePuanlari: list[int] = Field(min_length=10, max_length=10)
+    hamPuan: float
+    rS: float
+
+    @field_validator("maddePuanlari")
+    @classmethod
+    def araligi_dogrula(cls, deger: list[int]) -> list[int]:
+        if any(p < 1 or p > 6 for p in deger):
+            raise ValueError("SAS-SV maddeleri 1-6 aralığında olmalı")
+        return deger
+
+
+class YedamGecmisIstek(BaseModel):
+    """Rıza anındaki tek seferlik yükleme — sürükleyici + anket geçmişi."""
+
+    surukleyiciler: list[SurukleyiciDto] = Field(default_factory=list, max_length=400)
+    anketler: list[AnketYanitDto] = Field(default_factory=list, max_length=50)
+
+
+class EbeveynYedamOnayIstek(BaseModel):
+    rizaId: int
+    onay: bool
+
+
+# --- puan düzeltmesi (K56) ---
+
+
+class PuanDuzeltmeDto(BaseModel):
+    """
+    Panelden yapılmış tekil düzeltme.
+
+    `id` **sunucu id'si** ve cihazda birincil anahtar oluyor: aynı
+    deltanın iki kez uygulanması fiziksel olarak imkânsız kalsın diye.
+
+    Personelin adı taşınmıyor: kullanıcıya kimin yaptığı değil, ne
+    yapıldığı ve niçin söyleniyor.
+    """
+
+    id: int
+    delta: int
+    gerekce: str
+    zaman: dt.datetime
+
+
+class OdulKademeDurumuDto(BaseModel):
+    """
+    Bir ödül seçeneğinin **şu anki** seçilebilirliği (K28, A4).
+
+    Kapı stoğun kendisi: parti yüklenince açılıyor, bitince kapanıyor.
+    Cihaz bunu seçim ekranını çizmeden önce soruyor — kapalı bir seçeneği
+    sunup 503 ile reddetmek, olmayan bir eylemi sunmak olurdu (§4).
+    """
+
+    kademeId: str
+    secenekId: str
+    acik: bool
+
+
+# --- içerik ve duyuru (§5.5, §5.6) ---
+
+
+class BilgiYazisiDto(BaseModel):
+    """
+    Bilgi bankası yazısı — cihazdaki `assets/bilgi_bankasi.json` ile
+    **aynı alan adları**, çünkü aynı `BilgiBankasi.coz` çözümlemesinden
+    geçiyorlar. Gömülü set çevrimdışı yedek olarak kalıyor (S5).
+    """
+
+    id: str
+    baslik: str
+    ozet: str
+    kategori: str
+    okumaDk: int
+    #: Paragraflar. Cihazdaki JSON'da da liste.
+    govde: list[str]
+
+
+class BilgiBankasiYanit(BaseModel):
+    """
+    `GET /icerik/bilgi-bankasi`.
+
+    `surum` cihazın önbelleğini geçersiz kılmak için: değişmediyse cihaz
+    gövdeyi yeniden çözümlemiyor. "Hangi sürümü gördü" sorusunun cevabı
+    da bu (§5.5'in kabul edilmiş bedeli).
+    """
+
+    surum: int
+    yazilar: list[BilgiYazisiDto]
+
+
+class DuyuruDto(BaseModel):
+    """
+    Uygulama içi duyuru. **FCM yok** — senkronla iniyor, kullanıcı
+    uygulamayı açtığında bildirim defterinde görüyor (§5.6).
+    """
+
+    id: int
+    baslik: str
+    metin: str
+    yayinZamani: dt.datetime

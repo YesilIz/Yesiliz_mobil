@@ -91,6 +91,10 @@ interface YesilizApi {
     @GET("odul/secimlerim")
     suspend fun odulSecimlerim(): List<OdulSecimiDto>
 
+    /** Hangi kademe/seçenek şu an seçilebilir? Kimlik istemiyor. */
+    @GET("odul/durum")
+    suspend fun odulDurumlari(): List<OdulKademeDurumuDto>
+
     // --- ebeveyn ---
 
     @POST("ebeveyn/kod")
@@ -104,4 +108,59 @@ interface YesilizApi {
 
     @GET("ebeveyn/ozet")
     suspend fun ebeveynOzeti(): EbeveynOzetDto
+
+    /** 18 altı çocuğun YEDAM başvurusuna eşleşmiş ebeveynin onayı. */
+    @POST("ebeveyn/yedam-onay")
+    suspend fun yedamOnayi(@Body istek: EbeveynYedamOnayIstek): Map<String, String>
+
+    // --- içerik ve duyuru (§5.5, §5.6) ---
+
+    /**
+     * Bilgi bankası. **Kimlik istemiyor** — misafir kullanıcı da okuyor.
+     *
+     * Boş liste dönerse cihaz gömülü sete düşüyor (S5): sunucuda içerik
+     * yokken boş bir banka göstermek, var olan bir özelliği yok gibi
+     * sunmak olurdu.
+     */
+    @GET("icerik/bilgi-bankasi")
+    suspend fun bilgiBankasi(): BilgiBankasiYanit
+
+    /** `sonrasi`'ndan büyük id'ler — aynı duyuru iki kez bildirilmesin. */
+    @GET("icerik/duyuru")
+    suspend fun duyurular(@Query("sonrasi") sonrasi: Int): List<DuyuruDto>
+
+    // --- puan düzeltmesi (K56) ---
+
+    /**
+     * Panelden yapılmış düzeltmeler.
+     *
+     * Rıza kapısına bağlı **değil** (K19 istisnası): davranışsal veri
+     * değil, kullanıcının kendi bakiyesine yapılmış işlem.
+     */
+    @GET("puan/duzeltmeler")
+    suspend fun puanDuzeltmeleri(): List<PuanDuzeltmeDto>
+
+    // --- YEDAM ---
+
+    @POST("yedam/basvuru")
+    suspend fun yedamBasvur(@Body istek: YedamBasvuruIstek): YedamBasvuruYanit
+
+    @GET("yedam/basvurum")
+    suspend fun yedamDurumu(): YedamDurumYanit
+
+    /** Erişim **aynı saniyede** kesilir, rıza kapsamındaki veri silinir. */
+    @DELETE("yedam/riza")
+    suspend fun yedamRizasiniGeriCek(): Map<String, String>
+
+    /** Şeffaflık kaydı — rıza geri çekilse de okunabiliyor. */
+    @GET("yedam/erisim-kaydim")
+    suspend fun yedamErisimKaydim(): List<ErisimKaydiDto>
+
+    /** Günlük gönderim. `/ozet`'ten AYRI: iki rıza bağımsız (U1). */
+    @POST("yedam/surukleyici")
+    suspend fun yedamSurukleyici(@Body istek: SurukleyiciIstek): Map<String, Int>
+
+    /** Rıza anındaki tek seferlik geçmiş yüklemesi. */
+    @POST("yedam/gecmis")
+    suspend fun yedamGecmis(@Body istek: YedamGecmisIstek): Map<String, Int>
 }

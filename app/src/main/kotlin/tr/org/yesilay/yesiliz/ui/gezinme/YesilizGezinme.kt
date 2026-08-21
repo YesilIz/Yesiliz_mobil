@@ -46,6 +46,7 @@ import tr.org.yesilay.yesiliz.ui.ekran.riskdetay.RiskDetayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.saglik.SaglikIzinEkran
 import tr.org.yesilay.yesiliz.ui.ekran.sozlesme.SozlesmeEkran
 import tr.org.yesilay.yesiliz.ui.ekran.test.TestEkran
+import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamGizlilikEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yedam.YedamOnayEkran
 import tr.org.yesilay.yesiliz.ui.ekran.yuruyus.YuruyusEkran
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
@@ -236,6 +237,7 @@ fun YesilizGezinme(
                         ?.getString(Rota.PROFIL_SAYFA_ARG),
                     onGeri = { navController.popBackStack() },
                     onEbeveyn = { navController.navigate(Rota.EBEVEYN) },
+                    onYedamGizlilik = { navController.navigate(Rota.YEDAM_GIZLILIK) },
                     onGunlukHedef = { navController.navigate(Rota.GUNLUK_HEDEF) },
                     onKategoriler = { navController.navigate(Rota.KATEGORI) },
                     onAnketYenile = { navController.navigate(Rota.ANKET_YENILE) },
@@ -281,7 +283,13 @@ fun YesilizGezinme(
                 SaglikIzinEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.YEDAM_ONAY) {
-                YedamOnayEkran(onGeri = { navController.popBackStack() })
+                YedamOnayEkran(
+                    onGeri = { navController.popBackStack() },
+                    onGiris = { navController.navigate(Rota.GIRIS) },
+                )
+            }
+            composable(Rota.YEDAM_GIZLILIK) {
+                YedamGizlilikEkran(onGeri = { navController.popBackStack() })
             }
             composable(Rota.ODUL) {
                 OdulEkran(onGeri = { navController.popBackStack() })

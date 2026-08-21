@@ -17,6 +17,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KategoriEslemeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.OdulSecimiEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.PuanDuzeltmeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RuhHaliEntity
@@ -255,6 +256,10 @@ interface PuanGunlukDao {
     @Query("SELECT COALESCE(SUM(puanNet), 0) FROM puan_gunluk")
     fun toplamPuanAkisi(): Flow<Int>
 
+    /** Tek seferlik okuma — senkron gövdesi (U7) akış istemiyor. */
+    @Query("SELECT COALESCE(SUM(puanNet), 0) FROM puan_gunluk")
+    suspend fun toplamPuan(): Int
+
     @Query("SELECT * FROM puan_gunluk ORDER BY tarih DESC LIMIT 1")
     suspend fun sonuncu(): PuanGunlukEntity?
 
@@ -453,4 +458,39 @@ interface AktiviteOturumuDao {
 
     @Query("DELETE FROM aktivite_oturumu WHERE tarih < :tarih")
     suspend fun eskileriSil(tarih: LocalDate): Int
+}
+
+
+/**
+ * Puan düzeltmeleri (K56).
+ *
+ * `@Insert(onConflict = IGNORE)`: birincil anahtar sunucu id'si olduğu
+ * için aynı düzeltmenin ikinci kez indirilmesi sessizce yok sayılıyor.
+ * `REPLACE` olsaydı `bildirildi` bayrağı sıfırlanır ve kullanıcı aynı
+ * düzeltmeyi ikinci kez bildirim olarak görürdü.
+ */
+@Dao
+interface PuanDuzeltmeDao {
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun ekle(kayitlar: List<PuanDuzeltmeEntity>): List<Long>
+
+    /** Toplam puana eklenen düzeltme bakiyesi. */
+    @Query("SELECT COALESCE(SUM(delta), 0) FROM puan_duzeltme")
+    fun toplamDeltaAkisi(): Flow<Int>
+
+    @Query("SELECT COALESCE(SUM(delta), 0) FROM puan_duzeltme")
+    suspend fun toplamDelta(): Int
+
+    @Query("SELECT * FROM puan_duzeltme WHERE bildirildi = 0 ORDER BY zaman, id")
+    suspend fun bildirilmeyenler(): List<PuanDuzeltmeEntity>
+
+    @Query("UPDATE puan_duzeltme SET bildirildi = 1 WHERE id IN (:idler)")
+    suspend fun bildirildiIsaretle(idler: List<Int>)
+
+    @Query("SELECT * FROM puan_duzeltme ORDER BY zaman DESC, id DESC")
+    fun hepsiAkisi(): Flow<List<PuanDuzeltmeEntity>>
+
+    @Query("DELETE FROM puan_duzeltme")
+    suspend fun hepsiniSil()
 }

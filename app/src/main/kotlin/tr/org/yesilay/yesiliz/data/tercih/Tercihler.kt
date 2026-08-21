@@ -47,6 +47,45 @@ class Tercihler @Inject constructor(
 
     val gunlukHedefDk: Flow<Int> = depo.data.map { it[GUNLUK_HEDEF] ?: VARSAYILAN_HEDEF }
 
+    /**
+     * Karşılamada **beyan edilen** yaş; hiç girilmemişse `null`.
+     *
+     * Karşılama ekranı yaşı soruyordu ve 18 altında ebeveyn onayı
+     * gösteriyordu ama değer yalnızca ViewModel state'iydi — ekran
+     * kapanınca kayboluyordu. YEDAM kapısı (`docs/panel-plani.md §14 S2`)
+     * bu bilgiyi istiyor; sunucu 18 altı kullanıcıda ebeveyn onayı
+     * arayacaksa yaşın kalıcı olması şart.
+     *
+     * `null` "bilinmiyor" demek ve **reşit sayılmıyor**: eski sürümden
+     * gelen kullanıcı yaşını hiç girmemiş olabilir, bilinmeyeni "18 üstü"
+     * kabul etmek korumayı tam da korunması gerekenlerde kapatırdı
+     * (CLAUDE.md §9 "ölçülmeyen değerin iyi tarafa yorumlanması").
+     */
+    val beyanYas: Flow<Int?> = depo.data.map { it[BEYAN_YAS] }
+
+    /**
+     * Şimdiye kadar ulaşılan **en yüksek** toplam puan (U6).
+     *
+     * Ağaç evresi (K2) ve ödül kademesi (K28) bu değerden türüyor;
+     * ekrandaki bakiye güncel toplamı gösteriyor. Panelden yapılan bir
+     * düşürme (K56) bakiyeyi değiştiriyor ama **kazanılmışı geri
+     * almıyor**: kötü bir sonuçla ağacın kuruması tam da K2'nin
+     * reddettiği şey, kademenin geri gitmesi de K28'in.
+     *
+     * İkisi için ayrı anahtar tutulmuyor: evre saklanırsa kademe için
+     * ikinci bir anahtar gerekir ve ikisi ayrışabilir. **Ham toplamı**
+     * saklayınca ikisi de aynı sayıdan türüyor.
+     */
+    val enYuksekToplamPuan: Flow<Int> = depo.data.map { it[EN_YUKSEK_PUAN] ?: 0 }
+
+    /**
+     * Bildirim defterine yazılmış en son duyurunun id'si (§5.6).
+     *
+     * Cihaz yalnızca bundan büyüklerini çekiyor: aynı duyuruyu ikinci kez
+     * bildirmek, kullanıcıya aynı şeyi iki kez söylemek olurdu.
+     */
+    val sonDuyuruId: Flow<Int> = depo.data.map { it[SON_DUYURU] ?: 0 }
+
     // --- alpha eğrisinin girdileri ---
 
     /** Uygulamanın ilk açıldığı gün; `d` bu tarihten bugüne geçen gün sayısı. */
@@ -169,12 +208,44 @@ class Tercihler @Inject constructor(
 
     // --- yazma ---
 
-    suspend fun onboardingiBitir(hedefDk: Int, anketTarihi: LocalDate?) {
+    suspend fun onboardingiBitir(hedefDk: Int, anketTarihi: LocalDate?, yas: Int? = null) {
         depo.edit { p ->
             p[ONBOARDING_BITTI] = true
             p[GUNLUK_HEDEF] = hedefDk
             anketTarihi?.let { p[SON_ANKET] = it.toEpochDay() }
+            yas?.let { p[BEYAN_YAS] = it }
         }
+    }
+
+    /**
+     * Yaşı sonradan yazar/düzeltir.
+     *
+     * Karşılamayı eski sürümde bitirmiş kullanıcı YEDAM akışına
+     * girdiğinde yaşı bir kez soruluyor; onboarding'i baştan koşturmak
+     * gerekmiyor.
+     */
+    /**
+     * Yüksek-su-seviyesini günceller — **yalnızca yükseltir**.
+     *
+     * Düşürmenin yolu yok: kazanılmışı geri almamanın tek garantisi bu.
+     */
+    suspend fun enYuksekPuaniGuncelle(guncelToplam: Int) {
+        depo.edit { p ->
+            val eski = p[EN_YUKSEK_PUAN] ?: 0
+            if (guncelToplam > eski) p[EN_YUKSEK_PUAN] = guncelToplam
+        }
+    }
+
+    suspend fun sonDuyuruIdKaydet(id: Int) {
+        depo.edit { p ->
+            // Yalnızca ileri: sunucudan gelen eski bir id işareti geri
+            // almasın ve duyurular yeniden bildirilmesin.
+            if (id > (p[SON_DUYURU] ?: 0)) p[SON_DUYURU] = id
+        }
+    }
+
+    suspend fun beyanYasiKaydet(yas: Int) {
+        depo.edit { it[BEYAN_YAS] = yas }
     }
 
     suspend fun hedefiKaydet(dakika: Int) {
@@ -473,6 +544,9 @@ class Tercihler @Inject constructor(
         private val GECMIS_GUN = intPreferencesKey("gecmis_gun_sayisi")
         private val GECMIS_GUN_HESAPLANDI = booleanPreferencesKey("gecmis_gun_hesaplandi")
         private val SON_ANKET = longPreferencesKey("son_anket_gunu")
+        private val BEYAN_YAS = intPreferencesKey("beyan_yas")
+        private val EN_YUKSEK_PUAN = intPreferencesKey("en_yuksek_toplam_puan")
+        private val SON_DUYURU = intPreferencesKey("son_duyuru_id")
         private val YESILAY_PAYLASIM = booleanPreferencesKey("yesilay_paylasimi")
         private val SUNUCU_TABANI = stringPreferencesKey("sunucu_tabani")
         private val SUNUCU_TABANI_SURUM = intPreferencesKey("sunucu_tabani_surum")

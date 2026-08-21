@@ -16,6 +16,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KategoriEslemeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.OdulSecimiDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.PuanDuzeltmeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
@@ -31,6 +32,7 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.GunlukOzetEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KategoriEslemeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.KullanimOlayEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.OdulSecimiEntity
+import tr.org.yesilay.yesiliz.data.yerel.entity.PuanDuzeltmeEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.PuanGunlukEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RiskSonucEntity
 import tr.org.yesilay.yesiliz.data.yerel.entity.RuhHaliEntity
@@ -81,8 +83,9 @@ import tr.org.yesilay.yesiliz.data.yerel.entity.UykuBeyaniEntity
         AdimSayacEntity::class,
         OdulSecimiEntity::class,
         AktiviteOturumuEntity::class,
+        PuanDuzeltmeEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 @TypeConverters(Donusturucu::class)
@@ -95,6 +98,7 @@ abstract class YesilizDb : RoomDatabase() {
     abstract fun kategoriEslemeDao(): KategoriEslemeDao
     abstract fun gorevTamamlamaDao(): GorevTamamlamaDao
     abstract fun puanGunlukDao(): PuanGunlukDao
+    abstract fun puanDuzeltmeDao(): PuanDuzeltmeDao
     abstract fun ruhHaliDao(): RuhHaliDao
     abstract fun uykuBeyaniDao(): UykuBeyaniDao
     abstract fun farkindalikTestiDao(): FarkindalikTestiDao

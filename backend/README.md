@@ -6,15 +6,38 @@ FastAPI + PostgreSQL. CLAUDE.md §5'teki Faz 2 sunucusu.
 
 ```bash
 cd backend
-docker compose up -d          # PostgreSQL 16 + API (localhost:8000)
+docker compose up -d          # PostgreSQL 16 + API (:8000) + panel (:8001)
 curl localhost:8000/health    # {"status":"healthy","database":"connected","version":"0.1.0"}
 curl localhost:8000/saglik    # Android uyumluluk ucu: {"durum":"ayakta"}
+curl localhost:8001/health    # panel servisi
 ```
 
 API dokümanı: <http://localhost:8000/docs>
 
 Android emülatöründen sunucuya **`http://10.0.2.2:8000`** ile ulaşılıyor;
 emülatörde `localhost` cihazın kendisi demek.
+
+### Panel
+
+`api` ve `panel` **aynı imajı** koşuyor; farkları `YESILIZ_ROL`
+(`docs/panel-plani.md §4`, CLAUDE.md §12 K57). Panel uçları API alan adında
+**hiç mount edilmiyor** — yanlış yazılmış bir yetki kontrolü bile internete
+açık olmuyor, yol 404 dönüyor.
+
+Panelde kayıt formu yok: hesap açmak bir yetki işlemi. İlk hesap komutla,
+sonrakiler panelden `admin` rolüyle açılıyor.
+
+```bash
+docker compose exec panel python -m app.personel_ekle \
+  --eposta admin@yesilay.org.tr --ad "Ad Soyad" --rol admin
+```
+
+Komut TOTP sırrını ve kurtarma kodlarını **bir kez** yazdırıyor; veritabanında
+yalnızca şifreli sır (Fernet) ve kod özetleri duruyor. Sonra
+<http://localhost:8001> → parola → doğrulayıcı kodu.
+
+Roller: `admin` · `operasyon` · `yedam_yonetici` · `yedam_danisman` ·
+`gozlemci` (`docs/panel-plani.md §2`).
 
 ## Test
 
@@ -86,13 +109,30 @@ Ortam değişkenleri `YESILIZ_` önekli (`app/ayarlar.py`):
 | `YESILIZ_ESLESTIRME_KODU_DAKIKA` | 10 | tasarım 21'deki metinle birebir |
 | `YESILIZ_SAAT_DILIMI` | `Europe/Istanbul` | haftalık lig ve ebeveyn özeti için IANA iş saat dilimi; anlık kayıtlar yine UTC |
 
+## Panel ve mahremiyet
+
+Panel tabloları (`personel`, `personel_oturum`, `denetim_kaydi`, …) yukarıdaki
+sözleşmeyi **değiştirmiyor**: personel kimliği ve denetim izi taşıyorlar,
+davranış verisi değil. Panel bir kullanıcının davranış verisini varsayılan
+olarak göstermiyor (`docs/panel-plani.md` P9); tekil veri yalnızca KVKK
+talebi işlemi olarak, gerekçeyle ve denetim kaydıyla açılıyor.
+
+Her personel yazma eylemi `denetim_kaydi`'na **eylemle aynı transaction'da**
+yazılıyor, yani kaydı olmayan bir eylem mümkün değil. Tablo salt eklenebilir:
+PostgreSQL'de bir tetikleyici `UPDATE` ve `DELETE`'i reddediyor, `psql`'den
+bile.
+
 ## Henüz yok
 
 - **E-posta gönderimi** — sağlayıcı bağlanana kadar üretim ucu açıkça 503
   döndürüyor. Geliştirme/test jetonu yalnızca veritabanında tutulur; sırlar
   hiçbir ortamda günlüğe yazılmaz.
 - **Google OAuth** — kapsam dışı bırakıldı
-- **Uzman paneli arayüzü** — `kullanici.rol` alanı hazır, arayüz Faz 3
+- **Panel ekranları** — kimlik, yetki ve denetim iskeleti hazır (F1);
+  gösterge metrikleri ve hesap yönetimi F2'de, YEDAM başvuru akışı F3'te.
+  Boş ekranlar bunu **yazıyor**, uydurma sayı göstermiyor (CLAUDE.md §4).
+  `kullanici.rol` kolonu panelde **kullanılmıyor** — personel ayrı tabloda
+  (K57)
 - **HTTPS** — yerel geliştirmede şifresiz; dağıtımda TLS zorunlu
   (Android tarafında `ag_guvenligi.xml` şifresiz trafiği yalnızca
   emülatörün `10.0.2.2` adresi için açıyor)
