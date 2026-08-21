@@ -48,9 +48,24 @@ RISKLI_IFADELER = (
 )
 
 
+#: Türkçe aksanların ASCII karşılığı.
+#:
+#: Tarama aksana duyarlı olsaydı işe yaramazdı: insanlar "geç kalma"yı
+#: "gec kalma" diye de yazıyor ve uyarı tam da o zaman kaçardı. Gerçek
+#: bir doğrulamada bu eksik görüldü.
+_ASKI = str.maketrans("çğıöşüâîû", "cgiosuaiu")
+
+
+def _sadelestir(metin: str) -> str:
+    """Küçük harfe indirip aksanları düşürür — arama için."""
+    # `casefold` Türkçe'ye özgü İ/ı ayrımını çözmüyor ama burada amaç
+    # eşleşme, doğru büyük harf değil (`ui/TurkceMetin.kt` ile karıştırma).
+    return metin.casefold().translate(_ASKI)
+
+
 def _uyarilar(metin: str) -> list[str]:
-    kucuk = metin.lower()
-    return [ifade for ifade in RISKLI_IFADELER if ifade in kucuk]
+    sade = _sadelestir(metin)
+    return [ifade for ifade in RISKLI_IFADELER if _sadelestir(ifade) in sade]
 
 
 @yonlendirici.get("/icerik")

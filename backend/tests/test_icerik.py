@@ -244,6 +244,23 @@ def test_emir_kipi_uyari_biraliyor_ama_engellemiyor(db, panel_istemci, girisli):
     assert "hemen" in kayit.detay and "geç kalma" in kayit.detay
 
 
+def test_aksansiz_yazim_da_yakalaniyor(db, panel_istemci, girisli):
+    """
+    Gerçek doğrulamada çıktı: "geç kalma" aranırken "gec kalma" kaçıyordu.
+
+    Tarama aksana duyarlı olsaydı işe yaramazdı — insanlar aksansız
+    yazıyor ve uyarı tam da o zaman gerekiyor.
+    """
+    girisli()
+    _post(
+        panel_istemci,
+        "/yonetim/duyuru",
+        **{**DUYURU, "metin": "Hemen uygulamayi ac, gec kalma!"},
+    )
+    detay = db.query(DenetimKaydi).one().detay
+    assert "hemen" in detay and "geç kalma" in detay
+
+
 def test_temiz_metinde_uyari_yok(db, panel_istemci, girisli):
     girisli()
     _post(panel_istemci, "/yonetim/duyuru", **DUYURU)

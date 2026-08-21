@@ -2,7 +2,7 @@
 
 > **Türetildi:** `docs/panel-plani.md` (572 satır, 16 bölüm) ile `feature/panel`
 > dalının kod durumu karşılaştırılarak · 21 Ağustos 2026
-> **F0–F4 kapandı** (21 Ağustos 2026). Sıradaki faz **F5 (içerik ve duyuru)**.
+> **F0–F5 kapandı** (21 Ağustos 2026). Sıradaki faz **F6 (sertleştirme)**.
 > Numaralar plan belgesinin bölümlerine bağlı — bir kalemin *niçini* için
 > oradaki bölüme bak, burada yalnızca *ne* ve *nerede* var.
 
@@ -40,7 +40,7 @@ Bir destek talebi baştan sona panelden çözülüyor; `psql` gerekmiyor.
 ortalama ekran süresi, lig katılımı, ebeveyn eşleşmesi, bandı olmayan.
 
 - [x] **Y1** `/health` durumu, çalışan sürüm, son migration revizyonu — `surum_kapisi.py` zaten head'i biliyor, göstergeye bağlanacak
-- [ ] **Y2** *(F6'ya ertelendi)* Son 24 saatteki 5xx sayısı — `gunluk.py`'nin JSON log'undan. *Not: log kalıcı değilse ayrı bir sayaç gerekiyor; kalemi açmadan önce karar ver*
+- [ ] **Y2** *(F6'da, S5 ile birlikte)* Son 24 saatteki 5xx sayısı — `gunluk.py`'nin JSON log'undan. *Not: log kalıcı değilse ayrı bir sayaç gerekiyor; kalemi açmadan önce karar ver*
 - [x] **Y3** Açık YEDAM başvurusu sayısı + en eskisinin yaşı — ✅ `F4/4` + en eski başvurunun yaşı — **F3'e bağımlı**, tablo yok
 - [x] **Y4** Ekran süresi trendi (§5.1 "ortalama günlük ekran süresi, **trend**") — şu an yalnızca ortalama var
 
@@ -146,18 +146,21 @@ ayağı çözüldü:** kapı stoğun kendisi. Finansman ayağı Yeşilay'da.
 
 ---
 
-## 4. F5 · İÇERİK VE DUYURU — açık
+## 4. F5 · İÇERİK VE DUYURU — ✅ KAPANDI (21 Ağu 2026)
 
-**Bitiş ölçütü:** bir yazı düzeltmesi APK yayını olmadan telefona iniyor.
+**Bitiş ölçütü sağlandı** (`622718c`, `4bf7be0`): gerçek yığında bir yazı
+yayımlandı, sonra başlığı düzeltildi ve cihaz ucundan **APK yayını olmadan**
+sürüm 3 olarak indi. Bakım modu 503 döndü, `/health` etkilenmedi, taslak
+duyuru inmedi, yayımlanan indi.
 
-- [ ] **I1** `GET /icerik/bilgi-bankasi` — S5 kararı (b): sunucudan servis + cihazda önbellek. Gömülü `bilgi_bankasi.json` **çevrimdışı yedek olarak kalır**
-- [ ] **I2** Sürümleme + önbellek tazeleme + "hangi sürümü gördü" (§5.5'in kabul edilmiş bedeli)
-- [ ] **I3** `GET/POST /yonetim/icerik` — panel tarafı düzenleme
-- [ ] **I4** "Günün Sorusu" ve bildirim metinleri aynı yoldan
-- [ ] **I5** `duyuru` tablosu + `GET/POST /yonetim/duyuru` + cihazda `GET /duyuru`. **FCM YOK** (§5.6 kararı): duyuru senkronla `BildirimDeposu`'na iner, kullanıcı uygulamayı açınca görür
-- [ ] **I6** Duyuru metni denetimi — §4 "emir kipi / korkutma yok"
-- [ ] **I7** `GET/POST /yonetim/bayrak` — özellik bayrağı arayüzü. **Risk motoru sabitleri yalnızca gösterilir, değiştirilemez** (K17)
-- [ ] **I8** Asgari istemci sürümü + bakım modu (§5.7) → cihaz tarafı M9
+- [x] **I1** `GET /icerik/bilgi-bankasi` — S5 kararı (b): sunucudan servis + cihazda önbellek. Gömülü `bilgi_bankasi.json` **çevrimdışı yedek olarak kalır**
+- [x] **I2** Sürümleme + önbellek tazeleme + "hangi sürümü gördü" (§5.5'in kabul edilmiş bedeli)
+- [x] **I3** `GET/POST /yonetim/icerik` — panel tarafı düzenleme
+- [x] **I4** "Günün Sorusu" ve bildirim metinleri aynı yoldan
+- [x] **I5** `duyuru` tablosu + `GET/POST /yonetim/duyuru` + cihazda `GET /duyuru`. **FCM YOK** (§5.6 kararı): duyuru senkronla `BildirimDeposu`'na iner, kullanıcı uygulamayı açınca görür
+- [x] **I6** Duyuru metni denetimi — §4 "emir kipi / korkutma yok"
+- [x] **I7** `GET/POST /yonetim/bayrak` — özellik bayrağı arayüzü. **Risk motoru sabitleri yalnızca gösterilir, değiştirilemez** (K17)
+- [x] **I8** Asgari istemci sürümü + bakım modu (§5.7) → cihaz tarafı M9
 
 ---
 
@@ -186,7 +189,7 @@ M8 F2 turunda yazıldı; kalan dokuz kalem F3–F5'e bağlı.
 - [x] **M6** Rızayı geri çekme — tek dokunuş + onay
 - [x] **M7** Puan düzeltmesini çekme ve gösterme — F4/P4 ile aynı iş
 - [x] **M8** Askıya alınmış hesap ekranı — ✅ `ef1ac18`. 403 + `hesap_askida` bir OkHttp interceptor'ında tek yerde yakalanıyor; ekran gezinmenin üstünde
-- [ ] **M9** Bakım modu ekranı — 503 + bakım gövdesi
+- [x] **M9** Bakım modu şeridi — ✅ `4bf7be0`; **engelleyici değil**, kapatılabilir
 - [x] **M10** `Tercihler.beyanYas` (= D1) — onboarding'de sorulan yaş kalıcı hâle gelir
 
 ---
@@ -224,7 +227,7 @@ Plan §14'ün sekiz maddesinden üçü (S2, S3, S5) kapandı. Kalanlar:
    §15 onu F3 ile birlikte istiyordu; danışman notu bayrakla kapalı olduğu için
    şu an geri getirilemez veri yok, ama bayrak açılmadan önce tatbikat şart
 4. **F4** — K56 kararı zaten yazılı, kodu yok; ödül kapısı A4'ün teknik ayağını kapatıyor
-5. **F5**, sonra **F6**
+5. ~~**F5**~~ ✅ **bitti** (21 Ağu), sonra **F6**
 
 > Y13/Y14 (personel yönetimi) 1. adıma da 2. adıma da alınabilir; bugün tek
 > yol `python -m app.personel_ekle` ve bu, S1 cevaplanana kadar yeterli.
