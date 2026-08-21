@@ -69,6 +69,15 @@ Başka hiçbir yerde kullanılmaz — genel risk gösterimi ve hata durumları h
 yukarıdaki `--risk-*` / `--error*` yeşil skalasında. Ekran spekleri:
 `docs/tasarim-referans.md §2` ekran 25, 26, 30.
 
+**Yönetim ve YEDAM paneli bu kuralın kapsamı dışında** (`docs/panel-plani.md §3`).
+Kural, *kullanıcının kendi risk bandını gördüğü yüzey* için kondu: kırmızı orada
+damgalayıcı, çünkü damgalanan kişinin kendisi. Panelde durum renkleri
+(uyarı/kritik) serbest — damgalanan bir kullanıcı değil, bir **iş kaydının
+durumu**: şema uyuşmazlığı, askıdaki hesap, 2FA'sı kurulmamış personel.
+Panelin paleti yine `--green-*` ailesinden türüyor; kırmızı yalnızca durum
+şeritlerinde ve çiplerde (`panel.css` `.cip-uyari` / `.cip-kritik` /
+`.serit-kritik`).
+
 ### Teslim edilen tasarımdan eklenen tokenlar
 
 `docs/tasarim-referans.md §1`'de doğrulanmış, henüz buraya taşınmamış

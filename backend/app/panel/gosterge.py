@@ -43,6 +43,13 @@ class Gosterge:
     #: satırlardan; ölçülmemiş gün "az riskli" sayılmaz (CLAUDE.md §12 K30).
     bant_dagilimi: dict[str, int] = field(default_factory=dict)
     ortalama_ekran_dk: int = 0
+    #: Bir önceki eşit uzunluktaki pencerenin ortalaması. `None` ise o
+    #: pencerede karşılaştırılacak veri yok — sıfır SAYILMIYOR, yoksa
+    #: yeni kurulan sistemde "%100 arttı" gibi bir sayı çıkardı.
+    onceki_ortalama_ekran_dk: int | None = None
+    #: Askıya alınmış hesap sayısı. Operasyonun görmesi gereken bir
+    #: sayı: askıda unutulmuş bir hesap sessizce kullanıcı kaybıdır.
+    askidaki_hesap: int = 0
     lig_katilimi: int = 0
     ebeveyn_eslesmesi: int = 0
     #: Ölçüm penceresi içinde hiç `HESAPLANDI` risk satırı olmayan kullanıcı.
@@ -51,6 +58,13 @@ class Gosterge:
     @property
     def bant_toplami(self) -> int:
         return sum(self.bant_dagilimi.values())
+
+    @property
+    def ekran_farki_dk(self) -> int | None:
+        """Önceki pencereye göre değişim; karşılaştırma yoksa `None`."""
+        if self.onceki_ortalama_ekran_dk is None:
+            return None
+        return self.ortalama_ekran_dk - self.onceki_ortalama_ekran_dk
 
     def bant_yuzdesi(self, bant: str) -> int:
         toplam = self.bant_toplami
@@ -114,7 +128,7 @@ def _bant_dagilimi(db: Session, bugun: dt.date, pencere_gun: int) -> dict[str, i
     return dagilim
 
 
-def _ortalama_ekran_dk(db: Session, bugun: dt.date, pencere_gun: int) -> int:
+def _ortalama_ekran_dk(db: Session, bugun: dt.date, pencere_gun: int) -> int | None:
     """
     Penceredeki günlük özetlerin ortalama toplam ekran süresi.
 
@@ -124,6 +138,11 @@ def _ortalama_ekran_dk(db: Session, bugun: dt.date, pencere_gun: int) -> int:
     "satır var ≠ veri var" (CLAUDE.md §9).
     """
     bas = bugun - dt.timedelta(days=pencere_gun - 1)
+    return _ortalama_aralikta(db, bas, bugun)
+
+
+def _ortalama_aralikta(db: Session, bas: dt.date, bit: dt.date) -> int | None:
+    """Verilen kapalı aralıkta ortalama; ölçüm yoksa `None`."""
     toplam_ifade = (
         GunlukOzet.social_dk
         + GunlukOzet.entertainment_dk
@@ -137,11 +156,11 @@ def _ortalama_ekran_dk(db: Session, bugun: dt.date, pencere_gun: int) -> int:
     ortalama = db.scalar(
         select(func.avg(toplam_ifade)).where(
             GunlukOzet.tarih >= bas,
-            GunlukOzet.tarih <= bugun,
+            GunlukOzet.tarih <= bit,
             toplam_ifade > 0,
         )
     )
-    return round(ortalama) if ortalama else 0
+    return round(ortalama) if ortalama else None
 
 
 def gostergeyi_hesapla(
@@ -161,7 +180,17 @@ def gostergeyi_hesapla(
         aktif_7=_aktif_sayisi(db, 7, simdi),
         aktif_30=_aktif_sayisi(db, 30, simdi),
         bant_dagilimi=dagilim,
-        ortalama_ekran_dk=_ortalama_ekran_dk(db, bugun, pencere_gun),
+        ortalama_ekran_dk=_ortalama_ekran_dk(db, bugun, pencere_gun) or 0,
+        onceki_ortalama_ekran_dk=_ortalama_aralikta(
+            db,
+            bugun - dt.timedelta(days=2 * pencere_gun - 1),
+            bugun - dt.timedelta(days=pencere_gun),
+        ),
+        askidaki_hesap=db.scalar(
+            select(func.count())
+            .select_from(Kullanici)
+            .where(Kullanici.durum != "aktif")
+        ) or 0,
         lig_katilimi=db.scalar(
             select(func.count(func.distinct(LigUyelik.kullanici_id)))
         ) or 0,

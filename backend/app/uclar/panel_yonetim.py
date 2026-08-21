@@ -17,6 +17,7 @@ yakalanıyor.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
@@ -38,10 +39,12 @@ from app.panel.denetim_gorunum import (
 from app.panel.hesaplar import SAYFA_BOYU, ara, askiya_al, askiyi_kaldir, detay
 from app.panel.oturum import personel_gerek
 from app.panel.sablon import yanit, yonlendir
-from app.surum_kapisi import beklenen_revizyon
+from app.surum_kapisi import beklenen_revizyon, mevcut_revizyon
 from app.uclar.ebeveyn import bagi_kaldir
 from app.veri_disa_aktar import kullanici_verisi
 from app.veritabani import oturum
+
+gunluk = logging.getLogger(__name__)
 
 yonlendirici = APIRouter(prefix="/yonetim", tags=["panel-yonetim"])
 
@@ -75,6 +78,20 @@ DENETIM_ROLLERI = (
 #: gönderiyor (`SenkronDeposu.GUN`), daha geniş bir pencere sunucuda
 #: olmayan veriyi sorardı.
 PENCERE_GUN = 7
+
+
+def _guvenli_revizyon() -> str:
+    """
+    Veritabanının damgalı revizyonu; okunamıyorsa boş.
+
+    Gösterge, veritabanı erişilemediği için çökmemeli: bir izleme ekranının
+    ilk işi ayakta kalmak.
+    """
+    try:
+        return mevcut_revizyon() or ""
+    except Exception:  # noqa: BLE001 - sebebi ne olursa olsun gösterge ayakta kalmalı
+        gunluk.warning("Veritabanı revizyonu okunamadı", exc_info=True)
+        return ""
 
 
 def _gerekce_dogrula(gerekce: str) -> None:
@@ -125,6 +142,11 @@ def gosterge(
             "bant_grafigi": bant_dagilimi_svg(g.bant_dagilimi),
             "pencere_gun": PENCERE_GUN,
             "revizyon": beklenen_revizyon(),
+            # Panel migration KOŞTURMUYOR (K57): API servisi koşturuyor ve
+            # panel yalnızca uyuşmayı doğruluyor. Uyuşmazlık burada
+            # görünmeli — sessiz kalırsa panel eski şemaya bakmaya devam
+            # eder ve sayılar açıklanamaz biçimde yanlış çıkar.
+            "db_revizyonu": _guvenli_revizyon(),
         },
     )
 

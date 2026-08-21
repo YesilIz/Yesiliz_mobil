@@ -27,6 +27,10 @@
         <span class="olcum-sayi">{{ g.ebeveyn_eslesmesi }}</span>
         <span class="olcum-etiket">ebeveyn eşleşmesi</span>
       </div>
+      <div class="olcum">
+        <span class="olcum-sayi">{{ g.askidaki_hesap }}</span>
+        <span class="olcum-etiket">askıdaki hesap</span>
+      </div>
     </div>
     <p class="yardim">
       Sinyal sayısı yalnızca <strong>Yeşilay ile paylaşım onayı veren</strong>
@@ -70,6 +74,16 @@
     <p class="yardim">
       Son {{ pencere_gun }} günün paylaşılan özetlerinden. Ölçümü sıfır olan
       günler ortalamaya girmiyor.
+      {% set fark = g.ekran_farki_dk %}
+      {% if fark is none %}
+        Önceki {{ pencere_gun }} günde karşılaştırılacak ölçüm yok.
+      {% elif fark == 0 %}
+        Önceki {{ pencere_gun }} güne göre değişmedi.
+      {% else %}
+        Önceki {{ pencere_gun }} güne göre
+        <strong>{{ fark if fark > 0 else -fark }} dk
+        {{ "arttı" if fark > 0 else "azaldı" }}</strong>.
+      {% endif %}
     </p>
   </div>
 
@@ -77,15 +91,36 @@
     <h2>Sistem</h2>
     <table>
       <tr><th>Sürüm</th><td>{{ surum }}</td></tr>
-      <tr><th>Şema revizyonu</th><td>{{ revizyon }}</td></tr>
+      <tr><th>Şema revizyonu (kod)</th><td>{{ revizyon }}</td></tr>
+      <tr>
+        <th>Şema revizyonu (veritabanı)</th>
+        <td>
+          {% if not db_revizyonu %}
+            <span class="cip cip-uyari">okunamadı</span>
+          {% elif db_revizyonu == revizyon %}
+            <span class="cip">{{ db_revizyonu }}</span>
+          {% else %}
+            <span class="cip cip-kritik">{{ db_revizyonu }}</span>
+          {% endif %}
+        </td>
+      </tr>
       <tr><th>Veritabanı</th><td><span class="cip">bağlı</span></td></tr>
     </table>
     {# Hata sayacı BURADA GÖSTERİLMİYOR: panel API'den ayrı bir süreç ve
        gunluk.py sayacı tutmuyor, log akışı sağlayıcıda. Uydurma bir "0
        hata" yazmak, tam da paneli güvenilmez kılacak şey (CLAUDE.md §4). #}
+    {% if db_revizyonu and db_revizyonu != revizyon %}
+      <div class="serit serit-kritik">
+        Veritabanı şeması koddan farklı. Panel migration koşturmuyor — API
+        servisi açılışta koşturuyor. Dağıtım yarım kalmış olabilir;
+        gösterge sayıları güvenilmez.
+      </div>
+    {% endif %}
     <p class="yardim">
       İstek ve hata günlükleri sağlayıcının log akışında; panel onları
-      okumuyor.
+      okumuyor. Son 24 saatteki 5xx sayacı F6'ya (izleme ve alarm) bırakıldı:
+      log kalıcı değil ve uydurma bir "0 hata" yazmak paneli güvenilmez
+      kılardı.
     </p>
   </div>
 {% endblock %}

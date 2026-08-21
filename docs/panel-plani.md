@@ -1,6 +1,8 @@
 # panel-plani.md — Yönetim Paneli ve YEDAM Paneli
 
 > **Durum:** uygulanıyor · 18 Ağustos 2026 · dal `feature/panel`
+> **F0, F1 ve F2 kapandı** (21 Ağustos 2026). Kalan kalemler
+> `docs/panel-yapilacaklar.md`'de; sıradaki faz F3 (YEDAM).
 > Bu belge kararları ve iş sırasını kaydeder. Uygulama sırasında ortaya çıkan
 > yedi gerekçeli sapma **§1.1**'de (`U1`–`U7`).
 > Kaynak: `CLAUDE.md` §4 (mutlak kurallar), §6 (mimari), §12 (kararlar),
@@ -177,11 +179,11 @@ Toplu ve anonim; tekil kullanıcı yok.
 
 - kayıtlı hesap · son 7/30 günde senkron eden cihaz sayısı
 - risk bandı dağılımı (yalnızca `veri_durumu = HESAPLANDI` satırlardan — `CLAUDE.md` §12 K30)
-- ortalama günlük ekran süresi, trend
+- ortalama günlük ekran süresi **ve trend** (önceki eşit pencereyle fark; karşılaştırma yoksa sayı uydurulmuyor)
 - lig katılımı, aktif grup sayısı
-- açık YEDAM başvurusu sayısı ve en eski başvurunun yaşı
-- `/health` durumu, çalışan sürüm, son migration revizyonu
-- son 24 saatteki 5xx sayısı (`gunluk.py`'nin JSON log'undan)
+- açık YEDAM başvurusu sayısı ve en eski başvurunun yaşı — **F3** (tablo henüz yok)
+- çalışan sürüm + şema revizyonu **kod ve veritabanı yan yana** — uyuşmazlıkta uyarı şeridi (panel migration koşturmuyor, K57)
+- ~~son 24 saatteki 5xx sayısı~~ → **F6'ya ertelendi (21 Ağu):** JSON log kalıcı değil ve sorgulanamıyor; gerçek yeri izleme/alarm kalemi. Gösterge uydurma bir "0 hata" yazmıyor
 
 ### 5.2 Hesap yönetimi
 
@@ -189,9 +191,9 @@ Toplu ve anonim; tekil kullanıcı yok.
 |---|---|
 | E-posta / kullanıcı no ile arama | Ad ile arama **yok** — ad benzersiz değil, yanlış hesaba müdahale riski |
 | Hesap detayı | Kayıt tarihi, son senkron, lig üyeliği, ebeveyn bağı **var/yok**, ödül kademeleri. **Davranış verisi yok** (P9) |
-| Askıya alma | Oturumlar düşer, API 403 döner, cihaz sebebi ekranda görür. Veri silinmez |
+| Askıya alma | Oturumlar düşer, API 403 döner (`hesap_askida` + sebep), cihaz sebebi ekranda görür. Veri silinmez. **Yazıldı: F2/3** — kapı `mevcut_kullanici`'da tek yerde, giriş ve yenileme de dahil |
 | Silme | KVKK silme talebi. `DELETE /auth/hesap` ile aynı yolu kullanır; yedeklerden silme prosedürü ayrı ve yazılı olmalı |
-| Veri dışa aktarma | KVKK erişim hakkı. Kullanıcının sunucudaki tüm satırları JSON olarak. **Çift onay + gerekçe + denetim kaydı**; indirilen dosya kullanıcının kendisine gider, panele düşmez |
+| Veri dışa aktarma | KVKK erişim hakkı. **Varsayılan yol cihaz** (`GET /auth/verilerim`): kullanıcı kendi indiriyor, dosya panele hiç düşmüyor. Panelden indirme, kullanıcı uygulamaya erişemiyorsa geçerli bir **istisna** — çift onay + gerekçe + denetim kaydı (21 Ağu kararı) |
 | Ebeveyn bağını kaldırma | Destek talebi senaryosu (`DELETE /ebeveyn/eslesme` sunucu tarafı karşılığı) |
 
 ### 5.3 Puan düzeltmesi
@@ -532,13 +534,13 @@ Plan bunlar olmadan da ilerler ama bir noktada tıkanır.
 
 | # | Soru | Kim karar verir |
 |---|---|---|
-| S1 | **Danışman hesaplarını kim açar?** Yeşilay mı, ekip mi? Gerçek YEDAM personeli mi kullanacak, yoksa sistem Yeşilay'a teslim mi edilecek? | Yeşilay ile |
+| ~~S1~~ | ~~Danışman hesaplarını kim açar?~~ **Kapandı (21 Ağu):** Yeşilay kendi açacak. Panelde `admin` için personel yönetimi yazıldı (F2/6); davet e-postayla değil **geçici parolayla** (A15), personel ilk girişte parolasını değiştirip TOTP kuruyor. İlk `admin` hâlâ CLI'dan | ~~Yeşilay ile~~ |
 | ~~S2~~ | ~~18 yaş altı kullanıcıda YEDAM rızası kimden alınır?~~ **Kapandı (18 Ağu):** varsayılan *eşleşmiş ebeveyn varsa onayı da gerekli*, eşleşme yoksa çocuğun rızası yeterli. Kural `app/yedam_kapisi.py`'de tek fonksiyonda ve `ozellik_bayragi` ile değiştirilebilir (`eslesmisse`/`her_zaman`/`hicbir_zaman`). Yeşilay kararı gelince tek satır değişir | ~~Yeşilay + hukuk~~ |
 | ~~S3~~ | ~~Rıza süresi 90 gün mü?~~ **Kapandı (18 Ağu):** 90 gün, uzatma yolu yok — süre dolunca yeniden rıza. `docs/yedam-riza-metni-v1.md` bunu yazıyor | ~~Yeşilay~~ |
-| S4 | Danışman notlarının saklama süresi ve erişimi. Klinik kayıt sayılıyorsa ayrı rejim | Yeşilay + hukuk |
+| S4 | Danışman notlarının saklama süresi ve erişimi. Klinik kayıt sayılıyorsa ayrı rejim. **Karar (21 Ağu):** F3'te tablo ve uç yazılacak ama `ozellik_bayragi` ile **varsayılan KAPALI** — hukuk cevabı gelene kadar klinik kayıt üretilmiyor (S2'nin kapatılma deseni). Süre kararı hâlâ açık | Yeşilay + hukuk |
 | ~~S5~~ | ~~Bilgi bankası sunucudan mı servis edilsin~~ **Kapandı (18 Ağu):** evet — sunucudan servis + cihazda önbellek; gömülü set çevrimdışı yedek kalıyor | ~~ekip~~ |
 | S6 | Panel alan adı ve barındırma: aynı Railway hesabı mı, Yeşilay altyapısı mı | Yeşilay — **kod hazır:** CI `deploy-panel` job'u `vars.RAILWAY_PANEL_SERVICE` ve `vars.PANEL_TABAN` bekliyor |
-| S7 | Danışman kullanıcıyla uygulama içinden iletişim kurabilmeli mi? §4 chatbot yasağı bunu kapsamıyor (insan danışman) ama yeni bir yüzey | ekip + Yeşilay |
+| ~~S7~~ | ~~Danışman kullanıcıyla uygulama içinden iletişim kurabilmeli mi?~~ **Kapandı (21 Ağu): hayır.** İletişim telefon/e-posta ile; tercih ve değeri zaten `yedam_basvuru`'da. Mesajlaşma yüzeyi (bildirim, okundu, moderasyon, saklama) F3'ü belirgin biçimde büyütürdü | ~~ekip + Yeşilay~~ |
 | S8 | `gozlemci` rolüne gerçekten ihtiyaç var mı, yoksa raporlama için dışa aktarma yeter mi | ekip |
 
 > Kapanan kararlar üstü çizili bırakılıyor, numaraları **yeniden

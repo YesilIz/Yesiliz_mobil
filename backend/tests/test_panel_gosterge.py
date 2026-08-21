@@ -223,3 +223,47 @@ def test_grafik_kacisi_yapiyor():
     """Bant adı doğrudan SVG'ye gömülüyor; kaçırılmazsa enjeksiyon olurdu."""
     svg = bant_dagilimi_svg({"AZ": 1})
     assert "<title>AZ: 1</title>" in svg
+
+
+# --- F2/7: trend ve askıdaki hesap ---
+
+
+def test_trend_onceki_pencereyle_karsilastiriyor(db, kullanici):
+    k = kullanici()
+    bugun = yerel_bugun()
+    # Bu pencere: 100 dk. Önceki pencere: 60 dk.
+    db.add(GunlukOzet(kullanici_id=k.id, tarih=bugun, social_dk=100.0))
+    db.add(
+        GunlukOzet(
+            kullanici_id=k.id, tarih=bugun - dt.timedelta(days=8), social_dk=60.0
+        )
+    )
+    db.commit()
+
+    g = gostergeyi_hesapla(db, SIMDI, pencere_gun=7)
+    assert g.ortalama_ekran_dk == 100
+    assert g.onceki_ortalama_ekran_dk == 60
+    assert g.ekran_farki_dk == 40
+
+
+def test_onceki_pencerede_olcum_yoksa_fark_none(db, kullanici):
+    """Sıfır sayılsaydı yeni sistemde "%100 arttı" gibi bir sayı çıkardı."""
+    k = kullanici()
+    db.add(GunlukOzet(kullanici_id=k.id, tarih=yerel_bugun(), social_dk=100.0))
+    db.commit()
+
+    g = gostergeyi_hesapla(db, SIMDI, pencere_gun=7)
+    assert g.onceki_ortalama_ekran_dk is None
+    assert g.ekran_farki_dk is None
+
+
+def test_askidaki_hesap_sayiliyor(db, kullanici):
+    from app.modeller import KullaniciDurumu
+
+    a, b = kullanici(), kullanici()
+    a.durum = KullaniciDurumu.ASKIDA.value
+    db.commit()
+
+    g = gostergeyi_hesapla(db, SIMDI)
+    assert g.askidaki_hesap == 1
+    assert g.kullanici_sayisi == 2, "Askıdaki hesap toplamdan düşmüyor"

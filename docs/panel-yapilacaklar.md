@@ -2,7 +2,7 @@
 
 > **Türetildi:** `docs/panel-plani.md` (572 satır, 16 bölüm) ile `feature/panel`
 > dalının kod durumu karşılaştırılarak · 21 Ağustos 2026
-> **Plan belgesi bitti; iş bitmedi.** F0 ve F1 kapandı, F2'nin 1/6'sı yazıldı.
+> **F0, F1 ve F2 kapandı** (21 Ağustos 2026). Sıradaki faz **F3 (YEDAM)**.
 > Numaralar plan belgesinin bölümlerine bağlı — bir kalemin *niçini* için
 > oradaki bölüme bak, burada yalnızca *ne* ve *nerede* var.
 
@@ -22,46 +22,51 @@
 
 ---
 
-## 1. F2 · YÖNETİM v1 — açık
+## 1. F2 · YÖNETİM v1 — ✅ KAPANDI (21 Ağu 2026)
 
 **Bitiş ölçütü (plan §13):** bir destek talebi baştan sona panelden çözülüyor,
 `psql` açılmıyor.
 
-Bugün `uclar/panel_yonetim.py` **62 satır ve tek rota** (`GET /gosterge`).
+**Kapanış commit'leri:** `2fb89b7` (F2/2 arama·detay·silme kaskadı) ·
+`ef1ac18` (F2/3 askıya alma + Android M8) · `b3bf990` (F2/4 KVKK) ·
+`0e7c292` (F2/5 denetim görüntüleyici) · `41100ca` (F2/6 personel) ·
+F2/7 (gösterge + belge).
+
+Bir destek talebi baştan sona panelden çözülüyor; `psql` gerekmiyor.
 
 ### 1.1 Gösterge eksikleri (§5.1)
 
 `Gosterge` dataclass'ında olan: hesap sayısı, aktif 7/30, bant dağılımı,
 ortalama ekran süresi, lig katılımı, ebeveyn eşleşmesi, bandı olmayan.
 
-- [ ] **Y1** `/health` durumu, çalışan sürüm, son migration revizyonu — `surum_kapisi.py` zaten head'i biliyor, göstergeye bağlanacak
-- [ ] **Y2** Son 24 saatteki 5xx sayısı — `gunluk.py`'nin JSON log'undan. *Not: log kalıcı değilse ayrı bir sayaç gerekiyor; kalemi açmadan önce karar ver*
-- [ ] **Y3** Açık YEDAM başvurusu sayısı + en eski başvurunun yaşı — **F3'e bağımlı**, tablo yok
-- [ ] **Y4** Ekran süresi trendi (§5.1 "ortalama günlük ekran süresi, **trend**") — şu an yalnızca ortalama var
+- [x] **Y1** `/health` durumu, çalışan sürüm, son migration revizyonu — `surum_kapisi.py` zaten head'i biliyor, göstergeye bağlanacak
+- [ ] **Y2** *(F6'ya ertelendi)* Son 24 saatteki 5xx sayısı — `gunluk.py`'nin JSON log'undan. *Not: log kalıcı değilse ayrı bir sayaç gerekiyor; kalemi açmadan önce karar ver*
+- [ ] **Y3** *(F3'e bağlı)* Açık YEDAM başvurusu sayısı + en eski başvurunun yaşı — **F3'e bağımlı**, tablo yok
+- [x] **Y4** Ekran süresi trendi (§5.1 "ortalama günlük ekran süresi, **trend**") — şu an yalnızca ortalama var
 
 ### 1.2 Hesap yönetimi (§5.2) — hiçbiri yazılmadı
 
-- [ ] **Y5** `GET /yonetim/kullanici?ara=` — e-posta / kullanıcı no ile arama. **Ad ile arama yazılmayacak** (§5.2: ad benzersiz değil)
-- [ ] **Y6** `GET /yonetim/kullanici/{id}` — kayıt tarihi, son senkron, lig üyeliği, ebeveyn bağı **var/yok**, ödül kademeleri. **Davranış verisi yok** (P9)
-- [ ] **Y7** `POST /yonetim/kullanici/{id}/askiya-al` — oturumlar düşer, API 403 döner, veri silinmez. *Cihaz tarafı karşılığı M8*
-- [ ] **Y8** `DELETE /yonetim/kullanici/{id}` — `DELETE /auth/hesap` ile aynı yolu kullanır
-- [ ] **Y9** `POST /yonetim/kullanici/{id}/veri-disa-aktar` — KVKK erişim hakkı. Çift onay + gerekçe + denetim kaydı; dosya **kullanıcının kendisine** gider, panele düşmez
-- [ ] **Y10** Ebeveyn bağını kaldırma — `DELETE /ebeveyn/eslesme`'nin sunucu tarafı karşılığı
-- [ ] **Y11** Her biri için `denetim_kaydi` yazımı — `panel/denetim.py` var, uçlara bağlanacak
+- [x] **Y5** `GET /yonetim/kullanici?ara=` — e-posta / kullanıcı no ile arama. **Ad ile arama yazılmayacak** (§5.2: ad benzersiz değil)
+- [x] **Y6** `GET /yonetim/kullanici/{id}` — kayıt tarihi, son senkron, lig üyeliği, ebeveyn bağı **var/yok**, ödül kademeleri. **Davranış verisi yok** (P9)
+- [x] **Y7** `POST /yonetim/kullanici/{id}/askiya-al` — oturumlar düşer, API 403 döner, veri silinmez. *Cihaz tarafı karşılığı M8*
+- [x] **Y8** `DELETE /yonetim/kullanici/{id}` — `DELETE /auth/hesap` ile aynı yolu kullanır
+- [x] **Y9** `POST /yonetim/kullanici/{id}/veri-disa-aktar` — KVKK erişim hakkı. Çift onay + gerekçe + denetim kaydı; dosya **kullanıcının kendisine** gider, panele düşmez
+- [x] **Y10** Ebeveyn bağını kaldırma — `DELETE /ebeveyn/eslesme`'nin sunucu tarafı karşılığı
+- [x] **Y11** Her biri için `denetim_kaydi` yazımı — `panel/denetim.py` var, uçlara bağlanacak
 
 ### 1.3 Denetim kaydı görüntüleyici (§5.8)
 
-- [ ] **Y12** `GET /yonetim/denetim` — filtre: personel, kullanıcı, eylem türü, tarih aralığı. Yalnızca okuma; kayıt **silinemez**
+- [x] **Y12** `GET /yonetim/denetim` — filtre: personel, kullanıcı, eylem türü, tarih aralığı. Yalnızca okuma; kayıt **silinemez**
 
 ### 1.4 Personel yönetimi (§11)
 
-- [ ] **Y13** `GET /yonetim/personel` + `POST /yonetim/personel` — davet, askıya alma, rol atama. Yalnızca `admin`. Şu an tek yol `python -m app.personel_ekle`
-- [ ] **Y14** Eşzamanlı oturum listesi + tek tek düşürme (§2 "kaybolan dizüstü senaryosu") — `personel_oturum` tablosu hazır, arayüzü yok
+- [x] **Y13** `GET /yonetim/personel` + `POST /yonetim/personel` — davet, askıya alma, rol atama. Yalnızca `admin`. Şu an tek yol `python -m app.personel_ekle`
+- [x] **Y14** Eşzamanlı oturum listesi + tek tek düşürme (§2 "kaybolan dizüstü senaryosu") — `personel_oturum` tablosu hazır, arayüzü yok
 
 ### 1.5 Rol kapısı (§2 "Roller")
 
-- [ ] **Y15** Beş rolün (`admin` · `operasyon` · `yedam_yonetici` · `yedam_danisman` · `gozlemci`) yetki matrisi tek yerden uygulanmalı. İlke: **görünmeyen bölüm hiç çizilmez**, uç 403 döner. `PersonelRolu` enum'u var, kapı yok
-- [ ] **Y16** Rol başına en az bir "yetkisiz erişim 403 alır" testi
+- [x] **Y15** Beş rolün (`admin` · `operasyon` · `yedam_yonetici` · `yedam_danisman` · `gozlemci`) yetki matrisi tek yerden uygulanmalı. İlke: **görünmeyen bölüm hiç çizilmez**, uç 403 döner. `PersonelRolu` enum'u var, kapı yok
+- [x] **Y16** Rol başına en az bir "yetkisiz erişim 403 alır" testi
 
 ---
 
@@ -165,6 +170,7 @@ teslimatı uçtan uca işaretleniyor.
 
 Bugün `ui/ekran/yedam/` altında **tek dosya** var (`YedamOnayEkran.kt`) ve
 `YesilizApi.kt`'de tek bir `yedam` / `duzeltme` / `icerik` ucu yok.
+M8 F2 turunda yazıldı; kalan dokuz kalem F3–F5'e bağlı.
 
 - [ ] **M1** YEDAM rıza ekranı gerçek hâle gelir — madde madde metin, sürüm numarası, kabul kutusu. Şu an yalnızca 115'i çeviricide açıyor
 - [ ] **M2** Sürükleyici gönderimi — **U1: `POST /yedam/surukleyici`**, `/ozet` gövdesine değil
@@ -173,7 +179,7 @@ Bugün `ui/ekran/yedam/` altında **tek dosya** var (`YedamOnayEkran.kt`) ve
 - [ ] **M5** "Verilerine kim baktı" ekranı — Profil › Gizlilik
 - [ ] **M6** Rızayı geri çekme — tek dokunuş + onay
 - [ ] **M7** Puan düzeltmesini çekme ve gösterme — F4/P4 ile aynı iş
-- [ ] **M8** Askıya alınmış hesap ekranı — **403 sessizce çevrimdışı sayılmamalı** (K18/K42 ailesi)
+- [x] **M8** Askıya alınmış hesap ekranı — ✅ `ef1ac18`. 403 + `hesap_askida` bir OkHttp interceptor'ında tek yerde yakalanıyor; ekran gezinmenin üstünde
 - [ ] **M9** Bakım modu ekranı — 503 + bakım gövdesi
 - [ ] **M10** `Tercihler.beyanYas` (= D1) — onboarding'de sorulan yaş kalıcı hâle gelir
 
@@ -196,17 +202,17 @@ Plan §14'ün sekiz maddesinden üçü (S2, S3, S5) kapandı. Kalanlar:
 
 | # | Soru | Kim | Neyi tıkıyor |
 |---|---|---|---|
-| S1 | Danışman hesaplarını kim açar? Gerçek YEDAM personeli mi kullanacak? | Yeşilay | F3'ün gerçek kullanımı — teknik kısım test hesaplarıyla ilerleyebilir |
-| S4 | Danışman notunun saklama süresi ve erişimi — klinik kayıt sayılıyorsa ayrı rejim | Yeşilay + hukuk | D17, G7 |
+| ~~S1~~ | **Kapandı (21 Ağu):** Yeşilay kendi açacak → panelde personel yönetimi yazıldı (`41100ca`) | — | — |
+| S4 | Danışman notunun saklama süresi. **Karar (21 Ağu):** F3'te bayrakla **kapalı** gelecek; süre kararı hukuktan bekleniyor | Yeşilay + hukuk | D17, G7 |
 | S6 | Panel alan adı ve barındırma | Yeşilay | **Kod hazır:** CI `vars.RAILWAY_PANEL_SERVICE` ve `vars.PANEL_TABAN` bekliyor |
-| S7 | Danışman kullanıcıyla uygulama içinden iletişim kurabilmeli mi? | ekip + Yeşilay | Yeni yüzey; §4 chatbot yasağı bunu kapsamıyor (insan danışman) |
+| ~~S7~~ | **Kapandı (21 Ağu): hayır** — iletişim telefon/e-posta ile. F3'ün kapsamı daraldı | — | — |
 | S8 | `gozlemci` rolü gerçekten gerekli mi, dışa aktarma yeter mi? | ekip | Y15'in matrisi |
 
 ---
 
 ## 9. SIRA ÖNERİSİ
 
-1. **Y5–Y12** (hesap yönetimi + denetim görüntüleyici) — F2'yi kapatır, `psql` bağımlılığını bitirir. Başka hiçbir şeye bağımlı değil
+1. ~~**Y5–Y12**~~ ✅ **bitti** (21 Ağu) — Y13/Y14 de S1 kararıyla birlikte kapandı
 2. **D1/D2/D3** (yaş, kapı, bayrak okuma) — küçük ama F3'ün üçü de ön koşulu
 3. **D4–D19 + M1–M6** — F3'ün gövdesi, en büyük kalem. **G9 tatbikatı bununla birlikte** (§15)
 4. **F4** — K56 kararı zaten yazılı, kodu yok; ödül kapısı A4'ün teknik ayağını kapatıyor
