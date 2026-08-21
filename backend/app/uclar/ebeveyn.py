@@ -13,15 +13,25 @@ from sqlalchemy.orm import Session
 from app.ayarlar import ayarlar
 from app.guvenlik import kullaniciyi_kilitle, mevcut_kullanici
 from app.modeller import (
+    BasvuruDurumu,
     EbeveynBaglanti,
     EslestirmeKodu,
     GunlukOzet,
     Heartbeat,
     Kullanici,
     RiskSonuc,
+    YedamBasvuru,
+    YedamRiza,
 )
-from app.semalar import EbeveynOzetYanit, EslestirIstek, EslestirmeKoduIstek, KodYanit
+from app.semalar import (
+    EbeveynOzetYanit,
+    EbeveynYedamOnayIstek,
+    EslestirIstek,
+    EslestirmeKoduIstek,
+    KodYanit,
+)
 from app.veritabani import oturum
+from app.yedam_riza_yonetimi import rizayi_bitir
 from app.zaman import yerel_bugun
 
 yonlendirici = APIRouter(prefix="/ebeveyn", tags=["ebeveyn"])
@@ -286,3 +296,53 @@ def _gecmis(son: dt.datetime, simdi: dt.datetime) -> bool:
     if son.tzinfo is None:
         son = son.replace(tzinfo=dt.timezone.utc)
     return son < simdi
+
+
+@yonlendirici.post("/yedam-onay")
+def yedam_onayi(
+    istek: EbeveynYedamOnayIstek,
+    db: Session = Depends(oturum),
+    kullanici: Kullanici = Depends(mevcut_kullanici),
+) -> dict[str, str]:
+    """
+    18 altı çocuğun YEDAM başvurusuna **eşleşmiş ebeveynin** onayı.
+
+    Kapı `app/yedam_kapisi.py`'de; buradaki uç yalnızca onayı yazıyor.
+    Onay gelene kadar başvuru `ebeveyn_onayi_bekliyor` durumunda ve
+    **hiçbir danışman görmüyor** (rıza metni "18 yaşından küçüksen"
+    bölümü).
+
+    Yalnızca **rızada adı yazan** ebeveyn onaylayabiliyor: bağın o anda
+    var olması yetmiyor, rıza verildiğinde bağlı olan hesap olmalı. Aksi
+    hâlde araya giren yeni bir eşleşme, çocuğun daha önce açtığı bir
+    başvuruyu onaylayabilirdi.
+
+    Reddetme de bir cevap: `onay=false` başvuruyu kapatıyor ve rızayı
+    bitiriyor. Belirsiz bekleyen bir kayıt bırakmak, çocuğun "başvurum ne
+    oldu" sorusunu cevapsız bırakırdı.
+    """
+    riza = db.get(YedamRiza, istek.riza_id)
+    if riza is None or riza.ebeveyn_id != kullanici.id:
+        # 404: onaylayamayacağı bir rızanın var olup olmadığını da
+        # söylemiyoruz.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Onaylanacak başvuru bulunamadı")
+
+    basvuru = db.scalar(
+        select(YedamBasvuru).where(
+            YedamBasvuru.riza_id == riza.id,
+            YedamBasvuru.durum == BasvuruDurumu.EBEVEYN_ONAYI_BEKLIYOR.value,
+        )
+    )
+    if basvuru is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bekleyen bir başvuru yok")
+
+    simdi = dt.datetime.now(dt.timezone.utc)
+    if not istek.onay:
+        rizayi_bitir(db, riza, BasvuruDurumu.RIZA_GERI_CEKILDI, simdi)
+        db.commit()
+        return {"durum": "reddedildi"}
+
+    riza.ebeveyn_onay_tarihi = simdi
+    basvuru.durum = BasvuruDurumu.YENI.value
+    db.commit()
+    return {"durum": "onaylandi"}

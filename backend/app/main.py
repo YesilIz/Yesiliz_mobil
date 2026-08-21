@@ -33,7 +33,7 @@ from sqlalchemy import text
 
 from app import gunluk
 from app.ayarlar import SURUM, SunucuRolu, ayarlar
-from app.uclar import ebeveyn, hesap, lig, odul, ozet
+from app.uclar import ebeveyn, hesap, lig, odul, ozet, yedam
 from app.veritabani import motor
 
 
@@ -116,6 +116,7 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         uygulama.include_router(lig.yonlendirici)
         uygulama.include_router(ebeveyn.yonlendirici)
         uygulama.include_router(odul.yonlendirici)
+        uygulama.include_router(yedam.yonlendirici)
 
         @uygulama.get("/saglik", tags=["sistem"])
         def saglik(yanit: Response) -> dict[str, str]:

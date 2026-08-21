@@ -251,3 +251,108 @@ class EbeveynOzetYanit(BaseModel):
     bant: str | None
     trend: str | None
     sonSinyalSaatOnce: int | None
+
+
+# --- YEDAM ---
+#
+# `docs/panel-plani.md §6` · rıza metni `docs/yedam-riza-metni-v1.md`.
+# Metnin sürümü isteğe **cihaz tarafından** konuyor: kullanıcı hangi metni
+# okuduysa onun sürümü kaydedilmeli. Sunucu kendi bildiği sürümü yazsaydı,
+# eski bir APK yeni metne rıza vermiş gibi görünürdü.
+
+
+class YedamBasvuruIstek(BaseModel):
+    metin_surumu: str = Field(min_length=1, max_length=20)
+    #: Kullanıcının onayladığı kapsam anahtarları.
+    kapsam: list[str] = Field(min_length=1, max_length=10)
+    iletisim_turu: Literal["telefon", "eposta"]
+    iletisim_degeri: str = Field(min_length=3, max_length=320)
+    kullanici_notu: str = Field(default="", max_length=1000)
+    #: Beyan edilen yaş. `None` ise sunucu **reşit saymıyor** (K26, §9).
+    beyan_yas: int | None = Field(default=None, ge=5, le=120)
+
+    @field_validator("iletisim_degeri", mode="before")
+    @classmethod
+    def temizle(cls, deger: object) -> object:
+        return deger.strip() if isinstance(deger, str) else deger
+
+
+class YedamBasvuruYanit(BaseModel):
+    basvuru_id: int
+    durum: str
+    riza_son_gecerlilik: dt.datetime
+    #: 18 altı ve bağlı ebeveyn varsa onay bekleniyor.
+    ebeveyn_onayi_bekleniyor: bool = False
+
+
+class YedamDurumYanit(BaseModel):
+    """`GET /yedam/basvurum` — cihazın durum takibi.
+
+    Danışmanın adı **yok**: kullanıcıya "sana X atandı" demek, danışmanın
+    kimliğini başvuru daha görüşmeye dönüşmeden açardı.
+    """
+
+    basvuru_id: int | None = None
+    durum: str = ""
+    olusturma: dt.datetime | None = None
+    riza_son_gecerlilik: dt.datetime | None = None
+    ebeveyn_onayi_bekleniyor: bool = False
+    #: Görüşme kayıtları — tür ve zaman, içerik yok.
+    temaslar: list["YedamTemasDto"] = Field(default_factory=list)
+
+
+class YedamTemasDto(BaseModel):
+    tur: str
+    zaman: dt.datetime
+
+
+class ErisimKaydiDto(BaseModel):
+    """"14 Ağustos 10:32'de bakıldı." Danışmanın adı taşınmıyor."""
+
+    zaman: dt.datetime
+    kapsam: str
+
+
+class SurukleyiciDto(BaseModel):
+    tarih: dt.date
+    faktor: str = Field(min_length=1, max_length=40)
+    katki: float
+
+
+class SurukleyiciIstek(BaseModel):
+    """
+    `POST /yedam/surukleyici` — **`/ozet`'ten AYRI uç** (U1).
+
+    `/ozet` "Yeşilay ile paylaşım" rızasına bağlı (K19) ve o kapalıysa
+    hiç çağrılmıyor; sürükleyicileri oraya eklemek, özelliği tam da
+    korumak istediği kullanıcıda sessizce ölü bırakırdı.
+    """
+
+    kayitlar: list[SurukleyiciDto] = Field(min_length=1, max_length=400)
+
+
+class AnketYanitDto(BaseModel):
+    tarih: dt.date
+    #: 10 maddenin Likert puanları. Ölçek birebir korunuyor (K12).
+    madde_puanlari: list[int] = Field(min_length=10, max_length=10)
+    ham_puan: float
+    r_s: float
+
+    @field_validator("madde_puanlari")
+    @classmethod
+    def araligi_dogrula(cls, deger: list[int]) -> list[int]:
+        if any(p < 1 or p > 6 for p in deger):
+            raise ValueError("SAS-SV maddeleri 1-6 aralığında olmalı")
+        return deger
+
+
+class YedamGecmisIstek(BaseModel):
+    """Rıza anındaki tek seferlik yükleme — sürükleyici + anket geçmişi."""
+
+    surukleyiciler: list[SurukleyiciDto] = Field(default_factory=list, max_length=400)
+    anketler: list[AnketYanitDto] = Field(default_factory=list, max_length=50)
+
+
+class EbeveynYedamOnayIstek(BaseModel):
+    riza_id: int
+    onay: bool
