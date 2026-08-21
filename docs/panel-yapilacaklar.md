@@ -166,7 +166,7 @@ ayağı çözüldü:** kapı stoğun kendisi. Finansman ayağı Yeşilay'da.
 - [ ] **S1** Redis hız sınırı — **A12'nin gerçek konusu: cihaz API'si.** Panel girişi F1'de hesap kilidiyle çözüldü (U5)
 - [ ] **S2** IP allowlist / VPN, panel servisi önünde (G3)
 - [ ] **S3** Sızma testi / güvenlik gözden geçirmesi, yayına almadan önce (G10)
-- [ ] **S4** **Yedek + geri yükleme tatbikatı (G9) — F6'da değil, F3 İLE BİRLİKTE.** Danışman notu geri getirilemezse gerçek veri kaybı (§15)
+- [ ] **S4** = §10'daki **G9**. Aynı kalem iki yerde listelenmişti; tek kayıt §10'da
 - [ ] **S5** İzleme ve alarm
 - [ ] **S6** Personel parola politikası + kurtarma kodu akışının belgelenmesi (G2 — kod var, politika yazılı değil)
 
@@ -197,8 +197,8 @@ M8 F2 turunda yazıldı; kalan dokuz kalem F3–F5'e bağlı.
 - [ ] **G6** Veri işleyen sözleşmesi (Yeşilay ↔ ekip) — hukuki, gerçek kullanıma geçme ön koşulu
 - [ ] **G7** Saklama süreleri yazılı olmalı: başvuru, danışman notu, denetim kaydı, erişim kaydı
 - [ ] **G8** Silme talebinin **yedeklerde de** karşılanması — prosedür `docs/dagitim.md`'ye. *Bugün o dosyada yedek/geri yükleme bölümü hiç yok*
-- [ ] **B1** `DESIGN.md`'ye panel notu — §3'ün kararı: **kırmızı yasağı paneli kapsamıyor** (damgalanan kullanıcı değil, iş kaydının durumu). Bugün `DESIGN.md`'de panel geçmiyor
-- [ ] **B2** `CLAUDE.md` §11 test sayıları güncellenmeli — panel testleri (`test_panel_*.py`, `test_totp.py`, `test_servis_rolu.py`, `test_personel_modeli.py`, `test_sir_sifreleme.py`, `test_surum_kapisi.py`) sayıma girmemiş
+- [x] **B1** `DESIGN.md`'ye panel notu — ✅ F2/7 (`e1a99b8`)
+- [x] **B2** `CLAUDE.md` §11 test sayıları — ✅ her fazda güncelleniyor (şu an 898)
 
 ---
 
