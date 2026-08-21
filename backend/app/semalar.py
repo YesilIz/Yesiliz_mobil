@@ -402,3 +402,47 @@ class OdulKademeDurumuDto(BaseModel):
     kademeId: str
     secenekId: str
     acik: bool
+
+
+# --- içerik ve duyuru (§5.5, §5.6) ---
+
+
+class BilgiYazisiDto(BaseModel):
+    """
+    Bilgi bankası yazısı — cihazdaki `assets/bilgi_bankasi.json` ile
+    **aynı alan adları**, çünkü aynı `BilgiBankasi.coz` çözümlemesinden
+    geçiyorlar. Gömülü set çevrimdışı yedek olarak kalıyor (S5).
+    """
+
+    id: str
+    baslik: str
+    ozet: str
+    kategori: str
+    okumaDk: int
+    #: Paragraflar. Cihazdaki JSON'da da liste.
+    govde: list[str]
+
+
+class BilgiBankasiYanit(BaseModel):
+    """
+    `GET /icerik/bilgi-bankasi`.
+
+    `surum` cihazın önbelleğini geçersiz kılmak için: değişmediyse cihaz
+    gövdeyi yeniden çözümlemiyor. "Hangi sürümü gördü" sorusunun cevabı
+    da bu (§5.5'in kabul edilmiş bedeli).
+    """
+
+    surum: int
+    yazilar: list[BilgiYazisiDto]
+
+
+class DuyuruDto(BaseModel):
+    """
+    Uygulama içi duyuru. **FCM yok** — senkronla iniyor, kullanıcı
+    uygulamayı açtığında bildirim defterinde görüyor (§5.6).
+    """
+
+    id: int
+    baslik: str
+    metin: str
+    yayinZamani: dt.datetime

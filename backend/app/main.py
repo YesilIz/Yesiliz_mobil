@@ -34,7 +34,7 @@ from sqlalchemy import text
 
 from app import gunluk
 from app.ayarlar import SURUM, SunucuRolu, ayarlar
-from app.uclar import ebeveyn, hesap, lig, odul, ozet, puan, yedam
+from app.uclar import ebeveyn, hesap, icerik, lig, odul, ozet, puan, yedam
 from app.veritabani import motor
 
 
@@ -134,6 +134,7 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         uygulama.include_router(lig.yonlendirici)
         uygulama.include_router(ebeveyn.yonlendirici)
         uygulama.include_router(odul.yonlendirici)
+        uygulama.include_router(icerik.yonlendirici)
         uygulama.include_router(puan.yonlendirici)
         uygulama.include_router(yedam.yonlendirici)
 
@@ -164,6 +165,8 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
 
         from app.panel.sablon import STATIK_DIZINI
         from app.uclar import (
+            panel_bayrak,
+            panel_icerik,
             panel_odul,
             panel_oturum,
             panel_personel,
@@ -175,6 +178,8 @@ def uygulama_kur(rol: SunucuRolu | None = None) -> FastAPI:
         uygulama.include_router(panel_yonetim.yonlendirici)
         uygulama.include_router(panel_personel.yonlendirici)
         uygulama.include_router(panel_odul.yonlendirici)
+        uygulama.include_router(panel_bayrak.yonlendirici)
+        uygulama.include_router(panel_icerik.yonlendirici)
         uygulama.include_router(panel_yedam.yonlendirici)
 
         # CSS ve htmx depoya alınmış (`panel/statik/HTMX.md`): panel VPN

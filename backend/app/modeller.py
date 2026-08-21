@@ -921,3 +921,82 @@ class OdulTeslimat(Taban):
     guncelleme: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=_simdi, onupdate=_simdi
     )
+
+
+# ---------------------------------------------------------------------------
+# İÇERİK — bilgi bankası ve duyuru (`docs/panel-plani.md §5.5, §5.6`)
+#
+# S5 kararı (18 Ağu): bilgi bankası **sunucudan servis + cihazda önbellek**;
+# APK'ya gömülü set çevrimdışı yedek olarak kalıyor. Böylece bir yazı
+# düzeltmesi için yayın beklemek gerekmiyor, ama çevrimdışı garantisi de
+# bozulmuyor.
+#
+# §5.6 kararı: **FCM yok.** Duyuru senkronla iniyor ve kullanıcı uygulamayı
+# açtığında bildirim defterinde görüyor. Push altyapısı kurmak ayrı bir iş
+# kalemi ve MVP'nin kritik yolunda değil.
+# ---------------------------------------------------------------------------
+
+
+class BilgiYazisi(Taban):
+    """
+    Bilgi bankası yazısı.
+
+    `surum` **tüm bankanın** sürümü değil, tek yazının sürümü: bir yazının
+    düzeltilmesi diğerlerinin önbelleğini geçersiz kılmamalı. Cihaz banka
+    sürümünü ayrıca `icerik_surum` bayrağından okuyor.
+    """
+
+    __tablename__ = "bilgi_yazisi"
+
+    id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    baslik: Mapped[str] = mapped_column(String(200))
+    ozet: Mapped[str] = mapped_column(String(500))
+    kategori: Mapped[str] = mapped_column(String(60))
+    okuma_dk: Mapped[int] = mapped_column(Integer, default=1)
+    #: Paragraflar; cihazdaki JSON'la aynı biçimde satır sonuyla ayrılmış.
+    govde: Mapped[str] = mapped_column(Text)
+
+    surum: Mapped[int] = mapped_column(Integer, default=1, server_default=text("1"))
+    #: Yayından kaldırılan yazı **silinmiyor**: cihazdaki önbellekte kalmış
+    #: olabilir ve "bu yazı artık yok" demek, açılmış bir bağlantıyı
+    #: kırmaktan iyi. Liste ucundan düşüyor, tekil okuma çalışmaya devam
+    #: ediyor.
+    yayinda: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
+    sira: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    guncelleme: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, onupdate=_simdi
+    )
+    guncelleyen_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personel.id"), nullable=True
+    )
+
+
+class Duyuru(Taban):
+    """
+    Uygulama içi duyuru (`docs/panel-plani.md §5.6`).
+
+    **FCM yok:** cihaz bunu senkronla çekiyor ve bildirim defterine
+    yazıyor; kullanıcı uygulamayı açtığında görüyor. Anlık push, ayrı bir
+    altyapı ve izin akışı demek.
+
+    Metin `CLAUDE.md §4`'e uymak zorunda: emir kipi ve korkutma yok. Kural
+    kodla zorlanamıyor (serbest metin) ama panel formu bunu yazıyor ve
+    denetim kaydı kimin yayımladığını tutuyor.
+    """
+
+    __tablename__ = "duyuru"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    baslik: Mapped[str] = mapped_column(String(120))
+    metin: Mapped[str] = mapped_column(String(1000))
+    #: `hepsi` — şimdilik tek hedef. Segment gerekirse burası genişler.
+    hedef: Mapped[str] = mapped_column(String(40), default="hepsi")
+    yayin_zamani: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"))
+    olusturma: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi
+    )
