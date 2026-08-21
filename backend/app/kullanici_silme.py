@@ -30,11 +30,13 @@ from app.modeller import (
     EbeveynBaglanti,
     ErisimKaydi,
     EslestirmeKodu,
+    OdulTeslimat,
     GunlukOzet,
     Heartbeat,
     Kullanici,
     LigUyelik,
     OdulSecimi,
+    PuanDuzeltme,
     RiskSonuc,
     RiskSurukleyici,
     SifreSifirlama,
@@ -59,6 +61,7 @@ _TEK_KOLONLU = (
     (RiskSurukleyici, RiskSurukleyici.kullanici_id),
     (AnketYanit, AnketYanit.kullanici_id),
     (ErisimKaydi, ErisimKaydi.kullanici_id),
+    (PuanDuzeltme, PuanDuzeltme.kullanici_id),
 )
 
 #: Başvuruya bağlı tablolar. Kullanıcıya doğrudan bakmıyorlar ama
@@ -73,6 +76,12 @@ _BASVURUYA_BAGLI = (
     (DanismanNotu, DanismanNotu.basvuru_id),
 )
 
+#: Ödül seçimine bağlı tablolar. Kullanıcıya doğrudan bakmıyorlar;
+#: `odul_secimi` silinince öksüz kalırlar, ondan ÖNCE silinmeleri gerek.
+_SECIME_BAGLI = (
+    (OdulTeslimat, OdulTeslimat.odul_secimi_id),
+)
+
 #: İki uçlu bağlar: kullanıcı her iki kolonda da geçebilir, ikisinden de
 #: silinmeli — yoksa karşı taraf öksüz bir satıra bakmaya devam eder.
 _CIFT_KOLONLU = (
@@ -85,6 +94,7 @@ KAPSANAN_TABLOLAR = frozenset(
     [model.__tablename__ for model, _ in _TEK_KOLONLU]
     + [model.__tablename__ for model, _, _ in _CIFT_KOLONLU]
     + [model.__tablename__ for model, _ in _BASVURUYA_BAGLI]
+    + [model.__tablename__ for model, _ in _SECIME_BAGLI]
     + [YedamBasvuru.__tablename__, YedamRiza.__tablename__]
 )
 
@@ -102,6 +112,7 @@ def kullaniciyi_tamamen_sil(db: Session, kullanici: Kullanici) -> None:
     kid = kullanici.id
 
     _yedami_sil(db, kid)
+    _odulu_sil(db, kid)
 
     for model, kolon in _TEK_KOLONLU:
         db.execute(delete(model).where(kolon == kid))
@@ -110,6 +121,19 @@ def kullaniciyi_tamamen_sil(db: Session, kullanici: Kullanici) -> None:
         db.execute(delete(model).where(or_(sol == kid, sag == kid)))
 
     db.delete(kullanici)
+
+
+def _odulu_sil(db: Session, kid: int) -> None:
+    """
+    Teslimat kayıtları — `odul_secimi`'nden önce.
+
+    **Stok geri verilmiyor.** Hesabını silen kullanıcının kuponu zaten
+    ayrılmıştı; onu havuza geri koymak, teslim edilmiş bir ödülü ikinci
+    kez dağıtmaya yol açabilirdi. Sayım farkı panelden görülüyor.
+    """
+    secimler = select(OdulSecimi.id).where(OdulSecimi.kullanici_id == kid)
+    for model, kolon in _SECIME_BAGLI:
+        db.execute(delete(model).where(kolon.in_(secimler)))
 
 
 def _yedami_sil(db: Session, kid: int) -> None:

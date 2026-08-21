@@ -801,3 +801,123 @@ class AnketYanit(Taban):
     madde_puanlari: Mapped[str] = mapped_column(String(60))
     ham_puan: Mapped[float] = mapped_column(Float)
     r_s: Mapped[float] = mapped_column(Float)
+
+
+# ---------------------------------------------------------------------------
+# PUAN DÜZELTMESİ — §4'ün "ceza puanı yok" kuralının tek istisnası (K56)
+#
+# `docs/panel-plani.md §9`. Kuralın **amacı** korunuyor, harfi daralıyor:
+# otomatik hiçbir yol puan düşürmüyor, yalnızca bir insanın tekil ve
+# gerekçeli işlemi. Kullanıcı "ceza" değil "düzeltme" görüyor; kazanılmış
+# ödül kademesi ve ağaç evresi geri gitmiyor (cihazda yüksek-su-seviyesi).
+# ---------------------------------------------------------------------------
+
+
+class PuanDuzeltme(Taban):
+    """
+    Panelden yapılan tekil puan düzeltmesi.
+
+    **Delta saklanıyor, yeni toplam değil.** Toplam cihazda hesaplanıyor
+    (K17 ailesi: sunucu skor da puan da üretmiyor) ve sunucunun bildiği
+    değer bilgilendirici (U7, A13). Yeni toplamı yazmak, sunucuyu
+    olmadığı bir otoriteye dönüştürürdü.
+
+    `islem_anahtari` **tek kullanımlık**: aynı düzeltmenin iki kez
+    yazılması geri dönülemez bir kullanıcı zararı. Panelin CSRF'i oturuma
+    bağlı HMAC (U2) ve tekrar gönderimi engellemiyor; burada ayrıca
+    idempotency anahtarı var — U2'nin bilinçli istisnası.
+    """
+
+    __tablename__ = "puan_duzeltme"
+    __table_args__ = (
+        UniqueConstraint("islem_anahtari", name="uq_duzeltme_islem_anahtari"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), index=True)
+    #: Pozitif = ekleme, negatif = düşürme. Sıfır kabul edilmiyor.
+    delta: Mapped[int] = mapped_column(Integer)
+    #: Kullanıcıya **gösteriliyor** — gerekçesiz bir düzeltme, §4'ün
+    #: yasakladığı "ceza"nın ta kendisi olurdu.
+    gerekce: Mapped[str] = mapped_column(String(500))
+    personel_id: Mapped[int] = mapped_column(ForeignKey("personel.id"))
+    islem_anahtari: Mapped[str] = mapped_column(String(64))
+    zaman: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, index=True
+    )
+    #: Cihaz bu düzeltmeyi indirip uyguladı mı? Bilgilendirici — cihazın
+    #: kendi `puan_duzeltme` tablosu birincil anahtar olarak sunucu id'sini
+    #: kullanıyor, yani asıl tekrar koruması orada.
+    cihaz_uyguladi: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+
+
+class OdulStok(Taban):
+    """
+    Maddi ödül stoğu (`docs/panel-plani.md §5.4`).
+
+    **K28'in kapısı buraya bağlı:** panelden parti yüklenince kademe
+    açılıyor, stok bitince kapanıyor. A4'ün teknik ayağı bu; finansman
+    ayağı hâlâ Yeşilay'da. Olmayan bir teslimatı "kazandın" diye yazmak
+    uygulamanın en somut vaadini uydurma yapardı.
+    """
+
+    __tablename__ = "odul_stok"
+    __table_args__ = (
+        UniqueConstraint("kademe_id", "secenek_id", name="uq_stok_kademe_secenek"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kademe_id: Mapped[str] = mapped_column(String(40))
+    secenek_id: Mapped[str] = mapped_column(String(40))
+    toplam: Mapped[int] = mapped_column(Integer, default=0)
+    kalan: Mapped[int] = mapped_column(Integer, default=0)
+    son_kullanma: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    guncelleme: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, onupdate=_simdi
+    )
+
+    @property
+    def acik_mi(self) -> bool:
+        return self.kalan > 0
+
+
+class TeslimatDurumu(str, enum.Enum):
+    BEKLIYOR = "bekliyor"
+    GONDERILDI = "gonderildi"
+    TESLIM_EDILDI = "teslim_edildi"
+    #: Ulaşılamadı ya da kullanıcı istemedi — stok geri veriliyor.
+    IPTAL = "iptal"
+
+
+class OdulTeslimat(Taban):
+    """
+    Bir ödül seçiminin teslimat kaydı.
+
+    `odul_secimi` "kullanıcı neyi seçti"yi, bu tablo "ona ne oldu"yu
+    tutuyor. İkisini birleştirmek, seçimin kalıcılığını (K28: geri alma
+    yok) teslimatın değişken durumuyla aynı satıra koymak olurdu.
+    """
+
+    __tablename__ = "odul_teslimat"
+    __table_args__ = (
+        UniqueConstraint("odul_secimi_id", name="uq_teslimat_secim"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    odul_secimi_id: Mapped[int] = mapped_column(ForeignKey("odul_secimi.id"), index=True)
+    durum: Mapped[str] = mapped_column(
+        String(20), default=TeslimatDurumu.BEKLIYOR.value, index=True
+    )
+    #: Kupon kodu gibi teslim edilen değer. Kullanıcıya cihazda gösteriliyor.
+    kod: Mapped[str] = mapped_column(String(120), default="", server_default=text("''"))
+    gonderim_zamani: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    personel_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personel.id"), nullable=True
+    )
+    guncelleme: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_simdi, onupdate=_simdi
+    )

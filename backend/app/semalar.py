@@ -358,3 +358,23 @@ class YedamGecmisIstek(BaseModel):
 class EbeveynYedamOnayIstek(BaseModel):
     rizaId: int
     onay: bool
+
+
+# --- puan düzeltmesi (K56) ---
+
+
+class PuanDuzeltmeDto(BaseModel):
+    """
+    Panelden yapılmış tekil düzeltme.
+
+    `id` **sunucu id'si** ve cihazda birincil anahtar oluyor: aynı
+    deltanın iki kez uygulanması fiziksel olarak imkânsız kalsın diye.
+
+    Personelin adı taşınmıyor: kullanıcıya kimin yaptığı değil, ne
+    yapıldığı ve niçin söyleniyor.
+    """
+
+    id: int
+    delta: int
+    gerekce: str
+    zaman: dt.datetime

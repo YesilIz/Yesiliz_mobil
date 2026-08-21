@@ -22,6 +22,7 @@ import logging
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modeller import Kullanici, Personel, PersonelRolu
@@ -36,6 +37,7 @@ from app.panel.denetim_gorunum import (
     listele,
     personel_secenekleri,
 )
+from app.panel import puan
 from app.panel.hesaplar import SAYFA_BOYU, ara, askiya_al, askiyi_kaldir, detay
 from app.panel.oturum import personel_gerek
 from app.panel.sablon import yanit, yonlendir
@@ -192,7 +194,18 @@ def kullanici_detay(
     d = detay(db, kullanici_id)
     if d is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
-    return yanit(istek, "hesap_detay.html", {"etkin": "kullanici", "d": d})
+    return yanit(
+        istek,
+        "hesap_detay.html",
+        {
+            "etkin": "kullanici",
+            "d": d,
+            "duzeltmeler": puan.gecmis(db, kullanici_id),
+            "haftalik_puan": puan.sunucudaki_haftalik_puan(db, kullanici_id),
+            "islem_anahtari": puan.islem_anahtari(),
+            "puan_siniri": puan.SINIR,
+        },
+    )
 
 
 @yonlendirici.post("/kullanici/{kullanici_id}/askiya-al")
@@ -445,3 +458,70 @@ def denetim_kaydi(
         },
         parca="parca/denetim_sonuc.html",
     )
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/puan-duzeltme")
+def kullanici_puan_duzeltme(
+    istek: Request,
+    kullanici_id: int,
+    delta: int = Form(...),
+    gerekce: str = Form(""),
+    islem_anahtari: str = Form(...),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Puan düzeltmesi — §4'ün "ceza puanı yok" kuralının tek istisnası (K56).
+
+    Kural kaldırılmadı, daraltıldı: otomatik hiçbir yol puan düşürmüyor;
+    bu uç yalnızca bir insanın tekil ve gerekçeli işlemini yazıyor.
+
+    **Tekrar koruması veritabanında.** Aynı `islem_anahtari` ikinci kez
+    yazılamıyor ve çakışma `409` dönüyor: sessizce ikinci bir satır
+    yazmak, kullanıcının puanını iki kez değiştirmek olurdu ve bu geri
+    dönülemez bir zarar. Panelin CSRF'i oturuma bağlı HMAC (U2) ve tekrar
+    gönderimi engellemiyor — bu anahtar U2'nin bilinçli istisnası.
+    """
+    _gerekce_dogrula(gerekce)
+    kullanici = _kilitli_hesap(db, kullanici_id)
+
+    try:
+        puan.dogrula(delta)
+    except puan.DuzeltmeHatasi as hata:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, str(hata)
+        ) from None
+
+    kayit = puan.uygula(
+        db,
+        kullanici_id=kullanici.id,
+        delta=delta,
+        gerekce=gerekce,
+        personel_id=personel.id,
+        anahtar=islem_anahtari.strip(),
+    )
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.puan_duzeltme",
+        hedef_tur="kullanici",
+        hedef_id=kullanici.id,
+        gerekce=gerekce,
+        istek=istek,
+        detay={"delta": delta},
+    )
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu düzeltme zaten uygulandı. Formu yenileyip tekrar dene.",
+        ) from None
+
+    gunluk.info(
+        "Puan düzeltmesi",
+        extra={"kullanici": kullanici.id, "delta": delta, "duzeltme": kayit.id},
+    )
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")

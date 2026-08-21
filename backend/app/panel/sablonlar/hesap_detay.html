@@ -164,6 +164,85 @@
   </div>
 
   <div class="kart">
+    <h2>Puan düzeltmesi</h2>
+
+    <p class="yardim">
+      Bu, <strong>§4'ün "ceza puanı yok" kuralının tek istisnası</strong>
+      (K56). Otomatik hiçbir yol puan düşürmüyor; buradaki işlem tekil,
+      gerekçeli ve denetim kayıtlı. Kullanıcı ekranda "ceza" değil
+      <strong>düzeltme</strong> görüyor ve gerekçeyi okuyor.
+      <br>
+      <strong>Kazanılmış geri alınmaz:</strong> ödül kademesi ve ağaç
+      evresi cihazda en yüksek ulaşılan puandan türüyor, düzeltme yalnızca
+      bakiyeyi değiştiriyor.
+    </p>
+
+    <table>
+      <tr>
+        <th>Sunucudaki lig puanı</th>
+        <td>
+          {% if haftalik_puan is none %}
+            <span class="cip">bilinmiyor</span>
+          {% else %}
+            {{ haftalik_puan }}
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+    <p class="yardim">
+      Bu sayı <strong>toplam puan değil</strong> ve otorite de değil:
+      sunucu toplamı hiç bilmiyor, lig puanını da cihaz bildiriyor
+      (<code>CLAUDE.md</code> A13). Bilgilendirici olarak duruyor.
+    </p>
+
+    <form method="post" action="/yonetim/kullanici/{{ d.id }}/puan-duzeltme">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      {# Tek kullanımlık: aynı deltayı iki kez uygulamak geri dönülemez.
+         Oturuma bağlı CSRF (U2) tekrar gönderimi engellemiyor. #}
+      <input type="hidden" name="islem_anahtari" value="{{ islem_anahtari }}">
+      <label class="alan">
+        <span>Değişim (+ ekler, − düşürür; en fazla {{ puan_siniri }})</span>
+        <input type="number" name="delta" required
+               min="-{{ puan_siniri }}" max="{{ puan_siniri }}" step="1">
+      </label>
+      <label class="alan">
+        <span>Gerekçe (en az 20 karakter — kullanıcı bunu görecek)</span>
+        <textarea name="gerekce" rows="3" required minlength="20"
+                  placeholder="Örn. 12 Ağustos etkinliği katılım telafisi."></textarea>
+      </label>
+      <button type="submit">Düzeltmeyi uygula</button>
+    </form>
+
+    {% if duzeltmeler %}
+      <hr>
+      <div class="kaydir">
+        <table>
+          <thead>
+            <tr><th>Zaman</th><th>Değişim</th><th>Gerekçe</th><th>Personel</th><th>Cihaz</th></tr>
+          </thead>
+          <tbody>
+            {% for x in duzeltmeler %}
+              <tr>
+                <td>{{ x.zaman.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td>{{ "+" if x.delta > 0 else "" }}{{ x.delta }}</td>
+                <td>{{ x.gerekce }}</td>
+                <td>{{ x.personel_ad }}</td>
+                <td>
+                  {% if x.cihaz_uyguladi %}
+                    <span class="cip">indi</span>
+                  {% else %}
+                    <span class="cip cip-uyari">bekliyor</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="kart">
     <h2>KVKK talepleri</h2>
 
     <p class="yardim">
