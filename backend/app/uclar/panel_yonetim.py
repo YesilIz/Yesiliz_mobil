@@ -16,15 +16,17 @@ yakalanıyor.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modeller import Personel, PersonelRolu
+from app.modeller import Kullanici, Personel, PersonelRolu
 from app.panel.gosterge import BANT_ETIKETI, BANTLAR, gostergeyi_hesapla
 from app.panel.grafik import bant_dagilimi_svg
-from app.panel.hesaplar import SAYFA_BOYU, ara, detay
+from app.panel.denetim import ASGARI_GEREKCE, denetle
+from app.panel.hesaplar import SAYFA_BOYU, ara, askiya_al, askiyi_kaldir, detay
 from app.panel.oturum import personel_gerek
-from app.panel.sablon import yanit
+from app.panel.sablon import yanit, yonlendir
 from app.surum_kapisi import beklenen_revizyon
 from app.veritabani import oturum
 
@@ -52,6 +54,22 @@ HESAP_ROLLERI = (
 #: gönderiyor (`SenkronDeposu.GUN`), daha geniş bir pencere sunucuda
 #: olmayan veriyi sorardı.
 PENCERE_GUN = 7
+
+
+def _kilitli_hesap(db: Session, kullanici_id: int) -> Kullanici:
+    """
+    Yazma boyunca hesabı kilitler; panelde eksik hesap **404**.
+
+    `guvenlik.kullaniciyi_kilitle` 401 atıyor — cihaz tarafında doğru
+    ("senin oturumun geçersiz") ama panelde yanıltıcı: personelin oturumu
+    geçerli, aranan hesap yok.
+    """
+    kullanici = db.scalar(
+        select(Kullanici).where(Kullanici.id == kullanici_id).with_for_update()
+    )
+    if kullanici is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
+    return kullanici
 
 
 @yonlendirici.get("/gosterge")
@@ -117,3 +135,77 @@ def kullanici_detay(
     if d is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
     return yanit(istek, "hesap_detay.html", {"etkin": "kullanici", "d": d})
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/askiya-al")
+def kullanici_askiya_al(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Hesabı askıya alır — gerekçe zorunlu, denetim kaydı zorunlu.
+
+    Gerekçe iki yere birden gidiyor: `denetim_kaydi`'na (kalıcı iz) ve
+    kullanıcının cihazına (403 gövdesi). İkincisi §4 gereği — sebebini
+    öğrenemeyen kullanıcı uygulamayı bozuk sanar.
+    """
+    if len(gerekce.strip()) < ASGARI_GEREKCE:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Gerekçe en az {ASGARI_GEREKCE} karakter olmalı",
+        )
+
+    kullanici = _kilitli_hesap(db, kullanici_id)
+    if kullanici.askida_mi:
+        # İdempotent değil, gerçekten bir hata: ikinci kez askıya almak
+        # sebebi sessizce EZERDİ ve kullanıcı başka bir gerekçe görürdü.
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hesap zaten askıda")
+
+    askiya_al(db, kullanici, personel.id, gerekce)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici_askiya_al",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+    )
+    db.commit()
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/askiyi-kaldir")
+def kullanici_askiyi_kaldir(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """Askıyı kaldırır. Gerekçe burada da zorunlu: geri alma da bir karar."""
+    if len(gerekce.strip()) < ASGARI_GEREKCE:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Gerekçe en az {ASGARI_GEREKCE} karakter olmalı",
+        )
+
+    kullanici = _kilitli_hesap(db, kullanici_id)
+    if not kullanici.askida_mi:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hesap zaten aktif")
+
+    askiyi_kaldir(db, kullanici)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici_askiyi_kaldir",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+    )
+    db.commit()
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")

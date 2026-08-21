@@ -13,6 +13,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +32,8 @@ import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.nudge.NudgeOverlayService
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.AskidaEkran
+import tr.org.yesilay.yesiliz.ui.ekran.hesap.AskidaViewModel
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import tr.org.yesilay.yesiliz.ui.gezinme.YesilizGezinme
 import tr.org.yesilay.yesiliz.ui.tema.YesilizTemasi
@@ -78,6 +83,10 @@ class MainActivity : ComponentActivity() {
                     hedefRota = hedefRota,
                     onHedefRotaTuketildi = { hedefRota = null },
                 )
+                // Gezinmenin ÜSTÜNDE: askı bir ekran değil bir durum, ve
+                // etrafından dolaşılamamalı. Rota olarak eklenseydi geri
+                // tuşu ya da bir derin bağlantı onu atlayabilirdi.
+                AskiKapisi()
             }
         }
     }
@@ -260,4 +269,24 @@ class MainActivity : ComponentActivity() {
 internal fun disHedefRotasiniDogrula(eylem: String?, hamRota: String?): String? = when (eylem) {
     MainActivity.GEREKCE_EYLEMI, Intent.ACTION_VIEW_PERMISSION_USAGE -> Rota.SAGLIK_IZIN
     else -> hamRota?.takeIf { it == Rota.NEFES || it == Rota.YURUYUS }
+}
+
+
+/**
+ * Hesap askıya alınmışsa her şeyin üstüne engelleyici ekranı çizer.
+ *
+ * Durum ağ katmanından geliyor (`AskiDurumu`): hangi uç 403 + `hesap_askida`
+ * dönerse dönsün buraya düşüyor. Askı yokken hiçbir şey çizilmiyor.
+ */
+@Composable
+private fun AskiKapisi(gorunum: AskidaViewModel = hiltViewModel()) {
+    val hal by gorunum.hal.collectAsState()
+    val deneniyor by gorunum.deneniyor.collectAsState()
+    hal?.let {
+        AskidaEkran(
+            sebep = it.sebep,
+            onTekrarDene = gorunum::tekrarDene,
+            deneniyor = deneniyor,
+        )
+    }
 }

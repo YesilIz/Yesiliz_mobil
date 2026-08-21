@@ -49,6 +49,19 @@ def _simdi() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+class KullaniciDurumu(str, enum.Enum):
+    """
+    Son kullanıcı hesabının durumu.
+
+    `PersonelDurumu` ile aynı değerleri taşıyor ama **ayrı enum**: iki
+    kimlik alanı birbirini tanımıyor (`docs/panel-plani.md §2`, K57) ve
+    ortak bir enum ilk paylaşılan alan olurdu.
+    """
+
+    AKTIF = "aktif"
+    ASKIDA = "askida"
+
+
 class Kullanici(Taban):
     __tablename__ = "kullanici"
 
@@ -65,7 +78,29 @@ class Kullanici(Taban):
     avatar: Mapped[str] = mapped_column(String(32), default="")
     olusturma: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
 
+    # `aktif` | `askida` — panelden, gerekçeyle ve denetim kaydıyla
+    # değiştiriliyor (`docs/panel-plani.md §5.2`). Askıya alma **veri
+    # silmiyor**: hesap yerinde duruyor, yalnızca API erişimi kapanıyor.
+    # Yumuşak silmeyle karıştırılmamalı; silme hâlâ sert (`kullanici_silme`).
+    durum: Mapped[str] = mapped_column(
+        String(20), default="aktif", server_default=text("'aktif'")
+    )
+    # Kullanıcıya cihazda GÖSTERİLİYOR — sebebini öğrenemeyen kullanıcı
+    # uygulamayı bozuk sanır (CLAUDE.md §4 "yapılmayan işi yapıldı
+    # gösterme" ailesi). Bu yüzden serbest metin ve zorunlu.
+    askiya_alma_sebebi: Mapped[str] = mapped_column(String(500), default="")
+    askiya_alan_id: Mapped[int | None] = mapped_column(
+        ForeignKey("personel.id"), nullable=True
+    )
+    askiya_alma_zamani: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     ozetler: Mapped[list[GunlukOzet]] = relationship(back_populates="kullanici")
+
+    @property
+    def askida_mi(self) -> bool:
+        return self.durum == KullaniciDurumu.ASKIDA.value
 
 
 class YenilemeJetonu(Taban):

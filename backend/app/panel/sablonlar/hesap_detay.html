@@ -5,10 +5,32 @@
   <p class="yardim"><a href="/yonetim/kullanici">← Hesaplar</a></p>
   <h1>{{ d.eposta }}</h1>
 
+  {% if d.durum == "askida" %}
+    <div class="serit serit-uyari">
+      <strong>Hesap askıda.</strong>
+      {% if d.askiya_alma_zamani %}
+        {{ d.askiya_alma_zamani.strftime("%d.%m.%Y %H:%M") }} ·
+      {% endif %}
+      Gerekçe: {{ d.askiya_alma_sebebi }}
+      <br>
+      Kullanıcı uygulamayı açtığında bu gerekçeyi görüyor. Verisi silinmedi.
+    </div>
+  {% endif %}
+
   <div class="kart">
     <h2>Hesap</h2>
     <table>
       <tr><th>Kullanıcı no</th><td>{{ d.id }}</td></tr>
+      <tr>
+        <th>Durum</th>
+        <td>
+          {% if d.durum == "askida" %}
+            <span class="cip cip-uyari">askıda</span>
+          {% else %}
+            <span class="cip">aktif</span>
+          {% endif %}
+        </td>
+      </tr>
       <tr><th>Ad</th><td>{{ d.ad }}</td></tr>
       <tr><th>Kayıt tarihi</th><td>{{ d.olusturma.strftime("%d.%m.%Y %H:%M") }}</td></tr>
       <tr>
@@ -90,6 +112,38 @@
       </div>
     {% else %}
       <p class="bos-durum">Ödül seçimi yok.</p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>İşlemler</h2>
+    {% if d.durum == "askida" %}
+      <form method="post" action="/yonetim/kullanici/{{ d.id }}/askiyi-kaldir">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Askıyı kaldırma gerekçesi (en az 20 karakter)</span>
+          <textarea name="gerekce" rows="3" required minlength="20"></textarea>
+        </label>
+        <button type="submit">Askıyı kaldır</button>
+      </form>
+      <p class="yardim">
+        Askı kalkınca kullanıcı yeniden giriş yapmak zorunda: askıya alma
+        jetonlarını iptal etti ve geri getirmiyor.
+      </p>
+    {% else %}
+      <form method="post" action="/yonetim/kullanici/{{ d.id }}/askiya-al">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Askıya alma gerekçesi (en az 20 karakter)</span>
+          <textarea name="gerekce" rows="3" required minlength="20"
+                    placeholder="Kullanıcı bu metni uygulamada görecek."></textarea>
+        </label>
+        <button type="submit">Askıya al</button>
+      </form>
+      <p class="yardim">
+        Askıya alma <strong>veri silmiyor</strong> ve geri alınabilir. Açık
+        oturumlar hemen düşüyor, kullanıcı uygulamada gerekçeyi görüyor.
+      </p>
     {% endif %}
   </div>
 

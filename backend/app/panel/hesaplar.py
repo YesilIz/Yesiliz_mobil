@@ -20,15 +20,17 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass, field
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.modeller import (
     EbeveynBaglanti,
     Heartbeat,
     Kullanici,
+    KullaniciDurumu,
     LigUyelik,
     OdulSecimi,
+    YenilemeJetonu,
 )
 
 #: Tek sayfada gösterilen hesap sayısı.
@@ -48,6 +50,7 @@ class KullaniciSatiri:
     ad: str
     olusturma: dt.datetime
     son_sinyal: dt.datetime | None
+    durum: str
 
 
 @dataclass(frozen=True)
@@ -73,6 +76,9 @@ class KullaniciDetay:
     avatar: str
     olusturma: dt.datetime
     son_sinyal: dt.datetime | None
+    durum: str
+    askiya_alma_sebebi: str
+    askiya_alma_zamani: dt.datetime | None
     ebeveyn_bagi_var: bool
     ebeveyn_rolu: str
     lig_gecmisi: list[LigSatiri] = field(default_factory=list)
@@ -119,6 +125,7 @@ def ara(db: Session, sorgu: str, sayfa: int = 0) -> tuple[list[KullaniciSatiri],
             ad=k.ad,
             olusturma=k.olusturma,
             son_sinyal=sinyal,
+            durum=k.durum,
         )
         for k, sinyal in satirlar
     ], toplam
@@ -171,6 +178,9 @@ def detay(db: Session, kullanici_id: int) -> KullaniciDetay | None:
         avatar=kullanici.avatar or "",
         olusturma=kullanici.olusturma,
         son_sinyal=sinyal,
+        durum=kullanici.durum,
+        askiya_alma_sebebi=kullanici.askiya_alma_sebebi or "",
+        askiya_alma_zamani=kullanici.askiya_alma_zamani,
         ebeveyn_bagi_var=bag is not None,
         ebeveyn_rolu=rol,
         lig_gecmisi=[
@@ -183,3 +193,48 @@ def detay(db: Session, kullanici_id: int) -> KullaniciDetay | None:
         ],
         odul_secimleri=list(oduller),
     )
+
+
+def askiya_al(
+    db: Session,
+    kullanici: Kullanici,
+    personel_id: int,
+    sebep: str,
+) -> None:
+    """
+    Hesabı askıya alır ve **açık oturumlarını düşürür**; commit etmez.
+
+    Jetonları iptal etmek şart: erişim jetonu 30 dakika daha geçerli
+    olurdu ve `mevcut_kullanici` kapısı olmasa askı o pencerede fiilen
+    uygulanmazdı. İki koruma birlikte duruyor — kapı kalıcı, iptal ise
+    cihazı hemen dışarı atıyor.
+
+    **Veri silinmiyor.** Silme ayrı ve sert bir işlem
+    (`app/kullanici_silme.py`); askı geri alınabilir.
+    """
+    kullanici.durum = KullaniciDurumu.ASKIDA.value
+    kullanici.askiya_alma_sebebi = sebep.strip()[:500]
+    kullanici.askiya_alan_id = personel_id
+    kullanici.askiya_alma_zamani = dt.datetime.now(dt.timezone.utc)
+
+    db.execute(
+        update(YenilemeJetonu)
+        .where(YenilemeJetonu.kullanici_id == kullanici.id)
+        .values(iptal=True)
+    )
+
+
+def askiyi_kaldir(db: Session, kullanici: Kullanici) -> None:
+    """
+    Askıyı kaldırır; commit etmez.
+
+    Sebep alanı **temizleniyor**: hesap yeniden aktifken orada duran eski
+    bir gerekçe, sonraki bir askıda yanlışlıkla kullanıcıya gösterilirdi.
+    Kalıcı kayıt `denetim_kaydi`'nda.
+
+    Jetonlar geri gelmiyor — kullanıcı yeniden giriş yapıyor.
+    """
+    kullanici.durum = KullaniciDurumu.AKTIF.value
+    kullanici.askiya_alma_sebebi = ""
+    kullanici.askiya_alan_id = None
+    kullanici.askiya_alma_zamani = None

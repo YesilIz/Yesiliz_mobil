@@ -131,6 +131,26 @@ def jetonu_coz(jeton: str) -> int | None:
         return None
 
 
+#: Askıya alınmış hesabın 403 gövdesindeki ayırt edici alan. Cihaz bu
+#: değere bakıp çevrimdışı ile askıyı ayırıyor; yeniden adlandırılırsa
+#: Android tarafı da değişmeli.
+ASKIDA_KODU = "hesap_askida"
+
+
+def askiya_alma_govdesi(kullanici: Kullanici) -> dict[str, str]:
+    """
+    403'ün **makine okunur** gövdesi.
+
+    Düz metin bir mesaj yeterli değil: cihaz 403'ü ağ hatasından ayırmak
+    zorunda, yoksa `Sunucu*Deposu` onu sessizce "çevrimdışı"ya indirger ve
+    kullanıcı sebebini hiç öğrenmez (CLAUDE.md §12 K18/K42 ailesi).
+    """
+    return {
+        "hata": ASKIDA_KODU,
+        "sebep": kullanici.askiya_alma_sebebi or "",
+    }
+
+
 def mevcut_kullanici(
     kimlik: HTTPAuthorizationCredentials | None = Depends(_tasiyici),
     db: Session = Depends(oturum),
@@ -146,6 +166,11 @@ def mevcut_kullanici(
     kullanici = db.scalar(select(Kullanici).where(Kullanici.id == kullanici_id))
     if kullanici is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
+    if kullanici.askida_mi:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=askiya_alma_govdesi(kullanici),
+        )
     return kullanici
 
 

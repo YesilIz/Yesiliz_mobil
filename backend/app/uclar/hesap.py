@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.ayarlar import ayarlar
 from app.guvenlik import (
+    askiya_alma_govdesi,
     erisim_jetonu,
     jeton_ozetle,
     kullaniciyi_kilitle,
@@ -101,6 +102,13 @@ def giris(istek: GirisIstek, db: Session = Depends(oturum)) -> Jetonlar:
     if kullanici is None or not sifre_gecerli:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "E-posta ya da şifre hatalı")
 
+    # Parola doğrulandıktan SONRA bakılıyor: önce bakmak, yanlış parolayla
+    # bile bir e-postanın askıya alınmış olduğunu sızdırırdı.
+    if kullanici.askida_mi:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=askiya_alma_govdesi(kullanici)
+        )
+
     return _jetonlar(db, kullanici)
 
 
@@ -143,6 +151,14 @@ def yenile(istek: YenileIstek, db: Session = Depends(oturum)) -> Jetonlar:
     kullanici = db.get(Kullanici, kayit_.kullanici_id)
     if kullanici is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Kullanıcı bulunamadı")
+    # Askıya alma jetonları iptal ediyor, ama iptalle bu istek yarışabilir.
+    # Yenilemenin kendisi de kapıdan geçmeli, yoksa 30 dakikalık bir
+    # pencerede askı fiilen uygulanmıyor.
+    if kullanici.askida_mi:
+        db.commit()
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=askiya_alma_govdesi(kullanici)
+        )
     return _jetonlar(db, kullanici)
 
 
