@@ -1,9 +1,13 @@
 """
 Yönetim paneli (`docs/panel-plani.md §5`).
 
-F1'de yalnızca gösterge kabuğu var; metrikler, hesap yönetimi ve denetim
-görüntüleyici F2'de bağlanıyor. Kabuğun şimdi var olmasının sebebi giriş
-akışının bir yere düşmesi gerekmesi.
+Gösterge toplu/anonim (`GOSTERGE_ROLLERI`), hesap yönetimi tekil
+(`HESAP_ROLLERI`). İkisi ayrı rol kümesi: `gozlemci` yalnızca göstergeyi
+görüyor, tekil kullanıcıya hiç erişemiyor.
+
+Hesap detayının **davranış verisi taşımadığına** dikkat (P9) — sorguların
+kendisi `panel/hesaplar.py`'de ve o dosya `gunluk_ozet`/`risk_sonuc`
+tablolarına hiç dokunmuyor.
 
 **Her route rolünü açıkça beyan ediyor.** Kapsamı `test_panel_yetki_kapsami`
 router listesini tarayarak garanti ediyor: yetkisiz eklenmiş bir uç CI'da
@@ -12,12 +16,13 @@ yakalanıyor.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.modeller import Personel, PersonelRolu
 from app.panel.gosterge import BANT_ETIKETI, BANTLAR, gostergeyi_hesapla
 from app.panel.grafik import bant_dagilimi_svg
+from app.panel.hesaplar import SAYFA_BOYU, ara, detay
 from app.panel.oturum import personel_gerek
 from app.panel.sablon import yanit
 from app.surum_kapisi import beklenen_revizyon
@@ -32,6 +37,14 @@ GOSTERGE_ROLLERI = (
     PersonelRolu.ADMIN,
     PersonelRolu.OPERASYON,
     PersonelRolu.GOZLEMCI,
+)
+
+
+#: Tekil hesabı görebilenler. `GOZLEMCI` **yok**: rolün tanımı toplu ve
+#: anonim istatistik (§2 "Roller"), tekil hesap detayı o tanımın dışında.
+HESAP_ROLLERI = (
+    PersonelRolu.ADMIN,
+    PersonelRolu.OPERASYON,
 )
 
 
@@ -60,3 +73,47 @@ def gosterge(
             "revizyon": beklenen_revizyon(),
         },
     )
+
+
+@yonlendirici.get("/kullanici")
+def kullanici_ara(
+    istek: Request,
+    ara_metni: str = Query("", alias="ara"),
+    sayfa: int = Query(0, ge=0),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Hesap arama — e-posta ya da kullanıcı numarası.
+
+    Boş sorgu **tüm kullanıcıları listelemiyor**: hesap listesini gezinmek
+    bir destek talebini çözmüyor, yalnızca kişisel veriyi göz önüne
+    seriyor. Arama bir hedef gerektiriyor.
+    """
+    satirlar, toplam = ara(db, ara_metni, sayfa)
+    return yanit(
+        istek,
+        "hesap_ara.html",
+        {
+            "etkin": "kullanici",
+            "ara": ara_metni,
+            "satirlar": satirlar,
+            "toplam": toplam,
+            "sayfa": sayfa,
+            "sayfa_boyu": SAYFA_BOYU,
+        },
+        parca="parca/hesap_sonuc.html",
+    )
+
+
+@yonlendirici.get("/kullanici/{kullanici_id}")
+def kullanici_detay(
+    istek: Request,
+    kullanici_id: int,
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    d = detay(db, kullanici_id)
+    if d is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
+    return yanit(istek, "hesap_detay.html", {"etkin": "kullanici", "d": d})

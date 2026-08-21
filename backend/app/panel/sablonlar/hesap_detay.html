@@ -1,0 +1,108 @@
+{% extends "taban.html" %}
+{% block baslik %}{{ d.eposta }} · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <p class="yardim"><a href="/yonetim/kullanici">← Hesaplar</a></p>
+  <h1>{{ d.eposta }}</h1>
+
+  <div class="kart">
+    <h2>Hesap</h2>
+    <table>
+      <tr><th>Kullanıcı no</th><td>{{ d.id }}</td></tr>
+      <tr><th>Ad</th><td>{{ d.ad }}</td></tr>
+      <tr><th>Kayıt tarihi</th><td>{{ d.olusturma.strftime("%d.%m.%Y %H:%M") }}</td></tr>
+      <tr>
+        <th>Son sinyal</th>
+        <td>
+          {% if d.son_sinyal %}
+            {{ d.son_sinyal.strftime("%d.%m.%Y %H:%M") }}
+          {% else %}
+            <span class="cip">yok</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Ebeveyn bağı</th>
+        <td>
+          {% if d.ebeveyn_bagi_var %}
+            <span class="cip">var · {{ d.ebeveyn_rolu }}</span>
+          {% else %}
+            <span class="cip">yok</span>
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+    <p class="yardim">
+      Son sinyal yalnızca Yeşilay ile paylaşım onayı veren kullanıcılarda
+      dolu; boş olması hesabın kullanılmadığı anlamına gelmiyor.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Lig</h2>
+    {% if d.lig_gecmisi %}
+      <div class="kaydir">
+        <table>
+          <thead><tr><th>Hafta</th><th>Puan</th><th>Görünürlük</th></tr></thead>
+          <tbody>
+            {% for u in d.lig_gecmisi %}
+              <tr>
+                <td>{{ u.hafta_baslangic.strftime("%d.%m.%Y") }}</td>
+                <td>{{ u.haftalik_puan }}</td>
+                <td>
+                  {% if u.gorunur %}
+                    <span class="cip">görünür</span>
+                  {% else %}
+                    <span class="cip">gizli</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="yardim">
+        Haftalık puanı cihaz bildiriyor; sunucu doğrulamıyor
+        (<code>CLAUDE.md</code> A13). Destek talebinde referans alınabilir,
+        yaptırıma dayanak yapılamaz.
+      </p>
+    {% else %}
+      <p class="bos-durum">Lig üyeliği yok.</p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>Ödül seçimleri</h2>
+    {% if d.odul_secimleri %}
+      <div class="kaydir">
+        <table>
+          <thead><tr><th>Kademe</th><th>Seçenek</th><th>Tarih</th></tr></thead>
+          <tbody>
+            {% for o in d.odul_secimleri %}
+              <tr>
+                <td>{{ o.kademe_id }}</td>
+                <td>{{ o.secenek_id }}</td>
+                <td>{{ o.tarih.strftime("%d.%m.%Y") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="bos-durum">Ödül seçimi yok.</p>
+    {% endif %}
+  </div>
+
+  {# Davranış verisi (kategori dakikası, örüntü, risk skoru/bandı) BURADA
+     GÖSTERİLMİYOR ve `panel/hesaplar.py` onları hiç sorgulamıyor —
+     `docs/panel-plani.md` P9. Bu bölümü eklemek plan kararını değiştirmek
+     demek; ayrı bir karar olarak alınmalı. #}
+  <div class="kart">
+    <h2>Davranış verisi</h2>
+    <p class="bos-durum">
+      Tekil kullanıcının ekran süresi, kategori dağılımı ve risk skoru
+      panelde gösterilmiyor. Toplu dağılım göstergede; tekil erişim ancak
+      KVKK talebi işlemi olarak, gerekçeyle ve denetim kaydıyla açılır.
+    </p>
+  </div>
+{% endblock %}

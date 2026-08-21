@@ -1,0 +1,28 @@
+{% extends "taban.html" %}
+{% block baslik %}Hesaplar · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Hesaplar</h1>
+
+  <div class="kart">
+    <form hx-get="/yonetim/kullanici"
+          hx-target="#sonuc"
+          hx-trigger="submit"
+          hx-push-url="true">
+      <label class="alan">
+        <span>E-posta ya da kullanıcı numarası</span>
+        <input type="search" name="ara" value="{{ ara }}"
+               placeholder="ornek@eposta.com" autocomplete="off" autofocus>
+      </label>
+      <button type="submit">Ara</button>
+    </form>
+    <p class="yardim">
+      Ad ile arama yok: ad benzersiz değil ve yanlış hesabı askıya almak ya
+      da silmek geri alınamaz.
+    </p>
+  </div>
+
+  <div id="sonuc">
+    {% include "parca/hesap_sonuc.html" %}
+  </div>
+{% endblock %}

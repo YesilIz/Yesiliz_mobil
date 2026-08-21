@@ -6,7 +6,7 @@ import datetime as dt
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, or_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,20 +20,8 @@ from app.guvenlik import (
     sifre_dogrula,
     sifre_ozetle,
 )
-from app.modeller import (
-    Arkadaslik,
-    DavetKodu,
-    EbeveynBaglanti,
-    EslestirmeKodu,
-    GunlukOzet,
-    Heartbeat,
-    Kullanici,
-    LigUyelik,
-    OdulSecimi,
-    RiskSonuc,
-    SifreSifirlama,
-    YenilemeJetonu,
-)
+from app.kullanici_silme import kullaniciyi_tamamen_sil
+from app.modeller import Kullanici, SifreSifirlama, YenilemeJetonu
 from app.semalar import (
     GirisIstek,
     Jetonlar,
@@ -335,8 +323,9 @@ def hesabi_sil(
     kullanıcı verisinin sunucuda kalmaya devam etmesi, silme talebinin
     karşılanmaması demek. Aynı e-posta ile yeniden kayıt olmak serbest.
 
-    ORM `cascade` tanımlı olmadığı için bağlı tablolar elle siliniyor;
-    yabancı anahtar sırası önemli (önce çocuklar, sonra kullanıcı).
+    Silmenin kendisi `app/kullanici_silme.py`'de — panel de aynı silmeyi
+    yapıyor (`docs/panel-plani.md §5.2`) ve iki kopya, yeni bir tablo
+    eklendiğinde birinin unutulmasıyla öksüz kişisel veri bırakırdı.
 
     204 yerine gövdeli 200 dönüyor: API'nin geri kalanı da `{"durum": …}`
     veriyor ve boş gövde istemci tarafında ayrı bir dönüştürücü istiyor.
@@ -348,29 +337,7 @@ def hesabi_sil(
     # silme sonrasında kalıntı oluşmasın.
     kullanici = kullaniciyi_kilitle(db, kid)
 
-    db.execute(delete(Heartbeat).where(Heartbeat.kullanici_id == kid))
-    db.execute(delete(RiskSonuc).where(RiskSonuc.kullanici_id == kid))
-    db.execute(delete(GunlukOzet).where(GunlukOzet.kullanici_id == kid))
-    db.execute(delete(LigUyelik).where(LigUyelik.kullanici_id == kid))
-    db.execute(delete(OdulSecimi).where(OdulSecimi.kullanici_id == kid))
-    db.execute(delete(DavetKodu).where(DavetKodu.kullanici_id == kid))
-    db.execute(delete(EslestirmeKodu).where(EslestirmeKodu.ureten_id == kid))
-    db.execute(delete(SifreSifirlama).where(SifreSifirlama.kullanici_id == kid))
-    db.execute(delete(YenilemeJetonu).where(YenilemeJetonu.kullanici_id == kid))
-
-    # Karşılıklı bağlar: iki uçtan da silinmeli, yoksa öksüz satır kalır.
-    db.execute(
-        delete(Arkadaslik).where(
-            or_(Arkadaslik.kullanici_id == kid, Arkadaslik.arkadas_id == kid)
-        )
-    )
-    db.execute(
-        delete(EbeveynBaglanti).where(
-            or_(EbeveynBaglanti.ebeveyn_id == kid, EbeveynBaglanti.cocuk_id == kid)
-        )
-    )
-
-    db.delete(kullanici)
+    kullaniciyi_tamamen_sil(db, kullanici)
     db.commit()
     gunluk.info("Hesap silindi: kullanici=%s", kid)
     return {"durum": "silindi"}
