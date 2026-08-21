@@ -238,21 +238,58 @@ Plan §13'ün F3 bitiş ölçütü: *"gerçek bir telefonda rıza verilip başvu
 açılıyor, danışman görüyor, kullanıcı 'bakıldı' kaydını görüyor, geri
 çekince erişim kesiliyor."*
 
-Kod tarafı tamam ve testlerle örtülü, ama **bu tur hiç koşulmadı**:
+**Tur 21 Ağustos 2026'da koşuldu** — gerçek Samsung cihaz (`RF8NA115KCD`),
+`docker compose` yığını (PostgreSQL 16 + api + panel), USB tüneli üzerinden
+yerel backend. Sonuçlar aşağıda.
 
-- [ ] **V1** Telefonda rıza ver → başvuru aç → panelde havuzda gör
-- [ ] **V2** Panelden ata → detayı aç → telefonda "bakıldı" kaydı görünsün
-- [ ] **V3** Temas kaydı ekle → telefonda görüşme kaydı görünsün
-- [ ] **V4** Telefondan rızayı geri çek → panelde veri bölümleri boşalsın
-- [ ] **V5** 18 altı senaryosu: eşleşmiş ebeveynle başvuru → onay bekliyor →
-      ebeveyn onaylayınca havuza düşsün
-- [ ] **V6** Migration'ları **gerçek PostgreSQL'de** koştur — zincir SQLite'ta
-      uçtan uca koşturulamıyor (`c84f32a1e907` PostgreSQL'e özgü SQL kullanıyor,
-      mevcut bir migration)
+- [~] **V1** *(kısmen)* Başvuru API'den açıldı ve panelde havuzda göründü;
+      iletişim bilgisi havuzda **gizli**. **Rıza ekranının kendisi telefonda
+      görülemedi:** YEDAM kartı `Bant.COK` istiyor, o günün ölçümü 8 dakikaydı
+      ve K30 gereği bant hiç gösterilmiyor — yani ekrana ulaşmanın yolu
+      gerçekten yoğun bir kullanım günü. Kalan tek doğrulama bu
+- [x] **V2** ✅ Panelden atandı, detay açıldı, **telefonda dört erişim kaydı
+      göründü** (tarih + kapsam, danışman adı yok)
+- [x] **V3** ✅ Temas kaydı eklendi; sunucuda duruyor ve rıza geri
+      çekildikten sonra da kaldı (rıza metni §3)
+- [x] **V4** ✅ **Turun en değerli doğrulaması.** Telefondan geri çekildi:
+      `risk_surukleyici` **silindi (0)**, `erisim_kaydi` (4) ve `yedam_temas`
+      (1) **kaldı**, başvuru `riza_geri_cekildi` oldu, havuzdan düştü. Panel
+      "Rıza geçerli değil" gösterdi, sürükleyiciler kayboldu, kimlik ve
+      görüşme geçmişi kaldı. Rıza vermeyen ekranı açmak **yine erişim kaydı
+      yazdı** (4→5) — tasarlandığı gibi
+- [x] **V5** ✅ Eşleşme yokken 15 yaş → doğrudan `yeni`; eşleşme varken →
+      `ebeveyn_onayi_bekliyor` ve **havuzda görünmüyor**; ebeveyn onaylayınca
+      `yeni` olup havuza düştü (S2 kararı)
+- [x] **V6** ✅ On üç migration PostgreSQL 16'da uçtan uca koştu, `alembic
+      current` = head (`f3a91d5c082e`), 29 tablo. SQLite'ta test **edilemeyen**
+      iki şey doğrulandı: `ix_kullanici_askida` kısmi indeksi oluştu ve
+      `denetim_kaydi` tetikleyicisi UPDATE ile DELETE'i gerçekten reddetti
 - [ ] **G9** Yedek + geri yükleme tatbikatı — plan §15 bunu F3 ile birlikte
-      istiyor; danışman notu açılmadan önce şart
-- [ ] **V7** Puan düzeltmesi telefonda: panelden −120 → bildirim defterinde
-      "düzeltme" görünsün, bakiye düşsün, **ağaç evresi ve ödül kademesi geri
-      gitmesin** (U6'nın asıl sınandığı yer)
-- [ ] **V8** Ödül stoğu: panelden parti yükle → telefonda kademe açılsın →
-      seç → panelde teslimat "bekliyor" görünsün
+      istiyor; danışman notu açılmadan önce şart. **Turda yapılmadı**
+
+### Turun yan bulguları
+
+- **M5/M6 ekranı çalışıyor:** "YEDAM ve verilerin" satırı Profil › Gizlilik'te,
+  boş durum "çevrimdışı" değil "henüz kimse bakmadı" diyor, geri çekme onay
+  istiyor ve **kırmızı kullanmıyor** (§4).
+- **K30 doğrulandı:** o günün ölçümü 8 dakika olduğu için bugünün bandı
+  `YETERSIZ` ve hiç gösterilmiyor. Demo tohumu geçmiş 31 gün için gerçek skor
+  üretti (R≈38–62, `ORTA`).
+- **K60'ın bir sonucu görüldü:** denetim kaydı olan personel **silinemiyor**
+  (yabancı anahtar + silinemez kayıt). Doğru işlem askıya almak — tasarım
+  böyle, ama turda ilk kez fiilen karşılaşıldı.
+- **P9 sınırı:** panel hesap detayı davranış verisi taşımıyor (gerçek
+  veritabanında da doğrulandı).
+- **Anket ekranı adb ile sürülemedi:** kart yükseklikleri soru uzunluğuna göre
+  değiştiği için sabit koordinatlar kaymıyor. Elle doldurulması gereken tek
+  akış bu; V1 bu yüzden yarım kaldı.
+- [x] **V7** ✅ **U6 gerçek cihazda çivilendi.** Panelden +600 → telefonda
+      600 puan, ağaç büyüdü. Sonra −500 → bakiye **100'e düştü ama ağaç
+      aynı kaldı**. Bildirim defterinde iki kayıt: "Puanında bir düzeltme
+      yapıldı · −500 puan. Gerekçe: …" — "ceza" kelimesi yok. Aynı işlem
+      anahtarıyla ikinci gönderim **409** ile reddedildi (U2 istisnası)
+- [x] **V8** ✅ Stok yokken tüm seçenekler kapalı (fail-closed). Panelden
+      3 adetlik parti → **yalnızca o kademe/seçenek açıldı**. Kapalı seçenek
+      503, açık seçenek 201; stok 3→2 düştü, teslimat `bekliyor` açıldı.
+      `gonderildi` → `iptal`: **stok 3'e geri döndü, kullanıcının seçimi
+      kaldı** (K28)
