@@ -17,6 +17,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import retrofit2.HttpException
 import java.io.IOException
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import tr.org.yesilay.yesiliz.data.depo.SenkronDeposu
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
 import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
@@ -33,6 +36,7 @@ import javax.inject.Inject
 class LigViewModel @Inject constructor(
     private val depo: LigDeposu,
     private val tercihler: Tercihler,
+    private val senkronDeposu: SenkronDeposu,
 ) : ViewModel() {
 
     /**
@@ -51,15 +55,32 @@ class LigViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val durum: StateFlow<LigDurum> = tazelemeIsareti
-        .flatMapLatest { depo.ligAkisi() }
-        .combine(tercihler.oturum) { ozet, oturum ->
+        .flatMapLatest {
+            flow {
+                // Sıralamayı istemeden ÖNCE puanı gönder. Puan sunucuya
+                // yalnızca `POST /ozet` ile gidiyordu ve onu da gecelik
+                // worker çağırıyordu: lige katılan kullanıcı ertesi sabaha
+                // kadar kendini 0 puanla görüyordu. Çağrı rıza kapısını
+                // kendi içinde kontrol ediyor ve hatayı yutuyor.
+                senkronDeposu.senkronEt()
+                emitAll(depo.ligAkisi())
+            }
+        }
+        .combine(tercihler.yesilayPaylasimi) { ozet, paylasim ->
+            ozet to paylasim
+        }
+        .combine(tercihler.oturum) { (ozet, paylasim), oturum ->
             // Misafir ve hiç giriş yapmamış kullanıcı sunucuya gitmeden
             // "oturum yok" durumuna düşüyor: lig uçları zorunlu jeton
             // istiyor, çağrı zaten 401 dönecek.
             val girisYok = oturum.misafirMi || !oturum.girisYapildiMi
-            if (girisYok) ozet.copy(oturumYok = true, cevrimdisi = false) else ozet
+            val duzeltilmis =
+                if (girisYok) ozet.copy(oturumYok = true, cevrimdisi = false) else ozet
+            // Paylaşım kapalıyken puan gönderilemiyor; bunu yalnızca gerçekten
+            // ligde olan ve giriş yapmış kullanıcıya söylemek anlamlı.
+            duzeltilmis to (!paylasim && !girisYok && duzeltilmis.katildiMi)
         }
-        .map { ozet ->
+        .map { (ozet, paylasimKapali) ->
             LigDurum(
                 ligAdi = ozet.ligAdi,
                 kalanGun = ozet.kalanGun,
@@ -78,6 +99,7 @@ class LigViewModel @Inject constructor(
                 gorunuyorum = ozet.gorunuyorum,
                 cevrimdisi = ozet.cevrimdisi,
                 oturumYok = ozet.oturumYok,
+                puanPaylasimiKapali = paylasimKapali,
                 yukleniyor = false,
             )
         }
@@ -90,7 +112,12 @@ class LigViewModel @Inject constructor(
     fun ligeKatil() {
         viewModelScope.launch {
             _katilimHatasi.value = when (depo.ligeKatil()) {
-                LigDeposu.KatilimSonuc.BASARILI -> null
+                // Katılım üyeliği 0 puanla açıyor; puan ayrı bir uçtan
+                // gidiyor. Tazeleme onu da tetikliyor.
+                LigDeposu.KatilimSonuc.BASARILI -> {
+                    tazele()
+                    null
+                }
                 LigDeposu.KatilimSonuc.OTURUM_YOK ->
                     "Lige katılmak için giriş yapman gerekiyor."
                 LigDeposu.KatilimSonuc.ULASILAMADI ->
@@ -103,6 +130,20 @@ class LigViewModel @Inject constructor(
     fun tazele() {
         _katilimHatasi.value = null
         tazelemeIsareti.update { it + 1 }
+    }
+
+    /**
+     * "Paylaşımı aç ve puanımı gönder" — lig kartındaki eylem.
+     *
+     * Rızayı **kullanıcının açık dokunuşuyla** açıyor; kart neyin
+     * gönderileceğini yazıyor. Profil'deki anahtarla aynı tercih,
+     * yalnızca kullanıcının sorunu yaşadığı yerde.
+     */
+    fun paylasimiAcVePuaniGonder() {
+        viewModelScope.launch {
+            tercihler.yesilayPaylasimiAyarla(true)
+            tazele()
+        }
     }
 
     fun katilimHatasiGoruldu() {
@@ -128,45 +169,16 @@ class ArkadasEkleViewModel @Inject constructor(
     }
 
     /**
-     * Kod ve öneri listesini tazeler.
+     * Davet kodunu tazeler.
      *
-     * Askıya alan çağrılar `update` bloğunun DIŞINDA: `MutableStateFlow`
+     * Askıya alan çağrı `update` bloğunun DIŞINDA: `MutableStateFlow`
      * lambdayı yarışma durumunda yeniden çalıştırıyor ve içeride ağ
      * çağrısı olsaydı ikinci kez istek gidebilirdi.
      */
     private fun yenile() {
         viewModelScope.launch {
             val kod = depo.davetKodu()
-            val oneriler = depo.onerilenler()
-            _durum.update {
-                it.copy(davetKodu = kod, onerilenler = oneriler, yukleniyor = false)
-            }
-        }
-    }
-
-    /**
-     * Davet gönderir.
-     *
-     * Dokunuş veritabanına yazılıyordu ama ekranda hiçbir iz bırakmıyordu:
-     * çip hâlâ "Ekle" diyor, kişi listeden çıkmıyor, "Davet gönderildi"
-     * durumu görünmüyordu. Kullanıcı işe yaramadı sanıp tekrar dokunuyordu
-     * (`debug.md` Y-10).
-     *
-     * Asıl sebep gecikmeydi: sunucuya ulaşılamayan bir telefonda hem
-     * `davetGonder` hem `yenile` beşer saniye zaman aşımına giriyor,
-     * yaklaşık on saniye boyunca hiçbir şey değişmiyordu. Artık dokunuş
-     * ANINDA "Gönderiliyor…" olarak görünüyor.
-     */
-    fun davetGonder(isim: String) {
-        if (isim in _durum.value.gonderiliyor) return
-        _durum.update { it.copy(gonderiliyor = it.gonderiliyor + isim) }
-
-        viewModelScope.launch {
-            depo.davetGonder(isim)
-            val oneriler = depo.onerilenler()
-            _durum.update {
-                it.copy(onerilenler = oneriler, gonderiliyor = it.gonderiliyor - isim)
-            }
+            _durum.update { it.copy(davetKodu = kod, yukleniyor = false) }
         }
     }
 

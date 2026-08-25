@@ -15,7 +15,8 @@ birim testinden ayrı tutulmasının sebebi bu (bkz. `pytest.ini`,
 - Koşum sonunda `DELETE /auth/hesap` ile kullanıcı ve ona bağlı **her
   satır** siliniyor; temizlik `finally` içinde, test düşse bile koşuyor.
 
-Adım listesi `gorev1.md §9` ile birebir.
+Adımlar: `/health` → kayıt → giriş → korumalı uç → `POST /ozet` →
+`GET /lig` → `DELETE /auth/hesap` temizliği (CLAUDE.md §11).
 """
 
 from __future__ import annotations

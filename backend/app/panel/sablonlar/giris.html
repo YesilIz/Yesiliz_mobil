@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giriş · Yeşilİz Panel</title>
+  <link rel="stylesheet" href="/statik/panel.css">
+</head>
+<body class="giris-sayfa">
+  <main class="giris-kart">
+    <div class="marka">
+      <span class="marka-ad">Yeşilİz</span>
+      <span class="marka-alt">panel</span>
+    </div>
+
+    {% if hata %}<p class="serit serit-kritik">{{ hata }}</p>{% endif %}
+
+    <form method="post" action="/oturum/giris">
+      {# Tarayıcıda eski bir oturum çerezi kalmışsa CSRF kapısı jeton
+         istiyor. Bu alan olmadan, yarıda bırakılmış bir girişten sonra
+         kullanıcı bir daha giremiyordu. Çerez yoksa değer boş ve kapı
+         zaten jeton aramıyor. #}
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <div class="alan">
+        <label for="eposta">E-posta</label>
+        <input id="eposta" name="eposta" type="email" autocomplete="username"
+               required autofocus value="{{ eposta or '' }}">
+      </div>
+      <div class="alan">
+        <label for="sifre">Parola</label>
+        <input id="sifre" name="sifre" type="password"
+               autocomplete="current-password" required>
+      </div>
+      <button type="submit">Giriş yap</button>
+    </form>
+
+    {# Panelde kayıt formu ve parola sıfırlama YOK: personel hesabı açmak
+       bir yetki işlemi (app/personel_ekle.py, sonra admin rolü). İnternete
+       açık bir kayıt formu panelin bütün yetki modelini anlamsız kılardı. #}
+    <p class="yardim">
+      Hesabınız yoksa ya da parolanızı unuttuysanız panel yöneticisine
+      başvurun. Bu ekranda kayıt ve sıfırlama yok.
+    </p>
+  </main>
+</body>
+</html>

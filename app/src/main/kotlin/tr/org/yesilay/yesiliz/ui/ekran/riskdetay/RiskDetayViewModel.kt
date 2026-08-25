@@ -27,6 +27,7 @@ import tr.org.yesilay.yesiliz.risk.VeriDurumu
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import tr.org.yesilay.yesiliz.ui.bilesen.kisaEtiket
 
 /**
  * Risk analizi — `risk_sonuc`'un son satırı + o günün "etkileyen faktörleri".
@@ -57,7 +58,7 @@ class RiskDetayViewModel @Inject constructor(
                         // Yetersiz/eski ölçüme dayanan bir bant, "veri yok"
                         // ekranından daha yanıltıcı olurdu — 34 saniyelik
                         // kullanımı olan biri "AZ RİSKLİ" görmemeli
-                        // (`gorev2.md` §8, aynı sınıf hata: debug.md K-7).
+                        // (CLAUDE.md §12 K30, aynı sınıf hata: debug.md K-7).
                         VeriDurumu.YETERSIZ -> RiskDetayDurum(veriVarMi = true)
                         VeriDurumu.ESKI -> RiskDetayDurum(
                             veriVarMi = true,
@@ -72,7 +73,7 @@ class RiskDetayViewModel @Inject constructor(
                             RiskDetayDurum(
                                 veriVarMi = true,
                                 bant = bant,
-                                bantEtiketiKisa = bantKisaEtiket(bant),
+                                bantEtiketiKisa = bant.kisaEtiket(),
                                 aciklama = aciklama(bant),
                                 trendMesaji = trendMesaji(risk.trend.trendVeyaNull()),
                                 // Ham `R / 100` DEĞİL: halka ile ortasındaki
@@ -119,12 +120,6 @@ class RiskDetayViewModel @Inject constructor(
 
     private fun faktorlerAkisi(tarih: LocalDate): Flow<List<EtkileyenFaktor>> = flow {
         emit(riskDeposu.etkileyenFaktorler(tarih) ?: emptyList())
-    }
-
-    private fun bantKisaEtiket(bant: Bant): String = when (bant) {
-        Bant.AZ -> "Düşük"
-        Bant.ORTA -> "Orta"
-        Bant.COK -> "Yüksek"
     }
 
     /**

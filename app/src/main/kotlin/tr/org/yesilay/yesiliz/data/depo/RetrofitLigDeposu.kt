@@ -13,7 +13,6 @@ import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.LigSatiri
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -80,15 +79,6 @@ class RetrofitLigDeposu @Inject constructor(
         arkadaslar.value = api.davetGonder(DavetIstek(kod.trim().uppercase()))
             .map { Arkadas(it.isim, it.davetBekliyorMu) }
     }
-
-    /**
-     * Öneri listesi sunucuda **yok**.
-     *
-     * Kişi önerisi için sosyal grafik ya da rehber gerekiyor; rehber
-     * okunmuyor (CLAUDE.md §4) ve sosyal grafik henüz kurulmadı. Boş liste
-     * dönünce `ArkadasEkleEkran` bölümü hiç göstermiyor.
-     */
-    override suspend fun onerilenler(): List<OnerilenKisi> = emptyList()
 
     private fun tr.org.yesilay.yesiliz.data.uzak.LigYanit.cevir() = LigOzeti(
         ligAdi = ligAdi,

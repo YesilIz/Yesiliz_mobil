@@ -5,7 +5,7 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * `gorev2.md` §6 tekilleştirme senaryoları — hepsi listede birebir var.
+ * CLAUDE.md §12 K31 tekilleştirme senaryoları — hepsi listede birebir var.
  */
 class AktiviteTekillestirTest {
 

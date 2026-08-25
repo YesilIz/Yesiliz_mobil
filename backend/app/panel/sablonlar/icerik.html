@@ -1,0 +1,170 @@
+{% extends "taban.html" %}
+{% block baslik %}İçerik · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>İçerik</h1>
+
+  <div class="serit serit-bilgi">
+    Buradan yayımlanan yazı, <strong>APK yayını beklemeden</strong> telefona
+    iniyor. Uygulamaya gömülü set çevrimdışı yedek olarak kalıyor: sunucuya
+    ulaşılamazsa kullanıcı yine de okuyabiliyor.
+  </div>
+
+  <div class="kart">
+    <h2>Bilgi bankası</h2>
+    {% if not yazilar %}
+      <p class="bos-durum">
+        Sunucuda henüz yazı yok — cihazlar <strong>gömülü seti</strong>
+        kullanıyor. Buraya bir yazı eklediğinde sunucudaki set devreye giriyor.
+      </p>
+    {% else %}
+      <div class="kaydir">
+        <table>
+          <thead>
+            <tr><th>Kimlik</th><th>Başlık</th><th>Kategori</th><th>Sürüm</th>
+                <th>Durum</th><th>Güncelleme</th></tr>
+          </thead>
+          <tbody>
+            {% for y in yazilar %}
+              <tr>
+                <td><code>{{ y.id }}</code></td>
+                <td>{{ y.baslik }}</td>
+                <td>{{ y.kategori }}</td>
+                <td>v{{ y.surum }}</td>
+                <td>
+                  {% if y.yayinda %}
+                    <span class="cip">yayında</span>
+                  {% else %}
+                    <span class="cip cip-uyari">kaldırıldı</span>
+                  {% endif %}
+                </td>
+                <td>{{ y.guncelleme.strftime("%d.%m.%Y %H:%M") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="yardim">
+        Yayından kaldırılan yazı <strong>silinmiyor</strong>: listeden düşüyor
+        ama tekil bağlantısı çalışmaya devam ediyor. Cihazın önbelleğinde
+        kalmış bir yazının bağlantısını kırmak, onu listeden düşürmekten
+        farklı bir şey.
+      </p>
+    {% endif %}
+
+    <hr>
+    <h2>Yazı ekle / güncelle</h2>
+    <form method="post" action="/yonetim/icerik">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Kimlik (var olansa güncellenir, sürümü artar)</span>
+        <input type="text" name="yazi_id" required placeholder="ekran-ve-uyku">
+      </label>
+      <label class="alan">
+        <span>Başlık</span>
+        <input type="text" name="baslik" required>
+      </label>
+      <label class="alan">
+        <span>Özet</span>
+        <input type="text" name="ozet" required>
+      </label>
+      <label class="alan">
+        <span>Kategori</span>
+        <input type="text" name="kategori" required>
+      </label>
+      <label class="alan">
+        <span>Okuma süresi (dk)</span>
+        <input type="number" name="okuma_dk" min="1" value="2" required>
+      </label>
+      <label class="alan">
+        <span>Gövde — her satır bir paragraf</span>
+        <textarea name="govde" rows="8" required></textarea>
+      </label>
+      <label class="tek-satir">
+        <input type="checkbox" name="yayinda" value="evet" checked>
+        <span>Yayında</span>
+      </label>
+      <label class="alan">
+        <span>Gerekçe (en az 20 karakter)</span>
+        <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+      </label>
+      <button type="submit">Kaydet</button>
+    </form>
+  </div>
+
+  <div class="kart">
+    <h2>Duyurular</h2>
+    <div class="serit serit-uyari">
+      <strong>Yayımlamak geri alınamaz.</strong> Duyuru bir kez indiğinde
+      kullanıcının bildirim defterine yazılıyor ve oradan geri çekmenin yolu
+      yok. Bu yüzden taslak kaydetmek varsayılan.
+      <br>
+      Anlık bildirim (push) <strong>yok</strong>: duyuru senkronla iniyor,
+      kullanıcı uygulamayı açtığında görüyor.
+    </div>
+
+    {% if duyurular %}
+      <div class="kaydir">
+        <table>
+          <thead><tr><th>No</th><th>Başlık</th><th>Durum</th><th>İşlem</th></tr></thead>
+          <tbody>
+            {% for d in duyurular %}
+              <tr>
+                <td>#{{ d.id }}</td>
+                <td>{{ d.baslik }}</td>
+                <td>
+                  {% if d.yayin_zamani %}
+                    <span class="cip">{{ d.yayin_zamani.strftime("%d.%m.%Y %H:%M") }}</span>
+                  {% else %}
+                    <span class="cip cip-uyari">taslak</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if not d.yayin_zamani %}
+                    <form method="post" action="/yonetim/duyuru/{{ d.id }}/yayimla">
+                      <input type="hidden" name="_csrf" value="{{ csrf }}">
+                      <input type="text" name="gerekce" required minlength="20"
+                             placeholder="Yayımlama gerekçesi">
+                      <button type="submit">Yayımla</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="bos-durum">Henüz duyuru yok.</p>
+    {% endif %}
+
+    <hr>
+    <h2>Yeni duyuru</h2>
+    <form method="post" action="/yonetim/duyuru">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Başlık</span>
+        <input type="text" name="baslik" required>
+      </label>
+      <label class="alan">
+        <span>Metin</span>
+        <textarea name="metin" rows="4" required></textarea>
+      </label>
+      <label class="tek-satir">
+        <input type="checkbox" name="yayimla" value="evet">
+        <span>Hemen yayımla (işaretlenmezse taslak kalır)</span>
+      </label>
+      <label class="alan">
+        <span>Gerekçe (en az 20 karakter)</span>
+        <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+      </label>
+      <button type="submit">Kaydet</button>
+    </form>
+    <p class="yardim">
+      Metin <code>CLAUDE.md</code> §4'e uymalı: <strong>emir kipi ve korkutma
+      yok</strong>. Şu ifadeler yazıldığında denetim kaydına uyarı düşüyor
+      ama kayıt engellenmiyor — karar sende:
+      {{ riskli_ifadeler | join(", ") }}.
+    </p>
+  </div>
+{% endblock %}

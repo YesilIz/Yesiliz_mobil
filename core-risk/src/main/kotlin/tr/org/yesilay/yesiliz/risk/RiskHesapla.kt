@@ -65,7 +65,7 @@ object RiskHesapla {
     /**
      * @param gunGecmisi bu günün hesabının kaç gün önce yapıldığı — bugün
      *   işleniyorsa 0. [VeriDurumu.ESKI]'yi belirler (§4.8 A-yeni,
-     *   `gorev2.md` §8 "STALE_DATA").
+     *   CLAUDE.md §12 K30).
      */
     fun hesapla(
         gun: GunlukGirdi,

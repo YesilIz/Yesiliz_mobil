@@ -18,6 +18,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
+import tr.org.yesilay.yesiliz.ui.sureMetni
 
 /**
  * Ebeveyn paneli.
@@ -65,7 +66,7 @@ class EbeveynViewModel @Inject constructor(
             ozetYukleniyor = guncelOzetHali.yukleniyor,
             ozetHatasi = guncelOzetHali.hata,
             cocukAdi = ozet?.cocukAdi.orEmpty(),
-            ekranSuresiOrtalama = ozet?.let { sureMetni(it.ortalamaDk) }.orEmpty(),
+            ekranSuresiOrtalama = ozet?.ortalamaDk?.sureMetni().orEmpty(),
             tarihAraligi = ozet?.tarihAraligi() ?: "Son 7 gün",
             ekranCubuklari = ozet?.cubuklar().orEmpty(),
             ekranVurgu = ozet?.let { enYuksek(it.gunlukDakikalar) } ?: -1,
@@ -166,9 +167,6 @@ class EbeveynViewModel @Inject constructor(
         val calisiyor: Boolean = false,
         val hata: String? = null,
     )
-
-    /** `240` → `4s 0dk`. */
-    private fun sureMetni(dakika: Int): String = "${dakika / 60}s ${dakika % 60}dk"
 
     private fun enYuksek(dakikalar: List<Int>): Int =
         dakikalar.indices.maxByOrNull { dakikalar[it] } ?: -1

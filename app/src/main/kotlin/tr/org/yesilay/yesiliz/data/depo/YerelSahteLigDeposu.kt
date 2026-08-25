@@ -12,7 +12,6 @@ import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
 import tr.org.yesilay.yesiliz.domain.lig.LigSatiri
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -23,15 +22,20 @@ internal const val ORNEK_LIG_YUKSELEN = 3
 internal const val ORNEK_LIG_DUSEN = 3
 
 /**
- * [LigDeposu]'nun MVP uygulaması — CLAUDE.md §12 K7'de vaat edilen sınıf.
+ * [LigDeposu]'nun çevrimdışı uygulaması — CLAUDE.md §12 K7'de vaat edilen sınıf.
  *
- * Sıralama **bilinçli olarak sahte** (backend Faz 2). Arkadaş defteri ve
- * davet kodu ise gerçek: Room ve DataStore'da yaşıyor, uygulama yeniden
- * açıldığında duruyor. Böylece Lig sekmesinin boş/dolu geçişi ve davet
- * akışı demo gününde gerçekten çalışıyor.
+ * **Artık birincil yol değil.** `RetrofitLigDeposu` 5 Ağustos 2026'dan beri
+ * canlı backend'e bağlı ve sıralamayı gerçekten sunucudan getiriyor; K7'nin
+ * "backend gelince yalnızca DI bağlaması değişir" vaadi tuttu, hiçbir
+ * ViewModel ya da Composable değişmedi.
  *
- * Faz 2'de `RetrofitLigDeposu` bu sınıfın yerine geçiyor; `LigViewModel`
- * ve ekranlar değişmiyor.
+ * Bu sınıf **yalnızca debug derlemesinde** ve **yalnızca ağ hatasında**
+ * devreye giriyor (`YedekliLigDeposu`, K18): demo günü sunucuya ulaşılamazsa
+ * Lig sekmesi boş kalmasın diye. Release'de hiç örneklenmiyor (K18'in
+ * 5 Ağu daraltması) — sıralaması sahte olduğu için yayınlanan sürümde
+ * gösterilmesi uydurma veriyi gerçekmiş gibi sunmak olurdu.
+ *
+ * Arkadaş defteri ve davet kodu sahte değil: Room ve DataStore'da yaşıyor.
  */
 @Singleton
 class YerelSahteLigDeposu @Inject constructor(
@@ -93,11 +97,6 @@ class YerelSahteLigDeposu @Inject constructor(
         )
     }
 
-    override suspend fun onerilenler(): List<OnerilenKisi> {
-        val mevcut = arkadasDao.hepsiAkisi().first().map { it.isim }.toSet()
-        return ORNEK_ONERILER.map { it.copy(davetGonderildiMi = it.isim in mevcut) }
-    }
-
     /**
      * Sıralamayı kurar.
      *
@@ -151,22 +150,6 @@ class YerelSahteLigDeposu @Inject constructor(
             "İrem" to 1_140,
             "Deniz" to 1_040,
             "Ada" to 980,
-        )
-
-        /**
-         * Önerilen kişiler — **rehberden okunmuyor** (CLAUDE.md §4).
-         *
-         * Alt metinler "3 ortak arkadaş" / "1 ortak arkadaş" idi ve bu,
-         * aynı ekranda verilen "rehberine erişmiyoruz" sözüyle doğrudan
-         * çelişiyordu: ortak arkadaş sayısını bilmek ya rehbere ya da
-         * sosyal grafiğe erişmeyi gerektirir, ikisi de yok
-         * (`debug.md` O-13). Uydurma isim tolere edilebilir; uydurma
-         * ilişki bilgisi mahremiyet sözünü yalanlıyor.
-         */
-        val ORNEK_ONERILER = listOf(
-            OnerilenKisi("Ece Kılıç", "Örnek kişi"),
-            OnerilenKisi("Mert Aydın", "Örnek kişi"),
-            OnerilenKisi("Selin Öz", "Örnek kişi"),
         )
     }
 }

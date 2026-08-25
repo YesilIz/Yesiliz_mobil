@@ -10,6 +10,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import tr.org.yesilay.yesiliz.ui.sureMetni
 
 /**
  * Uygulama içi bildirim defteri (tasarım 35).
@@ -62,7 +63,7 @@ class BildirimDeposu @Inject constructor(
     suspend fun hedefTutturuldu(ekranDk: Int, hedefDk: Int) = birKezGunde(
         tur = BildirimTuru.HEDEF,
         baslik = "Ekran süresi hedefine ulaştın",
-        govde = "Bugün ${sureMetni(ekranDk)} ile hedefinin altındasın.",
+        govde = "Bugün ${ekranDk.sureMetni()} ile hedefinin altındasın.",
     )
 
     suspend fun seriIlerledi(gun: Int) = birKezGunde(
@@ -71,23 +72,38 @@ class BildirimDeposu @Inject constructor(
         govde = "Serin sürüyor, çarpanın da onunla büyüyor.",
     )
 
-    suspend fun ligSirasi(sira: Int, ligAdi: String) = birKezGunde(
-        tur = BildirimTuru.LIG,
-        baslik = "Ligde $sira. sıraya yükseldin",
-        govde = "$ligAdi'nde harika gidiyorsun.",
-    )
-
     suspend fun molaHatirlatildi(dakika: Int) = yaz(
         tur = BildirimTuru.MOLA,
         baslik = "Mola vakti",
         govde = "$dakika dakikadır aralıksız ekrandasın. Kısa bir ara iyi gelebilir.",
     )
 
-    suspend fun degerlendirmeYenilenebilir(gecenGun: Int) = birKezGunde(
-        tur = BildirimTuru.DEGERLENDIRME,
-        baslik = "Değerlendirmeni yenileyebilirsin",
-        govde = "Son değerlendirmenin üzerinden $gecenGun gün geçti.",
+    /**
+     * Panelden yapılan puan düzeltmesi (K56).
+     *
+     * **Dil bilinçli:** "ceza" kelimesi geçmiyor, emir kipi ve suçlayıcı
+     * ton yok (§4 "Emir kipi / korkutma"). Gerekçe olduğu gibi
+     * gösteriliyor — gerekçesiz bir düşürme, kuralın yasakladığı cezanın
+     * ta kendisi olurdu.
+     *
+     * `birKezGunde` **kullanılmıyor**: aynı gün birden çok düzeltme
+     * yapılabilir ve her biri kullanıcının görmesi gereken ayrı bir
+     * karar. Tekrar koruması `puan_duzeltme.bildirildi` bayrağında.
+     */
+    suspend fun puanDuzeltildi(delta: Int, gerekce: String) = yaz(
+        tur = BildirimTuru.DUZELTME,
+        baslik = "Puanında bir düzeltme yapıldı",
+        govde = "${if (delta > 0) "+" else ""}$delta puan. Gerekçe: $gerekce",
     )
+
+    /**
+     * Panelden yayımlanan duyuru (§5.6).
+     *
+     * `birKezGunde` kullanılmıyor: aynı gün birden çok duyuru
+     * yayımlanabilir. Tekrar koruması `Tercihler.sonDuyuruId`'de.
+     */
+    suspend fun duyuru(baslik: String, metin: String) =
+        yaz(BildirimTuru.DUYURU, baslik, metin)
 
     suspend fun hatirlatma(baslik: String, govde: String) =
         yaz(BildirimTuru.HATIRLATMA, baslik, govde)
@@ -121,15 +137,8 @@ class BildirimDeposu @Inject constructor(
         yaz(tur, baslik, govde)
     }
 
-    private fun sureMetni(dakika: Int): String {
-        val saatKismi = dakika / DAKIKA_SAAT
-        val dakikaKismi = dakika % DAKIKA_SAAT
-        return if (saatKismi > 0) "${saatKismi}s ${dakikaKismi}dk" else "${dakikaKismi}dk"
-    }
-
     private companion object {
         const val LISTE_ADET = 50
         const val SAKLAMA_GUN = 60L
-        const val DAKIKA_SAAT = 60
     }
 }

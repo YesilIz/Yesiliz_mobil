@@ -1,0 +1,46 @@
+{# Arama sonucu — hem tam sayfada include ediliyor hem HTMX parçası olarak
+   tek başına render ediliyor (`sablon.yanit(..., parca=...)`). #}
+{% if not ara %}
+  <p class="bos-durum">Aramak için e-posta ya da kullanıcı numarası gir.</p>
+{% elif not satirlar %}
+  <p class="bos-durum">“{{ ara }}” ile eşleşen hesap yok.</p>
+{% else %}
+  <div class="kart">
+    <p class="yardim">{{ toplam }} sonuç</p>
+    <div class="kaydir">
+      <table>
+        <thead>
+          <tr><th>No</th><th>E-posta</th><th>Ad</th><th>Kayıt</th><th>Son sinyal</th></tr>
+        </thead>
+        <tbody>
+          {% for s in satirlar %}
+            <tr>
+              <td><a href="/yonetim/kullanici/{{ s.id }}">{{ s.id }}</a></td>
+              <td><a href="/yonetim/kullanici/{{ s.id }}">{{ s.eposta }}</a></td>
+              <td>{{ s.ad }}</td>
+              <td>{{ s.olusturma.strftime("%d.%m.%Y") }}</td>
+              <td>
+                {% if s.son_sinyal %}
+                  {{ s.son_sinyal.strftime("%d.%m.%Y %H:%M") }}
+                {% else %}
+                  <span class="cip">yok</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if toplam > sayfa_boyu %}
+      <div class="tek-satir">
+        {% if sayfa > 0 %}
+          <a href="/yonetim/kullanici?ara={{ ara | urlencode }}&sayfa={{ sayfa - 1 }}">← Önceki</a>
+        {% endif %}
+        {% if (sayfa + 1) * sayfa_boyu < toplam %}
+          <a href="/yonetim/kullanici?ara={{ ara | urlencode }}&sayfa={{ sayfa + 1 }}">Sonraki →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endif %}

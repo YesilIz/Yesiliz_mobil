@@ -176,7 +176,7 @@ class GecisTest {
     }
 
     /**
-     * 5 → 6: `risk_sonuc.veriDurumu` (`gorev2.md` §8/§10 — dolu veritabanı ile).
+     * 5 → 6: `risk_sonuc.veriDurumu` (CLAUDE.md §12 K30/K33 — dolu veritabanı ile).
      *
      * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
      * ettiği şey geçişin **1'den 6'ya kadar** zincirlenmesi ve Room'un
@@ -193,7 +193,7 @@ class GecisTest {
 
     /**
      * Dolu veritabanı: iki günlük gerçek geçmiş (biri ölçülmüş, biri boş
-     * telafi günü) + ikisinin `risk_sonuc` satırı — `gorev2.md` §10
+     * telafi günü) + ikisinin `risk_sonuc` satırı — CLAUDE.md §12 K33
      * "gerçek kullanıcı geçmişine benzeyen dolu bir veritabanı". Geçiş
      * sonrası eski satırlar kaybolmamalı ve `veriDurumu`
      * `gunluk_ozet.olayVarMi`'ye göre doğru ayrılmalı.
@@ -225,7 +225,7 @@ class GecisTest {
     }
 
     /**
-     * 6 → 7: `aktivite_oturumu` tablosu (`gorev2.md` §4).
+     * 6 → 7: `aktivite_oturumu` tablosu (CLAUDE.md §12 K31).
      *
      * Var olan hiçbir tablo değişmediği için veri taşıma iddiası yok; test
      * ettiği şey geçişin **1'den 7'ye kadar** zincirlenmesi ve Room'un
@@ -274,6 +274,43 @@ class GecisTest {
     fun gecis8den9aSemaDogrulamasindanGeciyor() {
         yardimci.createDatabase(TEST_DB, 8).close()
         yardimci.runMigrationsAndValidate(TEST_DB, 9, true, GECIS_8_9)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun gecis9dan10aSemaDogrulamasindanGeciyor() {
+        yardimci.createDatabase(TEST_DB, 9).close()
+        yardimci.runMigrationsAndValidate(TEST_DB, 10, true, GECIS_9_10)
+    }
+
+    /**
+     * Puan düzeltme tablosu boş açılıyor ve var olan puanlara dokunmuyor.
+     *
+     * Düzeltme `puan_gunluk`'a yazılsaydı `gunuYenidenHesaplaIc`'in
+     * `@Upsert`'ü onu bir sonraki gecelik işte silerdi (K56).
+     */
+    @Test
+    @Throws(IOException::class)
+    fun gecis9dan10aVarOlanPuanaDokunmuyor() {
+        yardimci.createDatabase(TEST_DB, 9).apply {
+            execSQL(
+                "INSERT INTO puan_gunluk " +
+                    "(tarih, puanBrut, puanNet, carpan, seriGun, hedefTutturuldu, jokerKullanildi) " +
+                    "VALUES ('2026-08-20', 40, 40, 1.0, 3, 1, 0)",
+            )
+            close()
+        }
+
+        val db = yardimci.runMigrationsAndValidate(TEST_DB, 10, true, GECIS_9_10)
+
+        db.query("SELECT puanNet FROM puan_gunluk").use { imlec ->
+            assertTrue("puan satırı kaybolmuş", imlec.moveToFirst())
+            assertEquals(40, imlec.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM puan_duzeltme").use { imlec ->
+            imlec.moveToFirst()
+            assertEquals("düzeltme tablosu boş açılmalı", 0, imlec.getInt(0))
+        }
     }
 
     /**
@@ -353,8 +390,8 @@ class GecisTest {
     }
 
     /**
-     * Kapsamlı dolu veritabanı — `gorev2.md` §10 "gerçek kullanıcı geçmişine
-     * benzeyen dolu bir veritabanı": üç günlük geçmiş, dört tablo birden
+     * Kapsamlı dolu veritabanı (CLAUDE.md §12 K33) — gerçek kullanıcı
+     * geçmişine benzeyen dolu bir şema: üç günlük geçmiş, dört tablo birden
      * (`gunluk_ozet`, `risk_sonuc`, `adim_sayac`) — sürüm 4'te (adım sayacı
      * eklendikten sonra) kurulup 9'a kadar TÜM geçişlerden (5→6, 6→7, 7→8 ve
      * 8→9 dahil) geçiriliyor. Doğrulanan üç şey: hiçbir satır kaybolmuyor, yeni
@@ -385,8 +422,9 @@ class GecisTest {
         }
 
         val db = yardimci.runMigrationsAndValidate(
-            TEST_DB, 9, true,
-            GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7, GECIS_7_8, GECIS_8_9,
+            TEST_DB, 10, true,
+            GECIS_1_2, GECIS_2_3, GECIS_3_4, GECIS_4_5, GECIS_5_6, GECIS_6_7, GECIS_7_8,
+            GECIS_8_9, GECIS_9_10,
         )
 
         db.query("SELECT COUNT(*) FROM gunluk_ozet").use { imlec ->

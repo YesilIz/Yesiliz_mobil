@@ -15,7 +15,6 @@ import tr.org.yesilay.yesiliz.domain.lig.Arkadas
 import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
 import tr.org.yesilay.yesiliz.domain.lig.LigDeposu
 import tr.org.yesilay.yesiliz.domain.lig.LigOzeti
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 import java.io.IOException
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -94,10 +93,6 @@ class YedekliLigDeposu @Inject constructor(
         }
         agdanAl({ uzak.davetGonder(kod) }, { yerel.davetGonder(kod) })
     }
-
-    override suspend fun onerilenler(): List<OnerilenKisi> =
-        // Öneri listesi sunucuda yok; her hâlükârda yerelden.
-        yerel.onerilenler()
 }
 
 /**

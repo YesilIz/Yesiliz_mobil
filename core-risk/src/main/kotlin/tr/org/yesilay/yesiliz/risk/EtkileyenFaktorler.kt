@@ -11,7 +11,7 @@ package tr.org.yesilay.yesiliz.risk
  * [Sabitler.FAKTOR_ESIK_ORTA] — GEÇİCİ, bkz. CLAUDE.md §12 A3.
  */
 enum class FaktorSeviyesi(val etiket: String) {
-    DUSUK("Düşük risk"),
+    DUSUK("Düşük"),
     ORTA("Orta"),
     YUKSEK("Yüksek"),
 

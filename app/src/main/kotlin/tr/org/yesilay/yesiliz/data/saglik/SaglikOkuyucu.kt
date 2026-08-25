@@ -131,7 +131,7 @@ class SaglikOkuyucu @Inject constructor(
      * Egzersiz süresi burada YOK: tek bir toplam sayı, hangi oturumun
      * uygulamanın kendi yürüyüşüyle çakıştığını ayırt edemez. Onun için
      * [gununEgzersizOturumlari] — [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]
-     * çakışmayı oturum bazında hesaplıyor (`gorev2.md` §4-§6).
+     * çakışmayı oturum bazında hesaplıyor (CLAUDE.md §12 K31).
      */
     suspend fun gununAktivitesi(tarih: LocalDate): GunlukAktivite {
         val istemci = istemci() ?: return GunlukAktivite()
@@ -160,7 +160,7 @@ class SaglikOkuyucu @Inject constructor(
 
     /**
      * O güne ait Health Connect egzersiz oturumları — ortak aktivite
-     * modeline çevrilmiş (`gorev2.md` §4). Her kaydın [AktiviteOturumu.disKimlik]'i
+     * modeline çevrilmiş (CLAUDE.md §12 K31). Her kaydın [AktiviteOturumu.disKimlik]'i
      * Health Connect'in kendi `Metadata.id`'si: aynı kaydın iki kez
      * senkronize edilmesi [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'de
      * bununla yakalanıyor.

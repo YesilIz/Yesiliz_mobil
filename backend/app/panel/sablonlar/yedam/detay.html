@@ -1,0 +1,253 @@
+{% extends "taban.html" %}
+{% block baslik %}Başvuru #{{ d.id }} · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <p class="yardim"><a href="/yedam/havuz">← Başvurular</a></p>
+  <h1>Başvuru #{{ d.id }}</h1>
+
+  {# Başlık şeridi: rıza durumu ve "bakıldığı bildirildi" uyarısı (§6.2). #}
+  {% if d.riza_gecerli %}
+    <div class="serit serit-bilgi">
+      Rıza geçerli — {{ d.riza_bitis.strftime("%d.%m.%Y") }} tarihine kadar.
+      <strong>Bu ekranı açtığın kullanıcıya bildirildi.</strong>
+    </div>
+  {% else %}
+    <div class="serit serit-uyari">
+      <strong>Rıza geçerli değil</strong> (geri çekilmiş ya da süresi dolmuş).
+      Risk, sürükleyici ve anket bilgileri <strong>silindi</strong>; aşağıda
+      yalnızca başvurunun kendi kaydı ve görüşme geçmişi var.
+      Bu ekranı açtığın da kullanıcıya bildirildi.
+    </div>
+  {% endif %}
+
+  <div class="kart">
+    <h2>Kimlik ve iletişim</h2>
+    <table>
+      <tr><th>Ad</th><td>{{ d.kullanici_ad }}</td></tr>
+      <tr><th>İletişim</th><td>{{ d.iletisim_turu }} · {{ d.iletisim_degeri }}</td></tr>
+      <tr><th>Başvuru</th><td>{{ d.olusturma.strftime("%d.%m.%Y %H:%M") }}</td></tr>
+      <tr><th>Durum</th><td><span class="cip">{{ d.durum }}</span></td></tr>
+      <tr>
+        <th>Yaş bandı</th>
+        <td>
+          {% if d.beyan_yas is none %}
+            <span class="cip">beyan edilmedi</span>
+          {% elif d.beyan_yas < 18 %}
+            <span class="cip cip-uyari">18 yaş altı ({{ d.beyan_yas }})</span>
+            {% if d.ebeveyn_onayi_var %}
+              <span class="cip">ebeveyn onayı var</span>
+            {% endif %}
+          {% else %}
+            <span class="cip">18+</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th>Atanan</th><td>{{ d.atanan_ad or "—" }}</td></tr>
+    </table>
+    <p class="yardim">
+      Yaş <strong>beyan usulü</strong> ve doğrulanamıyor.
+    </p>
+  </div>
+
+  {% if d.kullanici_notu %}
+    <div class="kart">
+      <h2>Kullanıcının notu</h2>
+      <p>{{ d.kullanici_notu }}</p>
+    </div>
+  {% endif %}
+
+  {% if d.riza_gecerli %}
+    <div class="kart">
+      <h2>Risk</h2>
+      {% if d.bant_cizgisi %}
+        <table>
+          <tr><th>Güncel bant</th><td><span class="cip">{{ d.guncel_bant }}</span></td></tr>
+          <tr><th>Eğilim</th><td>{{ d.bant_cizgisi[-1].trend }}</td></tr>
+          <tr><th>Veri durumu</th><td>{{ d.bant_cizgisi[-1].veri_durumu }}</td></tr>
+          <tr><th>Ölçülen gün</th><td>{{ d.bant_cizgisi | length }}</td></tr>
+        </table>
+      {% elif "risk" in d.riza_kapsam %}
+        <p class="bos-durum">Bu pencerede hesaplanmış risk kaydı yok.</p>
+      {% else %}
+        <p class="bos-durum">Kullanıcı risk bilgisini paylaşmayı seçmedi.</p>
+      {% endif %}
+      <p class="yardim">
+        Skor <strong>cihazda</strong> hesaplanıyor; sunucu saklıyor.
+        Bu bir teşhis değildir — Yeşilİz tanı koymaz.
+      </p>
+    </div>
+
+    <div class="kart">
+      <h2>Skoru en çok yükseltenler</h2>
+      {% if d.surukleyiciler %}
+        <div class="kaydir">
+          <table>
+            <thead><tr><th>Sıra</th><th>Faktör</th></tr></thead>
+            <tbody>
+              {% for s in d.surukleyiciler %}
+                <tr><td>{{ s.sira }}</td><td>{{ s.faktor }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="yardim">
+          <strong>Sıra</strong>, katkı yüzdesi değil: motor sürükleyicileri
+          sıralı bir liste olarak veriyor. Yüzde göstermek, ölçülmemiş bir
+          sayıyı ölçülmüş gibi sunmak olurdu.
+        </p>
+      {% elif "surukleyici" in d.riza_kapsam %}
+        <p class="bos-durum">Henüz sürükleyici verisi gelmedi.</p>
+      {% else %}
+        <p class="bos-durum">Kullanıcı bu bilgiyi paylaşmayı seçmedi.</p>
+      {% endif %}
+    </div>
+
+    <div class="kart">
+      <h2>Davranış özeti</h2>
+      {% if d.davranis_paylasilmiyor %}
+        <p class="bos-durum">
+          Kullanıcı davranış özetini paylaşmıyor. Bu <strong>ayrı bir
+          rıza</strong> ("Yeşilay ile paylaşım") ve YEDAM rızası onu
+          açmıyor.
+        </p>
+      {% else %}
+        <table>
+          <tr><th>Ort. günlük ekran</th><td>{{ d.ortalama_ekran_dk }} dk</td></tr>
+        </table>
+      {% endif %}
+      <p class="yardim">
+        Uygulama adları ve oturum dökümü <strong>sunucuda hiç yok</strong> ve
+        hiçbir zaman toplanmadı.
+      </p>
+    </div>
+
+    <div class="kart">
+      <h2>Anket geçmişi</h2>
+      {% if d.anketler %}
+        <div class="kaydir">
+          <table>
+            <thead><tr><th>Tarih</th><th>Ham puan</th><th>Madde puanları</th></tr></thead>
+            <tbody>
+              {% for a in d.anketler %}
+                <tr>
+                  <td>{{ a.tarih.strftime("%d.%m.%Y") }}</td>
+                  <td>{{ a.ham_puan }}</td>
+                  <td>{{ a.madde_puanlari | join(" · ") }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% elif "anket" in d.riza_kapsam %}
+        <p class="bos-durum">Kullanıcı henüz anket doldurmadı.</p>
+      {% else %}
+        <p class="bos-durum">Kullanıcı anket sonuçlarını paylaşmayı seçmedi.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="kart">
+    <h2>Görüşme kayıtları</h2>
+    {% if d.temaslar %}
+      <div class="kaydir">
+        <table>
+          <thead><tr><th>Zaman</th><th>Tür</th><th>Danışman</th></tr></thead>
+          <tbody>
+            {% for t in d.temaslar %}
+              <tr>
+                <td>{{ t.zaman.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td><span class="cip">{{ t.tur }}</span></td>
+                <td>{{ t.personel_ad }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="bos-durum">Henüz görüşme kaydı yok.</p>
+    {% endif %}
+
+    {% if d.durum not in ("kapandi", "riza_geri_cekildi", "suresi_doldu") %}
+      <form method="post" action="/yedam/basvuru/{{ d.id }}/temas">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Görüşme kaydı ekle</span>
+          <select name="tur" required>
+            {% for t in temas_turleri %}
+              <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit">Kaydet</button>
+      </form>
+      <p class="yardim">
+        Kullanıcı bu kaydı uygulamada görüyor — türü ve zamanı, içeriği değil.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="kart">
+    <h2>Danışman notu</h2>
+    {% if d.notlar %}
+      {% for n in d.notlar %}
+        <p><strong>{{ n.zaman.strftime("%d.%m.%Y %H:%M") }} · {{ n.personel_ad }}</strong><br>
+        {{ n.metin }}</p>
+      {% endfor %}
+    {% endif %}
+
+    {% if not_acik %}
+      <form method="post" action="/yedam/basvuru/{{ d.id }}/not">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Not</span>
+          <textarea name="metin" rows="4" required></textarea>
+        </label>
+        <button type="submit">Not ekle</button>
+      </form>
+      <p class="yardim">Not kullanıcıya gösterilmiyor.</p>
+    {% else %}
+      <p class="bos-durum">
+        Danışman notu şu anda <strong>kapalı</strong>. Klinik kayıt
+        sayılabileceği için saklama süresi ve erişim rejimi yazılana kadar
+        not alınmıyor.
+      </p>
+    {% endif %}
+  </div>
+
+  {% if atayabilir and d.durum not in ("kapandi", "riza_geri_cekildi", "suresi_doldu") %}
+    <div class="kart">
+      <h2>Atama</h2>
+      <form method="post" action="/yedam/basvuru/{{ d.id }}/ata">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Danışman</span>
+          <select name="danisman_id" required>
+            {% for did, ad in danismanlar %}
+              <option value="{{ did }}"
+                {% if d.atanan_personel_id == did %}selected{% endif %}>{{ ad }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit">Ata</button>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if d.durum not in ("kapandi", "riza_geri_cekildi", "suresi_doldu") %}
+    <div class="kart">
+      <h2>Kapat</h2>
+      <form method="post" action="/yedam/basvuru/{{ d.id }}/kapat">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <label class="alan">
+          <span>Kapanış gerekçesi (en az 20 karakter)</span>
+          <textarea name="gerekce" rows="3" required minlength="20"></textarea>
+        </label>
+        <button type="submit">Başvuruyu kapat</button>
+      </form>
+      <p class="yardim">
+        Kapatmak <strong>rızayı bitirmiyor</strong>: rızanın süresi kendi
+        takvimine göre işliyor ve onu yalnızca kullanıcı geri çekebilir.
+      </p>
+    </div>
+  {% endif %}
+{% endblock %}

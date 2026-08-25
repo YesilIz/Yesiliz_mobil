@@ -150,7 +150,9 @@ class RiskDeposu @Inject constructor(
      * Alpha eğrisinin `d` girdisi (spec-risk.md §4.5).
      *
      * `canliGun` = biriken özet satırı sayısı. `gecmisGun` kurulumda geriye
-     * dönük çekilen gün — 0,6 ağırlıkla sayılıyor, şimdilik 0.
+     * dönük çekilen gün — 0,6 ağırlıkla sayılıyor. Alanı [GecmisVeriDeposu]
+     * dolduruyor: kullanım izni onaylandıktan sonra bir kez gerçek gün
+     * sayısını yazıyor, yani sıfır değil.
      */
     private suspend fun dEfektif(tarih: LocalDate): Int = Alpha.dEfektif(
         GecmisPencere(

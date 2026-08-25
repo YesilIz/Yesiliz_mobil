@@ -117,6 +117,10 @@ class OnboardingViewModel @Inject constructor(
                     tercihler.onboardingiBitir(
                         hedefDk = durum.hedefDakika,
                         anketTarihi = anketTarihi,
+                        // Yaş buraya kadar yalnızca ViewModel state'iydi ve
+                        // ekran kapanınca kayboluyordu; YEDAM kapısı onu
+                        // istiyor (docs/panel-plani.md §14 S2).
+                        yas = durum.yas,
                     )
 
                     // Anket doldurulduysa risk hemen hesaplanmalı — yoksa kullanıcı

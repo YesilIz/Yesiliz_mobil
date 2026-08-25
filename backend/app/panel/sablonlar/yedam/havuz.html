@@ -1,0 +1,69 @@
+{% extends "taban.html" %}
+{% block baslik %}YEDAM başvuruları · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>YEDAM başvuruları</h1>
+
+  {% if yalnizca_kendi %}
+    <p class="yardim">
+      Yalnızca sana atanan başvurular görünüyor. Danışmanlar kullanıcı
+      arayamaz; rıza vermemiş bir kullanıcıya erişim yüzeyi yok.
+    </p>
+  {% endif %}
+
+  <div class="kart">
+    {% if not satirlar %}
+      <p class="bos-durum">
+        {% if yalnizca_kendi %}
+          Sana atanmış açık başvuru yok.
+        {% else %}
+          Açık başvuru yok.
+        {% endif %}
+      </p>
+    {% else %}
+      <div class="kaydir">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th><th>Geliş</th><th>Yaş</th><th>Durum</th>
+              <th>İletişim</th><th>Atanan</th><th>Temas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in satirlar %}
+              <tr>
+                <td><a href="/yedam/basvuru/{{ s.id }}">#{{ s.id }}</a></td>
+                <td>{{ s.olusturma.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td>
+                  {# Bekleyen başvuru en pahalı olan: yaşı öne çıkıyor. #}
+                  {% if s.yas_gun >= 7 %}
+                    <span class="cip cip-kritik">{{ s.yas_gun }} gün</span>
+                  {% elif s.yas_gun >= 3 %}
+                    <span class="cip cip-uyari">{{ s.yas_gun }} gün</span>
+                  {% else %}
+                    <span class="cip">{{ s.yas_gun }} gün</span>
+                  {% endif %}
+                </td>
+                <td><span class="cip">{{ s.durum }}</span></td>
+                <td>{{ s.iletisim_turu }}</td>
+                <td>
+                  {% if s.atanan_ad %}
+                    {{ s.atanan_ad }}
+                  {% else %}
+                    <span class="cip cip-uyari">atanmadı</span>
+                  {% endif %}
+                </td>
+                <td>{{ s.temas_sayisi }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="yardim">
+        En eski başvuru üstte. İletişim bilgisinin kendisi burada
+        gösterilmiyor — başvuruyu açtığında görünüyor ve o an kullanıcıya
+        bakıldığı bildiriliyor.
+      </p>
+    {% endif %}
+  </div>
+{% endblock %}

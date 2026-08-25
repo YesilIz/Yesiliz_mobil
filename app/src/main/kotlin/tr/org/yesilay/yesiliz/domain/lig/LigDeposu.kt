@@ -48,9 +48,6 @@ interface LigDeposu {
         /** Ağ/sunucu hatası — sonra tekrar denenebilir. */
         ULASILAMADI,
     }
-
-    /** Henüz eklenmemiş öneri listesi. */
-    suspend fun onerilenler(): List<OnerilenKisi>
 }
 
 data class LigOzeti(
@@ -104,11 +101,4 @@ data class LigSatiri(
 data class Arkadas(
     val isim: String,
     val davetBekliyorMu: Boolean,
-)
-
-data class OnerilenKisi(
-    val isim: String,
-    /** "3 ortak arkadaş" / "Rehberinden" gibi alt metin. */
-    val altMetin: String,
-    val davetGonderildiMi: Boolean = false,
 )

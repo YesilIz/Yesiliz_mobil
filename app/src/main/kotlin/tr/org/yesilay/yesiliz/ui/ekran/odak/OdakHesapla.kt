@@ -1,5 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.odak
 
+import tr.org.yesilay.yesiliz.ui.sayacMetni
+
 /**
  * Odak seansının saf hesabı.
  *
@@ -72,8 +74,7 @@ object OdakHesapla {
         tamamlandiMi && !ekranAcildiMi
 
     /** Kalan süreyi `12:05` biçiminde verir. */
-    fun kalanMetni(kalanSaniye: Int): String =
-        "%d:%02d".format(kalanSaniye / 60, kalanSaniye % 60)
+    fun kalanMetni(kalanSaniye: Int): String = kalanSaniye.sayacMetni()
 }
 
 data class OdakIlerleme(

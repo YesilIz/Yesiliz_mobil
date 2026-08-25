@@ -18,7 +18,9 @@ import retrofit2.Retrofit
 import tr.org.yesilay.yesiliz.BuildConfig
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import tr.org.yesilay.yesiliz.data.tercih.Tercihler
+import tr.org.yesilay.yesiliz.data.uzak.AskiDurumu
 import tr.org.yesilay.yesiliz.data.uzak.JetonAuthenticator
+import tr.org.yesilay.yesiliz.data.uzak.askiInterceptor
 import tr.org.yesilay.yesiliz.data.uzak.JetonDeposu
 import tr.org.yesilay.yesiliz.data.uzak.JetonKaynak
 import tr.org.yesilay.yesiliz.data.uzak.JetonYenileyici
@@ -124,6 +126,7 @@ object AgModulu {
         jetonDeposu: JetonDeposu,
         authenticator: Authenticator,
         tercihler: Tercihler,
+        askiDurumu: AskiDurumu,
     ): OkHttpClient {
         val kimlik = Interceptor { zincir ->
             val jeton = jetonDeposu.erisimSenkron()
@@ -146,6 +149,10 @@ object AgModulu {
             // Olmadığında 30 dakikalık jeton süresi dolar dolmaz her kimlikli
             // çağrı sessizce yedek/sahte veriye düşüyordu.
             .authenticator(authenticator)
+            // Askı tespiti **uygulama** interceptor'ı (network değil):
+            // authenticator'ın yeniden denemesi bunun altında bittiği için
+            // buraya NİHAİ yanıt geliyor, aradaki 401 değil.
+            .addInterceptor(askiInterceptor(askiDurumu))
             .connectTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
             .readTimeout(ZAMAN_ASIMI_SN, TimeUnit.SECONDS)
 

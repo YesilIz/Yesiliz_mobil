@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block baslik %}Yeşilİz Panel{% endblock %}</title>
+  <link rel="stylesheet" href="/statik/panel.css">
+  <script src="/statik/htmx.min.js" defer></script>
+</head>
+{# hx-headers bir öznitelik, script değil: CSP'nin script-src 'self'
+   kuralını gevşetmeden bütün HTMX isteklerine CSRF jetonunu taşıyor. #}
+<body hx-headers='{"X-CSRF": "{{ csrf }}"}'>
+  <div class="kabuk">
+    <nav class="yan-menu">
+      <div class="marka">
+        <span class="marka-ad" style="color:#fff">Yeşilİz</span>
+        <span class="marka-alt">panel</span>
+      </div>
+
+      {% block yan_menu %}
+        {% if personel and personel.rol in ("admin", "operasyon", "gozlemci") %}
+          <a href="/yonetim/gosterge"{% if etkin == "gosterge" %} aria-current="page"{% endif %}>Gösterge</a>
+        {% endif %}
+        {% if personel and personel.rol in ("admin", "operasyon") %}
+          <a href="/yonetim/kullanici"{% if etkin == "kullanici" %} aria-current="page"{% endif %}>Hesaplar</a>
+          <a href="/yonetim/odul"{% if etkin == "odul" %} aria-current="page"{% endif %}>Ödüller</a>
+          <a href="/yonetim/icerik"{% if etkin == "icerik" %} aria-current="page"{% endif %}>İçerik</a>
+        {% endif %}
+        {% if personel and personel.rol in ("admin", "yedam_yonetici", "yedam_danisman") %}
+          <a href="/yedam/havuz"{% if etkin == "yedam" %} aria-current="page"{% endif %}>YEDAM başvuruları</a>
+        {% endif %}
+        {# Denetim kaydı `operasyon`a da açık: uç ona **kendi** kayıtlarını
+           gösteriyor (`panel_yonetim.denetim_kaydi`). Link yalnızca
+           admin'de olsaydı, var olan ama ulaşılamayan bir özellik
+           kalırdı — ekran zaten "Kendi kayıtlarını görüyorsun" diyor. #}
+        {% if personel and personel.rol in ("admin", "operasyon") %}
+          <a href="/yonetim/denetim"{% if etkin == "denetim" %} aria-current="page"{% endif %}>Denetim kaydı</a>
+        {% endif %}
+        {% if personel and personel.rol == "admin" %}
+          <a href="/yonetim/personel"{% if etkin == "personel" %} aria-current="page"{% endif %}>Personel</a>
+          <a href="/yonetim/bayrak"{% if etkin == "bayrak" %} aria-current="page"{% endif %}>Bayraklar</a>
+        {% endif %}
+      {% endblock %}
+
+      <div class="yan-menu-alt">
+        {% if personel %}
+          <div>{{ personel.ad }}</div>
+          <div>{{ personel.rol }}</div>
+        {% endif %}
+        <form method="post" action="/oturum/cikis">
+          <input type="hidden" name="_csrf" value="{{ csrf }}">
+          <button type="submit">Çıkış</button>
+        </form>
+      </div>
+    </nav>
+
+    <main class="icerik">
+      {% block icerik %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+{% extends "taban.html" %}
+{% block baslik %}Ödül operasyonu · Yeşilİz Panel{% endblock %}
+
+{% block icerik %}
+  <h1>Ödül operasyonu</h1>
+
+  <div class="serit serit-bilgi">
+    Maddi ödül kademesinin cihazda açık olup olmadığını <strong>stok
+    belirliyor</strong>. Parti yüklenince kademe açılıyor, stok bitince
+    kapanıyor. Stok satırı hiç yoksa kademe <strong>kapalı</strong> —
+    "satır yok" "sınırsız" demek değil.
+  </div>
+
+  <div class="kart">
+    <h2>Stok</h2>
+    <div class="kaydir">
+      <table>
+        <thead>
+          <tr><th>Kademe</th><th>Seçenek</th><th>Toplam</th><th>Kalan</th>
+              <th>Son kullanma</th><th>Durum</th></tr>
+        </thead>
+        <tbody>
+          {% for s in stoklar %}
+            <tr>
+              <td>{{ s.kademe_id }}</td>
+              <td>{{ s.secenek_id }}</td>
+              <td>{{ s.toplam }}</td>
+              <td>{{ s.kalan }}</td>
+              <td>
+                {% if s.son_kullanma %}
+                  {{ s.son_kullanma.strftime("%d.%m.%Y") }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if s.acik %}
+                  <span class="cip">açık</span>
+                {% else %}
+                  <span class="cip cip-uyari">kapalı</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <hr>
+    <h2>Parti yükle</h2>
+    <form method="post" action="/yonetim/odul/stok">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Kademe / seçenek</span>
+        <select name="kademe_id" required>
+          {% for s in stoklar %}
+            <option value="{{ s.kademe_id }}">{{ s.kademe_id }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="alan">
+        <span>Seçenek</span>
+        <select name="secenek_id" required>
+          {% for s in stoklar %}
+            <option value="{{ s.secenek_id }}">{{ s.secenek_id }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="alan">
+        <span>Adet (mevcut kalana <strong>eklenir</strong>)</span>
+        <input type="number" name="adet" min="1" required>
+      </label>
+      <label class="alan">
+        <span>Son kullanma (isteğe bağlı)</span>
+        <input type="date" name="son_kullanma">
+      </label>
+      <label class="alan">
+        <span>Gerekçe (en az 20 karakter — hangi parti, hangi tedarikçi)</span>
+        <textarea name="gerekce" rows="2" required minlength="20"></textarea>
+      </label>
+      <button type="submit">Partiyi yükle</button>
+    </form>
+    <p class="yardim">
+      Stok yüklemek bir <strong>tedarik taahhüdü</strong>: kullanıcıya
+      "kazandın" demeye başlayan işlem bu. Hangi partiden geldiği denetim
+      kaydında duruyor.
+    </p>
+  </div>
+
+  <div class="kart">
+    <h2>Teslimatlar</h2>
+    {% if not teslimatlar %}
+      <p class="bos-durum">Henüz teslimat kaydı yok.</p>
+    {% else %}
+      <div class="kaydir">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Kullanıcı</th><th>Ödül</th><th>Durum</th>
+                <th>Kod</th><th>Güncelleme</th><th>İşlem</th></tr>
+          </thead>
+          <tbody>
+            {% for t in teslimatlar %}
+              <tr>
+                <td>#{{ t.id }}</td>
+                <td><a href="/yonetim/kullanici/{{ t.kullanici_id }}">{{ t.eposta }}</a></td>
+                <td>{{ t.secenek_id }}</td>
+                <td><span class="cip">{{ t.durum }}</span></td>
+                <td>{{ t.kod or "—" }}</td>
+                <td>{{ t.guncelleme.strftime("%d.%m.%Y %H:%M") }}</td>
+                <td>
+                  <form method="post" action="/yonetim/odul/teslimat/{{ t.id }}">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <select name="durum">
+                      {% for d in durumlar %}
+                        <option value="{{ d }}"
+                          {% if t.durum == d %}selected{% endif %}>{{ d }}</option>
+                      {% endfor %}
+                    </select>
+                    <input type="text" name="kod" placeholder="kupon kodu"
+                           value="{{ t.kod }}">
+                    <button type="submit">Kaydet</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="yardim">
+        <strong>İptal stoğu geri veriyor</strong> ama kullanıcının seçimi
+        kalıyor: iptal bir teslimat sorunu, kullanıcının hakkının kaybı
+        değil (K28 — geri alma yok).
+      </p>
+    {% endif %}
+  </div>
+{% endblock %}

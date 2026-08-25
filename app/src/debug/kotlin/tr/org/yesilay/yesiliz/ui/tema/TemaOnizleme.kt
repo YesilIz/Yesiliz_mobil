@@ -40,8 +40,13 @@ import tr.org.yesilay.yesiliz.ui.buyukHarf
  *  1. `tema/` dosyalarının DESIGN.md §1 ile uyuştuğunu **gözle** doğrulamak
  *  2. Sonraki ekranları yazarken hangi tokenın neye benzediğini göstermek
  *
- * Gerçek ana ekran gelince MainActivity buradan oraya bağlanır;
- * bu dosya geliştirici aracı olarak kalır.
+ * **`src/debug`'da yaşıyor** (5. tarama G5-012). Bir zamanlar `MainActivity`
+ * doğrudan buraya bağlanıyordu; gerçek ana ekran geldiğinden beri hiçbir
+ * yerden ulaşılmıyor — `Rota`'da karşılığı yok, `NavHost`'a kayıtlı değil,
+ * tek çağıranı kendi `@Preview`'ı. `src/main`'de durduğu sürece release
+ * kaynak ağacında "bu ekran nerede açılıyor?" sorusunu doğuruyordu.
+ * `AdimTaniAlicisi` / `DemoVeriModulu` ile aynı kurulmuş desen; Android
+ * Studio'nun `@Preview` paneli debug kaynak setinde de çalışıyor.
  *
  * DİKKAT: bu dosyada da hardcoded renk/ölçü yok — kural kendine de uygulanıyor.
  * Tek istisna: galeri kutucuklarının boyutu gibi salt sunum ölçüleri.

@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -20,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Apps
@@ -35,12 +32,10 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -72,11 +67,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,10 +78,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import tr.org.yesilay.yesiliz.BuildConfig
 import tr.org.yesilay.yesiliz.data.tercih.BildirimSaatleri
-import tr.org.yesilay.yesiliz.domain.sozlesme.Sozlesmeler
-import tr.org.yesilay.yesiliz.domain.sozlesme.SssMaddesi
-import tr.org.yesilay.yesiliz.ui.kalinIsle
-import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 import tr.org.yesilay.yesiliz.ui.gezinme.Rota
 import tr.org.yesilay.yesiliz.ui.bilesen.AltSayfa
 import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
@@ -106,7 +94,6 @@ import tr.org.yesilay.yesiliz.ui.bilesen.OnayKutusu
 import tr.org.yesilay.yesiliz.ui.bilesen.SecenekKarti
 import tr.org.yesilay.yesiliz.ui.bilesen.TehlikeliButon
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
-import tr.org.yesilay.yesiliz.ui.tema.Beyaz
 import tr.org.yesilay.yesiliz.ui.tema.Bosluk
 import tr.org.yesilay.yesiliz.ui.tema.KirmiziIstisna
 import tr.org.yesilay.yesiliz.ui.tema.KirmiziIstisnaZemin
@@ -120,6 +107,11 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
+import tr.org.yesilay.yesiliz.ui.ekran.profil.icerik.YedamHakkindaIcerik
+import tr.org.yesilay.yesiliz.ui.ekran.profil.icerik.YardimIcerik
+import tr.org.yesilay.yesiliz.ui.ekran.profil.icerik.HakkindaIcerik
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /**
  * Profil ve ayarlar — `docs/tasarim-referans.md §2 / 12`.
@@ -137,6 +129,7 @@ import tr.org.yesilay.yesiliz.ui.tema.YesilNane
 fun ProfilEkran(
     onGeri: () -> Unit,
     onEbeveyn: () -> Unit,
+    onYedamGizlilik: () -> Unit,
     onGunlukHedef: () -> Unit,
     onKategoriler: () -> Unit,
     onAnketYenile: () -> Unit,
@@ -308,16 +301,15 @@ fun ProfilEkran(
                     onDegis = viewModel::ligdeGorun,
                 )
                 KartAyraci()
-                AnahtarSatiri(
-                    ikon = Icons.Filled.SelfImprovement,
-                    etiket = "Mola hatırlatıcı",
-                    acik = durum.molaHatirlaticiAcik,
-                    onDegis = { acik ->
-                        viewModel.molaHatirlaticiAyarla(acik)
-                        if (acik && !NudgeIzni.verildiMi(context) && NudgeIzni.ayarEkraniVarMi(context)) {
-                            context.startActivity(NudgeIzni.ayarIntent(context))
-                        }
-                    },
+                // YEDAM rızası **ayrı bir kapı** (K19 ailesi): yukarıdaki
+                // "Yeşilay ile paylaşım" onu açmıyor, o da bunu. Bu yüzden
+                // anahtar değil, kendi ekranına giden bir satır — geri
+                // çekme onay istiyor ve erişim kaydı da orada.
+                AyarSatiri(
+                    Icons.Filled.Visibility,
+                    "YEDAM ve verilerin",
+                    altMetin = "Kim baktı, rızanı geri çek",
+                    onTikla = onYedamGizlilik,
                 )
             }
 
@@ -551,7 +543,7 @@ fun ProfilEkran(
 
 /** Alt sayfa başlığı — "X + kapat" düzeni, tüm alt sayfalar bunu paylaşıyor. */
 @Composable
-private fun AltSayfaBasligi(baslik: String, onKapat: () -> Unit) {
+internal fun AltSayfaBasligi(baslik: String, onKapat: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1057,167 +1049,6 @@ private fun HesabiSilIcerik(
 internal fun hesapSilmeOnayiGecerli(metin: String): Boolean =
     metin.trim().uppercase(Locale.forLanguageTag("tr-TR")) == "SİL"
 
-/** Alt sayfa 28 — Yardım. Statik SSS, backend gerektirmiyor. */
-@Composable
-private fun YardimIcerik(onKapat: () -> Unit, sorular: List<SssMaddesi>) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Olcu.EkranKenari)
-            .padding(bottom = Olcu.BolumArasi),
-    ) {
-        AltSayfaBasligi("Yardım", onKapat)
-        Spacer(modifier = Modifier.height(Bosluk.S))
-        Text(
-            text = "Sık sorulan sorular ve destek yolları.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MetinIkincil,
-        )
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        // Dört soru chevron'lu ve tıklanabilir görünüyordu ama HİÇBİRİNİN
-        // cevabı yazılmamıştı (`debug.md` Y-6). Cevaplar artık
-        // `assets/sozlesmeler.json`'da; satıra dokununca açılıyor.
-        var acikSoru by remember { mutableStateOf<String?>(null) }
-
-        if (sorular.isEmpty()) {
-            Text(
-                text = "Sorular yükleniyor…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MetinUcuncul,
-            )
-        }
-        sorular.forEachIndexed { i, madde ->
-            val acik = acikSoru == madde.soru
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { acikSoru = if (acik) null else madde.soru }
-                        .padding(vertical = Bosluk.M),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = madde.soru,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MetinBirincil,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        imageVector = if (acik) {
-                            Icons.Filled.KeyboardArrowDown
-                        } else {
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight
-                        },
-                        contentDescription = null,
-                        tint = MetinUcuncul,
-                    )
-                }
-                if (acik) {
-                    madde.cevap.forEach { paragraf ->
-                        Text(
-                            text = kalinIsle(paragraf),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MetinIkincil,
-                            modifier = Modifier.padding(bottom = Bosluk.S),
-                        )
-                    }
-                }
-            }
-            if (i != sorular.lastIndex) KartAyraci()
-        }
-    }
-}
-
-/** Alt sayfa 29 — Hakkında. Sürüm, kurulu APK'nın derleme bilgisidir. */
-@Composable
-private fun HakkindaIcerik(onKapat: () -> Unit, onSozlesme: (String) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Olcu.EkranKenari)
-            .padding(bottom = Olcu.BolumArasi),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Spacer(modifier = Modifier.weight(1f))
-            androidx.compose.material3.IconButton(onClick = onKapat) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Kapat",
-                    tint = MetinBirincil,
-                )
-            }
-        }
-
-        IkonRozeti(
-            ikon = Icons.Filled.Park,
-            zemin = YesilKoyu,
-            renk = Beyaz,
-            olcu = Olcu.IkonRozeti,
-            sekil = RoundedCornerShape(Yaricap.Cip),
-        )
-        Spacer(modifier = Modifier.height(Bosluk.S))
-        Text(
-            text = "Yeşilİz",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MetinBirincil,
-        )
-        Text(
-            text = "Sürüm ${BuildConfig.VERSION_NAME}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MetinUcuncul,
-        )
-        Spacer(modifier = Modifier.height(Bosluk.S))
-        Text(
-            text = "Yeşilİz, ekranla sağlıklı bir ilişki kurmana yardımcı olur.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MetinIkincil,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        // Üç satır da chevron'lu ve tıklanabilir GÖRÜNÜYORDU ama `onTikla`
-        // almıyordu; metinler hiçbir yerde yoktu (`debug.md` Y-6).
-        val baglantilar = listOf(
-            "Kullanım Koşulları" to Sozlesmeler.KULLANIM_KOSULLARI,
-            "Gizlilik Politikası" to Sozlesmeler.GIZLILIK_POLITIKASI,
-            "Açık kaynak lisansları" to Sozlesmeler.ACIK_KAYNAK,
-        )
-        baglantilar.forEachIndexed { i, (satir, id) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSozlesme(id) }
-                    .padding(vertical = Bosluk.M),
-            ) {
-                Text(
-                    text = satir,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MetinBirincil,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MetinUcuncul,
-                )
-            }
-            if (i != baglantilar.lastIndex) KartAyraci()
-        }
-
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-        Text(
-            text = "© 2026 Yeşilİz",
-            style = MaterialTheme.typography.bodySmall,
-            color = MetinUcuncul,
-        )
-    }
-}
-
 @Composable
 private fun MaddeSatiri(metin: String) {
     Row(modifier = Modifier.padding(vertical = Bosluk.Xs)) {
@@ -1249,101 +1080,6 @@ private fun GizlilikNotu(
             text = metin,
             style = MaterialTheme.typography.bodyMedium,
             color = MetinBirincil,
-        )
-    }
-}
-
-/**
- * Alt sayfa 27 — YEDAM hakkında.
- *
- * **Sadece bilgilendirme.** Yönlendirme/rıza akışı ayrı bir ekran
- * (`ui/ekran/yedam/`), yalnızca yüksek bantta ve kullanıcı onayıyla açılıyor
- * (`docs/tasarim-referans.md §2 / 27` notu).
- */
-@Composable
-private fun YedamHakkindaIcerik(onKapat: () -> Unit) {
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Olcu.EkranKenari)
-            .padding(bottom = Olcu.BolumArasi),
-    ) {
-        AltSayfaBasligi("YEDAM hakkında", onKapat)
-        Spacer(modifier = Modifier.height(Bosluk.S))
-
-        IkonRozeti(
-            ikon = Icons.Filled.SupportAgent,
-            zemin = YesilKoyu,
-            renk = Beyaz,
-            sekil = RoundedCornerShape(Yaricap.Cip),
-        )
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        Text(
-            text = "YEDAM (Yeşilay Danışmanlık Merkezi), bağımlılık alanında " +
-                "ücretsiz danışmanlık veriyor. Başvurmak için bir tanı almış " +
-                "olman gerekmiyor.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MetinIkincil,
-        )
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(Yaricap.Buton))
-                .background(YesilNane)
-                .padding(Olcu.KartIci),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.SupportAgent,
-                contentDescription = null,
-                tint = YesilAna,
-            )
-            Spacer(modifier = Modifier.width(Olcu.Aralik))
-            Text(
-                text = "115 — ücretsiz ve gizli YEDAM Hattı",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MetinBirincil,
-            )
-        }
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        Text(
-            text = "Görüşmeler gizlilik ilkesiyle yürütülür.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MetinIkincil,
-        )
-        Text(
-            text = "Görüşmeyi YEDAM uzmanları yürütür.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MetinIkincil,
-        )
-        Text(
-            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
-                "cumartesi 08:30–17:30.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MetinIkincil,
-        )
-        Spacer(modifier = Modifier.height(Olcu.Aralik))
-
-        // ACTION_DIAL: numarayı çevirici uygulamasına yazıyor ama kendisi
-        // aramıyor. ACTION_CALL izin isterdi ve kullanıcının onayı olmadan
-        // arama başlatmak bu ekranın işi değil.
-        BirincilButon(
-            metin = "115'i ara",
-            onTikla = {
-                context.startActivity(
-                    android.content.Intent(
-                        android.content.Intent.ACTION_DIAL,
-                        android.net.Uri.parse("tel:115"),
-                    ),
-                )
-            },
         )
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tr.org.yesilay.yesiliz.nudge.NudgeAyari
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
@@ -49,6 +50,11 @@ import tr.org.yesilay.yesiliz.ui.tema.Olcu
 import tr.org.yesilay.yesiliz.ui.tema.Yaricap
 import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.SelfImprovement
+import tr.org.yesilay.yesiliz.ui.bilesen.Kart
+import tr.org.yesilay.yesiliz.ui.bilesen.AnahtarSatiri
+import tr.org.yesilay.yesiliz.nudge.NudgeIzni
 
 /** Günlük hedef — `docs/tasarim-referans.md §2 / 34`. */
 @Composable
@@ -107,6 +113,8 @@ fun HedefEkran(
 
                 AyarSeridi(
                     deger = durum.secilenDk,
+                    enAz = HedefSinir.EN_AZ,
+                    enCok = HedefSinir.EN_COK,
                     onAzalt = viewModel::azalt,
                     onArttir = viewModel::arttir,
                 )
@@ -117,16 +125,26 @@ fun HedefEkran(
                         HizliCip(
                             dakika = dakika,
                             secili = dakika == durum.secilenDk,
+                            // Listeye kayıtlı hedef de ekleniyor (HedefSinir);
+                            // hiçbir şey değiştirilmemişken o çip "seçili"
+                            // görünüyor ama KAYITLI değer olduğu anlaşılmıyordu.
+                            kayitliMi = dakika == durum.kayitliHedefDk,
                             onTikla = { viewModel.ayarla(dakika) },
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
 
+                // Şerit yalnızca GÜNLÜK HEDEF için doğru. Mola eşiği anında
+                // geçerli oluyor (§12 K53: servis eşiği her poll turunda
+                // okuyor), yani şerit mola bölümünün altındayken yapılan
+                // işi yapılmamış gösteriyordu (5. tarama G5-029).
                 BilgiSeridi(ebeveynAktifMi = durum.ebeveynAktifMi)
 
+                MolaEsigiBolumu(durum = durum, viewModel = viewModel)
+
                 BirincilButon(
-                    metin = if (durum.kaydedildi) "Kaydedildi" else "Hedefi kaydet",
+                    metin = if (durum.kaydedildi) "Kaydedildi" else "Kaydet",
                     onTikla = viewModel::kaydet,
                     etkin = durum.degistiMi,
                 )
@@ -135,41 +153,138 @@ fun HedefEkran(
     }
 }
 
-/** `−` (beyaz) · değer · `+` (YesilAna) — tasarım 34'teki şerit. */
+/**
+ * Kesintisiz ekran süresi eşiği — nudge bu süre dolunca çıkıyor.
+ *
+ * Aynı ekranda duruyor çünkü kullanıcı için tek bir soru: "günde ne kadar,
+ * bir oturuşta ne kadar". Sınırlar [NudgeAyari]'de ve seçim onlarla kırpılıyor
+ * — 12 saatlik bir eşik hatırlatıcıyı hiç tetiklenmez hâle getirirdi.
+ */
 @Composable
-private fun AyarSeridi(deger: Int, onAzalt: () -> Unit, onArttir: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Yaricap.Kart))
-            .background(Yesil50)
-            .padding(Bosluk.S),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AyarDugmesi(
-            ikon = Icons.Filled.Remove,
-            aciklama = "Azalt",
-            zemin = Beyaz,
-            renk = MetinBirincil,
-            etkin = deger > HedefSinir.EN_AZ,
-            onTikla = onAzalt,
+private fun MolaEsigiBolumu(durum: HedefDurum, viewModel: HedefViewModel) {
+    val baglam = LocalContext.current
+
+    BolumBasligi("Mola hatırlatıcı")
+
+    // Anahtar Profil › Gizlilik'ten buraya taşındı: açma düğmesi ile eşiği
+    // iki ayrı ekranda tutmak, tek bir özelliği ikiye bölüyordu. Ayrıca bu
+    // bir gizlilik ayarı değil — cihazdan hiçbir veri çıkarmıyor, yanındaki
+    // iki satır (Yeşilay paylaşımı, ligde görün) ise gerçek rıza kapısıydı
+    // ve aynı başlık altında durmak ikisinin ağırlığını bulandırıyordu
+    // (5. tarama G5-034).
+    Kart(icBosluk = Olcu.Aralik) {
+        AnahtarSatiri(
+            ikon = Icons.Filled.SelfImprovement,
+            etiket = "Mola hatırlatıcı",
+            acik = durum.molaHatirlaticiAcik,
+            onDegis = { acik ->
+                viewModel.molaHatirlaticiAyarla(acik)
+                // Overlay izni olmadan popup çizilemiyor; anahtarı açan
+                // kullanıcıyı sistem ekranına bir kez yönlendiriyoruz.
+                if (acik && !NudgeIzni.verildiMi(baglam) && NudgeIzni.ayarEkraniVarMi(baglam)) {
+                    baglam.startActivity(NudgeIzni.ayarIntent(baglam))
+                }
+            },
         )
+    }
+
+    Text(
+        text = "Kesintisiz ${durum.secilenNudgeDk.sureMetni()} ekranda kalınca " +
+            "kısa bir mola önerisi çıkar.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MetinIkincil,
+    )
+
+    AyarSeridi(
+        deger = durum.secilenNudgeDk,
+        enAz = NudgeAyari.EN_AZ_DK,
+        enCok = NudgeAyari.EN_COK_DK,
+        onAzalt = viewModel::nudgeAzalt,
+        onArttir = viewModel::nudgeArttir,
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(Bosluk.S)) {
+        NudgeAyari.HIZLI_SECIM.forEach { dakika ->
+            HizliCip(
+                dakika = dakika,
+                secili = dakika == durum.secilenNudgeDk,
+                onTikla = { viewModel.nudgeAyarla(dakika) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+
+    // Varsayılana dönmek yalnızca kayıtlı bir seçim varken anlamlı.
+    if (durum.nudgeSecilmisMi) {
         Text(
-            text = uzunSure(deger),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MetinBirincil,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
+            text = "Varsayılana dön",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = YesilAna,
+            modifier = Modifier.clickable(onClick = viewModel::nudgeVarsayilanaDon),
         )
-        AyarDugmesi(
-            ikon = Icons.Filled.Add,
-            aciklama = "Arttır",
-            zemin = YesilAna,
-            renk = Beyaz,
-            etkin = deger < HedefSinir.EN_COK,
-            onTikla = onArttir,
+    }
+
+    // Hatırlatıcı kapalıyken eşiğin bir etkisi yok; bunu söylememek,
+    // çalışmayan bir ayarı çalışıyormuş gibi göstermek olurdu (§12 K37).
+    // Anahtar artık hemen yukarıda, o yüzden yönlendirme metni gerekmiyor.
+    if (!durum.molaHatirlaticiAcik) {
+        Text(
+            text = "Hatırlatıcı kapalıyken bu eşik uygulanmıyor.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MetinUcuncul,
         )
+    }
+}
+
+/**
+ * `−` … `+` şeridi — tasarım 34.
+ *
+ * **Değeri yazmıyor.** Ekran aynı sayıyı üç kez gösteriyordu (halka "4s 45dk",
+ * şerit "4 saat 45 dakika", seçili çip "4s 45dk") ve ikisi farklı yazım
+ * kuralındaydı. Değeri günlük hedefte halka, mola bölümünde üstteki cümle
+ * söylüyor; şerit yalnızca kontrol (5. tarama G5-028).
+ */
+@Composable
+private fun AyarSeridi(
+    deger: Int,
+    enAz: Int,
+    enCok: Int,
+    onAzalt: () -> Unit,
+    onArttir: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        // Şerit değeri yazmayı bırakınca tam genişlikte kalması ortada geniş
+        // bir boşluk bırakıyordu — "kontrol" değil "eksik bir şey" gibi
+        // duruyordu. Bant artık iki düğmeyi sarıyor.
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(Yaricap.Kart))
+                .background(Yesil50)
+                .padding(Bosluk.S),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Olcu.BolumArasi),
+        ) {
+            AyarDugmesi(
+                ikon = Icons.Filled.Remove,
+                aciklama = "Azalt",
+                zemin = Beyaz,
+                renk = MetinBirincil,
+                etkin = deger > enAz,
+                onTikla = onAzalt,
+            )
+            AyarDugmesi(
+                ikon = Icons.Filled.Add,
+                aciklama = "Arttır",
+                zemin = YesilAna,
+                renk = Beyaz,
+                etkin = deger < enCok,
+                onTikla = onArttir,
+            )
+        }
     }
 }
 
@@ -204,6 +319,7 @@ private fun HizliCip(
     secili: Boolean,
     onTikla: () -> Unit,
     modifier: Modifier = Modifier,
+    kayitliMi: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -218,12 +334,21 @@ private fun HizliCip(
             .clickable(onClick = onTikla),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = dakika.sureMetni(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (secili) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (secili) YesilAna else MetinIkincil,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = dakika.sureMetni(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (secili) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (secili) YesilAna else MetinIkincil,
+            )
+            if (kayitliMi) {
+                Text(
+                    text = "kayıtlı",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MetinUcuncul,
+                )
+            }
+        }
     }
 }
 
@@ -264,14 +389,3 @@ internal fun hedefBilgiMetni(ebeveynAktifMi: Boolean): String =
     } else {
         "Değişiklikler yarından itibaren geçerli olur."
     }
-
-/** "4 saat 45 dakika" — şeritteki uzun biçim. */
-private fun uzunSure(dakika: Int): String {
-    val saat = dakika / 60
-    val kalan = dakika % 60
-    return when {
-        saat == 0 -> "$kalan dakika"
-        kalan == 0 -> "$saat saat"
-        else -> "$saat saat $kalan dakika"
-    }
-}

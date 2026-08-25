@@ -25,6 +25,7 @@ import tr.org.yesilay.yesiliz.data.yerel.dao.GunlukOzetDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KategoriEslemeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.KullanimOlayDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.OdulSecimiDao
+import tr.org.yesilay.yesiliz.data.yerel.dao.PuanDuzeltmeDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.PuanGunlukDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RiskSonucDao
 import tr.org.yesilay.yesiliz.data.yerel.dao.RuhHaliDao
@@ -78,6 +79,9 @@ object VeriModulu {
     fun puanGunlukDao(db: YesilizDb): PuanGunlukDao = db.puanGunlukDao()
 
     @Provides
+    fun puanDuzeltmeDao(db: YesilizDb): PuanDuzeltmeDao = db.puanDuzeltmeDao()
+
+    @Provides
     fun ruhHaliDao(db: YesilizDb): RuhHaliDao = db.ruhHaliDao()
 
     @Provides
@@ -103,7 +107,7 @@ object VeriModulu {
 
     /**
      * `AdimDeposu` sahte bir kaynakla test edilebilsin diye somut sınıf
-     * yerine arayüz istiyor (`AdimDeposuTest`, `gorev2.md` §3).
+     * yerine arayüz istiyor (`AdimDeposuTest`, CLAUDE.md §12 K33).
      */
     @Provides
     fun adimKaynagi(okuyucu: AdimSayacOkuyucu): AdimKaynagi = okuyucu

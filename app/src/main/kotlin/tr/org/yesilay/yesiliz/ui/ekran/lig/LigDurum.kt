@@ -1,6 +1,5 @@
 package tr.org.yesilay.yesiliz.ui.ekran.lig
 
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
 
 /**
  * Lig ekranı durumu — `docs/tasarim-referans.md §2 / 10` ve boş durum **37**.
@@ -35,6 +34,16 @@ data class LigDurum(
      * yapabileceği bir şey olmadığını sanıyordu.
      */
     val oturumYok: Boolean = false,
+    /**
+     * "Yeşilay ile paylaşım" kapalı — puan sunucuya **hiç gitmiyor**.
+     *
+     * Lig puanı `POST /ozet` ile taşınıyor ve o uç rıza kapısının arkasında
+     * (§12 K19). Kapalıyken kullanıcı sıralamada kendi satırını 0 puanla
+     * görüyordu ve bunun sebebi hiçbir yerde yazmıyordu: puan kazanmaya
+     * devam ettiği hâlde lig hiç güncellenmiyordu. Kapıyı kaldırmak değil,
+     * **söylemek** doğru olan (§12 K37).
+     */
+    val puanPaylasimiKapali: Boolean = false,
     val yukleniyor: Boolean = true,
 )
 
@@ -53,15 +62,6 @@ data class ArkadasEkleDurum(
     val kodHatasi: String? = null,
     val kodIslemde: Boolean = false,
     val kodlaEklendi: Boolean = false,
-    val onerilenler: List<OnerilenKisi> = emptyList(),
     val kopyalandi: Boolean = false,
-    /**
-     * Daveti gönderilmekte olan isimler.
-     *
-     * Sunucuya ulaşılamayan bir telefonda gönderim beş saniye sürüyor;
-     * o süre boyunca çipin "Ekle" demeye devam etmesi, kullanıcının
-     * tekrar tekrar dokunmasına yol açıyordu (`debug.md` Y-10).
-     */
-    val gonderiliyor: Set<String> = emptySet(),
     val yukleniyor: Boolean = true,
 )

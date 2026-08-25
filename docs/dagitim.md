@@ -1,6 +1,6 @@
 # Dağıtım — backend ve Android
 
-> Görev 1'in dokümanı. Kaynak: `gorev1.md`, `CLAUDE.md` §5 ve §12 K18/K24.
+> Dağıtım dokümanı. Kaynak: `CLAUDE.md` §5 ve §12 K18/K24/K29.
 >
 > **Buraya gerçek parola ya da secret yazılmaz.** Değişkenlerin adları var,
 > değerleri yok; değerler sağlayıcı panelinde ve `.env`'de (gitignore'da).
@@ -23,12 +23,33 @@ adları değiştirilemiyor.
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `YESILIZ_ERISIM_DAKIKA` | hayır | Erişim jetonu ömrü, varsayılan 30 |
 | — | `YESILIZ_SAAT_DILIMI` | hayır | Lig haftası ve ebeveyn "bugün" penceresi; varsayılan `Europe/Istanbul` |
 | `PORT` | — | hayır | Sağlayıcı enjekte ediyor; yerelde 8000 |
+| `SERVER_ROLE` | `YESILIZ_ROL` | hayır | `api` (varsayılan) · `panel`. Hangi router kümesinin mount edileceğini belirliyor — §2.1 |
+
+**Yalnızca `rol = panel` servisinde:** aşağıdakiler API servisinde tanımsız
+kalabilir; açılış kapısı onları yalnızca panel rolünde arıyor.
+
+| Standart ad | Önekli ad | Zorunlu mu | Ne işe yarıyor |
+|---|---|---|---|
+| `PANEL_SECRET` | `YESILIZ_PANEL_SIRRI` | üretimde **evet** | Oturum çerezi ve CSRF jetonunun türetildiği sır, ≥ 32 karakter |
+| `PANEL_TOTP_KEY` | `YESILIZ_PANEL_TOTP_ANAHTARI` | üretimde **evet** | Personel TOTP sırlarını şifreleyen Fernet anahtarı |
+| `PANEL_BASE_URL` | `YESILIZ_PANEL_TABAN` | üretimde **evet** | Panelin kendi HTTPS adresi; `Origin` denetimi ve TOTP kurulumu kullanıyor |
+| — | `YESILIZ_PANEL_CEREZ_GUVENLI` | hayır | Varsayılan `true`. Yalnızca yerel http geliştirmede `false` |
+| — | `YESILIZ_PANEL_OTURUM_MUTLAK_SAAT` | hayır | Vardiya uzunluğu, varsayılan 8 |
+| — | `YESILIZ_PANEL_OTURUM_HAREKETSIZLIK_DAKIKA` | hayır | Varsayılan 30 |
 
 Örnek dosya: `backend/.env.ornek`. Anahtar üretmek için:
 
 ```bash
+# JWT ve panel sırrı
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Panel TOTP anahtarı (Fernet)
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
+
+> **TOTP anahtarı kaybolursa** kayıtlı bütün personel sırları çözülemez ve
+> herkes 2FA'yı yeniden kurmak zorunda kalır. Anahtarı sağlayıcı panelinde
+> tanımlayın ve ayrıca güvenli bir yerde saklayın.
 
 ### Üretim açılış kapısı
 
@@ -37,7 +58,18 @@ ve şu üç durumda **uygulama başlamıyor**:
 
 - JWT anahtarı depodaki varsayılan değerde,
 - JWT anahtarı 32 karakterden kısa,
-- `DATABASE_URL` bir SQLite adresi.
+- `DATABASE_URL` bir SQLite adresi,
+- `ALLOWED_ORIGINS` joker (`*`) içeriyor.
+
+`rol = panel` iken ayrıca dört kural daha (`Ayarlar._panel_sorunlari`):
+
+- panel oturum sırrı varsayılanda ya da 32 karakterden kısa,
+- panel TOTP anahtarı varsayılanda,
+- panel çerezi `Secure` değil,
+- `PANEL_BASE_URL` boş ya da `https://` ile başlamıyor.
+
+**API rolüne yeni kural eklenmedi** — canlıdaki mevcut servisin kapısı
+bit-birebir aynı, panel ayarlarının hiçbirini tanımlamasına gerek yok.
 
 Uyarı basıp devam etmiyor: uyarı sağlayıcı log akışında kaybolur ve sunucu
 haftalarca varsayılan anahtarla çalışır. Hata mesajı anahtarın kendisini
@@ -101,6 +133,46 @@ railway run alembic current    # ya da sağlayıcı kabuğundan
 
 ---
 
+### İkinci servis: panel
+
+Panel **aynı imajı** koşuyor; ayrılan tek şey ortam değişkenleri
+(`docs/panel-plani.md §4`, CLAUDE.md §12 K57). Aynı Railway projesinde ikinci
+bir servis açılıyor:
+
+| Ayar | Değer |
+|---|---|
+| Repo / Root Directory | API servisiyle **aynı** (`backend`) |
+| `YESILIZ_ROL` | `panel` |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — aynı veritabanı |
+| `JWT_SECRET` | API ile aynı değer |
+| `PANEL_SECRET` · `PANEL_TOTP_KEY` · `PANEL_BASE_URL` | §1'deki üretim zorunluları |
+| Domain | ayrı alt alan adı (ör. `panel.<alan>`) |
+| Healthcheck | `/health` — API ile aynı, `railway.json` değişmiyor |
+
+**Panel migration koşturmuyor.** `baslat.sh` rolü Python'a soruyor ve panel
+rolünde `alembic upgrade` yerine `app/surum_kapisi.py` çalışıyor: şema head'de
+değilse 10 × 6 sn bekliyor, hâlâ değilse uvicorn hiç başlamıyor. İki servisin
+aynı anda `alembic upgrade` koşması çakışma demek olurdu.
+
+Bu yüzden **dağıtım sırası da sabit**: önce API (migration), sonra panel. CI
+bunu `deploy-panel: needs: deploy` ile zorluyor.
+
+> **Ağ kısıtı.** Panel servisi kurum ağı / VPN arkasına alınmalı (G3). Bu
+> kimlik doğrulamasının **önündeki** ikinci kapı; TOTP ve hesap kilidi onun
+> yerini tutmuyor.
+
+İlk personel hesabı:
+
+```bash
+railway run --service <panel-servisi> \
+  python -m app.personel_ekle --eposta admin@yesilay.org.tr \
+  --ad "Ad Soyad" --rol admin
+```
+
+Komut TOTP sırrını ve kurtarma kodlarını bir kez yazdırıyor.
+
+---
+
 ## 3. Sağlık kontrolü
 
 ```http
@@ -135,7 +207,7 @@ curl -s localhost:8000/health
 YESILIZ_SMOKE_TABAN=https://<alan-adi> python -m pytest smoke -q
 ```
 
-Smoke testleri (`backend/smoke/test_duman.py`) `gorev1.md §9`'un adım
+Smoke testleri (`backend/smoke/test_duman.py`) kabul kriterlerinin adım
 listesini izliyor: `/health` → benzersiz test kullanıcısı → giriş →
 korumalı uç (jetonsuz 401 dâhil) → `POST /ozet` → `GET /lig` →
 `DELETE /auth/hesap` ile temizlik. Temizlik `finally` içinde, test düşse
@@ -227,7 +299,7 @@ keytool -genkeypair -keystore app/yesiliz-release.jks -alias yesiliz \
 
 ### Release APK doğrulaması
 
-**Otomatik (`gorev2.md` §11):**
+**Otomatik (CLAUDE.md §12 K32):**
 
 ```bash
 ./gradlew :app:dogrulaReleaseApk
@@ -274,9 +346,15 @@ indirgeniyor: boş sonuç + `cevrimdisi` bayrağı + logcat izi
 
 ## 7. CI/CD
 
-`.github/workflows/backend.yml`: test → üretim güvenlik kapısı → Docker
-imajı → (yalnızca `main`) Railway dağıtımı → `/health` bekleme → smoke.
-Herhangi bir adım düşerse sonraki koşmuyor.
+`.github/workflows/backend.yml`: test → üretim güvenlik kapısı → panel
+kapısı → Docker imajı → (yalnızca `main`) **API dağıtımı** → `/health` →
+**panel dağıtımı** → panel `/health` → smoke. Herhangi bir adım düşerse
+sonraki koşmuyor.
+
+**Panel API'den sonra dağıtılıyor ve bu sıra pazarlık edilemez:**
+migration'ın tek sahibi API servisi, panel yalnızca şemayı doğruluyor. Panel
+önce kalkarsa sürüm kapısı düşer ve servis crash-loop'a girer. CI bunu
+`deploy-panel: needs: deploy` ile zorluyor.
 
 Depo ayarları (Settings › Secrets and variables › Actions):
 
@@ -285,6 +363,8 @@ Depo ayarları (Settings › Secrets and variables › Actions):
 | secret | `RAILWAY_TOKEN` | Railway proje jetonu |
 | variable | `RAILWAY_SERVICE` | Railway'deki servis adı |
 | variable | `CANLI_TABAN` | `https://<alan-adi>` |
+| variable | `RAILWAY_PANEL_SERVICE` | Panel servisinin Railway'deki adı |
+| variable | `PANEL_TABAN` | `https://panel.<alan-adi>` |
 
 Dağıtım işi `environment: production` kullanıyor; jeton yalnızca oradan
 okunabiliyor.

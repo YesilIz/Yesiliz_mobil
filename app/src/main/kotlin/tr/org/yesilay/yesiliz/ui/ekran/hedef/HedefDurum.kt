@@ -8,7 +8,7 @@ package tr.org.yesilay.yesiliz.ui.ekran.hedef
  * istediği zaman değiştirdiği ayar ekranı.
  */
 data class HedefDurum(
-    /** Kaydedilmiş hedef — "Hedefi kaydet" basılana kadar değişmiyor. */
+    /** Kaydedilmiş hedef — "Kaydet" basılana kadar değişmiyor. */
     val kayitliHedefDk: Int = 0,
     /** Ekranda seçili olan değer. */
     val secilenDk: Int = 0,
@@ -16,8 +16,24 @@ data class HedefDurum(
     val bugunDk: Int? = null,
     val ebeveynAktifMi: Boolean = false,
     val kaydedildi: Boolean = false,
+    /** Kaydedilmiş nudge eşiği (dakika) — hiç seçilmediyse varsayılan. */
+    val kayitliNudgeDk: Int = 0,
+    /** Ekranda seçili olan nudge eşiği. */
+    val secilenNudgeDk: Int = 0,
+    /**
+     * Mola hatırlatıcı Profil'den açık mı — kapalıysa eşik seçilebiliyor ama
+     * uygulanmıyor ve ekran bunu söylüyor (§12 K37: kapalı bir özelliğin
+     * ayarını çalışıyormuş gibi göstermek).
+     */
+    val molaHatirlaticiAcik: Boolean = false,
+    /** Kullanıcı kendi eşiğini kaydetmiş mi — false ise varsayılan geçerli. */
+    val nudgeSecilmisMi: Boolean = false,
 ) {
-    val degistiMi: Boolean get() = secilenDk != kayitliHedefDk
+    val hedefDegistiMi: Boolean get() = secilenDk != kayitliHedefDk
+
+    val nudgeDegistiMi: Boolean get() = secilenNudgeDk != kayitliNudgeDk
+
+    val degistiMi: Boolean get() = hedefDegistiMi || nudgeDegistiMi
 
     /** Halka oranı: bugünün kullanımının hedefe oranı. */
     val oran: Float

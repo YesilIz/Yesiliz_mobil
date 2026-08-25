@@ -121,6 +121,12 @@ fun LigEkran(
             if (durum.cevrimdisi) {
                 item { CevrimdisiNotu(ornekVeriVarMi = durum.siralama.isNotEmpty()) }
             }
+            // Puan sunucuya rıza kapısının arkasından gidiyor (§12 K19).
+            // Kapalıyken kullanıcı ligde 0 puanla duruyor ve sebebini
+            // hiçbir yerde göremiyordu.
+            if (durum.puanPaylasimiKapali) {
+                item { PuanGitmiyorNotu(onPaylasimiAc = viewModel::paylasimiAcVePuaniGonder) }
+            }
             // "Ligde görün" kapalıysa söyleniyor. Kullanıcı kendi satırını
             // görmeye devam ediyor ama başkaları görmüyor; bunu bilmeden
             // sıralamanın neden bu kadar kısa olduğunu anlayamazdı.
@@ -168,8 +174,7 @@ private fun LigKurallari(durum: LigDurum, onKapat: () -> Unit) {
         listOf(
             "Her hafta pazartesi yeni bir tur başlıyor; sıralama haftalık " +
                 "puanına göre kuruluyor.",
-            "Hafta sonunda ilk ${durum.yukselen} kişi bir üst lige geçiyor, " +
-                "son ${durum.dusen} kişi bir alt lige iniyor.",
+            ligTerfiMetni(yukselen = durum.yukselen, dusen = durum.dusen),
             "Ligler: Fidan → Filiz → Ağaç → Koru → Orman.",
             "Düşmek puan kaybettirmiyor. Kazandığın hiçbir puan geri " +
                 "alınmıyor; yalnızca haftaya hangi grupta yarışacağın " +
@@ -227,6 +232,44 @@ private fun CevrimdisiNotu(ornekVeriVarMi: Boolean) {
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
         )
+    }
+}
+
+/**
+ * Puan sunucuya gitmiyor — "Yeşilay ile paylaşım" kapalı.
+ *
+ * Lig puanı `POST /ozet` ile taşınıyor ve o uç rıza kapısının arkasında
+ * (§12 K19). Kapı **kaldırılmıyor**: kullanıcının davranış özetini rızası
+ * olmadan göndermek uygulamanın temel sözü. Yapılan şey durumu söylemek ve
+ * açmayı tek dokunuşa indirmek — sessizce 0 puan göstermek, kullanıcının
+ * kazandığı puanların kaybolduğunu sanmasına yol açıyordu (§12 K37).
+ */
+@Composable
+private fun PuanGitmiyorNotu(onPaylasimiAc: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Yaricap.Kart))
+            .background(YuzeyKirik)
+            .padding(Olcu.KartIci),
+        verticalArrangement = Arrangement.spacedBy(Bosluk.S),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = MetinUcuncul,
+            )
+            Spacer(modifier = Modifier.width(Bosluk.S))
+            Text(
+                text = "Puanın ligde 0 görünüyor: \"Yeşilay ile paylaşım\" kapalı " +
+                    "olduğu için haftalık puanın sunucuya gönderilmiyor. " +
+                    "Açarsan günlük özetin ve puanın paylaşılır.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MetinIkincil,
+            )
+        }
+        IkincilButon(metin = "Paylaşımı aç ve puanımı gönder", onTikla = onPaylasimiAc)
     }
 }
 
@@ -395,20 +438,27 @@ private fun LigBasligi(durum: LigDurum, onKuralAcikla: () -> Unit) {
         // -- ve filtre sanılıyordu; hiçbiri tıklanmıyordu (`debug.md` O-16).
         // Aslında bilgi etiketi olduklarına göre yapacakları en doğru şey
         // ne anlama geldiklerini anlatmak.
+        // Sıfır, kuralın kendisi değil YOKLUĞU: "Son 0 düşer" kullanıcıya
+        // hiçbir şey söylemiyor ve tek kişilik bir ligde düşme fikrini boş
+        // yere gündeme getiriyor (CLAUDE.md §4, 5. tarama G5-030).
         Row(horizontalArrangement = Arrangement.spacedBy(Olcu.Aralik)) {
-            Cip(
-                metin = "İlk ${durum.yukselen} yükselir",
-                ikon = Icons.Filled.ArrowUpward,
-                zemin = YesilNane,
-                onTikla = onKuralAcikla,
-            )
-            Cip(
-                metin = "Son ${durum.dusen} düşer",
-                ikon = Icons.Filled.ArrowDownward,
-                zemin = Yesil50,
-                renk = MetinUcuncul,
-                onTikla = onKuralAcikla,
-            )
+            if (durum.yukselen > 0) {
+                Cip(
+                    metin = "İlk ${durum.yukselen} yükselir",
+                    ikon = Icons.Filled.ArrowUpward,
+                    zemin = YesilNane,
+                    onTikla = onKuralAcikla,
+                )
+            }
+            if (durum.dusen > 0) {
+                Cip(
+                    metin = "Son ${durum.dusen} düşer",
+                    ikon = Icons.Filled.ArrowDownward,
+                    zemin = Yesil50,
+                    renk = MetinUcuncul,
+                    onTikla = onKuralAcikla,
+                )
+            }
         }
         Spacer(modifier = Modifier.height(Olcu.Aralik))
     }
@@ -462,3 +512,19 @@ private fun LigSatiri(satir: LigSatiriModel) {
 }
 
 private val SiraGenisligi = Bosluk.L
+
+/**
+ * Lig terfi/tenzil kuralı — sıfır kolu hiç söylenmez.
+ *
+ * Tek kişilik bir ligde `dusen = 0` oluyor ve "son 0 kişi bir alt lige
+ * iniyor" hem bilgi vermiyor hem de olmayan bir cezayı gündeme getiriyor
+ * (CLAUDE.md §4, 5. tarama G5-030).
+ */
+internal fun ligTerfiMetni(yukselen: Int, dusen: Int): String = when {
+    yukselen > 0 && dusen > 0 ->
+        "Hafta sonunda ilk $yukselen kişi bir üst lige geçiyor, " +
+            "son $dusen kişi bir alt lige iniyor."
+    yukselen > 0 -> "Hafta sonunda ilk $yukselen kişi bir üst lige geçiyor."
+    dusen > 0 -> "Hafta sonunda son $dusen kişi bir alt lige iniyor."
+    else -> "Bu turda lig değişimi yok; sıralama yalnızca haftalık puanı gösteriyor."
+}

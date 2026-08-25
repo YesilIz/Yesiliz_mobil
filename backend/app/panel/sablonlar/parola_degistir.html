@@ -1,0 +1,45 @@
+{% extends "taban.html" %}
+{% block baslik %}Parola değiştir · Yeşilİz Panel{% endblock %}
+
+{# Yan menü çizilmiyor: parola değiştirilene kadar panelin geri kalanı
+   zaten kapalı (`personel_oturumu` bağımlılığı yönlendiriyor), açık
+   görünen bağlantılar boşuna tıklanırdı. #}
+{% block yan_menu %}{% endblock %}
+
+{% block icerik %}
+  <h1>Parolanı değiştir</h1>
+
+  <div class="kart">
+    <p class="yardim">
+      Hesabın geçici bir parolayla açıldı. Devam etmek için kendi
+      parolanı belirle — geçici parola bir insan kanalından geçtiği için
+      kalıcı olarak kullanılamaz.
+    </p>
+
+    {% if hata %}
+      <div class="serit serit-uyari">{{ hata }}</div>
+    {% endif %}
+
+    <form method="post" action="/oturum/parola-degistir">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label class="alan">
+        <span>Geçici parola</span>
+        <input type="password" name="mevcut" required autocomplete="current-password">
+      </label>
+      <label class="alan">
+        <span>Yeni parola</span>
+        <input type="password" name="yeni" required autocomplete="new-password">
+      </label>
+      <label class="alan">
+        <span>Yeni parola (tekrar)</span>
+        <input type="password" name="yeni_tekrar" required autocomplete="new-password">
+      </label>
+      <button type="submit">Parolayı değiştir</button>
+    </form>
+
+    <p class="yardim">
+      Değişimden sonra bütün oturumların kapanıyor ve yeni parolanla
+      yeniden giriş yapıyorsun.
+    </p>
+  </div>
+{% endblock %}

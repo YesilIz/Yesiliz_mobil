@@ -1,0 +1,527 @@
+"""
+Yönetim paneli (`docs/panel-plani.md §5`).
+
+Gösterge toplu/anonim (`GOSTERGE_ROLLERI`), hesap yönetimi tekil
+(`HESAP_ROLLERI`). İkisi ayrı rol kümesi: `gozlemci` yalnızca göstergeyi
+görüyor, tekil kullanıcıya hiç erişemiyor.
+
+Hesap detayının **davranış verisi taşımadığına** dikkat (P9) — sorguların
+kendisi `panel/hesaplar.py`'de ve o dosya `gunluk_ozet`/`risk_sonuc`
+tablolarına hiç dokunmuyor.
+
+**Her route rolünü açıkça beyan ediyor.** Kapsamı `test_panel_yetki_kapsami`
+router listesini tarayarak garanti ediyor: yetkisiz eklenmiş bir uç CI'da
+yakalanıyor.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import logging
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.modeller import Kullanici, Personel, PersonelRolu
+from app.panel.gosterge import BANT_ETIKETI, BANTLAR, gostergeyi_hesapla
+from app.panel.grafik import bant_dagilimi_svg
+from app.kullanici_silme import kullaniciyi_tamamen_sil
+from app.panel.denetim import ASGARI_GEREKCE, denetle
+from app.panel.denetim_gorunum import (
+    SAYFA_BOYU as DENETIM_SAYFA_BOYU,
+    Filtre,
+    eylem_secenekleri,
+    listele,
+    personel_secenekleri,
+)
+from app.panel import puan
+from app.panel.hesaplar import SAYFA_BOYU, ara, askiya_al, askiyi_kaldir, detay
+from app.panel.oturum import personel_gerek
+from app.panel.sablon import yanit, yonlendir
+from app.surum_kapisi import beklenen_revizyon, mevcut_revizyon
+from app.uclar.ebeveyn import bagi_kaldir
+from app.veri_disa_aktar import kullanici_verisi
+from app.veritabani import oturum
+
+gunluk = logging.getLogger(__name__)
+
+yonlendirici = APIRouter(prefix="/yonetim", tags=["panel-yonetim"])
+
+#: Toplu/anonim istatistiği görebilenler. `gozlemci` yalnızca burayı
+#: görüyor; tekil kullanıcı verisine hiçbir rolün varsayılan erişimi yok
+#: (`docs/panel-plani.md` P9).
+GOSTERGE_ROLLERI = (
+    PersonelRolu.ADMIN,
+    PersonelRolu.OPERASYON,
+    PersonelRolu.GOZLEMCI,
+)
+
+
+#: Tekil hesabı görebilenler. `GOZLEMCI` **yok**: rolün tanımı toplu ve
+#: anonim istatistik (§2 "Roller"), tekil hesap detayı o tanımın dışında.
+HESAP_ROLLERI = (
+    PersonelRolu.ADMIN,
+    PersonelRolu.OPERASYON,
+)
+
+
+#: Denetim kaydını görebilenler. `OPERASYON` yalnızca kendi kayıtlarını
+#: görüyor (uç içinde daraltılıyor); bütünü `ADMIN` görüyor.
+DENETIM_ROLLERI = (
+    PersonelRolu.ADMIN,
+    PersonelRolu.OPERASYON,
+)
+
+
+#: Bant dağılımının bakacağı pencere. 7 gün: cihaz da son 7 günü
+#: gönderiyor (`SenkronDeposu.GUN`), daha geniş bir pencere sunucuda
+#: olmayan veriyi sorardı.
+PENCERE_GUN = 7
+
+
+def _guvenli_revizyon() -> str:
+    """
+    Veritabanının damgalı revizyonu; okunamıyorsa boş.
+
+    Gösterge, veritabanı erişilemediği için çökmemeli: bir izleme ekranının
+    ilk işi ayakta kalmak.
+    """
+    try:
+        return mevcut_revizyon() or ""
+    except Exception:  # noqa: BLE001 - sebebi ne olursa olsun gösterge ayakta kalmalı
+        gunluk.warning("Veritabanı revizyonu okunamadı", exc_info=True)
+        return ""
+
+
+def _gerekce_dogrula(gerekce: str) -> None:
+    """
+    Gerekçe zorunlu ve kısa olamaz.
+
+    Sınır `panel/denetim.py`'de tanımlı: "düzeltme" diyen bir eylemin
+    niçini kaydın kendisinde durmalı, tek kelimelik gerekçe denetim izi
+    değil.
+    """
+    if len(gerekce.strip()) < ASGARI_GEREKCE:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Gerekçe en az {ASGARI_GEREKCE} karakter olmalı",
+        )
+
+
+def _kilitli_hesap(db: Session, kullanici_id: int) -> Kullanici:
+    """
+    Yazma boyunca hesabı kilitler; panelde eksik hesap **404**.
+
+    `guvenlik.kullaniciyi_kilitle` 401 atıyor — cihaz tarafında doğru
+    ("senin oturumun geçersiz") ama panelde yanıltıcı: personelin oturumu
+    geçerli, aranan hesap yok.
+    """
+    kullanici = db.scalar(
+        select(Kullanici).where(Kullanici.id == kullanici_id).with_for_update()
+    )
+    if kullanici is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
+    return kullanici
+
+
+@yonlendirici.get("/gosterge")
+def gosterge(
+    istek: Request,
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*GOSTERGE_ROLLERI)),
+):
+    g = gostergeyi_hesapla(db, pencere_gun=PENCERE_GUN)
+    return yanit(
+        istek,
+        "gosterge.html",
+        {
+            "etkin": "gosterge",
+            "g": g,
+            "bantlar": [(kod, BANT_ETIKETI[kod]) for kod in BANTLAR],
+            "bant_grafigi": bant_dagilimi_svg(g.bant_dagilimi),
+            "pencere_gun": PENCERE_GUN,
+            "revizyon": beklenen_revizyon(),
+            # Panel migration KOŞTURMUYOR (K57): API servisi koşturuyor ve
+            # panel yalnızca uyuşmayı doğruluyor. Uyuşmazlık burada
+            # görünmeli — sessiz kalırsa panel eski şemaya bakmaya devam
+            # eder ve sayılar açıklanamaz biçimde yanlış çıkar.
+            "db_revizyonu": _guvenli_revizyon(),
+        },
+    )
+
+
+@yonlendirici.get("/kullanici")
+def kullanici_ara(
+    istek: Request,
+    ara_metni: str = Query("", alias="ara"),
+    sayfa: int = Query(0, ge=0),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Hesap arama — e-posta ya da kullanıcı numarası.
+
+    Boş sorgu **tüm kullanıcıları listelemiyor**: hesap listesini gezinmek
+    bir destek talebini çözmüyor, yalnızca kişisel veriyi göz önüne
+    seriyor. Arama bir hedef gerektiriyor.
+    """
+    satirlar, toplam = ara(db, ara_metni, sayfa)
+    return yanit(
+        istek,
+        "hesap_ara.html",
+        {
+            "etkin": "kullanici",
+            "ara": ara_metni,
+            "satirlar": satirlar,
+            "toplam": toplam,
+            "sayfa": sayfa,
+            "sayfa_boyu": SAYFA_BOYU,
+        },
+        parca="parca/hesap_sonuc.html",
+    )
+
+
+@yonlendirici.get("/kullanici/{kullanici_id}")
+def kullanici_detay(
+    istek: Request,
+    kullanici_id: int,
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    d = detay(db, kullanici_id)
+    if d is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
+    return yanit(
+        istek,
+        "hesap_detay.html",
+        {
+            "etkin": "kullanici",
+            "d": d,
+            "duzeltmeler": puan.gecmis(db, kullanici_id),
+            "haftalik_puan": puan.sunucudaki_haftalik_puan(db, kullanici_id),
+            "islem_anahtari": puan.islem_anahtari(),
+            "puan_siniri": puan.SINIR,
+        },
+    )
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/askiya-al")
+def kullanici_askiya_al(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Hesabı askıya alır — gerekçe zorunlu, denetim kaydı zorunlu.
+
+    Gerekçe iki yere birden gidiyor: `denetim_kaydi`'na (kalıcı iz) ve
+    kullanıcının cihazına (403 gövdesi). İkincisi §4 gereği — sebebini
+    öğrenemeyen kullanıcı uygulamayı bozuk sanar.
+    """
+    _gerekce_dogrula(gerekce)
+    kullanici = _kilitli_hesap(db, kullanici_id)
+    if kullanici.askida_mi:
+        # İdempotent değil, gerçekten bir hata: ikinci kez askıya almak
+        # sebebi sessizce EZERDİ ve kullanıcı başka bir gerekçe görürdü.
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hesap zaten askıda")
+
+    askiya_al(db, kullanici, personel.id, gerekce)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.askiya_al",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+    )
+    db.commit()
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/askiyi-kaldir")
+def kullanici_askiyi_kaldir(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """Askıyı kaldırır. Gerekçe burada da zorunlu: geri alma da bir karar."""
+    _gerekce_dogrula(gerekce)
+    kullanici = _kilitli_hesap(db, kullanici_id)
+    if not kullanici.askida_mi:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hesap zaten aktif")
+
+    askiyi_kaldir(db, kullanici)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.askiyi_kaldir",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+    )
+    db.commit()
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/ebeveyn-bagi-kaldir")
+def kullanici_ebeveyn_bagi_kaldir(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Ebeveyn–çocuk bağını panelden kaldırır (destek talebi senaryosu).
+
+    Bağ **iki kullanıcıyı birden** ilgilendiriyor: kaldırma, ebeveynin
+    çocuğun özetine erişimini kesiyor. Bu yüzden gerekçe zorunlu.
+    """
+    _gerekce_dogrula(gerekce)
+    kullanici = _kilitli_hesap(db, kullanici_id)
+
+    bagi_kaldir(db, kullanici.id)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.ebeveyn_bagi_kaldir",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+    )
+    db.commit()
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/veri-disa-aktar")
+def kullanici_veri_disa_aktar(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    onay: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    KVKK erişim hakkı — **istisna yol**.
+
+    Varsayılan, kullanıcının kendi cihazından indirmesi
+    (`GET /auth/verilerim`): dosya panele hiç düşmüyor. Bu uç yalnızca
+    kullanıcı uygulamaya erişemiyorsa (telefonu yok, hesabı askıda)
+    kullanılıyor ve bedeli var — kişisel verinin bir kopyası personelin
+    bilgisayarına iniyor.
+
+    Bu yüzden **çift onay**: gerekçenin yanında ayrı bir onay kutusu.
+    Yanlışlıkla basılabilecek tek bir düğme, bir kullanıcının bütün
+    davranış geçmişini dışarı çıkarmamalı.
+    """
+    _gerekce_dogrula(gerekce)
+    if onay.strip().lower() not in ("evet", "on", "true", "1"):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Dışa aktarma için onay kutusu işaretlenmeli",
+        )
+
+    kullanici = db.get(Kullanici, kullanici_id)
+    if kullanici is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hesap bulunamadı")
+
+    veri = kullanici_verisi(db, kullanici)
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.veri_disa_aktar",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+        detay={"satir_sayisi": len(veri["gunluk_ozetler"])},
+    )
+    db.commit()
+
+    ad = f"yesiliz-kullanici-{kullanici_id}.json"
+    return JSONResponse(
+        veri,
+        headers={"Content-Disposition": f'attachment; filename="{ad}"'},
+    )
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/sil")
+def kullanici_sil(
+    istek: Request,
+    kullanici_id: int,
+    gerekce: str = Form(""),
+    onay_eposta: str = Form(""),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    KVKK silme talebi — **geri alınamaz**.
+
+    Çift onay, e-postayı elle yazdırarak: silinen hesap geri gelmiyor ve
+    tek düğmelik bir işlem yanlış satıra basmayı fazlasıyla kolaylaştırır.
+    Aranan hesabın e-postası yazılmadan silme çalışmıyor.
+
+    Silmenin kendisi `app/kullanici_silme.py`'de — cihazın
+    `DELETE /auth/hesap` ucuyla **aynı** kod. Yumuşak silme bilinçli olarak
+    tercih edilmedi: veri sunucuda kalırsa talep karşılanmamış olur.
+
+    `DELETE` yerine `POST`: HTML formları yalnızca GET/POST gönderiyor ve
+    panel SSR (`docs/panel-plani.md §3`). Uç adı fiili söylüyor.
+    """
+    _gerekce_dogrula(gerekce)
+
+    kullanici = _kilitli_hesap(db, kullanici_id)
+    if onay_eposta.strip().lower() != kullanici.eposta.lower():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Onay için hesabın e-postası birebir yazılmalı",
+        )
+
+    # Denetim satırı silmeden ÖNCE ve aynı transaction'da: `hedef_id`
+    # yabancı anahtar değil (migration KDoc'u), yani kullanıcı gidince
+    # kayıt hayatta kalıyor ve kimin neyi sildiği okunabilir kalıyor.
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.sil",
+        hedef_tur="kullanici",
+        hedef_id=kullanici_id,
+        gerekce=gerekce,
+        istek=istek,
+        detay={"eposta": kullanici.eposta},
+    )
+    kullaniciyi_tamamen_sil(db, kullanici)
+    db.commit()
+    return yonlendir(istek, "/yonetim/kullanici")
+
+
+@yonlendirici.get("/denetim")
+def denetim_kaydi(
+    istek: Request,
+    personel_id: int | None = Query(None),
+    kullanici_id: int | None = Query(None),
+    eylem: str = Query(""),
+    baslangic: dt.date | None = Query(None),
+    bitis: dt.date | None = Query(None),
+    sayfa: int = Query(0, ge=0),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*DENETIM_ROLLERI)),
+):
+    """
+    Denetim kaydı görüntüleyici — **yalnızca okuma** (`§5.8`).
+
+    `OPERASYON` yalnızca **kendi** kayıtlarını görüyor: denetim izi
+    personeli de denetliyor ve herkesin herkesi izleyebilmesi, kaydın
+    caydırıcılığından çok bir gözetim yüzeyi üretirdi. Bütünü görmek
+    `ADMIN`'in işi.
+    """
+    kendiyle_sinirli = personel.rol == PersonelRolu.OPERASYON.value
+    if kendiyle_sinirli:
+        personel_id = personel.id
+
+    filtre = Filtre(
+        personel_id=personel_id,
+        kullanici_id=kullanici_id,
+        eylem=eylem,
+        baslangic=baslangic,
+        bitis=bitis,
+    )
+    satirlar, toplam = listele(db, filtre, sayfa)
+
+    return yanit(
+        istek,
+        "denetim.html",
+        {
+            "etkin": "denetim",
+            "satirlar": satirlar,
+            "toplam": toplam,
+            "sayfa": sayfa,
+            "sayfa_boyu": DENETIM_SAYFA_BOYU,
+            "filtre": filtre,
+            # Kendi kaydıyla sınırlı personel, DİĞER personelin adını
+            # filtre listesinde de görmemeli: satırları gizleyip adı
+            # açılır listede bırakmak sızıntının kendisi.
+            "personeller": [] if kendiyle_sinirli else personel_secenekleri(db),
+            "eylemler": eylem_secenekleri(db),
+            "kendi_kaydiyla_sinirli": kendiyle_sinirli,
+        },
+        parca="parca/denetim_sonuc.html",
+    )
+
+
+@yonlendirici.post("/kullanici/{kullanici_id}/puan-duzeltme")
+def kullanici_puan_duzeltme(
+    istek: Request,
+    kullanici_id: int,
+    delta: int = Form(...),
+    gerekce: str = Form(""),
+    islem_anahtari: str = Form(...),
+    db: Session = Depends(oturum),
+    personel: Personel = Depends(personel_gerek(*HESAP_ROLLERI)),
+):
+    """
+    Puan düzeltmesi — §4'ün "ceza puanı yok" kuralının tek istisnası (K56).
+
+    Kural kaldırılmadı, daraltıldı: otomatik hiçbir yol puan düşürmüyor;
+    bu uç yalnızca bir insanın tekil ve gerekçeli işlemini yazıyor.
+
+    **Tekrar koruması veritabanında.** Aynı `islem_anahtari` ikinci kez
+    yazılamıyor ve çakışma `409` dönüyor: sessizce ikinci bir satır
+    yazmak, kullanıcının puanını iki kez değiştirmek olurdu ve bu geri
+    dönülemez bir zarar. Panelin CSRF'i oturuma bağlı HMAC (U2) ve tekrar
+    gönderimi engellemiyor — bu anahtar U2'nin bilinçli istisnası.
+    """
+    _gerekce_dogrula(gerekce)
+    kullanici = _kilitli_hesap(db, kullanici_id)
+
+    try:
+        puan.dogrula(delta)
+    except puan.DuzeltmeHatasi as hata:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, str(hata)
+        ) from None
+
+    kayit = puan.uygula(
+        db,
+        kullanici_id=kullanici.id,
+        delta=delta,
+        gerekce=gerekce,
+        personel_id=personel.id,
+        anahtar=islem_anahtari.strip(),
+    )
+    denetle(
+        db,
+        personel,
+        eylem="kullanici.puan_duzeltme",
+        hedef_tur="kullanici",
+        hedef_id=kullanici.id,
+        gerekce=gerekce,
+        istek=istek,
+        detay={"delta": delta},
+    )
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu düzeltme zaten uygulandı. Formu yenileyip tekrar dene.",
+        ) from None
+
+    gunluk.info(
+        "Puan düzeltmesi",
+        extra={"kullanici": kullanici.id, "delta": delta, "duzeltme": kayit.id},
+    )
+    return yonlendir(istek, f"/yonetim/kullanici/{kullanici_id}")

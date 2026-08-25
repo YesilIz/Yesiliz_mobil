@@ -45,7 +45,7 @@ data class KullanimOlayEntity(
  * Uygulamanın kendi kaydettiği aktivite oturumu (şu an yalnızca aktif
  * yürüyüş, `YuruyusServisi`) — Health Connect'ten canlı okunan egzersiz
  * kayıtlarıyla birlikte [tr.org.yesilay.yesiliz.domain.kullanim.AktiviteTekillestir]'e
- * giriyor (`gorev2.md` §4-§6). Health Connect'in kendi kayıtları burada
+ * giriyor (CLAUDE.md §12 K31). Health Connect'in kendi kayıtları burada
  * ayrıca SAKLANMIYOR — Health Connect zaten kendi kaynağı, tekrar
  * tutmak veri çatallanması yaratırdı; yalnızca uygulamanın kendi
  * ölçtüğü oturumlar burada.
@@ -168,7 +168,7 @@ data class RiskSonucEntity(
     /**
      * [tr.org.yesilay.yesiliz.risk.VeriDurumu] adı — `YETERSIZ` iken
      * [gosterilenBant] hesaplanmış olsa da UI'da GÖSTERİLMEMELİ
-     * (gorev2.md §8, `RiskDeposu.gunuHesapla`).
+     * (CLAUDE.md §12 K30, `RiskDeposu.gunuHesapla`).
      */
     val veriDurumu: String = "HESAPLANDI",
 )
@@ -384,4 +384,29 @@ data class OdulSecimiEntity(
     @PrimaryKey val kademeId: String,
     val secenekId: String,
     val tarih: LocalDate,
+)
+
+
+/**
+ * Panelden yapılmış puan düzeltmesi (`CLAUDE.md §12 K56`).
+ *
+ * **Ayrı tablo olmasının sebebi:** `PuanDeposu.gunuYenidenHesaplaIc` her
+ * koşumda `puan_gunluk` satırını `@Upsert` ile eziyor. Düzeltmeyi oraya
+ * yazmak, bir sonraki gecelik işte kaybolması demekti.
+ *
+ * **Birincil anahtar sunucu id'si.** Aynı düzeltmenin ikinci kez
+ * indirilmesi no-op oluyor; bir deltayı iki kez uygulamak geri dönülemez
+ * bir kullanıcı zararı ve koruma tek bir bayrağa bırakılamaz.
+ */
+@Entity(tableName = "puan_duzeltme")
+data class PuanDuzeltmeEntity(
+    /** Sunucudaki `puan_duzeltme.id` — tekrar koruması bu. */
+    @PrimaryKey val id: Int,
+    /** Pozitif ekler, negatif düşürür. */
+    val delta: Int,
+    /** Kullanıcıya **gösteriliyor**; gerekçesiz düzeltme "ceza" olurdu. */
+    val gerekce: String,
+    val zaman: Instant,
+    /** Bildirim defterine yazıldı mı? Aynı düzeltme iki kez bildirilmesin. */
+    val bildirildi: Boolean = false,
 )

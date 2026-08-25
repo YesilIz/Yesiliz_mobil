@@ -72,17 +72,15 @@ class ProfilViewModel @Inject constructor(
     val durum: StateFlow<ProfilDurum> = combine(
         tercihler.yesilayPaylasimi,
         tercihler.ligdeGorun,
-        tercihler.molaHatirlaticiAcikMi,
         tercihler.gunlukHedefDk,
         tercihler.bildirimSaatleri,
-    ) { paylasim, ligde, molaHatirlatici, hedef, saatler ->
+    ) { paylasim, ligde, hedef, saatler ->
         // `combine` en fazla beş akış alıyor; oturum ayrı bir halkada
         // ekleniyor.
         ProfilDurum(
             isim = SABIT_ISIM,
             yesilayPaylasimi = paylasim,
             ligdeGorun = ligde,
-            molaHatirlaticiAcik = molaHatirlatici,
             gunlukHedefDk = hedef,
             bildirimSaatleri = saatler,
             demoKullanilabilir = demoVeri.kullanilabilir,
@@ -145,16 +143,6 @@ class ProfilViewModel @Inject constructor(
             tercihler.ligdeGorunAyarla(acik)
             senkronDeposu.ligGorunurlugunuSenkronEt()
         }
-    }
-
-    /**
-     * Overlay iznini istemek ([NudgeIzni]) Composable'ın işi — ViewModel
-     * Context tutmaz (CLAUDE.md §6). Burada yalnızca kullanıcının **niyeti**
-     * kaydediliyor; asıl servis `MainActivity.onResume()`'da bu bayrak +
-     * gerçek izin durumuna göre başlatılıp durduruluyor.
-     */
-    fun molaHatirlaticiAyarla(acik: Boolean) {
-        viewModelScope.launch { tercihler.molaHatirlaticiAyarla(acik) }
     }
 
     /**

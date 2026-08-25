@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,8 +30,6 @@ class JetonDeposu @Inject constructor(
     @ApplicationContext private val baglam: Context,
 ) {
     private val depo get() = baglam.jetonDeposu
-
-    val erisimAkisi = depo.data.map { it[ERISIM] }
 
     suspend fun erisim(): String? = depo.data.first()[ERISIM]
 

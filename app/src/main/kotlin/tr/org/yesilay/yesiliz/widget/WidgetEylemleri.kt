@@ -9,7 +9,6 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CancellationException
 import tr.org.yesilay.yesiliz.MainActivity
@@ -82,15 +81,4 @@ suspend fun widgetlariTazele(baglam: Context) {
     } catch (hata: Exception) {
         Log.w("YesilizWidget", "Widget'lar tazelenemedi", hata)
     }
-}
-
-/** Kaç widget ekli — teşhis ve testler için. */
-suspend fun widgetSayisi(baglam: Context): Int = runCatching {
-    val yonetici = GlanceAppWidgetManager(baglam)
-    yonetici.getGlanceIds(EkranSuresiWidget::class.java).size +
-        yonetici.getGlanceIds(GununSorusuWidget::class.java).size
-}.getOrElse { hata ->
-    if (hata is CancellationException) throw hata
-    Log.w("YesilizWidget", "Widget sayısı okunamadı", hata)
-    0
 }

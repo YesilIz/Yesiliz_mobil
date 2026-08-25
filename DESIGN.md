@@ -69,6 +69,15 @@ Başka hiçbir yerde kullanılmaz — genel risk gösterimi ve hata durumları h
 yukarıdaki `--risk-*` / `--error*` yeşil skalasında. Ekran spekleri:
 `docs/tasarim-referans.md §2` ekran 25, 26, 30.
 
+**Yönetim ve YEDAM paneli bu kuralın kapsamı dışında** (`docs/panel-plani.md §3`).
+Kural, *kullanıcının kendi risk bandını gördüğü yüzey* için kondu: kırmızı orada
+damgalayıcı, çünkü damgalanan kişinin kendisi. Panelde durum renkleri
+(uyarı/kritik) serbest — damgalanan bir kullanıcı değil, bir **iş kaydının
+durumu**: şema uyuşmazlığı, askıdaki hesap, 2FA'sı kurulmamış personel.
+Panelin paleti yine `--green-*` ailesinden türüyor; kırmızı yalnızca durum
+şeritlerinde ve çiplerde (`panel.css` `.cip-uyari` / `.cip-kritik` /
+`.serit-kritik`).
+
 ### Teslim edilen tasarımdan eklenen tokenlar
 
 `docs/tasarim-referans.md §1`'de doğrulanmış, henüz buraya taşınmamış
@@ -217,6 +226,14 @@ Screen:
 ---
 
 ## 4. AĞAÇ METAFORU — SPEK
+
+> **TARİHSEL — kod bu bölümü izlemiyor.** Aşağıdaki tablo ağacı **risk bandına**
+> ve beş duruma bağlıyor; uygulama ağacı **TOPLAM PUANA** ve **dokuz evreye**
+> bağlıyor (`AnaViewModel.agacEvresi`, `EVRE2_PUAN = 100` … `EVRE9_PUAN = 10.000`).
+> Risk bandına bağlamak bilinçli olarak reddedildi: kötü bir günde ağacı
+> kurutmak cezalandırma olurdu (CLAUDE.md §4 "ceza puanı yok", §12 K2).
+> **Çelişkide kod kazanıyor.** Bölümün geri kalanı — ağacın hiçbir zaman ölü
+> görünmemesi, yumuşak geçişler, palet — hâlâ geçerli.
 
 Ana ekranın merkezindeki görsel. Kullanıcının durumu tek bakışta görünür.
 

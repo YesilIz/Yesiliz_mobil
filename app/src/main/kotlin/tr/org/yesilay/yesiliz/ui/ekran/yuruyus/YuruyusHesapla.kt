@@ -1,5 +1,7 @@
 package tr.org.yesilay.yesiliz.ui.ekran.yuruyus
 
+import tr.org.yesilay.yesiliz.ui.sayacMetni
+
 /**
  * Aktif yürüyüşün ilerleme hesabı — **saf fonksiyon**.
  *
@@ -47,6 +49,5 @@ object YuruyusHesapla {
     }
 
     /** `12:34` biçimi — sayaç metni. */
-    fun sayacMetni(saniye: Int): String =
-        "%d:%02d".format(saniye / SANIYE_DAKIKA, saniye % SANIYE_DAKIKA)
+    fun sayacMetni(saniye: Int): String = saniye.sayacMetni()
 }

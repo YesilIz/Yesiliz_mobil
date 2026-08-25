@@ -1,10 +1,10 @@
 package tr.org.yesilay.yesiliz.ui.ekran.bildirim
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Eco
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Notifications
@@ -133,10 +133,11 @@ private fun ikonu(turAnahtari: String): ImageVector =
         BildirimTuru.PUAN -> Icons.Filled.Eco
         BildirimTuru.HEDEF -> Icons.Filled.TrackChanges
         BildirimTuru.SERI -> Icons.Filled.LocalFireDepartment
-        BildirimTuru.LIG -> Icons.Filled.EmojiEvents
         BildirimTuru.MOLA -> Icons.Filled.Timer
-        BildirimTuru.DEGERLENDIRME -> Icons.AutoMirrored.Filled.FactCheck
         BildirimTuru.EBEVEYN -> Icons.Filled.FamilyRestroom
         BildirimTuru.HATIRLATMA -> Icons.Filled.Notifications
+        // Nötr bir ikon: düzeltme bir uyarı ya da ceza değil (K56).
+        BildirimTuru.DUZELTME -> Icons.Filled.Balance
+        BildirimTuru.DUYURU -> Icons.Filled.Campaign
         null -> Icons.Filled.CheckCircle
     }

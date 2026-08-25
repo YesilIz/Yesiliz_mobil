@@ -17,7 +17,7 @@ import javax.inject.Singleton
  *
  * `YuruyusServisi` bir yürüyüş tamamlandığında buraya yazıyor,
  * `AktiviteSaglayici` günün toplam spor dakikasını hesaplarken Health
- * Connect kayıtlarıyla birlikte buradan okuyor (`gorev2.md` §4).
+ * Connect kayıtlarıyla birlikte buradan okuyor (CLAUDE.md §12 K31).
  */
 @Singleton
 class AktiviteOturumuDeposu @Inject constructor(

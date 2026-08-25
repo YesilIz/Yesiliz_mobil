@@ -109,8 +109,10 @@ object Rota {
     const val SAGLIK_IZIN = "saglik/izin"
     const val YEDAM_ONAY = "yedam/onay"
 
+    /** "Verilerine kim baktı" + rıza geri çekme (M5, M6). */
+    const val YEDAM_GIZLILIK = "yedam/gizlilik"
+
     // --- hesap (akış dışı) ---
-    const val HESAP = "hesap"
     const val GIRIS = "hesap/giris"
     const val KAYIT = "hesap/kayit"
     const val SIFRE = "hesap/sifre"

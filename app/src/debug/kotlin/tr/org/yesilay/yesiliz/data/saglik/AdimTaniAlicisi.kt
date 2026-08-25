@@ -15,7 +15,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 /**
- * Yalnızca debug APK'da bulunan donanım adım sayacı tanısı (`gorev2.md` §2).
+ * Yalnızca debug APK'da bulunan donanım adım sayacı tanısı (CLAUDE.md §12 K32).
  *
  * `SaglikTaniAlicisi`'nin (Health Connect) donanım sayacı karşılığı —
  * aynı desen: `adb shell am broadcast` ile tetiklenir, sonuç logcat'e yazılır.

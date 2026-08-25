@@ -1,9 +1,5 @@
 package tr.org.yesilay.yesiliz.ui
 
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -45,15 +41,12 @@ fun Int.sureMetni(): String {
     }
 }
 
-/** Grafik ekseni için kısa süre: `480` → `8s`. */
-fun Int.kisaSaat(): String = "${this / 60}s"
-
 /**
  * Grafik ekseni için süre — bir saatin ALTINI da gösterir.
  *
- * [kisaSaat] tam bölme yaptığı için 8 dakikayı "0s" yazıyordu; ekseni
- * verinin kendi ölçeğinden türetince (grafiğin tepesi 8 dakika olabiliyor)
- * üç etiket birden "0s" çıkıyordu.
+ * Selefi tam bölme yaptığı için 8 dakikayı "0s" yazıyordu; ekseni verinin
+ * kendi ölçeğinden türetince (grafiğin tepesi 8 dakika olabiliyor) üç
+ * etiket birden "0s" çıkıyordu (CLAUDE.md §12 K49).
  */
 fun Int.eksenSuresi(): String = when {
     this <= 0 -> "0"
@@ -65,27 +58,12 @@ fun Int.eksenSuresi(): String = when {
 fun Int.kisaBin(): String = "${this / 1000}b"
 
 /**
- * Tek vurgu biçimi: `**kalın**`.
+ * Geri sayım metni — `725` → `12:05`.
  *
- * Markdown kütüphanesi eklemek yerine tek kural elle işleniyor — içerik
- * bizim yazdığımız asset dosyalarından ibaret, keyfi markdown gelmiyor.
- * Bilgi Bankası yazıları ve sözleşme metinleri ortak kullanıyor.
+ * Odak seansı, aktif yürüyüş ve nefes egzersizi aynı ifadeyi üç ayrı yerde
+ * taşıyordu; ikisi karakteri karakterine aynıydı (CLAUDE.md §12 K49 ailesi:
+ * biçim kararı tek yerde yaşar).
  */
-fun kalinIsle(metin: String) = buildAnnotatedString {
-    var kalan = metin
-    while (true) {
-        val bas = kalan.indexOf(KALIN_AYRACI)
-        if (bas < 0) break
-        val son = kalan.indexOf(KALIN_AYRACI, bas + KALIN_AYRACI.length)
-        if (son < 0) break
+fun Int.sayacMetni(): String = "%d:%02d".format(this / SANIYE_DAKIKA, this % SANIYE_DAKIKA)
 
-        append(kalan.substring(0, bas))
-        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
-            append(kalan.substring(bas + KALIN_AYRACI.length, son))
-        }
-        kalan = kalan.substring(son + KALIN_AYRACI.length)
-    }
-    append(kalan)
-}
-
-private const val KALIN_AYRACI = "**"
+private const val SANIYE_DAKIKA = 60

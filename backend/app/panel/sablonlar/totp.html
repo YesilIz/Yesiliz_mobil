@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doğrulama · Yeşilİz Panel</title>
+  <link rel="stylesheet" href="/statik/panel.css">
+</head>
+<body class="giris-sayfa">
+  <main class="giris-kart">
+    <div class="marka">
+      <span class="marka-ad">Yeşilİz</span>
+      <span class="marka-alt">panel</span>
+    </div>
+
+    <h2>İki adımlı doğrulama</h2>
+    <p class="yardim" style="margin-top:0">
+      Doğrulayıcı uygulamandaki altı haneli kodu gir.
+    </p>
+
+    {% if hata %}<p class="serit serit-kritik">{{ hata }}</p>{% endif %}
+
+    <form method="post" action="/oturum/totp">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <div class="alan">
+        <label for="kod">Kod</label>
+        <input id="kod" name="kod" class="kod-alani" type="text"
+               inputmode="numeric" autocomplete="one-time-code"
+               maxlength="10" required autofocus>
+      </div>
+      <button type="submit">Doğrula</button>
+    </form>
+
+    <p class="yardim">
+      Telefonuna erişemiyorsan kurulumda verilen kurtarma kodlarından birini
+      aynı alana yazabilirsin. Her kod bir kez kullanılıyor.
+    </p>
+  </main>
+</body>
+</html>

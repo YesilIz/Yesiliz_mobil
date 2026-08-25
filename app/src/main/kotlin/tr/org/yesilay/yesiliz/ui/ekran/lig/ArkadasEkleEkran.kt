@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MailOutline
-import androidx.compose.material.icons.filled.PermContactCalendar
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,11 +43,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tr.org.yesilay.yesiliz.domain.lig.DavetKodu
-import tr.org.yesilay.yesiliz.domain.lig.OnerilenKisi
-import tr.org.yesilay.yesiliz.ui.bilesen.BolumBasligi
 import tr.org.yesilay.yesiliz.ui.bilesen.BirincilButon
 import tr.org.yesilay.yesiliz.ui.bilesen.Cip
-import tr.org.yesilay.yesiliz.ui.bilesen.KullaniciAvatari
 import tr.org.yesilay.yesiliz.ui.bilesen.YesilBaslikliEkran
 import tr.org.yesilay.yesiliz.ui.bilesen.Yigin
 import tr.org.yesilay.yesiliz.ui.tema.Ayrac
@@ -119,43 +115,18 @@ fun ArkadasEkleEkran(
                         modifier = Modifier.weight(1f),
                         onTikla = { davetPaylas(context, durum.davetKodu) },
                     )
-                    // Rehber verisi HİÇ toplanmıyor (CLAUDE.md §4). Tasarımda
-                    // bu buton var ama izin istemek, toplamayacağımız bir
-                    // veriye erişim istemek olurdu — devre dışı ve sebebi
-                    // hemen altında yazıyor.
-                    EylemKutusu(
-                        ikon = Icons.Filled.PermContactCalendar,
-                        etiket = "Kişilerden bul",
-                        modifier = Modifier.weight(1f),
-                        etkin = false,
-                        onTikla = {},
-                    )
                 }
+                // Rehber HİÇ okunmuyor (CLAUDE.md §4, §12 K14). Bir zamanlar
+                // burada devre dışı bir "Kişilerden bul" düğmesi ve altında
+                // onu açıklayan bir paragraf vardı; hiçbir zaman açılamayacak
+                // bir kontrolü göstermek, kullanıcıyı "acaba nasıl açılır?"
+                // diye aratıyordu. Duruş kayboldu diye kaldırılmadı — tek
+                // cümle olarak burada duruyor (5. tarama G5-035).
                 Text(
-                    text = "Rehberine erişmiyoruz; kişi listesi hiçbir zaman " +
-                        "okunmuyor. Davet kodunu paylaşman yeterli.",
+                    text = "Rehberine erişmiyoruz; davet kodunu paylaşman yeterli.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MetinUcuncul,
                 )
-
-                // Liste rehberden ya da sosyal grafikten gelmiyor -- ikisi
-                // de yok. Bunu başlıkta söylemek şart: "Önerilen kişiler"
-                // tek başına, hemen üstündeki "rehberine erişmiyoruz"
-                // sözüyle çelişiyordu (`debug.md` O-13).
-                BolumBasligi("Örnek kişiler")
-                Text(
-                    text = "Bu liste örnektir; kişi önerisi için gereken " +
-                        "sosyal bağlantı bilgisini toplamıyoruz.",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MetinUcuncul,
-                )
-                durum.onerilenler.forEach { kisi ->
-                    OnerilenSatiri(
-                        kisi = kisi,
-                        gonderiliyor = kisi.isim in durum.gonderiliyor,
-                    onEkle = { viewModel.davetGonder(kisi.isim) },
-                    )
-                }
             }
         }
     }
@@ -311,43 +282,6 @@ private fun EylemKutusu(
             color = if (etkin) MetinBirincil else MetinUcuncul,
             textAlign = TextAlign.Center,
         )
-    }
-}
-
-@Composable
-private fun OnerilenSatiri(
-    kisi: OnerilenKisi,
-    gonderiliyor: Boolean,
-    onEkle: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Bosluk.S),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        KullaniciAvatari(isim = kisi.isim, zemin = Yesil50, metinRengi = MetinBirincil)
-        Spacer(modifier = Modifier.width(Olcu.Aralik))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = kisi.isim,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MetinBirincil,
-            )
-            Text(
-                text = kisi.altMetin,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MetinIkincil,
-            )
-        }
-        when {
-            kisi.davetGonderildiMi ->
-                Cip(metin = "Davet gönderildi", zemin = Yesil50, renk = MetinIkincil)
-            // Gönderim sunucuya ulaşılamayan bir telefonda beş saniye
-            // sürüyor; o süre boyunca "Ekle" demeye devam etmek kullanıcıyı
-            // tekrar dokunmaya itiyordu (`debug.md` Y-10).
-            gonderiliyor -> Cip(metin = "Gönderiliyor…", zemin = Yesil50, renk = MetinIkincil)
-            else -> Cip(metin = "Ekle", zemin = Beyaz, renk = YesilAna, onTikla = onEkle)
-        }
     }
 }
 

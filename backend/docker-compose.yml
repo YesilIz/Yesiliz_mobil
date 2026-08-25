@@ -1,8 +1,14 @@
 # Yeşilİz — yerel geliştirme yığını.
 #
-# `docker compose up -d` → PostgreSQL 16 + API (localhost:8000).
+# `docker compose up -d` → PostgreSQL 16 + API (localhost:8000) +
+# panel (localhost:8001).
 # Android emülatöründen API'ye `http://10.0.2.2:8000` ile ulaşılıyor;
 # emülatörde `localhost` cihazın kendisi demek.
+#
+# İki servis **aynı imajı** koşuyor, farkları `YESILIZ_ROL`
+# (docs/panel-plani.md §4, CLAUDE.md §12 K57). İlk personel hesabı:
+#   docker compose exec panel python -m app.personel_ekle \
+#     --eposta admin@yesilay.org.tr --ad "Ad Soyad" --rol admin
 
 services:
   db:
@@ -43,6 +49,37 @@ services:
       - .:/uygulama
     command: >
       sh -c "alembic upgrade head &&
+             uvicorn app.main:uygulama --host 0.0.0.0 --port 8000 --reload"
+
+  panel:
+    build: .
+    depends_on:
+      # Migration'ın tek sahibi API. Panel yalnızca şemayı doğruluyor;
+      # `api` ayağa kalkmadan başlarsa sürüm kapısı düşer.
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+    environment:
+      YESILIZ_ORTAM: development
+      YESILIZ_ROL: panel
+      YESILIZ_VERITABANI_URL: postgresql+psycopg://yesiliz:yesiliz@db:5432/yesiliz
+      YESILIZ_JWT_ANAHTARI: gelistirme-anahtari-uretimde-degistir
+      # Yerelde http konuşuluyor; `Secure` çerez geri gönderilmezdi.
+      # Üretimde bu değerin false olması açılış kapısınca reddediliyor.
+      YESILIZ_PANEL_CEREZ_GUVENLI: "false"
+      YESILIZ_PANEL_TABAN: http://localhost:8001
+      # Yerel döngü kolaylığı: ikinci faktör yerine sabit kod. Üretimde
+      # tanımlıysa `ayarlar.dogrula` servisi hiç başlatmıyor.
+      YESILIZ_PANEL_SABIT_TOTP: "123456"
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/uygulama
+    # `alembic upgrade` YOK — iki servis aynı anda migration koşarsa
+    # çakışırlar. Panel `baslat.sh`'ta olduğu gibi yalnızca doğruluyor.
+    command: >
+      sh -c "python -m app.surum_kapisi &&
              uvicorn app.main:uygulama --host 0.0.0.0 --port 8000 --reload"
 
 volumes:

@@ -14,7 +14,6 @@ data class ProfilDurum(
     val ligAdi: String = "",
     val yesilayPaylasimi: Boolean = false,
     val ligdeGorun: Boolean = true,
-    val molaHatirlaticiAcik: Boolean = false,
     val gunlukHedefDk: Int = 0,
     val bildirimSaatleri: BildirimSaatleri = BildirimSaatleri(),
     /** Debug derlemesinde demo tohumu satırı gösterilsin mi. */

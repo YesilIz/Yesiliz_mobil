@@ -68,6 +68,8 @@ import tr.org.yesilay.yesiliz.ui.tema.Yesil50
 import tr.org.yesilay.yesiliz.ui.tema.YesilAna
 import tr.org.yesilay.yesiliz.ui.tema.YesilKoyu
 import tr.org.yesilay.yesiliz.ui.tema.YesilNane
+import tr.org.yesilay.yesiliz.domain.yedam.Yedam
+import tr.org.yesilay.yesiliz.ui.bilesen.YedamAraButonu
 
 /**
  * Ebeveyn paneli — `docs/tasarim-referans.md §2 / 13, 20-22, 27`.
@@ -723,27 +725,12 @@ private fun YedamHakkinda(onKapat: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Bosluk.S))
         Text(
-            text = "Çalışma saatleri: hafta içi 08:30–00:00, " +
-                "cumartesi 08:30–17:30.",
+            text = Yedam.CALISMA_SAATLERI,
             style = MaterialTheme.typography.bodyMedium,
             color = MetinIkincil,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(Olcu.Aralik))
-        // ACTION_DIAL: numarayı çeviriciye yazıyor, aramayı KENDİ
-        // başlatmıyor. ACTION_CALL izin isterdi ve kullanıcının onayı
-        // olmadan arama başlatmak bu ekranın işi değil. Profil › YEDAM
-        // hakkında alt sayfasıyla aynı desen.
-        BirincilButon(
-            metin = "115'i ara",
-            onTikla = {
-                baglam.startActivity(
-                    android.content.Intent(
-                        android.content.Intent.ACTION_DIAL,
-                        android.net.Uri.parse("tel:115"),
-                    ),
-                )
-            },
-        )
+        YedamAraButonu()
     }
 }

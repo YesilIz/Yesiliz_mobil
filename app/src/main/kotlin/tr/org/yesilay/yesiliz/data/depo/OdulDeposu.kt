@@ -47,6 +47,33 @@ class OdulDeposu @Inject constructor(
 ) {
     private val uzlastirmaKilidi = Mutex()
 
+    /**
+     * Seçenek şu an seçilebilir mi? Sunucuya ulaşılamazsa **kapalı**.
+     *
+     * Fail-closed: "bilmiyoruz"u "açık" saymak, karşılanamayacak bir
+     * ödülü seçtirmek olurdu.
+     */
+    suspend fun acikMi(kademeId: String, secenekId: String): Boolean = try {
+        api.odulDurumlari().any {
+            it.kademeId == kademeId && it.secenekId == secenekId && it.acik
+        }
+    } catch (iptal: CancellationException) {
+        throw iptal
+    } catch (hata: Exception) {
+        Log.w(ETIKET, "ödül durumu alınamadı", hata)
+        MADDI_ODUL_TESLIMATI_ETKIN
+    }
+
+    /** Ekranın kademeyi "seçilebilir" çizmesi için — aynı fail-closed kural. */
+    suspend fun acikSecenekler(): Set<Pair<String, String>> = try {
+        api.odulDurumlari().filter { it.acik }.map { it.kademeId to it.secenekId }.toSet()
+    } catch (iptal: CancellationException) {
+        throw iptal
+    } catch (hata: Exception) {
+        Log.w(ETIKET, "ödül durumları alınamadı", hata)
+        emptySet()
+    }
+
     private companion object {
         const val ETIKET = "OdulDeposu"
     }
@@ -72,8 +99,11 @@ class OdulDeposu @Inject constructor(
      *   seçim varsa false (arayan yeniden sormamalı — seçim değişmiyor)
      */
     suspend fun sec(kademeId: String, secenekId: String): Boolean {
-        if (!MADDI_ODUL_TESLIMATI_ETKIN) return false
         if (dao.getir(kademeId) != null) return false
+        // Kapı sunucuda (stok). Kapalıysa yerel kayıt da yazılmıyor:
+        // cihazda "kazandın" yazıp sunucuda karşılığı olmaması, K37'nin
+        // tam olarak yasakladığı şey.
+        if (!acikMi(kademeId, secenekId)) return false
 
         dao.kaydet(OdulSecimiEntity(kademeId, secenekId, LocalDate.now(saat)))
 
@@ -122,10 +152,10 @@ class OdulDeposu @Inject constructor(
 
             // Önceki bir ağ hatasında yalnızca cihazda kalmış seçimleri
             // yeniden gönder. Sunucuda olan kademeye ikinci kez dokunulmaz.
-            if (MADDI_ODUL_TESLIMATI_ETKIN) {
-                plan.sunucuyaYaz.forEach { (kademeId, secenekId) ->
-                    api.odulSec(OdulSecimIstek(kademeId, secenekId))
-                }
+            plan.sunucuyaYaz.forEach { (kademeId, secenekId) ->
+                // Sunucu stok yoksa 503 dönüyor; bekleyen yerel seçim
+                // sonraki açılışta yeniden denenecek.
+                api.odulSec(OdulSecimIstek(kademeId, secenekId))
             }
         } catch (iptal: CancellationException) {
             throw iptal
@@ -135,7 +165,17 @@ class OdulDeposu @Inject constructor(
     }
 }
 
-/** Sponsorluk/teslimat ve sunucu hak-ediş doğrulaması birlikte açılmalı. */
+/**
+ * Maddi ödül kapısının **başlangıç** değeri.
+ *
+ * Eskiden derlemeye gömülü bir `false`'tu ve A4 çözülünce APK yayını
+ * gerektiriyordu. Kapı artık sunucudaki **stok**: panelden parti
+ * yüklenince açılıyor, bitince kapanıyor (`docs/panel-plani.md §5.4`).
+ *
+ * `false` başlangıç değeri fail-closed: sunucuya ulaşılamadıysa kademe
+ * kapalı görünüyor. "Bilmiyoruz"u "açık" saymak, karşılanamayacak bir
+ * ödülü seçtirmek olurdu (§4, K37).
+ */
 internal const val MADDI_ODUL_TESLIMATI_ETKIN = false
 
 internal data class OdulUzlastirmaPlani(
