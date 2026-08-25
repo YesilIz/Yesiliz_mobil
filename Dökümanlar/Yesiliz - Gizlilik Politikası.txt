@@ -1,0 +1,61 @@
+Gizlilik Politikası
+
+Son güncelleme: 1 Ağustos 2026
+
+Bu metin bilgilendirme amaçlıdır ve hukuki incelemeden geçmemiştir. Nihai KVKK aydınlatma metni Yeşilay tarafından yayımlanacaktır.
+
+Kısa hâli
+
+Ne yaptığını değil, ne kadar süre yaptığını ölçüyoruz. Hesaplama telefonunda yapılıyor. Sunucuya, sen açıkça izin vermedikçe hiçbir şey gitmiyor.
+
+Neyi topluyoruz
+
+Hangi uygulamayı ne kadar süre kullandığın, günde kaç kez telefonu açtığın ve bu kullanımın günün hangi saatlerine dağıldığı. Uygulamalar kategoriye çevriliyor (sosyal, eğlence, üretkenlik…).
+
+İzin verirsen adım sayın ve egzersiz süren. Bunlar Health Connect üzerinden okunur.
+
+Kendi girdiklerin: yaş, cinsiyet, günlük hedefin, ruh hali kaydın, uyku beyanın ve doldurduğun değerlendirme anketlerinin yanıtları.
+
+Neyi TOPLAMIYORUZ
+
+Mesajlarını, fotoğraflarını, rehberini, arama geçmişini, tarayıcı geçmişini ve uygulamaların içindeki hiçbir içeriği okumuyoruz.
+
+Konumunu istemiyoruz. Uygulamanın konum izni yok ve olmayacak.
+
+Kalp atışı, uyku, kilo gibi sağlık verilerini istemiyoruz — Health Connect'ten yalnızca adım sayısı ve egzersiz süresi okunuyor.
+
+Şifreni cihazında hiçbir yere yazmıyoruz. Doğrulama sunucuda yapılıyor; telefonunda yalnızca oturum jetonu duruyor.
+
+Nerede duruyor
+
+Ham kullanım kayıtların telefonundan çıkmıyor. Risk skorun da telefonunda hesaplanıyor; sunucunun ikinci bir hesaplama motoru yok.
+
+Ham kayıtlar 30 gün sonra otomatik siliniyor; geriye yalnızca günlük özetler kalıyor.
+
+Sunucuya ne gidiyor
+
+Yalnızca "Yeşilay ile paylaşım" anahtarını açarsan: günlük özetin (toplam süre, kategori dağılımı, açılış sayısı) ve hesaplanmış risk skorun. Anahtar kapalıyken ağ isteği hiç yapılmıyor. Misafir kullanıcının verisi hiçbir koşulda gönderilmiyor.
+
+Hangi uygulamayı kullandığın sunucuya gitmiyor — yalnızca kategori toplamları gidiyor.
+
+Ligde görünme
+
+Lig sıralamasında yalnızca adın ve haftalık puanın görünür. "Ligde görün" anahtarını kapatırsan başkalarının sıralamasında çıkmazsın; kendi sıranı görmeye devam edersin.
+
+Ebeveyn paneli
+
+Eşleştirme yaparsan ebeveynine yalnızca özet gider: toplam ekran süresi, risk bandı ve eğilim. Hangi uygulamayı kullandığın, mesajların ve konumun ebeveynine de gitmez.
+
+Haklarınız
+
+Verilerinin tamamını JSON ve CSV olarak indirebilirsin (Profil › Geçmişi indir).
+
+Verilerini ya da hesabını kalıcı olarak silebilirsin (Profil › Verilerim). Hesap silme, sunucudaki kaydını da siler. Sunucuya ulaşılamıyorsa uygulama bunu sana söyler.
+
+18 yaşından küçükseniz
+
+Kayıt sırasında ebeveyn onayı beyanı istenir. KVKK gereği çocukların verileri ayrı bir rejime tabidir; toplanan veri kapsamı yetişkinlerle aynıdır ve yukarıdaki sınırların tamamı geçerlidir.
+
+İletişim
+
+Sorularınız için Yeşilay ile iletişime geçebilirsiniz. YEDAM danışma hattı: 115 (ücretsiz).

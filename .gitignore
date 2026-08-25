@@ -37,3 +37,12 @@ __pycache__/
 /recap.txt
 /projeaciklamasi.md
 /mcp.txt
+
+# İmzalama anahtarı notları ve parolalar — depo özel olsa da girmez.
+# "Yeşiliz uygulama parolası anahtarı.txt" doğrudan bir parola taşıyor;
+# parmak izleri de anahtarla birlikte tek klasörde durduğu için klasör bütün olarak dışarıda.
+debug aahtarları/
+
+# Gerçek cihazdan alınan veri yedekleri (adb run-as tar).
+# Kullanıcının ham kullanım verisi; §4 "ham veri cihazdan çıkmaz" ile aynı sınır.
+yesiliz-cihaz-yedek/

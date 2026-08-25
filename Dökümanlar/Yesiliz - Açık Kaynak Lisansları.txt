@@ -1,0 +1,29 @@
+Açık kaynak lisansları
+
+Son güncelleme: 1 Ağustos 2026
+
+Yeşilİz aşağıdaki açık kaynaklı bileşenleri kullanıyor. Her birinin lisans metni kendi projesinde yayımlanmıştır.
+
+Apache License 2.0
+
+Android Jetpack (Compose, Room, WorkManager, DataStore, Navigation, Lifecycle, Glance, Health Connect) — Google LLC
+
+Material Components ve Material Symbols — Google LLC
+
+Kotlin ve kotlinx kütüphaneleri (Coroutines, Serialization) — JetBrains s.r.o.
+
+Dagger Hilt — Google LLC
+
+OkHttp ve Retrofit — Square, Inc.
+
+SIL Open Font License 1.1
+
+Inter yazı tipi — Rasmus Andersson
+
+Creative Commons Attribution 4.0
+
+Uygulama kategorisi eşlemesinin bir bölümü, LMU Münih'in yayımladığı uygulama kategorileri veri setinden türetilmiştir (doi:10.5334/jopd.59).
+
+Sunucu tarafı
+
+FastAPI (MIT) — Sebastián Ramírez · SQLAlchemy (MIT) · Alembic (MIT) · PostgreSQL (PostgreSQL License) · argon2-cffi (MIT) · PyJWT (MIT)
