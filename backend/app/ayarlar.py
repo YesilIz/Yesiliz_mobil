@@ -228,6 +228,24 @@ class Ayarlar(BaseSettings):
     # üretimde `dogrula` False'u reddediyor.
     panel_cerez_guvenli: bool = True
 
+    # İkinci faktör zorunlu mu?
+    #
+    # **Varsayılan `True` ve öyle kalmalı.** Kapatmak, panelin bütün yetki
+    # yüzeyini — hesap askıya alma, silme, KVKK dışa aktarma, puan
+    # düzeltmesi, YEDAM danışmanlık kayıtları — tek bir parolanın arkasına
+    # koyuyor.
+    #
+    # Kapatılabilir olmasının sebebi geliştirme evresi: panel Yeşilay'a
+    # devredilene kadar ekip her girişte doğrulayıcı uygulama açmak
+    # istemiyor. Kapalıyken **sessiz kalmıyor**: her girişte uyarı
+    # loglanıyor ve panelin her sayfasında şerit görünüyor. Devretmeden
+    # önce açmak tek değişkenlik iş, ama unutulursa ekranın kendisi
+    # söylüyor.
+    panel_2fa_zorunlu: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("YESILIZ_PANEL_2FA_ZORUNLU", "PANEL_2FA_REQUIRED"),
+    )
+
     # Geliştirmede ikinci faktörün yerine geçen sabit kod.
     #
     # **Yalnızca geliştirme kolaylığı.** TOTP zaman tabanlı olduğu için sabit

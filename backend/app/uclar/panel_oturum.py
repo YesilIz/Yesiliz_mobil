@@ -143,7 +143,28 @@ def giris(
             durum=status.HTTP_401_UNAUTHORIZED,
         )
 
-    ham, _ = panel_oturum.oturum_ac(db, personel, istek)
+    ham, kayit = panel_oturum.oturum_ac(db, personel, istek)
+
+    if not ayarlar().panel_2fa_zorunlu:
+        # İkinci faktör kapalı (`ayarlar.panel_2fa_zorunlu`) — geliştirme
+        # evresi kolaylığı. **Sessiz değil:** her giriş uyarı olarak
+        # loglanıyor ve panelin her sayfasında şerit duruyor.
+        #
+        # Oturum burada tam yetkili işaretleniyor, yani TOTP adımını
+        # atlamak oturumu yarım bırakmıyor; `personel_oturumu` bağımlılığı
+        # `totp_dogrulandi` şartını olduğu gibi koruyor ve bayrak yeniden
+        # açıldığında hiçbir şey değişmiyor.
+        panel_oturum.totp_dogrulandi_isaretle(kayit)
+        panel_oturum.denemeleri_sifirla(db, personel)
+        db.commit()
+        gunluk.warning(
+            "İki adımlı doğrulama kapalıyken giriş",
+            extra={"personel": personel.id},
+        )
+        cevap = yonlendir(istek, _giris_hedefi(personel))
+        panel_oturum.cerezi_yaz(cevap, ham)
+        return cevap
+
     db.commit()
 
     hedef = "/oturum/totp" if personel.totp_sir else "/oturum/totp-kur"
