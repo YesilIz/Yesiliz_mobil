@@ -36,6 +36,14 @@ emulator -avd Yesiliz_Pixel7_API36 &
 # backend  (pytest)
 cd backend && docker compose up -d && docker compose exec api pytest -q
 
+# panel — AYRI SERVİS, aynı imaj (§12 K57). Yığın üç servis: db · api · panel
+#   api   → http://localhost:8000     panel → http://localhost:8001
+# Migration'ın tek sahibi api; panel yalnızca şemayı doğruluyor.
+# Yerelde ikinci faktör sabit kod: 123456 (üretimde tanımlıysa servis açılmıyor).
+docker compose exec api python -m app.personel_ekle \
+  --eposta admin@yesilay.org.tr --ad "Ad Soyad" --rol admin
+# Panelde kayıt formu YOK: ilk hesap bu komutla, sonrakiler panelden admin rolüyle.
+
 # canlı ortam smoke testleri — dağıtılmış sunucuya karşı, `pytest -q` toplamıyor
 YESILIZ_SMOKE_TABAN=https://yesilizmobil-production.up.railway.app \
   python -m pytest smoke -q
@@ -109,7 +117,7 @@ fix/y             ●────●───
 | `docs/spec-puan.md` | Görev · puan · lig · ödül | puan sistemine dokunurken |
 | `docs/spec-veri.md` | Veri stratejisi, 18 yaş altı ebeveyn modu | veri politikasına dokunurken |
 | `docs/referans/yesiliz_hesap.py` | Risk motorunun **referans** implementasyonu | **DOKUNULMAZ** — spek |
-| **`docs/tasarim-referans.md`** | **Teslim edilen 31 ekranın (19 + 12 ek) spek'i + tokenlar** | **UI yazarken — ekranların kaynağı** |
+| **`docs/tasarim-referans.md`** | **Teslim edilen 42 ekranın (19 + 12 + 11 ek) spek'i + tokenlar** | **UI yazarken — ekranların kaynağı** |
 | `docs/spike-usagestats-sonuc.md` | UsageStats ortam bulguları | veri okumaya başlarken |
 | **`docs/dagitim.md`** | **Ortam değişkenleri, Railway, migration, /health, CI/CD, Android adres yönetimi** | **dağıtıma ya da sunucu adresine dokunurken** |
 | `docs/gorev-dagilimi.md` | Altı kişilik ekibin modül sahipliği ve iş bölümü | kime hangi iş sorulacağını ararken |
@@ -198,10 +206,13 @@ kullanıma ve gerçek hayat aktivitelerine yönlendiren Android uygulaması.
 yesiliz/
 ├─ app/          Android uygulaması
 ├─ core-risk/    SAF KOTLIN (JVM) — android.* import YASAK
-├─ backend/      FastAPI + PostgreSQL — hesap, senkron, lig, ebeveyn
+├─ backend/      FastAPI + PostgreSQL — cihaz API'si (uclar/) VE yönetim/YEDAM
+│                paneli (panel/). Tek kod tabanı, tek imaj, İKİ servis:
+│                hangisinin koşacağını YESILIZ_ROL belirliyor (§12 K57)
 ├─ docs/         spec'ler + referans Python
 ├─ tests/        doğrulama vektörleri + üreticiler
-└─ tools/        veri/görsel/doküman üreticileri
+├─ tools/        veri/görsel/doküman üreticileri
+└─ Dökümanlar/   yarışma şartnamesi, rapor, yasal metinler — kod değil
 ```
 
 **core-risk neden ayrı:** Android sınıfı sızarsa saf fonksiyon garantisi bozulur;
@@ -216,7 +227,8 @@ core-risk/…/risk/
 ├─ Cikti.kt         RiskSonuc · Bant · Trend · GunSonuc
 ├─ RiskHesapla.kt   hesap sırası, saf fonksiyon
 ├─ Alpha.kt         alpha eğrisi + dEfektif
-└─ Bantlama.kt      eşik → güvenlik → histerezis → trend + BantTakipci
+├─ Bantlama.kt      eşik → güvenlik → histerezis → trend + BantTakipci
+└─ EtkileyenFaktorler.kt  sürükleyiciler — her hesap bunu döndürür (§7)
 
 app/…/yesiliz/
 ├─ MainActivity.kt · YesilizApp.kt
@@ -232,15 +244,21 @@ app/…/yesiliz/
 │  │                      gece yarısını ve saat dilimi değişimini yakalayan
 │  │                      TEK "bugün" kaynağı (§12 K35)
 │  └─ depo/               Repository — UI buradan okur.
-│                         Yerel: Kategori · Kullanim · Risk · Puan · Bildirim ·
-│                         Bilgi · Beyan · GecmisVeri · DisaAktar · VeriYonetimi
-│                         Uzak: RetrofitHesap · RetrofitLig · Senkron · Ebeveyn
+│                         Yerel: Kategori · Kullanim · Risk · Puan · PuanDuzeltme ·
+│                         Bildirim · Bilgi · Duyuru · Beyan · Adim · Odul ·
+│                         Sozlesme · AktiviteOturumu · YuruyusOturum ·
+│                         GecmisVeri · DisaAktar · VeriYonetimi · YerelOturumSiniri
+│                         Uzak: RetrofitHesap · RetrofitLig · Senkron · Ebeveyn · Yedam
 │                         Sarmalayıcı: Yedekli*Deposu (debug) ·
 │                         Sunucu*Deposu (release) — §12 K18
-├─ domain/
-│  ├─ model/              UI'ın gördüğü modeller
+├─ domain/                UI'ın gördüğü modeller ve saf use case'ler
 │  ├─ kategori/           Kategori · KategoriEsleyici · KategoriTablosu
-│  └─ kullanim/           KullanimOlay · OruntuCikar · YerDegisHesapla
+│  ├─ kullanim/           KullanimOlay · OruntuCikar · YerDegisHesapla ·
+│  │                      AktiviteOturumu · AktiviteTekillestir (K31)
+│  ├─ gorev/              Gorev · RuhHaliPenceresi (K41)
+│  ├─ puan/               görev · seri · çarpan · günlük tavan
+│  ├─ yedam/              Yedam.kt — YEDAM saatleri/iletişimi TEK kaynak (K55)
+│  └─ bildirim/ bilgi/ hesap/ lig/ sozlesme/ test/
 ├─ ui/
 │  ├─ tema/               Renk · Tipografi · Sekil · Boyut · Tema
 │  ├─ TurkceMetin.kt      buyukHarf() / kucukHarf()
@@ -248,10 +266,12 @@ app/…/yesiliz/
 │  │                      yürüyüş DEĞİL, o foreground service'te, §12 K21)
 │  ├─ KaliciAkis.kt       "önce yaz, sonra ilerle" — kalıcılık bitmeden
 │  │                      ekran değiştirmeyi engelleyen ortak ilke
-│  ├─ bilesen/            AyarSatiri · BosDurum · Cip · IlerlemeCubugu · Kart
-│  │  │                   KodKutusu · KullaniciAvatari · LikertSecici · OnayKutusu
-│  │  │                   RiskGirisKarti · SallananYapraklar · UstBaslik ·
-│  │  │                   YaprakZemini · YesilizButon
+│  ├─ bilesen/            AltSayfa (§9) · AyarSatiri · BosDurum · Cip ·
+│  │  │                   IlerlemeCubugu · Kart · KodKutusu · KullaniciAvatari ·
+│  │  │                   LikertSecici · OnayKutusu · OrmanZemini · ProfilAvatar ·
+│  │  │                   RiskGirisKarti · SallananYapraklar · TekerlekSecici (K47) ·
+│  │  │                   UstBaslik · UyariSeridi · YaprakZemini · YedamKarti ·
+│  │  │                   YenileDugmesi (K43) · YesilizButon
 │  │  └─ veri/            CubukGrafik · CubukSecim · DaireselGosterge · YiginBar
 │  ├─ gezinme/            NavHost, rotalar
 │  └─ ekran/              onboarding ana istatistik nefes riskdetay
@@ -259,10 +279,12 @@ app/…/yesiliz/
 │                         bilgi test bildirim anket yuruyus saglik yedam
 │                         sozlesme aktivite odak gozmolasi gecekapanisi
 │                         ekransiz
-├─ nudge/                 Tetikleyici.kt · NudgeSabitleri.kt · NudgeDurum.kt ·
+├─ nudge/                 Tetikleyici.kt · OnPlanTespit.kt (K51) ·
+│                         NudgeSabitleri.kt · NudgeAyari.kt (K53) · NudgeAsama.kt ·
 │                         NudgeOverlay.kt · NudgeOverlayService.kt · NudgeIzni.kt
 ├─ arkaplan/              GunlukOzetWorker · HatirlatmaWorker ·
 │                         YuruyusServisi (İ-3) · IsPlanlayici
+├─ zaman/                 GecenSureSaati — monotonik geçen süre (§9 `delay(1000)`)
 └─ widget/                Glance — EkranSuresiWidget · GununSorusuWidget ·
                           WidgetVerisi (@EntryPoint) · WidgetEylemleri
 ```
@@ -313,17 +335,20 @@ kez daha sınayan şey bu ayrım oldu: dosya sayısı iki, dokunulan ekran sıf�
 
 ### Sunucu ile senkron
 
-FastAPI backend (`backend/`) beş alanı karşılıyor — uç listesi
-`data/uzak/YesilizApi.kt`'de:
+FastAPI backend (`backend/`) dokuz alanı karşılıyor — cihazın gördüğü
+**34 uç**, tam liste `data/uzak/YesilizApi.kt`'de:
 
 | Alan | Uçlar |
 |---|---|
 | Sağlık | `GET saglik` — veritabanını da yokluyor; DB düşükse 503 (`DBG-046`) |
-| Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · **`auth/cikis`** · `auth/sifre-sifirla` · **`PATCH auth/profil`** · **`DELETE auth/hesap`** |
+| Hesap | `POST auth/kayit` · `auth/giris` · `auth/yenile` · `auth/cikis` · `auth/sifre-sifirla` · `PATCH auth/profil` · `DELETE auth/hesap` |
 | Özet | `POST ozet` · `GET ozet` · `POST heartbeat` |
-| Lig | `GET lig` · `POST lig/katil` · **`POST lig/gorunurluk`** · `GET arkadas` · `GET arkadas/kod` · `POST arkadas/davet` |
-| Ödül | `POST odul/sec` · `GET odul/secimlerim` (§12 K28) |
-| Ebeveyn | `POST ebeveyn/kod` · `POST ebeveyn/eslestir` · **`DELETE ebeveyn/eslesme`** · `GET ebeveyn/ozet` |
+| Lig | `GET lig` · `POST lig/katil` · `POST lig/gorunurluk` · `GET arkadas` · `GET arkadas/kod` · `POST arkadas/davet` |
+| Ödül | `POST odul/sec` · `GET odul/secimlerim` · **`GET odul/durum`** — stok kapısı, ekran çizilmeden soruluyor (§12 K28, K62) |
+| Ebeveyn | `POST ebeveyn/kod` · `POST ebeveyn/eslestir` · `DELETE ebeveyn/eslesme` · `GET ebeveyn/ozet` · **`POST ebeveyn/yedam-onay`** |
+| **YEDAM** | `POST yedam/basvuru` · `GET yedam/basvurum` · `DELETE yedam/riza` · `GET yedam/erisim-kaydim` · `POST yedam/surukleyici` · `POST yedam/gecmis` (§12 K61) |
+| **İçerik** | `GET icerik/bilgi-bankasi` · `GET icerik/duyuru` — gömülü set yedek kalıyor (§12 K63) |
+| **Puan** | `GET puan/duzeltmeler` — panelden yapılan düzeltmeler (§12 K56, K62) |
 
 İki kural pazarlık edilemez:
 
@@ -334,6 +359,11 @@ FastAPI backend (`backend/`) beş alanı karşılıyor — uç listesi
   ağ çağrısı hiç yapılmıyor; misafir kullanıcı da senkronize edilmiyor.
   **`heartbeat` de bu kapının arkasında** (11 Ağu, DBG-068): "son açılış"
   bilgisi eşleşmiş + rıza vermiş çocuk dışında hiç kimseden çıkmıyor.
+
+**YEDAM rızası ayrı bir kapı** (§12 K61): sürükleyiciler `/ozet` gövdesine
+**eklenmedi**, kendi ucuna gidiyor (`POST yedam/surukleyici`) — `/ozet`
+paylaşımı kapalı kullanıcıda hiç çağrılmıyor ve özellik tam da korumak
+istediği kişide sessizce ölü kalırdı.
 
 Rıza kapısının **istisnası** `lig/gorunurluk` (DBG-049): "Ligde görün"
 davranışsal veri değil, bir mahremiyet tercihinin kendisi. Paylaşım kapalıyken
@@ -362,7 +392,7 @@ taşıyor ve `GecisTest` emülatörde doğruluyor.
 > uygulama açılışta çöküyor — sessizce kullanıcının geçmişini silmektense
 > gürültülü başarısız olmak yeğ.
 
-**Şu an 15 entity · 15 DAO, şema sürümü 9.** `GECIS_1_2` (`Gecisler.kt`)
+**Şu an 16 entity · 16 DAO, şema sürümü 10.** `GECIS_1_2` (`Gecisler.kt`)
 `bildirim` ve `arkadas` tablolarını ekliyor; `GECIS_3_4` `adim_sayac`
 tablosunu ekliyor (§12 K27); `GECIS_2_3` `gunluk_ozet`'e
 `olayVarMi` kolonunu ekleyip var olan satırları `acilisSayisi > 0` ile
@@ -378,7 +408,10 @@ yapmadan yazdığı yanıltıcı "ebeveyn paneline gönderildi" bildirimlerini
 ile dolduruluyor) ve `adimKaynagi` kolonlarını, `puan_gunluk`'a
 `hedefTutturuldu` + `jokerKullanildi` kolonlarını ekliyor, `ruh_hali`
 birincil anahtarını `tarih`ten `(tarih, dilim)`'e taşıyor — var olan
-satırlar `sabah` penceresine geçiyor (§12 K39, K40, K41).
+satırlar `sabah` penceresine geçiyor (§12 K39, K40, K41); `GECIS_9_10`
+`puan_duzeltme` tablosunu ekliyor — panelden yapılan gerekçeli düzeltmeler
+`puan_gunluk`'a yazılamaz, çünkü `gunuYenidenHesaplaIc` her koşumda orayı
+`@Upsert` ile eziyor (§12 K56, K62).
 
 Bir zamanlar planlanan `LigUyelikEntity` ve `EbeveynBaglantiEntity` **yazılmadı
 ve yazılmayacak.** Lig üyeliği ve ebeveyn bağlantısı doğası gereği sunucu
@@ -453,7 +486,8 @@ güncellenmiş sürümüyle **12 ekran/varyasyonluk ek teslim** geldi (ebeveyn
 eşleştirme akışı, veri şeffaflığı/hesap silme ekranları, YEDAM hakkında,
 Yardım, Hakkında ve — sıradaki iş listesindeki #2'yi karşılayan — Risk
 analizi ekranı). Ekran ekran spek ve tokenlar **`docs/tasarim-referans.md`**'de,
-kesilmiş ekranlar (31 adet) `docs/tasarim/ekranlar/*.png`'de.
+kesilmiş ekranlar (42 dosya: 41 ekran + `08b` varyasyonu)
+`docs/tasarim/ekranlar/*.png`'de.
 
 | # | Adım |
 |---|---|
@@ -564,16 +598,16 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | Alan | İçerik | Doğrulama |
 |---|---|---|
 | Araç zinciri | JDK 17 · Android Studio · SDK 37 · AVD | emülatör açılıyor |
-| `core-risk/` | 6 dosya — risk motoru tam, artık `VeriDurumu` (YETERSİZ/HESAPLANDI/ESKİ, §12 K30) | **30 test**, referansla birebir |
+| `core-risk/` | 7 dosya — risk motoru tam, artık `VeriDurumu` (YETERSİZ/HESAPLANDI/ESKİ, §12 K30) | **30 test**, referansla birebir |
 | `app/ui/tema/` | Renk · Tipografi · Sekil · Boyut · Tema + Inter + hilal ikonu | emülatörde görüldü |
 | `app/domain/kategori/` | 3.106 paketlik tablo + eşleyici | **9 test** |
 | `app/domain/kullanim/` | `OruntuCikar` — 6 örüntü + `YerDegisHesapla` | **22 test** |
-| `app/data/yerel/` | 15 entity · 15 DAO · `YesilizDb` (sürüm 9) · `Gecisler.kt` — destructive fallback **yok** | **cihaz testleri** (`GecisTest` 1→2 … 8→9'un tamamını, ayrıca dolu veritabanını sürüm 4'ten 9'a taşıyan kapsamlı testi gerçek cihazda ve emülatörde koşuyor) |
+| `app/data/yerel/` | 16 entity · 16 DAO · `YesilizDb` (sürüm 10) · `Gecisler.kt` — destructive fallback **yok** | **cihaz testleri** (`GecisTest`, 20 test: 1→2 … 9→10'un tamamı, ayrıca dolu veritabanını sürüm 4'ten 10'a taşıyan kapsamlı test). Migration'lar 21 Ağu'da PostgreSQL 16'da da uçtan uca koştu (panel turu V6) |
 | `app/data/kullanim/` | `OturumCikar` (saf) · `KullanimOkuyucu` · `KullanimIzni` | **13 birim + 7 emülatör testi** |
 | `app/data/depo/` | `KategoriDeposu` · `KullanimDeposu` (sistem → kategori → Room → özet) | seed + override korunuyor |
 | Dokümantasyon | `DB.md` · spike raporu · kapanmış tarama kayıtları (`docs/arsiv/`) | üreticileri var |
-| Tasarım | **Dışarıdan 31 ekranlık teslim** (29 Tem + 30 Tem ek 2026) | `docs/tasarim-referans.md` · palet DESIGN.md §1 ile birebir |
-| `app/ui/bilesen/` | Kart · Cip · YesilizButon · IkonRozeti · AyarSatiri · LikertSecici · KullaniciAvatari · UstBaslik · IlerlemeCubugu + `veri/` CubukGrafik · DaireselGosterge · YiginBar | emülatörde görüldü |
+| Tasarım | **Dışarıdan 42 ekranlık teslim** (29 Tem 19 + 30 Tem 12 + 30 Tem ikinci ek 11) | `docs/tasarim-referans.md` · palet DESIGN.md §1 ile birebir |
+| `app/ui/bilesen/` | 21 bileşen — Kart · Cip · YesilizButon · AltSayfa · AyarSatiri · LikertSecici · KullaniciAvatari · UstBaslik · IlerlemeCubugu · TekerlekSecici · UyariSeridi · YenileDugmesi … + `veri/` CubukGrafik · CubukSecim · DaireselGosterge · YiginBar. Tam liste §6'daki ağaçta | emülatörde görüldü |
 | `app/ui/gezinme/` | NavHost · 4 sekmeli alt bar · onboarding alt grafiği · çift gezinme koruması | akış uçtan uca yürüdü |
 | `app/ui/ekran/` | onboarding (7) · ana (+ görev detayı alt sayfası) · istatistik · riskdetay · lig · profil (+6 alt sayfa) · ödül (+4 alt sayfa — sertifika/geçmiş/detay + seçim) · ebeveyn · nefes | emülatörde ekran ekran doğrulandı |
 | `app/di/` | Hilt — `VeriModulu`, `@HiltAndroidApp`, `HiltWorkerFactory` | uygulama açılıyor |
@@ -599,40 +633,53 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `ui/ekran/hesap/` + `domain/hesap/` | Giriş · Kayıt · Şifremi unuttum (14, 15, 38); şifre hiçbir yere yazılmıyor | **7 birim testi** |
 | `app/widget/` | Glance: `EkranSuresiWidget` (40) + etkileşimli `GununSorusuWidget` (39) | manifest receiver'ları; emülatörde eklendi |
 | `arkaplan/HatirlatmaWorker` | Günlük hatırlatma (Profil › Bildirim saatleri), varsayılan kapalı | `BildirimSaatleri` saf çözümleme |
-| `backend/` | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | **117 pytest**; `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
+| `backend/` cihaz API'si | FastAPI + PostgreSQL + Alembic — hesap (JWT), özet senkronu, lig, ödül seçimi, ebeveyn eşleştirme; `docker compose up -d` ile ayağa kalkıyor | `backend/README.md` çalıştırma + mahremiyet sözleşmesi |
 | `backend/` dağıtım katmanı | Ortam ayrımı + üretim açılış kapısı (`ayarlar.py`) · `/health` (DB kontrollü) · JSON log + `X-Istek-Id` + gizli değer maskesi (`gunluk.py`) · CORS · açılışta migration (`baslat.sh`) · `railway.json` · `.env.ornek` | **23 pytest**; yerel yığında `/health` 200 ve `alembic current` = head |
 | `backend/smoke/` | Canlı ortama karşı uçtan uca akış — `/health` → kayıt → giriş → korumalı uç → `POST /ozet` → `GET /lig` → `DELETE /auth/hesap` temizliği | **canlı ortama karşı koştu** (CI, 5 Ağu); `pytest.ini` normal koşumdan ayırıyor |
-| `.github/workflows/` | `backend.yml` (test → güvenlik kapısı → imaj → Railway → `/health` → smoke) · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | **`main`'de uçtan uca yeşil koştu** (5 Ağu): dağıtım + `/health` + smoke |
+| `.github/workflows/` | `backend.yml` — beş job: `test` → `deploy` (api) → **`deploy-panel`** → `smoke`, artı güvenlik kapısı · `android-ag-guvenligi.yml` (cleartext ve `10.0.2.2` nöbetçisi) | **`main`'de uçtan uca yeşil koştu** (5 Ağu): dağıtım + `/health` + smoke. Panel job'u `vars.RAILWAY_PANEL_SERVICE` tanımlı değilse **atlanıyor** (S6 kararı bekleniyor) |
+| **`backend/app/panel/`** — yönetim + YEDAM paneli | F0–F5 (21 Ağu 2026): personel kimliği (`personel` tablosu, son kullanıcıdan **ayrı** — K57) · TOTP · CSRF · hesap kilidi · gösterge (sunucuda üretilen SVG) · hesap arama/detay/askı/silme · KVKK işlemleri · denetim kaydı görüntüleyici · personel yönetimi (K60) · **YEDAM danışman paneli** (K61) · puan düzeltmesi + ödül stoğu (K56, K62) · içerik/duyuru/bakım (K63) | Gerçek cihaz turu 21 Ağu (V2–V8 geçti); migration'lar PostgreSQL 16'da head'e koştu. **Kalan: F6 sertleştirme** — §11 "Açık işler" |
 | **Canlı ortam** | Railway'de yayında — `https://yesilizmobil-production.up.railway.app` · PostgreSQL bağlı · Alembic açılışta koşuyor · `ENVIRONMENT=production` kapısı devrede | `GET /health` → 200, `{"status":"healthy","database":"connected"}` |
 | Release imzalama | `app/build.gradle.kts` `signingConfigs` — keystore ve parolalar **depoda değil** (`local.properties` ya da ortam değişkeni). Üçünden biri eksikse derleme düşmüyor, imzasız üretip uyarı basıyor | V2 imza geçerli · dex'te `10.0.2.2` yok · gömülü adres canlı HTTPS |
-| `app/data/uzak/` | `YesilizApi` (22 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme**, 5xx/429'da oturum korunuyor | uçtan uca emülatörde doğrulandı; birim testleri var |
+| `app/data/uzak/` | `YesilizApi` (34 uç) · `Dto` · `JetonDeposu` (erişim/yenileme jetonu) · `AgModulu` (OkHttp interceptor) · `JetonAuthenticator` + `JetonYenileyici` — **401'de sessiz yenileme**, 5xx/429'da oturum korunuyor | uçtan uca emülatörde doğrulandı; birim testleri var |
 | `app/data/depo/` uzak taraf | `RetrofitHesapDeposu` · `RetrofitLigDeposu` · `SenkronDeposu` (rıza kapılı, §12 K19) · `EbeveynDeposu` (kod sunucuda doğrulanıyor) | rıza kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 |
 | `app/data/depo/YedekliDepolar` | Offline-first sarmalayıcı — ağ hatasında yerel sahteye düşer, iş hatasında (401/409) düşmez (§12 K18). **Yalnızca debug'da bağlı** | backend kapalıyken debug'da lig sekmesi yine dolu |
 | `app/data/depo/SunucuDepolar` | Release'in bağladığı sunucu-yalnız depolar — sahte veri yok, hata indirgeniyor (boş sonuç + `cevrimdisi` + logcat) | release APK'da `10.0.2.2` ve şifresiz adres yok (dex denetlendi) |
 | `app/data/depo/OdulDeposu` | Ödül seçimi (market kuponu / fidan bağışı, §12 K28) — yerel yazma birincil, sunucuya rıza kapısı olmadan (hesaplıysa) ikincil; uzak seçimler yerele alınır, bekleyen yerel seçimler yeniden gönderilir | **3 cihaz + 2 uzlaştırma testi**; tekrar seçim `false` dönüyor |
 
-**Toplam 936 test** (378 Android birim + 62 cihaz/emülatör + 30 core-risk + 466
-backend pytest). JVM ve backend sayıları **21 Ağustos 2026'da** F2 (yönetim
-paneli) turundan sonra ölçüldü; cihaz sayısı 17 Ağustos'tan. Backend'in 320'si
-F1–F3'ün panel ve YEDAM testlerini de kapsıyor (117 → 400: personel kimliği,
-TOTP, oturum, CSRF, gösterge, hesap yönetimi, KVKK, denetim kaydı, YEDAM
-rıza/başvuru/danışman paneli).
-JVM tarafı `:core-risk:test` + `:app:testDebugUnitTest` (408 test, 0 hata, 1 `Assume`
-atlaması — `TetikleyiciTest`'in "devam et sönümü moladan uzun" senaryosu, `dev`
-dalında iki sönüm de eşiğe eşitlendiği için atlanıyor, §12 K50), backend
-`docker compose exec api pytest -q` (466 passed), cihaz süiti emülatörde
-(API 36) `:app:connectedDebugAndroidTest` (58 test, 0 hata, 4 `Assume`
-atlaması — `KullanimOkuyucuTest`, UsageStats izni verilmeden atlanıyor;
-`adb shell appops … allow` sonrası geçiyor). Süit en son 11 Ağustos'ta gerçek
-telefonda da (Samsung SM-A217F · API 31) koştu. Zincir uçtan uca
-çalışıyor:
+**Toplam ~935 test.** Her satır ayrı ölçüldü; **her birinin yanında en son
+ne zaman koşturulduğu yazıyor** — sayıyı güncellerken tarihi de güncelle,
+yoksa ölçülmemiş bir iddia ölçülmüş gibi durur.
+
+| Süit | Komut | Sayı | En son koşum |
+|---|---|---|---|
+| core-risk | `:core-risk:test` | **30**, 0 hata | 25 Ağu 2026 |
+| Android birim | `:app:testDebugUnitTest` | **378**, 0 hata | 25 Ağu 2026 |
+| Cihaz/emülatör | `:app:connectedDebugAndroidTest` | **58**, 0 hata + 4 `Assume` atlaması | 17 Ağu 2026 |
+| Backend | `docker compose exec api pytest -q` | **466 passed** | 21 Ağu 2026 |
+
+JVM tarafı (408 test) 25 Ağustos'ta `main`'de koştu: **0 hata, 0 atlama.**
+`dev`'de `TetikleyiciTest`'in "devam et sönümü moladan uzun" senaryosu bir
+`Assume` atlaması veriyor — o dalda iki sönüm de eşiğe eşitleniyor (§12 K50);
+`main`'de eşik gerçek değerinde olduğu için atlama yok.
+
+Cihaz süitindeki 4 atlama `KullanimOkuyucuTest` — UsageStats izni verilmeden
+atlanıyor, `adb shell appops … allow` sonrası geçiyor. Süit en son 11
+Ağustos'ta gerçek telefonda da (Samsung SM-A217F · API 31) koştu; o günden
+beri `GecisTest`'e 9→10 geçişi eklendi ve **yeniden ölçülmedi**.
+
+Backend'in yarısından fazlası panel ve YEDAM tarafı: F0–F5 turu 117 testten
+466'ya çıkardı (personel kimliği, TOTP, oturum, CSRF, gösterge, hesap
+yönetimi, KVKK, denetim kaydı, YEDAM rıza/başvuru/danışman paneli, puan
+düzeltmesi, ödül stoğu, içerik/duyuru/bakım).
+
+Zincir uçtan uca çalışıyor:
 `UsageStats → Room → core-risk → risk_sonuc → StateFlow → Composable`.
 Ekranlardaki sabit veri **silindi**; veri yokken boş durum gösteriliyor.
 Tıklayınca hiçbir şey yapmayan buton/satır kalmadı.
 
-**Hâlâ bilinçli sahte olanlar:** önerilen kişiler listesi (rehber okunmuyor —
-§12 K14) ve **debug derlemesinde, backend kapalıyken** lig sıralaması/lig adı
-(§12 K18 sarmalayıcısı `YerelSahteLigDeposu`'na düşüyor). Release'de bu yol
+**Hâlâ bilinçli sahte olan tek şey:** **debug derlemesinde, backend
+kapalıyken** lig sıralaması/lig adı (§12 K18 sarmalayıcısı
+`YerelSahteLigDeposu`'na düşüyor). Release'de bu yol
 **yok**: sahte depo hiç örneklenmiyor, boş lig + "sunucuya ulaşılamıyor" notu
 görünüyor. Sunucu ayaktayken lig, hesap, özet senkronu ve ebeveyn eşleştirmesi
 gerçek. Kullanıcı adı da gerçek: hesap ekranından ya da misafir modunda
@@ -678,7 +725,9 @@ yani aşağıdaki dal ayrımı satırı geçerliliğini koruyor.
 | Release APK'nın **gerçek telefonda** akış doğrulaması | Kabul kriterlerinin 13'ünden 12'si sağlandı. APK 11 Ağu'da sıfırlanmış Samsung SM-A217F'e kuruldu, açıldı, çökmedi; `DEBUGGABLE` değil, gömülü adres canlı HTTPS. **Kalan tek şey akışın kendisi:** hiçbir manuel sunucu ayarı yapmadan kayıt → giriş → lig turu ve o turda "çevrimdışı" uyarısının **görünmemesi** |
 | Yayın öncesi riskler | **Tek kaynak §12'nin A tablosu:** A12 paylaşımlı hız sınırı · A13 istemci beyanlı lig puanı · A14 Keystore'suz jeton saklama · A15 e-posta sağlayıcısı · A16 Health Connect alpha; ebeveyn onayı A5/K26. (`docs/arsiv/DEBUG_LOG.md` son bölümü aynı listeyi taşıyor ama **arşiv** — güncel tutulan yer burası) |
 | **`NudgeSabitleri.ESIK` dallara göre ayrışıyor** | `main` 45 dakika (gerçek değer), `dev` 15 saniye (cihazda doğrulama için). 14 Ağu 2026'da bilinçli olarak ayrıldı → §12 K50. **`dev`'i `main`'e alırken `--ff-only` çalışmaz**, gerçek merge gerekiyor; `TetikleyiciTest` eşiğe göreli olduğu için ayrışmayı yakalamaz |
-| Uzman/Yeşilay paneli | **F0–F3 bitti** (21 Ağu 2026, dal `feature/panel`): personel kimliği + TOTP + denetim kaydı + iki servisli dağıtım + gösterge + hesap yönetimi + KVKK işlemleri + denetim görüntüleyici + personel yönetimi + **YEDAM köprüsü uçtan uca** (rıza, başvuru, danışman paneli, erişim kaydı, geri çekme, Android M1–M6) + **puan düzeltmesi ve ödül stoğu** (K56 kodda, Room 10; K28 kapısı stoğa bağlandı → **A4'ün teknik ayağı kapandı**) + **içerik, duyuru ve bakım modu** (S5: bilgi bankası sunucudan, gömülü set yedek; §5.6: FCM yok). §3 çekirdek döngüsünün 5. adımı ("KÖPRÜ KUR") artık gerçek. **Gerçek cihaz turu koşulmadı** ve migration'lar PostgreSQL'de denenmedi — `docs/panel-yapilacaklar.md §10`. Sıradaki F4 (puan ve ödül) |
+| Uzman/Yeşilay paneli | **F0–F5 bitti** (21 Ağu 2026), `main`'de (`0674446`): personel kimliği + TOTP + denetim kaydı + iki servisli dağıtım + gösterge + hesap yönetimi + KVKK işlemleri + denetim görüntüleyici + personel yönetimi + **YEDAM köprüsü uçtan uca** (K61) + **puan düzeltmesi ve ödül stoğu** (K56/K62 → **A4'ün teknik ayağı kapandı**) + **içerik, duyuru ve bakım modu** (K63). Android M1–M10'un onu da yazıldı. §3 çekirdek döngüsünün 5. adımı ("KÖPRÜ KUR") artık gerçek. **Gerçek cihaz turu 21 Ağu'da koşuldu** (Samsung `RF8NA115KCD`): V2–V8 geçti, migration'lar PostgreSQL 16'da uçtan uca koştu. **Sıradaki F6 (sertleştirme)** — aşağıdaki satır |
+| **Panelde kalan: F6 · sertleştirme** | Hiçbiri başlamadı. **S1** Redis hız sınırı (A12'nin cihaz API'si ayağı; panel girişi hesap kilidiyle zaten korunuyor) · **S2** panel önünde IP allowlist/VPN · **S3** sızma testi · **S5** izleme ve alarm · **S6** parola politikasının belgelenmesi. Ayrıca iki doğrulama açığı: **V1** YEDAM rıza ekranı telefonda görülemedi (kart `Bant.COK` istiyor, o günün ölçümü 8 dk'ydı ve K30 bandı hiç göstermiyor) ve **G9** yedek/geri yükleme tatbikatı — danışman notu bayrağı (S4) açılmadan önce şart. Kalem kalem `docs/panel-yapilacaklar.md §5, §10` |
+| **Doküman ve hukuk** — kod dışı, ama yayın ön koşulu | **G5** `Dökümanlar/Yesiliz - Gizlilik Politikası.txt` YEDAM paylaşımıyla güncellenmeli + **personel için ayrı aydınlatma metni** (bugün yok) · **G6** veri işleyen sözleşmesi (Yeşilay ↔ ekip) · **G7** saklama süreleri yazılı olmalı (başvuru, danışman notu, denetim kaydı, erişim kaydı) · **G8** silme talebinin **yedeklerde de** karşılanması — prosedür `docs/dagitim.md`'ye, o dosyada bugün yedek/geri yükleme bölümü **hiç yok**. Ayrıntı `docs/panel-yapilacaklar.md §7` |
 | *Faz 3* | ML katmanı (scikit-learn · XGBoost · SHAP), A1–A3 kalibrasyonu — pilot verisi bekliyor |
 
 **Tasarımı eksik ekran kalmadı.** 30 Tem ikinci ek teslimi (8 ekran +
@@ -709,26 +758,27 @@ duruyor, ihtiyaç olursa oradan alınır.
 
 ### Kapanmış
 
-| # | Konu | Karar | Niçin |
-|---|---|---|---|
-| K1 | Lig seviyeleri | Fidan → Filiz → Ağaç → Koru → Orman | ağaç metaforunu izliyor; fidan bağışı ödülü de aynı dilde |
-| K2 | Ana ekran metaforu | **Ağaç**, 9 büyüme evresi | durumu tek bakışta, damgalamadan gösteriyor. **İki düzeltme (14 Ağu 2026):** bu satır 6 evre diyordu, kod (`AnaViewModel.agacEvresi`, `AnaEkran.agacGorseli`) 9 evre kullanıyor; ve evre **seriye değil TOPLAM PUANA** bağlı (`EVRE2_PUAN = 100` … `EVRE9_PUAN = 10.000`). Risk bandına bağlamak bilinçli olarak reddedildi — kötü bir günde ağacı kurutmak cezalandırma olurdu (`AnaViewModel` KDoc). `DESIGN.md §4` hâlâ ağacı risk bandına ve 5 aşamaya bağlıyor; **kod kazanıyor**, o bölüm tarihsel |
-| K3 | MVP kesimi | §11'deki sıra | puanlamada en ağır kriter "çalışan uçtan uca döngü" (%25) |
-| K4 | Font | **Inter** | Averta ticari lisans istiyor; lisans gelirse `Tipografi.kt` tek dosyadan değişir |
-| K5 | Grafik kütüphanesi | Custom Compose Canvas | yalnızca 3 grafik türü var, hepsi tek renk skalasında, pan/zoom istenmiyor. Vico/MPAndroidChart kendi paletiyle gelir — "kırmızı yok" kuralına sürekli karşı durmak gerekirdi. 4 Canvas bileşeni yazmak daha az risk |
-| K6 | İkon seti | Material Symbols + Stitch illüstrasyonları | işlevsel ikonlar hazır setten; ağaç/nefes/YEDAM gibi özgün görseller Stitch'ten |
-| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni | backend o sırada §11'de en sondaydı; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır. **Sonuç (31 Tem):** backend gelince yalnızca DI bağlaması değişti, tek bir ViewModel veya Composable'a dokunulmadı — desen vaadini tuttu. 5 Ağu'da bir kez daha sınandı: bağlama debug/release kaynak setine ayrıldı (`di/DepoBaglama.kt`), yine hiçbir ekran değişmedi |
-| K8 | Kategori kaynağı | LMU veri seti + referans tablo + Türkiye | LMU (doi:10.5334/jopd.59) 3.091 uygulama veriyor ama Almanya örneklemi; referans tablo Snapchat/TikTok gibi kritik çakışmaları düzeltiyor |
-| K9 | `sistem` kategorisi | Risk hesabına girmez | LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
-| K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** | Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
-| K11 | Görev detayı ayrı `gorev/` ekran klasörü **değil** | Alt sayfa içeriği `GorevDetayi` — `AnaEkran.kt` içinde private composable, `ProfilEkran`/`OdulEkran`'ın kendi alt sayfaları gibi | §6'daki mimari şema `gorev`'i ayrı bir `ui/ekran/` klasörü gibi listeliyordu ama bu hiç uygulanmadı — `ProfilEkran`/`OdulEkran` emsali (alt sayfa = yerel `remember` state + private composable, ayrı ViewModel yok) daha güçlü ve daha yeni. Şema buna göre düzeltildi (§6). Bir daha `gorev/` klasörü **açılmasın** |
-| K12 | "Kendini Test Et" kısa farkındalık testi, **SAS-SV değil** | 5 soru, 3'lü seçim, kesme puanı yok, risk motoruna girmiyor. `domain/test/` + ayrı `farkindalik_testi` tablosu | SAS-SV'nin 29,5 kesme puanı yayınlanmış bir çalışmaya dayanıyor ve ölçeğin **birebir** korunmasına bağlı (`docs/spec-anket.md §6.1`). Kısaltmak geçersizleştirirdi; ayrı bir araç yazmak tek doğru yol. İkisini aynı tabloda tutmak da kalibre edilmemiş bir puanın kalibre edilmişle karışması riskini doğururdu — bu yüzden `anket_yanit` ve `farkindalik_testi` ayrı |
-| K13 | Kilit ekranı widget'ı (tasarım 41) **uygulanmadı** | Aynı bilgi tasarım 40'taki ana ekran widget'ıyla veriliyor | iOS'un kilit ekranı widget'ının Android'de karşılığı yok; platformda genel kullanıma açık bir yetenek değil. Tasarım arşivde referans olarak duruyor |
-| K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı | CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
+| # | Konu | Karar ve gerekçe |
+|---|---|---|
+| K1 | Lig seviyeleri | Fidan → Filiz → Ağaç → Koru → Orman — ağaç metaforunu izliyor; fidan bağışı ödülü de aynı dilde |
+| K2 | Ana ekran metaforu | **Ağaç**, 9 büyüme evresi — durumu tek bakışta, damgalamadan gösteriyor. **İki düzeltme (14 Ağu 2026):** bu satır 6 evre diyordu, kod (`AnaViewModel.agacEvresi`, `AnaEkran.agacGorseli`) 9 evre kullanıyor; ve evre **seriye değil TOPLAM PUANA** bağlı (`EVRE2_PUAN = 100` … `EVRE9_PUAN = 10.000`). Risk bandına bağlamak bilinçli olarak reddedildi — kötü bir günde ağacı kurutmak cezalandırma olurdu (`AnaViewModel` KDoc). `DESIGN.md §4` hâlâ ağacı risk bandına ve 5 aşamaya bağlıyor; **kod kazanıyor**, o bölüm tarihsel |
+| K3 | MVP kesimi | §11'deki sıra — puanlamada en ağır kriter "çalışan uçtan uca döngü" (%25) |
+| K4 | Font | **Inter** — Averta ticari lisans istiyor; lisans gelirse `Tipografi.kt` tek dosyadan değişir |
+| K5 | Grafik kütüphanesi | Custom Compose Canvas — yalnızca 3 grafik türü var, hepsi tek renk skalasında, pan/zoom istenmiyor. Vico/MPAndroidChart kendi paletiyle gelir — "kırmızı yok" kuralına sürekli karşı durmak gerekirdi. 4 Canvas bileşeni yazmak daha az risk |
+| K6 | İkon seti | Material Symbols + Stitch illüstrasyonları — işlevsel ikonlar hazır setten; ağaç/nefes/YEDAM gibi özgün görseller Stitch'ten |
+| K7 | Lig/Ödül backend bağımlılığı | Mock repository deseni — backend o sırada §11'de en sondaydı; arayüz sabit tutulunca demo günü 4 nav sekmesi de çalışır. **Sonuç (31 Tem):** backend gelince yalnızca DI bağlaması değişti, tek bir ViewModel veya Composable'a dokunulmadı — desen vaadini tuttu. 5 Ağu'da bir kez daha sınandı: bağlama debug/release kaynak setine ayrıldı (`di/DepoBaglama.kt`), yine hiçbir ekran değişmedi |
+| K8 | Kategori kaynağı | LMU veri seti + referans tablo + Türkiye — LMU (doi:10.5334/jopd.59) 3.091 uygulama veriyor ama Almanya örneklemi; referans tablo Snapchat/TikTok gibi kritik çakışmaları düzeltiyor |
+| K9 | `sistem` kategorisi | Risk hesabına girmez — LMU'nun 3.091 uygulamasının 1.426'sı launcher/SystemUI. Tabloda olmasalardı `other` (0,5) sayılırlardı — telefonun kendi arayüzü kullanıcıya risk yazılamaz |
+| K10 | Kırmızı renk istisnaları | 30 Tem ek teslimindeki iki kırmızı kullanım (risk analizi "Yüksek" etiketi/çubuğu; hesap/veri kalıcı silme onayı) **aynen uygulanır** — Kullanıcı, teslim edilen tasarımın bu iki noktada olduğu gibi kullanılmasına karar verdi. §4 MUTLAK KURALLAR ve DESIGN.md §1 bu istisnayla güncellendi — kural genel olarak geçerliliğini koruyor, yalnızca bu iki ekranla sınırlı |
+| K11 | Görev detayı ayrı `gorev/` ekran klasörü **değil** | Alt sayfa içeriği `GorevDetayi` — `AnaEkran.kt` içinde private composable, `ProfilEkran`/`OdulEkran`'ın kendi alt sayfaları gibi — §6'daki mimari şema `gorev`'i ayrı bir `ui/ekran/` klasörü gibi listeliyordu ama bu hiç uygulanmadı — `ProfilEkran`/`OdulEkran` emsali (alt sayfa = yerel `remember` state + private composable, ayrı ViewModel yok) daha güçlü ve daha yeni. Şema buna göre düzeltildi (§6). Bir daha `gorev/` klasörü **açılmasın** |
+| K12 | "Kendini Test Et" kısa farkındalık testi, **SAS-SV değil** | 5 soru, 3'lü seçim, kesme puanı yok, risk motoruna girmiyor. `domain/test/` + ayrı `farkindalik_testi` tablosu — SAS-SV'nin 29,5 kesme puanı yayınlanmış bir çalışmaya dayanıyor ve ölçeğin **birebir** korunmasına bağlı (`docs/spec-anket.md §6.1`). Kısaltmak geçersizleştirirdi; ayrı bir araç yazmak tek doğru yol. İkisini aynı tabloda tutmak da kalibre edilmemiş bir puanın kalibre edilmişle karışması riskini doğururdu — bu yüzden `anket_yanit` ve `farkindalik_testi` ayrı |
+| K13 | Kilit ekranı widget'ı (tasarım 41) **uygulanmadı** | Aynı bilgi tasarım 40'taki ana ekran widget'ıyla veriliyor — iOS'un kilit ekranı widget'ının Android'de karşılığı yok; platformda genel kullanıma açık bir yetenek değil. Tasarım arşivde referans olarak duruyor |
+| K14 | Rehber (kişiler) **hiç okunmuyor** | Tasarım 36'daki "Kişilerden bul" butonu bilinçli olarak devre dışı, sebebi ekranda yazılı. **17 Ağu 2026 (K55):** yanındaki boş "Örnek kişiler" bölümü de kaldırıldı ve `LigDeposu.onerilenler()` arayüzden düştü — sunucu onu hiç uygulamıyordu; kararın kendisi aynen geçerli — CLAUDE.md §4: rehber toplanmıyor. İzin istemek, toplamayacağımız bir veriye erişim istemek olurdu. Davet kodunu paylaşmak aynı işi görüyor |
 | ~~K15~~ | ~~Aktif yürüyüş **foreground service'siz**~~ | **1 Ağu 2026'da TERSİNE ÇEVRİLDİ → K21.** Eski karar: ekran açık kaldığı sürece sayıyor, gerekçesi "arka planda takip ayrı izin/bildirim/pil bütçesi ister, MVP'nin kritik yolunda değil". Gerçek cihazda bu, özelliği tam da kullanılacağı anda çalışmaz kılıyordu (`debug.md` İ-3) |
-| K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor | İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
-| K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) — **yalnızca debug** | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil. **Bağlama kaynak setinde** (`di/DepoBaglama.kt`): debug → `Yedekli*`, release → `Sunucu*` | Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor. **5 Ağu 2026 daraltması:** aynı davranış yayınlanan sürümde kullanıcıya uydurulmuş bir sıralamayı gerçekmiş gibi göstermek olurdu. Release'de `YerelSahte*` hiç örneklenmiyor; `Sunucu*Deposu` hatayı yutmuyor, indirgiyor — boş sonuç + `cevrimdisi` bayrağı + logcat izi |
-| K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor | `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor. **Genişletme (11 Ağu, DBG-068):** `POST heartbeat` bu kapının **dışındaydı** — paylaşımı kapatan kullanıcının "son açılış" zamanı yine sunucuya gidiyordu. Cihazın ne zaman kullanıldığı da davranışsal veri. Artık heartbeat kimlikli + misafir olmayan + eşleşmiş + rıza vermiş çocuk şartına bağlı. **Kapının dışında kalan iki şey bilinçli:** `lig/gorunurluk` ve ödül seçimi (K28) — bunlar davranış değil, kullanıcının kendi tercihinin sunucudaki karşılığı; rızaya bağlarsak "görünmek istemiyorum" tercihi hiç uygulanamaz |
+| K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da — Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
+| K17 | Sunucu **skor hesaplamıyor** | Risk çıkarımı cihazda kalıyor, sunucuya yalnızca sonuç gidiyor — İkinci bir motor uygulaması yazmak, `core-risk`'in referans Python ile birebir doğrulanmışlığını bozardı. Sunucu saklıyor ve ebeveyn/lig için okuyor, hesaplamıyor |
+| K18 | Offline-first sarmalayıcı (`Yedekli*Deposu`) — **yalnızca debug** | Sunucuya ulaşılamazsa yerel mock; **yalnızca ağ hatasında**, iş hatasında değil. **Bağlama kaynak setinde** (`di/DepoBaglama.kt`): debug → `Yedekli*`, release → `Sunucu*` — Demo günü backend'in ayakta olacağı garanti değil (ağ, laptop, kap). Lig sekmesinin bağlantı hatasıyla boş kalması, özelliğin yokmuş gibi görünmesi demek. Ama yanlış şifrede yerele düşmek "giriş yaptın" demek olurdu — o yüzden 401/409 olduğu gibi geçiyor. **5 Ağu 2026 daraltması:** aynı davranış yayınlanan sürümde kullanıcıya uydurulmuş bir sıralamayı gerçekmiş gibi göstermek olurdu. Release'de `YerelSahte*` hiç örneklenmiyor; `Sunucu*Deposu` hatayı yutmuyor, indirgiyor — boş sonuç + `cevrimdisi` bayrağı + logcat izi |
+| K19 | Senkron **rıza kapısına** bağlı | "Yeşilay ile paylaşım" kapalıysa ağ çağrısı bile yapılmıyor; misafir de senkronize edilmiyor — `docs/spec-veri.md` opt-in. Emülatörde doğrulandı: kapalıyken `POST /ozet` hiç görülmüyor, açılınca 200 dönüyor. **Genişletme (11 Ağu, DBG-068):** `POST heartbeat` bu kapının **dışındaydı** — paylaşımı kapatan kullanıcının "son açılış" zamanı yine sunucuya gidiyordu. Cihazın ne zaman kullanıldığı da davranışsal veri. Artık heartbeat kimlikli + misafir olmayan + eşleşmiş + rıza vermiş çocuk şartına bağlı. **Kapının dışında kalan iki şey bilinçli:** `lig/gorunurluk` ve ödül seçimi (K28) — bunlar davranış değil, kullanıcının kendi tercihinin sunucudaki karşılığı; rızaya bağlarsak "görünmek istemiyorum" tercihi hiç uygulanamaz |
 | K20 | Görev doğrulaması **üç türlü**: `OTOMATIK` · `AKTIVITE` · `BEYAN` | İki değer varken aralarına sıkışan görevler yanlış tarafa düşüyordu. Ana ekranın `when` bloğu NEFES ve YURUYUS dışındaki her şeyi "Tamamlandı olarak işaretle" butonuna gönderiyordu — OTOMATIK ilan edilmiş `GECE_TEMIZ` ve `TUKETIM_HEDEFI` dahil. O iki görev **zaten** özetten puanlanıyor; elle işaretlenince aynı gün için çift sayılıyordu ve kayıt `dogrulamaTuru = "otomatik"` olarak yazıldığı için denetim izi de yanıltıcıydı (`debug.md` K-9). `OTOMATIK` görevler `PuanDeposu.gorevTamamla`'dan da yazılamıyor |
 | K21 | Aktif yürüyüş **foreground service ile** (K15 tersine) | `arkaplan/YuruyusServisi`. Servis yalnızca oturum sürerken yaşıyor, hedef süre dolunca kendini durduruyor; bildirimi sessiz ve düşük öncelikli. Ekranı 15 dakika açık tutarak yürümek ne makul bir istek ne de uygulamanın kendi mesajıyla ("ekrandan uzaklaş") tutarlıydı — yürüyüş ekranından `EkranAcikTut` kaldırıldı (nefes ve göz molasında **duruyor**, orada kullanıcı ekrana bakıyor). **Tip düzeltmesi (11 Ağu, DBG-045):** `foregroundServiceType` `health` **değil** `specialUse`. `health` tipi, platformun sağlık/aktivite izinlerinden **en az birini** şart koşuyor; uygulama `ACTIVITY_RECOGNITION`'ı isteğe bağlı sayıp izin yokken yalnızca adım sayısını gizlediği için, izni reddetmiş API 36 cihazında `startForeground` `SecurityException` atıp **süreci çökertiyordu** ve Android servisi yeniden başlatıp döngüye giriyordu. 15 dakikalık sayaç için meşru bir izin ön koşulu yok; `specialUse` + açık gerekçe doğru tip. Play Console incelemesinde bu tip ayrı gerekçe istiyor |
 | K22 | Dördüncü sekme **Aktiviteler**, Profil avatara taşındı | Profil bir ayar ekranı: nadiren ve belirli bir şey aramaya gidiliyor. Kalıcı bir sekmeyi işgal etmesi, en sık kullanılacak dördüncü alanı harcıyordu. Altı aktivite: nefes · yürüyüş · odak seansı · 20-20-20 göz molası · gece kapanışı · "ekransız ne yaptın?" (`debug.md` İ-1) |
@@ -739,7 +789,6 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K27 | Adım verisi **iki kaynaklı**: Health Connect + donanım sayacı | Health Connect adım **saymıyor**, saklıyor. Yazan bir uygulama yoksa okuma sonsuza kadar sıfır dönüyor — test telefonunda tam olarak bu oldu ("Health Connect'te hiç veriniz yok"; Samsung Health kurulu değil, Google Fit bağlı değil). Yani düzgün çalışan bir entegrasyon, kullanıcının **başka bir uygulama kurmasına** bağlıydı. `Sensor.TYPE_STEP_COUNTER` hiçbir şeye bağlı değil. `AktiviteSaglayici` ikisini birleştiriyor: **Health Connect önce** (saatten/bileklikten gelen veri telefonun cebe girmesinden bağımsız), sıfırsa sensör. **Toplama yok** — ikisi aynı ayakları ölçüyor, şişirilen her adım riski haksız yere aşağı çeker. Sayaç gün başına adım vermiyor (açılıştan beri kümülatif, yeniden başlatmada sıfırlanıyor), o yüzden `adim_sayac` tablosu farkları biriktiriyor; hesap saf (`AdimBirikim.kt`, 6 test). Egzersiz süresi yalnızca Health Connect'ten — adımdan egzersiz uydurmak ölçüm değil tahmin olurdu (`debug.md` K-0) |
 | K28 | 5.000 ve 10.000 puanlık ödül kademelerinde **seçenek**: kupon veya fidan bağışı | Market kuponuyla ilgilenmeyen kullanıcı için kupon boşa giden bir ödüldü — "kazandım ama işime yaramadı". `OdulViewModel.Kademe` artık tek bir ödül yerine `secenekler` listesi taşıyor; kademe kazanılınca birden fazla seçenek varsa `OdulHali.SECIM_BEKLIYOR`, kullanıcı seçince `OdulDeposu` üzerinden **kalıcı** yazılıyor (CLAUDE.md §4 "yalnızca kazanç" — geri alma yok). 1. ve 2. kademede (rozet, fidan) tek seçenek olduğu için davranış değişmedi. Seçim, `Yedekli*Deposu` (K18) deseninden farklı çalışıyor: yerel yazma **birincil** (sunucu ulaşılamasa da ödül kaybolmasın), sunucuya senkron **rıza kapısına (K19) bağlı değil** — davranışsal veri taşımıyor, hesap açmakla aynı sınıfta bir kullanıcı eylemi. `docs/spec-puan.md §9.1` güncellendi. Uzak uzlaştırma sunucudaki mevcut seçimleri yeni telefona yazar ve ağda düşmüş yerel seçimleri sonraki akış açılışında yeniden gönderir; ilk seçim ilkesi iki tarafta da korunur (11 Ağu 2026, A7 kapandı). **Maddi ödüller şu an `PLANLANAN` (11 Ağu, DBG-066/067):** kupon ve fidan bağışının karşılanacağı bir tedarik/iş ortaklığı entegrasyonu **yok** (A4 hâlâ açık). Olmayan bir teslimatı "kazandın" diye yazmak, uygulamanın en somut vaadini uydurma yapardı — üstelik hem cihazda hem sunucuda kalıcı kayıt oluşturarak. Maddi kademeler görünüyor ama seçilemiyor, teslimatın hazır olmadığı ekranda yazılı, Android bu seçimi `POST`'lamıyor ve backend `503` dönüp **hiçbir satır yazmıyor**; eski kayıtlar okunmaya devam ediyor. Dijital rozet de "resmî sertifika" görünümünden çıkarıldı, uygulama içi başarı kartı oldu. A4 çözülünce açılacak tek şey bu kapı |
 | K29 | Sunucu adresi **tek yapılandırma noktasından**; iki build türü de canlı sunucuyu gömüyor | `app/build.gradle.kts` → `BuildConfig.API_TABANI` = `canliSunucu` (HTTPS) — **13 Ağu 2026'dan beri debug'da da**. Eskiden debug varsayılanı emülatörün `10.0.2.2`'siydi; gerçek telefona kurulan debug APK'sında bu, her çağrının zaman aşımına uğrayıp sessizce yerel yedeğe düşmesi (K18) ve adresin elle yazılması demekti — yani **varsayılan durum bozuktu**. Yerel backend'e bağlanmak aynı düğmeden: `./gradlew :app:installDebug -Pyesiliz.sunucu=http://10.0.2.2:8000/`. `Tercihler.VARSAYILAN_SUNUCU` bunu okuyor, `AgModulu` ondan alıyor. Adres `-Pyesiliz.sunucu` ya da `YESILIZ_SUNUCU` ile eziliyor. Temiz kurulmuş telefon hiçbir ayar yapmadan sunucuya ulaşıyor. **Dört koruma birlikte:** release HTTPS olmayan adresle derlenmiyor, `ag_guvenligi.xml` şifresiz trafiği istisnasız reddediyor (10.0.2.2 istisnası silindi), `dogrulaReleaseApk` üretilen ikiliyi açıp denetliyor (K32), ve release DataStore ezmesini hiç okumuyor (K24 daraltması, DBG-056). CI hepsini denetliyor |
-| K16 | Şifre **yerelde saklanmıyor** | `YerelSahteHesapDeposu` şifreyi doğrulayıp unutuyor; yalnızca ad ve e-posta DataStore'da | Yarım bir kimlik doğrulama yazmak, güvenli olduğu izlenimi verirdi. Parola sunucu işi. **Sonuç (31 Tem):** sunucu geldi, doğrulama `backend/app/guvenlik.py`'de; cihazda yalnızca JWT var (`JetonDeposu`), parola hâlâ hiçbir yere yazılmıyor. Yerel sahte depo sunucu kapalıyken yedek olarak duruyor (§12 K18) |
 | K30 | Risk motoruna **`VeriDurumu`** (YETERSİZ/HESAPLANDI/ESKİ) eklendi | Görev tanımı "yetersiz veri düşük risk sayılmaz" diyordu. "15 dakikadan az kullanım" kuralı `EtkileyenFaktorler`'deki alt faktörleri koruyordu (`FAKTOR_ASGARI_DK`, K-7/Y-3) ama günün **kendi bandını** korumuyordu — `RiskDeposu.gunuHesapla` `olayVarMi = false` olan (hiç ölçüm olmayan) bir günü bile sessizce hesaplayıp `R = 0 → AZ RİSKLİ` yazıyordu; 34 saniyeliğine açıp bırakan bir kullanıcı ilk günde "düşük risk" görüyordu. `RiskHesapla.hesapla` artık `gun.toplamDk < Sabitler.GUN_ASGARI_DK` iken `VeriDurumu.YETERSIZ` dönüyor; `RiskDetayViewModel` ve `AnaViewModel` bu durumda bandı **hiç göstermiyor**, `RiskDetayEkran` var olan "Henüz yeterli veri yok" boş durumuna düşüyor. `VeriDurumu.ESKI` ayrı bir eksen: `RiskDeposu` her günü kendi tarihi için taze hesapladığından hiç üretmiyor, `RiskDetayViewModel` son `risk_sonuc` satırının tarihini gösterim ANINDA bugünle karşılaştırıp türetiyor (`Sabitler.VERI_ESKI_ESIK_GUN = 3` gün) — kullanıcı birkaç gündür uygulamayı açmadıysa eski bant "güncelmiş" gibi durmuyor. `risk_sonuc.veriDurumu` kolonu `GECIS_5_6` ile eklendi, geriye dönük `gunluk_ozet.olayVarMi = 0` olan günler `YETERSIZ`'e çekildi. 10 yeni `core-risk` senaryo testi (34sn gece kullanımı, sınır değerin altı/tam/üstü, ESKİ) eklendi |
 | K31 | Uygulamanın kendi yürüyüşü artık spor dakikasına giriyor; ortak aktivite modeli + tekilleştirme | `AktiviteSaglayici` egzersiz süresini **yalnızca** Health Connect'ten alıyordu — `YuruyusServisi`'nde tamamlanan bir yürüyüş hiçbir yere yazılmıyordu, aktif yürüyüş özelliği Görev tamamlama puanı veriyordu ama risk motorunun aktivite sönümlemesine (`D`, tavan %15) hiç girmiyordu. `domain/kullanim/AktiviteOturumu.kt` ortak modeli tanımlıyor (`baslangic`/`bitis`/`kaynak`/`disKimlik`), `AktiviteTekillestir.birlestirilmisSureDk` çakışan oturumları (aynı yürüyüş hem uygulamada hem saatte) tek sayıyor, çakışmayanları topluyor — çakışma oranı eşiği (`CAKISMA_ORANI_ESIGI = 0.5`) tek yerde. `aktivite_oturumu` tablosu (`GECIS_6_7`) uygulama yürüyüşlerini kalıcı tutuyor; `SaglikOkuyucu.gununEgzersizOturumlari` artık Health Connect'in `ExerciseSessionRecord`'larını tek tek okuyor (eskiden yalnızca toplam süre aggregate'i vardı — oturum bazlı çakışma hesabı bununla mümkün oldu), `Metadata.id` [AktiviteOturumu.disKimlik]'e giriyor ki aynı Health Connect kaydının iki kez senkronize edilmesi çift saymasın. `AktiviteSaglayici` ikisini `AktiviteTekillestir`'e veriyor. 11 yeni birim testi (görev tanımındaki 8 tekilleştirme senaryosunun tamamı + sınır değer + boş liste + negatif süre reddi) |
 | K32 | Adım teşhis alıcısı (`AdimTaniAlicisi`, debug-only) + release APK'yı otomatik denetleyen Gradle task'ı (`dogrulaReleaseApk`) eklendi | Görev tanımı donanım sayacının sapma nedenini (ham sayaç/gün başlangıcı/yeniden başlatma) ayırt edecek teşhis bilgisi istiyordu; hiçbiri hiçbir yerde loglanmıyordu. `SaglikTaniAlicisi`'yle (Health Connect) aynı kurulmuş desen: `app/src/debug`'da, `adb shell am broadcast -a tr.org.yesilay.yesiliz.ADIM_TANI` ile tetiklenip logcat'e yazıyor, production'a hiç girmiyor. §11 "release APK içeriğini kontrol eden otomatik bir test" isteği için `app/build.gradle.kts`'e `ReleaseApkAgGuvenligiDenetimi` task'ı eklendi — üretilen APK'nın **her dosyasını** açıp `10.0.2.2` arıyor (varsa düşer) ve canlı HTTPS adresinin gerçekten gömülü olduğunu doğruluyor (yoksa düşer); `android-ağ-güvenliği` CI'ının kaynak-düzeyi kontrolünden daha güçlü çünkü gerçekten üretilmiş ikiliye bakıyor. **Bağ iki yönlü olmalı (7 Ağu düzeltmesi):** task yalnızca `dependsOn("assembleRelease")` taşıyordu, yani `dogrulaReleaseApk` çağrılınca APK üretiliyordu ama `assembleRelease` tek başına koştuğunda denetim **hiç çalışmıyordu** — hiçbir CI workflow'u da task'ı adıyla çağırmadığı için nöbetçi pratikte hiç nöbet tutmuyordu. `tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(…) }` ile ters bağ kuruldu; `tasks.named` burada çalışmıyor çünkü AGP task'ı script değerlendirilirken henüz kaydetmemiş oluyor (aynı dosyadaki HTTPS kapısıyla aynı desen). `bundleRelease` bilerek dışarıda: AAB üretiyor, denetimin baktığı `outputs/apk/release` dizinine dokunmuyor. Denetimin geçtiği **ve** yasaklı desen bulunca derlemeyi gerçekten düşürdüğü 7 Ağu'da doğrulandı |
@@ -749,7 +798,6 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K36 | Sunucuda **jeton özeti** saklanıyor, jetonun kendisi değil | Yenileme jetonu (30 gün) ve şifre sıfırlama jetonu veritabanına **düz** yazılıyordu; veritabanı yedeğini okuyabilen biri onları doğrudan oynatabilirdi — yani DB içeriği hamiline yazılı kimlik bilgisiydi. Artık SHA-256 özeti yazılıp özetle aranıyor (`guvenlik.jeton_ozetle`), tüketim satır kilidiyle seri hale getirildi (iki eşzamanlı yenileme aynı jetonu harcayamıyor). Migration var olan satırları yerinde özetledi, istemcideki ham jetonlar geçersizleşmedi. Parola zaten `argon2id` idi (K16), bu onun jeton karşılığı |
 | K37 | Bir işi yapmadan "yaptım" diyen her ekran/uç **fail-closed** çevrildi | Üçüncü taramanın (DBG-022/023/053/064/065/066/067) ortak kökü tek bir alışkanlıktı: bir özelliğin arka ucu yokken UI'ın başarı durumunu yazması. Sahte ebeveyn paneli (uydurma çocuk adı/yaşı/grafiği), gerçekte gönderilmeyen "ebeveyn paneline gönderildi", iletilmeyen YEDAM başvurusu, karşılanamayan maddi ödül, doğrulanamayan eşleştirme kodu. Hepsi aynı sınıf hata ve hepsi **kullanıcıya en pahalıya patlayan yerde**: mahremiyet, aile, destek, ödül. Kural §4'e madde olarak eklendi. Uygulaması: entegrasyonu olmayan eylem ya **hiç sunulmaz** ya da yapamadığını söyler; boş/başarısız yanıt asla varsayılan bir "meşru görünen" değere çevrilmez (§9 `runCatching{}.getOrDefault` tuzağının UI karşılığı). **Tekrarladı (13 Ağu):** profil düzenleme ekranı hiçbir ağ çağrısı yapmadan DataStore'a yazıp "güncellendi" diyordu — sunucudaki ad değişmiyor, girilen **yeni şifre hiçbir yere gitmiyordu** (kullanıcı eski şifresiyle giriş yapmaya devam ediyor). `PATCH /auth/profil` yazıldı (K38); alışkanlık, arka ucu olmayan bir alanı forma koymakla başlıyor |
 | K38 | Profil düzenleme **sunucuda**: `PATCH /auth/profil`; e-posta alanı kapalı | Ekran ad, e-posta, şifre ve avatarı düzenletiyor ama hiçbiri sunucuya gitmiyordu (K37). Üç ayrı sonuç: sunucudaki ad ligde/ebeveyn panelinde eski kalıyordu, "yeni şifre" hiçbir yere yazılmadığı için kullanıcı şifresini değiştirdiğini sanıyordu, ve e-posta yalnızca cihazda değişince `YerelOturumSiniri`'nin e-posta bazlı veri sahibi anahtarı (`VERI_SAHIBI`) uyuşmaz hâle gelip **sonraki girişte kullanıcının bütün yerel geçmişini sildiriyordu**. Uç ad + avatar + şifreyi güncelliyor; şifre değişimi **mevcut şifreyi** şart koşuyor (erişim jetonu tek başına yetseydi telefonu eline geçiren biri hesabı devralırdı). **E-posta değiştirilemiyor** — doğrulama e-postası gönderemiyoruz (A15), yalnızca sunucuda değiştirmek de kullanıcıyı ulaşılamaz bir adrese kilitlerdi; alan salt okunur ve sebebi ekranda yazılı. Avatar `kullanici.avatar` kolonunda (`a83f19c2d507`) ve giriş yanıtında dönüyor: yeni telefonda simge geri geliyor. Çevrimdışı kolda (`YerelSahteHesapDeposu`) ad/avatar yazılıyor ama şifre değişimi açıkça reddediliyor — cihazda saklanan bir parola yok (K16) |
-
 | K39 | Ölçüm olmayan yerde **ölçüm varmış gibi davranılmıyor** — üç kusurun ortak kökü | `AktiviteSaglayici.geçmişAdimTahmini` geçmiş günlerde adım 0 dönünce hafta içi ~5.500 / hafta sonu ~3.800 civarında bir sayı **üretiyordu**; `agregadanCikar` Android'in haftalık kovasını tek güne yazıyordu (istatistikteki "19 saat"); `olayVarMi` adım varlığıyla da doğru oluyordu. Üçü birlikte, kullanıcı telefonuna hiç dokunmadan gün başına ~60-125 puan ve seri kazanmasına yol açıyordu — üstelik uydurma adım risk motorunun `D` sönümlemesine girip bandı olduğundan **iyi** gösteriyordu. Tahmin fonksiyonu silindi; agrega yolu `AgregaSuz`'den geçiyor (§9); `olayVarMi` yeniden yalnızca gerçek kullanım ölçümüne bakıyor; ölçülemeyen gün `geceOlculduMu = false` ile işaretlenip puanlanmıyor. Cihazlarda kalmış uydurma satırlar tek seferlik bir bayrakla (`Tercihler.uydurmaAdimTemizligiGerekli`, sürüm işaretçili — K24 deseni) yeniden işleniyor. Kurulum **öncesi** günler ekran süresi geçmişine giriyor (UsageStats onları gerçekten ölçmüş, §10) ama puan/risk zincirine girmiyor: geriye dönük ödül dağıtmak `debug.md` K-4'ün ta kendisi |
 | K40 | Seri (streak) **günlük hedefi tutturmakla** ilerliyor; haftada bir joker gün | Eski kural "önceki günde `puanNet > 0` mıydı" idi (`PuanGunlukDao.oncekiAktifGun`): nefes egzersizi yapıp 9 saat ekranda kalan kullanıcının serisi de büyüyordu, yani seri ödüllendirdiği davranıştan kopuktu. `PuanSabitleri.KORUMA_PENCERESI_GUN = 7` tanımlıydı ama **hiçbir yerde kullanılmıyordu** — KDoc "haftada bir kaçırma dondurur" diyor, kod bunu yapmıyordu. Yeni kural: gün ölçüldü **ve** ekran süresi ≤ günlük hedef → seri +1; hedef kaçırıldı ve son 7 günde joker kullanılmamış → seri donar (joker harcanır); joker yoksa → 0; gün hiç **ölçülmediyse** seri ne artar ne kırılır (izin vermeyen kullanıcıyı cezalandırmak §4'e aykırı). Karar gün bitiminde, gecelik worker'da veriliyor — gün içi geri alınabilir bir seri gösterilmiyor. `hedefTutturuldu` ve `jokerKullanildi` kolonları `puan_gunluk`'ta; ana ekran çipi joker harcanan günü "3 gün · joker" diye söylüyor |
 | K41 | Ruh hali **günde üç pencere**: sabah / öğlen / akşam | Tek kayıt, "bugün nasıldın"ı sabahki tek bir ana indirgiyordu; ruh hali gün içinde değişen bir şey ve takibin değeri tam da o değişimde. `domain/gorev/RuhHaliPenceresi` sınırları saf fonksiyon olarak taşıyor (05:00–11:59 / 12:00–17:59 / 18:00–04:59); `ruh_hali` birincil anahtarı `(tarih, dilim)` oldu, `Gorev.RUH_HALI.gunlukLimit` 3. **Gece yarısı ile 05:00 arası hâlâ DÜNÜN akşam penceresi** — yoksa 00:30'da uygulamayı açan kullanıcı yeni günün akşam kaydını saatler önce yapmış olurdu. Aynı pencerede tekrar sürüklemek değeri günceller, ikinci kez puan vermez: günlük limit tek başına yetmiyordu (sabah penceresinde iki kez kaydırmak limitin altında kalıp ikinci puanı yazardı), pencerenin daha önce doldurulup doldurulmadığı ayrıca soruluyor |
@@ -759,17 +807,14 @@ duruyor, ihtiyaç olursa oradan alınır.
 | K45 | Karşılama akışına **hareket izni adımı**; ana ekranda eksik izin hatırlatıcısı | Adım izni yalnızca Profil › "Adım ve hareket izni" satırından isteniyordu; varsayılan kullanıcı hiç izin vermiyor, aktivite sönümlemesi (`D`) hep 1,0 kalıyor ve risk skoru aktiviteyi hiç görmüyordu. Onboarding'e `HareketIzinEkran` eklendi (adım 3/5, atlanabilir). **Health Connect bilinçli olarak dışarıda**: kurulu olmayabiliyor, kendi izin ekranını açıyor ve Play Store yönlendirmesi gerekebiliyor — karşılamanın ortasında kullanıcıyı uygulamadan çıkarmak akışı kırıyor. İzin verilmediyse ana ekranda `Kart` + `BosDurum` deseninde (yeni bileşen değil) bir hatırlatıcı çıkıyor; **kapatılabilir**, çünkü bilinçli reddedeni sürekli dürtmek §3'ün "zorlama yok" ilkesine aykırı |
 | K46 | Bildirimler **silinebiliyor**: kaydırarak tek tek, onayla toplu | Defterde yalnızca 60 günlük otomatik temizlik vardı; kullanıcının kendi silme yolu yoktu. Tek tek silme `SwipeToDismissBox` ile (projedeki ilk kullanımı) ve **tek yön** — iki yönlü kaydırma listede yanlışlıkla çok kolay tetikleniyor ve buradaki tek eylem silme. Silinen kayıt `Snackbar` + "Geri al" ile geri yüklenebiliyor: geri alınamayan bir silme, yanlışlıkla kaydıran kullanıcıya kaydı kalıcı kaybettirirdi. Toplu temizleme geri alınamadığı için **önce onay soruyor**; onay diliyle birlikte kırmızı kullanılmıyor (§4) |
 | K47 | Odak seansında **tekerlekli süre seçici** | Süre "Süreyi değiştir" butonuyla 15 → 25 → 45 → 15 diye dönüyordu: aradaki bir değer (30 dk) seçilemiyor, istenen süreye kaç dokunuşta ulaşılacağı belirsiz kalıyordu. Yeni ortak bileşen `ui/bilesen/TekerlekSecici` (`LazyColumn` + `rememberSnapFlingBehavior`) 5–120 dk arasını 5'er adımla veriyor; hızlı çipler (15/25/45) duruyor çünkü kullanıcıların çoğu bu üçünden birini seçiyor. Puan süreye bağlı **değil** (sabit `Gorev.ODAK` puanı), yani uzun süre seçmek bir kazanç yolu açmıyor. `HedefEkran` ve `ProfilEkran`'daki −/+ desenleri bu tura dahil edilmedi — kapsam şişmesin |
-
 | K48 | **Yarım ölçülen gün** hedefe de seriye de sayılmıyor | `KullanimDeposu` bugünü `enErken = veriBaslangicAni` ile işliyor: kurulum/rıza anından öncesi hiç okunmuyor. Saat 14:00'te kuran misafirin o günkü ölçümü 8 dakika çıkıyor ve bu, TÜM GÜN için konmuş 285 dakikalık hedefle karşılaştırılınca hedef tam puanla tutturulmuş sayılıyordu — uygulama açılır açılmaz **27 puan ve 1 günlük seri** (gerçek cihazda görüldü). `PuanDeposu` artık `veriBaslangicAni`'yi günün başlangıcıyla karşılaştırıyor; yarım ölçülen gün hedef puanı ve gece puanı almıyor, seriyi ne artırıyor ne kırıyor. Ayrıca **süren gün** de seriye sayılmıyor (K40 "karar gün bitiminde"): akşam hedef aşılınca geri alınacak bir seri göstermek, kullanıcının bunu bozulma sanmasına yol açar. Aynı iddia bildirimde de vardı — `bugunuBildir` süren gün için "Ekran süresi hedefine ulaştın" yazıyordu; `kapananGunuBildir` oldu, dünü bildiriyor ve ölçülmemiş/yarım günü atlıyor (§12 K37) |
 | K49 | Grafik ekseni **çubuklarla aynı ölçekten** türüyor | `CubukGrafik` çubukları verinin kendi maksimumuna göre ölçekliyor ama eksen etiketleri çağrıdan sabit geliyordu (`8s / 4s / 0`). 8 DAKİKALIK bir gün, tepesinde "8s" yazan bir eksenin altında tam boy çubuk olarak çiziliyordu — "istatistikteki saatler tutmuyor" şikâyeti buydu ve gerçek cihazda doğrulandı. `eksenEtiketleri: List<String>` yerine `eksenBicimi: (Float) -> String`: bileşen etiketleri kendi `enBuyuk` değerinden üretiyor, ikisi ayrışamıyor. `Int.eksenSuresi()` bir saatin altını da gösteriyor (`kisaSaat` tam bölme yaptığı için 8 dakika "0s" çıkıyordu); eksen sütunu 28 → 40dp, etiket sarmıyor |
 | K50 | Nudge eşiği **dala göre**: `main` 45 dakika, `dev` 15 saniye | Değer 13 Ağu'da 15 saniyeye çekilmişti çünkü popup'ı gerçek cihazda doğrulamak için 45 dakika beklemek pratik değil — ama o hâliyle commit'lenince yayınlanabilir dal da demo değerini taşıyordu ve tek koruma bir KDoc uyarısıydı. Testler yakalamıyor (`TetikleyiciTest` eşiğe **göreli** yazılı, ikisinde de yeşil), yani unutulması an meselesiydi. Ayrım şu: `main` gerçek kullanıcı değerini taşır, geliştirme dalı doğrulanabilir kalır. Ayrışan tek şey `NudgeSabitleri.ESIK` satırı ve KDoc'u; türetilen sabitler (`POLL_ARALIGI`, `SONUM_*`) zaten `ESIK`'ten hesaplandığı için iki dalda da tutarlı, `NudgeOverlay.AnaKart` 60 sn üstünü dakikaya çevirdiği için metin de doğru. **Bedeli:** `main` artık `dev`'e fast-forward edilemiyor. `dev` bu satıra dokunmadığı sürece merge 45 dakikayı koruyor (merge tabanına göre değişen taraf yalnızca `main`), dokunursa çakışma çıkıyor — istenen davranış bu, karar insana kalıyor. `git reset --hard dev` değeri sessizce yutar; §11'deki satır bu yüzden duruyor. 15 saniye ayrıca `BildirimDeposu.molaHatirlatildi(ESIK.toMinutes())`'e **0** geçiriyor ("0 dakikadır aralıksız ekrandasın") — demo dalında kabul, yayında değil |
 | K51 | Nudge ön plandaki uygulamayı **kendi, dışlamasız kaynağından** soruyor; `KullanimOkuyucu`'nun kendi paketi elemesi olduğu gibi duruyor | Servis "şu an ön planda ne var" sorusunu `oturumlar.maxByOrNull { it.bitis }` ile, yani penceredeki **en son biten oturumla** cevaplıyordu. Ama `KullanimOkuyucu` kendi paketimizi olay akışından eliyor — ve o eleme doğru (K9 ailesi: kullanıcı Yeşilİz'e baktığı için cezalandırılmaz). İkisi birleşince kullanıcı tüketim uygulamasından Yeşilİz'e geçtiğinde geçiş **hiç görünmüyor**: `OturumCikar` TikTok oturumunu kapatamıyor, `suAnTuketimdeMi` `true` takılıyor ve nudge kullanıcıyı **kendi uygulamasına, hatta kendi önerdiği nefes egzersizinin üstüne** kadar takip ediyordu (4. tarama T4-003; cihazda üç ayrı tetikleme). Çözüm eleme tarafında değil **nudge tarafında**: `KullanimOkuyucu.sonPencereHamOlaylari` elemesiz ham olayı veriyor (risk yolundaki `sonPencereOlaylari` aynen duruyor), yeni saf `OnPlanTespit` bu olayları yürüyüp ön plandaki paketi buluyor, kendi paketimiz `NudgeOverlayService.tuketimKategorisi`'nde açıkça dışarıda. Ön plan okunamıyorsa cevap `false` — **fail-closed** (§4, K37). İki yan sonuç: overlay dururken de ön plan sorulmaya devam ediyor, kullanıcı tüketimden çıkınca overlay **kapanıyor** (yoksa kullanıcıyı 60 saniye takip ediyordu); ve `Tetikleyici.acikBlokSuresi` bloğu artık `blokBas → blokBit` ölçüyor, `blokBas → simdi` değil — tüketim uygulamasından çıkıldıktan sonra blok duvar saatiyle büyüyordu, yani "45 dakikadır buradasın" iddiası o dakikaların bir kısmı başka uygulamada geçmişken kuruluyordu (§4 "yapılmayan işi yapıldı gösterme" ailesi). Hata `TetikleyiciTest`'in göremeyeceği yerdeydi: `Tetikleyici` saf fonksiyon olarak **doğruydu**, kusur onu besleyen sorudaydı — bu yüzden yeni saf fonksiyonun kendi testi var (`OnPlanTespitTest`, 8 senaryo) |
-
 | K52 | Histerezis yalnızca **ölçülmüş** günleri gözlem sayıyor; risk halkası gösterilen bandın aralığına kırpılıyor | Kullanıcı anketini yeniledi (10 madde × 6 = 60), motor doğru hesapladı (`rS = 100`, `alpha = 0,643`, `R = 66,3`, `adayBant = COK`) ama ekranda **"Düşük"** yazdı. Sebep `RiskDeposu.takipciyiKur`'daydı: geçmiş `risk_sonuc` satırlarının **hepsini** takipçiye yeniden oynatıyordu, `veriDurumu`'na bakmadan. Telefonun kullanılmadığı üç gün `olayVarMi = 0` → `R = 0` → `adayBant = AZ` üretmişti; bunlar gözlem sayılınca takipçide `mevcutBant = AZ` kuruldu ve **gerçekten ölçülen ilk gün** "bant değişimi" sayılıp `GUN_YUKARI = 3` gün bekletildi. §9 "Satır var ≠ veri var"ın bir kez daha tekrarı — ironisi şu ki `alpha`'nın `d` girdisi bu ayrımı zaten yapıyordu (`gunSayisiEKadar`, `olayVarMi = 1`, KDoc'unda gerekçesiyle), histerezis yapmıyordu. `adayBantVeyaNull` → `histerezisAdayi` oldu ve `veriDurumu != HESAPLANDI` satırları eliyor. **Histerezisin kendisi kaldırılmadı:** gerçekten ölçülmüş AZ günlerinden sonra ani sıçrama hâlâ 3 gün bekliyor (§5.4 bilinçli kararı, iki cihaz testi ikisini birden koruyor). İkinci ve ayrı kusur ekrandaydı: `RiskDetayViewModel` halkayı ham `R / 100`'den, ortasındaki etiketi ise histerezisten geçmiş banttan alıyordu — aynı dairenin içinde %66 dolu halka ve "Düşük" yazısı, altında "sağlıklı bir düzeyde görünüyor" cümlesi. Halka artık `RiskHalkaOrani` ile **gösterilen bandın aralığına kırpılıyor**: bant ile skor uyuştuğu sürece (normal durum) skorun bant içindeki gerçek yeri görünüyor, yalnızca histerezis bandı geride tuttuğunda halka sınırda duruyor. Skoru atmak yerine kırpmak seçildi çünkü ekran sayısal skoru hiç yazmıyor; halka bandın görselleştirmesi, ikinci bir iddia değil. Güvenlik tabanının (§5.3) bandı yukarı çektiği ters durumu da kapatıyor |
 | K53 | Nudge eşiği **kullanıcı ayarı**: Profil › Hedeflerim'de 15–90 dakika | Eşik derlemeye gömülüydü ve dala göre ayrışıyordu (K50), yani kullanıcının hiç sözü yoktu: 45 dakika kimine erken kimine geç. Değer artık `Tercihler.nudgeEsikDk`'de; **seçim yoksa** `NudgeSabitleri.ESIK` (dal değeri) geçerli, yani K50'nin `main`/`dev` ayrımı olduğu gibi duruyor. Türetilen süreler (`pollAraligi`, `sonumMola`, `sonumDevam`) derleme zamanı `val`'lerden `NudgeAyari`'ye taşındı — çalışma anında değişen bir eşikle derleme zamanı sabiti mümkün değil; hesabın kendisi aynı. Servis eşiği **her turda** okuyor, ayar değişince yeniden başlatma gerekmiyor. **Sınırlar bilinçli:** alt sınır 15 dk (daha kısası "hafif dokunuş" değil dırdır, §3), üst sınır 90 dk — 12 saatlik bir eşik hatırlatıcıyı hiç tetiklenmez hâle getirir ve kullanıcı açık sandığı bir özellikle kalır (K37); istemeyen **kapatır**, saklamaz. `kirp` okuyan tarafta: yedekten/eski sürümden gelen değer de sınıra çekiliyor. "Varsayılana dön" ayrı bir eylem olarak duruyor çünkü değeri varsayılana *eşitlemek* yetmiyor — `dev`'in 15 saniyesi alt sınırın altında, tercih anahtarını silmek tek yol. Ekran, hatırlatıcı Profil'den kapalıyken eşiğin uygulanmadığını yazıyor. 10 yeni birim testi (`NudgeAyariTest`) |
 | K54 | Lig puanı: sıralama istenmeden **önce** senkron; rıza kapısı kapalıysa ekranda söyleniyor | Kullanıcı ligde kendini **0 puanla** görüyordu. İki ayrı sebep vardı ve ikisi de sessizdi. **(1)** Haftalık puan sunucuya yalnızca `POST /ozet` ile gidiyor, onu da gecelik worker (ve Profil'deki birkaç dokunuş) çağırıyordu: `POST /lig/katil` üyeliği `haftalik_puan = 0` ile açtığı için lige katılan kullanıcı ertesi sabaha kadar 0'da kalıyordu. `LigViewModel` artık sıralamayı istemeden önce `SenkronDeposu.senkronEt()` çağırıyor (katılım ve yenile dahil); çağrı rıza kapısını kendi içinde kontrol ediyor ve hatayı yutuyor. **(2)** Asıl sebep: "Yeşilay ile paylaşım" kapalıyken senkron ilk satırda dönüyor (K19), yani puan **hiç** gitmiyor — ama lig ekranı bunu söylemiyordu; kullanıcı puan kazanmaya devam ederken ligde 0 duruyordu. Rıza kapısı **kaldırılmadı** (davranış özeti rızasız gitmez); ekrana durumu söyleyen ve tek dokunuşla açmayı öneren bir kart eklendi (`puanPaylasimiKapali`), kart neyin paylaşılacağını yazıyor. Gerçek telefonda doğrulandı: kart göründü, dokunuşla `POST /ozet` 200 döndü, `GET /lig` puanı 0'dan 49'a çıkardı (yerel haftalık toplamla birebir) |
 | K55 | 5. tarama (gereksizlik) kapatıldı; **G5-036 reddedildi** — K50 duruyor | 17 Ağu 2026 taraması 37 madde buldu (`docs/arsiv/tarama-05-gereksizlik.md`): 22 ölçüm, 15 görüş. Uygulanan ~500 satır kod + ~3 MB varlık. Üç sınıf: **(1) yalan söyleyen açıklamalar** — 35 referans depoda hiç olmayan `gorev*.md` dosyalarına gidiyordu, `build.gradle.kts` "ViewModel'ler henüz Hilt'siz" diyordu (kodda 27 `@HiltViewModel`), `VeriYonetimiDeposu` KVKK tablosunda "12 tablo" yazıyordu (şema 15), iki yerde var olmayan bir "§14" bölümüne atıf vardı. Bu proje kararlarını yorumlarda taşıyor (§9, §12); yanlış yorum yanlış koddan pahalı. **(2) ölü ve çift kod** — 13 sıfır-kullanımlı üye, ulaşılamayan `TemaOnizleme.kt` (`src/debug`'a taşındı), üç `sureMetni` (üç farklı çıktı), üç `mm:ss`, iki bant etiketi, dört YEDAM saat kopyası (`domain/yedam/Yedam.kt` tek kaynak oldu). **(3) kullanıcıya dokunan gürültü** — release'de HERKESİN gördüğü boş "Örnek kişiler" bölümü kaldırıldı ve `LigDeposu.onerilenler()` arayüzden düştü (sunucu onu hiç uygulamıyordu; K7 bozulmadı, arayüz sunucunun karşılayabildiği yüzeye indi), mola eşiği için **yanlış** olan "yarından itibaren geçerli" şeridi doğru bloğa taşındı, mola anahtarı Gizlilik'ten eşiğin yanına geldi (bir bildirim tercihiydi, rıza kapısı değil), "Son 0 düşer" / "🔥 0 gün" gibi eksiklik duyuran etiketler gizlendi. **G5-036 kullanıcı kararıyla reddedildi:** `dev`'de `NudgeSabitleri.ESIK = 15 sn` kalıyor, yani K50'nin dal ayrımı ve `main`'e fast-forward edilememe bedeli aynen sürüyor. G5-031 (adım kaynağı metni) ve G5-023 (sahte/yedekli depo katmanı) de bilinçli olarak dokunulmadı |
-
 | K56 | Panelden **gerekçeli puan düzeltmesi** — §4'ün "ceza puanı yok" kuralının tek istisnası | Kullanıcı kararı (18 Ağu 2026): yönetim paneli puan ekleyebilmeli **ve** düşürebilmeli. Kuralın *amacı* korunuyor, harfi daralıyor. **Otomatik ceza yok:** hiçbir kural, worker ya da davranış puan düşürmüyor; yalnızca bir insanın tekil, gerekçeli (en az 20 karakter) işlemi ve her işlem `denetim_kaydi`'na yazılıyor. **Dil:** kullanıcı "ceza" görmüyor, bildirim "Puanında bir düzeltme yapıldı: −120. Gerekçe: …" diyor; emir kipi ve suçlayıcı dil yok (§4). **Kazanılmış olan geri alınmıyor:** ödül kademesi ve seçim kalıcı (K28), ağaç evresi düşmüyor (K2 — kötü bir sonuçla ağacın geri gitmesi tam da K2'nin reddettiği şey). İkisi de `Tercihler.enYuksekToplamPuan` yüksek-su-seviyesinden türüyor; ekrandaki bakiye güncel toplamı gösteriyor, evre ve kademe `maxOf(guncel, enYuksek)` okuyor. **Cihazda ayrı tablo:** `puan_duzeltme` (Room 10, `GECIS_9_10`) — `gunuYenidenHesaplaIc` her koşumda `puan_gunluk`'u `@Upsert` ile eziyor, düzeltmeyi oraya yazmak bir sonraki gecelik işte kaybolurdu. Birincil anahtar **sunucu id'si**: aynı düzeltmenin ikinci kez indirilmesi no-op, çünkü bir delta'nın iki kez uygulanması geri dönülemez bir kullanıcı zararı. Meşru kullanımlar: hile/istismar düzeltmesi, yanlış işlemin geri alınması, etkinlik/telafi puanı. Ayrıntı `docs/panel-plani.md §9` |
 | K57 | Panel **ayrı servis, aynı imaj**; personel kimliği son kullanıcıdan **ayrı tabloda** | İki karar bir arada, ikisi de aynı ilkeden: yanlış yazmayı mümkün kılmamak. **(1) Servis ayrımı** — `YESILIZ_ROL` (`api`\|`panel`) `main.py`'deki `uygulama_kur()` fabrikasında hangi router'ların mount edileceğini belirliyor. Panel uçları API alan adında **hiç mount edilmiyor**, yani yanlış yapılandırılmış bir yetki kontrolü bile internete açık olmuyor — yol 404. Tek kod tabanı, tek Docker imajı, iki Railway servisi; şema ve migration tek yerde. Panel rolü migration **koşturmuyor**, `app/surum_kapisi.py` ile head karşılaştırıyor ve uyuşmazlıkta açılmıyor (iki servis aynı anda `alembic upgrade` koşarsa çakışır). **(2) Personel ayrı tablo** — `kullanici.rol` kolonu (`kullanici`\|`uzman`) **kullanılmıyor**: son kullanıcı KVKK'da *veri sahibi*, personel *veri işleyen*; personelin ekran süresi, ligi, ödülü, serisi olmamalı; ve `rol` ile ayrım her uçta ayrı ayrı doğru yazılmayı gerektirirken ayrı tablo bunu yabancı anahtar seviyesinde fiziksel kılıyor (`core-risk`'in ayrı modül olma gerekçesiyle aynı mantık). Aynı kişi hem danışman hem kullanıcı olabilir — iki ayrı hesap açar. Mobil uygulama personel hesabını **tanımıyor**, rol yönlendirmesi kodu hiç yazılmıyor. Ayrıntı `docs/panel-plani.md §2, §4` |
 | K58 | Hesap askıya alma: kapı **tek yerde**, sebep **cihazda görünür** | Panel bir hesabı askıya alabiliyor (`docs/panel-plani.md §5.2`) ama askı ancak kullanıcı sebebini görürse dürüst. Sunucu tarafı `mevcut_kullanici` bağımlılığında tek bir kapıdan geçiyor — her uç ayrı ayrı doğru yazılmak zorunda değil; **giriş ve yenileme de dahil**, yoksa jetonu elinde olan kullanıcı 30 dakika daha çalışırdı. Askı bilgisi parola doğrulandıktan **sonra** veriliyor: önce bakmak, yanlış parolayla bile bir e-postanın askıda olduğunu sızdırırdı. Cihaz tarafında 403 + `hesap_askida` gövdesini bir **OkHttp interceptor** yakalıyor (`data/uzak/AskiDurumu.kt`): her deponun ayrı ayrı tanıması gerekseydi biri unutulur ve orada 403 sessizce "sunucuya ulaşılamıyor"a inerdi (K18/K42 ailesi) — kullanıcı hesabının kapalı olduğunu hiç öğrenemezdi. Ekran gezinmenin **üstünde**: askı bir durum, rota değil; rota olsaydı geri tuşu ya da derin bağlantı onu atlayabilirdi. Ekranda **destek butonu yok** — uygulamada tanımlı destek kanalı yok ve olmayan kanala düğme koymak §4'ün yasakladığı şey; yerine "yeniden dene", askı kalkmışsa ilk başarılı yanıt ekranı kapatıyor. **Askı veri silmiyor** ve geri alınabilir; silme ayrı ve sert |
