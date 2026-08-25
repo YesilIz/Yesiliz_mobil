@@ -35,8 +35,18 @@ SABIT_BASLIKLAR = {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
     # Panel URL'leri kullanıcı numarası ve başvuru numarası taşıyor; dış
-    # bağlantıya `Referer` olarak sızmamalı.
-    "Referrer-Policy": "no-referrer",
+    # bağlantıya `Referer` olarak sızmamalı. `same-origin` bunu tam olarak
+    # veriyor: kendi sayfalarımız arasında tam `Referer`, dışarıya hiçbir şey.
+    #
+    # **`no-referrer` OLAMAZ ve bu bir tercih değil, CSRF kapısının şartı.**
+    # Fetch standardı, `Origin` başlığını yazarken yönlendirici politikaya
+    # bakıyor: politika `no-referrer` ise GET/HEAD dışındaki isteklerde
+    # `Origin` **`null` olarak** gönderiliyor (Fetch §"Append a request
+    # `Origin` header"). Yani panel `no-referrer` derse tarayıcı her form
+    # POST'unda `Origin: null` + `Referer` yok gönderiyor, `CsrfKapisi` de
+    # bunu haklı olarak reddediyor: panelin bütün yazma işlemleri gerçek
+    # tarayıcıda 403 oluyor. Girişin kilitlenmesinin sebebi buydu.
+    "Referrer-Policy": "same-origin",
 }
 
 #: Statik varlıklar `no-store` almıyor: htmx ve CSS her sayfa açılışında

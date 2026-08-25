@@ -45,7 +45,20 @@ class JsonBicimlendirici(logging.Formatter):
             "mesaj": _gizle(kayit.getMessage()),
         }
         # Middleware'in eklediği alanlar `extra=` ile geliyor.
-        for alan in ("istek_id", "yol", "metot", "durum", "sure_ms", "hata_turu"):
+        #
+        # Liste **sabit**: `record.__dict__`'i olduğu gibi dökmek, ileride
+        # birinin `extra`'ya koyduğu bir sırrı sessizce loglara taşırdı.
+        # Yeni bir alan eklemek bilinçli bir karar olmalı.
+        for alan in (
+            "istek_id", "yol", "metot", "durum", "sure_ms", "hata_turu",
+            # CSRF "kaynak" reddinin teşhisi: neyin uyuşmadığı yazılmadan
+            # 403 üretimde çözülemiyordu. Host adı taşıyorlar, sır değil.
+            "gelen_origin", "gelen_referer", "beklenen",
+            # Denetim/işlem izleri.
+            "personel", "rol", "kullanici", "delta", "duzeltme", "adet",
+            "kademe", "secenek", "anahtar", "deger", "basvuru",
+            "onay_bekliyor", "silinen_satir", "ifadeler", "duyuru",
+        ):
             deger = getattr(kayit, alan, None)
             if deger is not None:
                 govde[alan] = deger

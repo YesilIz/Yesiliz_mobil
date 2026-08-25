@@ -217,6 +217,20 @@ class Ayarlar(BaseSettings):
     # üretimde `dogrula` False'u reddediyor.
     panel_cerez_guvenli: bool = True
 
+    # Geliştirmede ikinci faktörün yerine geçen sabit kod.
+    #
+    # **Yalnızca geliştirme kolaylığı.** TOTP zaman tabanlı olduğu için sabit
+    # bir kod üretemiyor; panele her bakışta doğrulayıcı uygulama açmak
+    # yerel döngüyü yavaşlatıyordu. Boş bırakılırsa (varsayılan) böyle bir
+    # yol **yok**: özellik açıkça tanımlanmadan var olmuyor.
+    #
+    # Üretimde tanımlıysa `dogrula` servisi hiç başlatmıyor — uyarı basıp
+    # devam etmek, panelin ikinci faktörünü sessizce kapalı bırakırdı.
+    panel_sabit_totp: str = Field(
+        default="",
+        validation_alias=AliasChoices("YESILIZ_PANEL_SABIT_TOTP", "PANEL_FIXED_TOTP"),
+    )
+
     # Vardiya uzunluğu. `personel_oturum.mutlak_bitis` bu değerden **satır
     # yazılırken** hesaplanıyor: ayar sonradan büyütülürse yaşayan oturumlar
     # geriye dönük uzamıyor.
@@ -267,6 +281,17 @@ class Ayarlar(BaseSettings):
             return
 
         sorunlar: list[str] = []
+
+        # **Rolden önce sorulan tek kural.** Diğer panel kuralları
+        # `panel_mi` dalının içinde, ama bu değişken yanlışlıkla API
+        # servisine tanımlanmış olsa bile dağıtımın kırmızıya dönmesi
+        # gerekiyor: ikinci faktörü kapatan bir anahtarın üretim ortamında
+        # bulunması, hangi serviste olduğundan bağımsız olarak bir kusur.
+        if self.panel_sabit_totp:
+            sorunlar.append(
+                "PANEL_FIXED_TOTP üretimde tanımlanamaz: panelin ikinci "
+                "faktörünü devre dışı bırakır. Değişkeni silin."
+            )
 
         if self.jwt_anahtari == VARSAYILAN_JWT_ANAHTARI:
             sorunlar.append(

@@ -128,6 +128,64 @@ def test_oturumlu_istekte_jeton_hala_zorunlu(girisli, monkeypatch):
     assert girisli.post("/oturum/cikis", data={}).status_code == 403
 
 
+def test_opak_kaynak_reddediliyor(girisli, monkeypatch):
+    """
+    `Origin: null` geçmiyor.
+
+    Opak kaynak, kaynağın kaybolduğu her yerden geliyor — `file://` sayfası,
+    `sandbox`'lı iframe, `data:` belge. Saldırgan kendi sayfasına sandbox'lı
+    bir iframe koyup panele POST atabildiği için `null`'ı geçirmek kapıyı
+    tam da korumak istediği saldırıya açardı.
+    """
+    a = panel_oturum.ayarlar()
+    monkeypatch.setattr(a, "panel_taban_url", "https://panel.yesilay.org.tr")
+    yanit = girisli.post(
+        "/oturum/cikis",
+        data={"_csrf": _csrf(girisli)},
+        headers={"Origin": "null"},
+    )
+    assert yanit.status_code == 403
+
+
+def test_referrer_politikasi_origin_basligini_dusurmuyor(panel_istemci):
+    """
+    Nöbetçi: yönlendirici politikası `Origin`'i `null`'a çeviremez.
+
+    Fetch standardı `Origin` başlığını yazarken yönlendirici politikaya
+    bakıyor; politika `no-referrer` ise GET/HEAD dışındaki isteklerde
+    `Origin` **`null`** gönderiliyor. Panel `no-referrer` derse tarayıcı her
+    form POST'unda opak kaynak yolluyor, `CsrfKapisi` de haklı olarak
+    reddediyor: bütün yazma işlemleri gerçek tarayıcıda 403 oluyor ve
+    kimse panele giremiyor. Bir kez yaşandı.
+
+    Süitin geri kalanı bunu göremiyor çünkü `TestClient` ya açık bir
+    `Origin` taşıyor ya da hiç taşımıyor; tarayıcının politikaya göre
+    başlığı düşürmesini taklit eden tek yer burası.
+    """
+    politika = panel_istemci.get("/oturum/giris").headers["referrer-policy"]
+    assert politika not in {"no-referrer", "unsafe-url"}, (
+        f"{politika}: tarayıcı form POST'larında Origin'i null'a çeker"
+    )
+
+
+def test_tarayici_bicimli_giris_postu_gecebiliyor(panel_istemci, monkeypatch):
+    """
+    Gerçek tarayıcının gönderdiği biçimde giriş: kendi `Origin`'imiz, jeton yok.
+
+    `test_giris_postu_jetonsuz_gecebiliyor` başlıksız gönderiyor, yani
+    kaynak denetimi hiç koşmuyor. Tarayıcı başlığı **her zaman** yolluyor;
+    o yolun da açık olduğu ayrıca sınanmalı.
+    """
+    a = panel_oturum.ayarlar()
+    monkeypatch.setattr(a, "panel_taban_url", "https://panel.yesilay.org.tr")
+    yanit = panel_istemci.post(
+        "/oturum/giris",
+        data={"eposta": "yok@ornek.com", "sifre": "x"},
+        headers={"Origin": "https://panel.yesilay.org.tr"},
+    )
+    assert yanit.status_code == 401
+
+
 def test_giris_postu_jetonsuz_gecebiliyor(panel_istemci):
     """
     Giriş oturum açılmadan geldiği için CSRF jetonu taşıyamaz.
@@ -156,7 +214,7 @@ def test_csp_unsafe_inline_icermiyor(panel_istemci):
     [
         ("x-frame-options", "DENY"),
         ("x-content-type-options", "nosniff"),
-        ("referrer-policy", "no-referrer"),
+        ("referrer-policy", "same-origin"),
         ("cache-control", "no-store"),
     ],
 )

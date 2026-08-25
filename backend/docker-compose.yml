@@ -69,6 +69,9 @@ services:
       # Üretimde bu değerin false olması açılış kapısınca reddediliyor.
       YESILIZ_PANEL_CEREZ_GUVENLI: "false"
       YESILIZ_PANEL_TABAN: http://localhost:8001
+      # Yerel döngü kolaylığı: ikinci faktör yerine sabit kod. Üretimde
+      # tanımlıysa `ayarlar.dogrula` servisi hiç başlatmıyor.
+      YESILIZ_PANEL_SABIT_TOTP: "123456"
     ports:
       - "8001:8000"
     volumes:

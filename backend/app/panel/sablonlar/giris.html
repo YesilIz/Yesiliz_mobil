@@ -16,6 +16,11 @@
     {% if hata %}<p class="serit serit-kritik">{{ hata }}</p>{% endif %}
 
     <form method="post" action="/oturum/giris">
+      {# Tarayıcıda eski bir oturum çerezi kalmışsa CSRF kapısı jeton
+         istiyor. Bu alan olmadan, yarıda bırakılmış bir girişten sonra
+         kullanıcı bir daha giremiyordu. Çerez yoksa değer boş ve kapı
+         zaten jeton aramıyor. #}
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
       <div class="alan">
         <label for="eposta">E-posta</label>
         <input id="eposta" name="eposta" type="email" autocomplete="username"

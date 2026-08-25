@@ -362,3 +362,124 @@ def test_askiya_alinan_personelin_oturumu_o_anda_dusuyor(
     assert yanit.status_code == 303
     assert yanit.headers["location"] == "/oturum/giris"
     assert db.query(PersonelOturum).one().iptal is True
+
+
+def test_eski_cerezle_yeniden_giris_yapilabiliyor(panel_istemci, personel_kur, db):
+    """
+    Tarayıcıda kalmış bir oturum çerezi girişi **kilitlememeli**.
+
+    Gerçek tarayıcıda bulundu: giriş formu CSRF jetonu taşımıyordu ve
+    çerez varken kapı jeton istiyordu, yani yarıda bırakılmış bir TOTP
+    adımından sonra kullanıcı bir daha giremiyordu — 403 "Oturum
+    doğrulaması başarısız". Betikler bunu görmüyordu çünkü her denemede
+    temiz bir istemciyle giriyorlardı.
+    """
+    import re
+
+    sir = sir_uret()
+    personel_kur(sir=sir)
+
+    # İlk giriş: çerez konuyor, TOTP adımı yarıda bırakılıyor.
+    assert _giris(panel_istemci).status_code in (200, 303)
+    assert panel_istemci.cookies.get(CEREZ_ADI)
+
+    # Kullanıcı giriş sayfasına dönüyor; form artık jeton taşımalı.
+    sayfa = panel_istemci.get("/oturum/giris").text
+    m = re.search(r'name="_csrf" value="([^"]*)"', sayfa)
+    assert m, "Giriş formunda _csrf alanı yok"
+    assert m.group(1), "Çerez varken jeton boş kalamaz"
+
+    # Ve o jetonla giriş yeniden yapılabilmeli.
+    yanit = panel_istemci.post(
+        "/oturum/giris",
+        data={"eposta": "admin@yesilay.org.tr", "sifre": SIFRE, "_csrf": m.group(1)},
+    )
+    assert yanit.status_code in (200, 303), yanit.text[:200]
+
+
+def test_cerezsiz_giriste_jeton_bos(panel_istemci, personel_kur):
+    """Oturumsuz istekte kapı jeton aramıyor; form da boş taşıyor."""
+    import re
+
+    personel_kur()
+    sayfa = panel_istemci.get("/oturum/giris").text
+    m = re.search(r'name="_csrf" value="([^"]*)"', sayfa)
+    assert m and m.group(1) == ""
+
+
+# --- geliştirme kolaylığı: sabit TOTP kodu ---
+
+
+def _ham_kod(istemci, kod: str):
+    """`_totp` sırdan kod üretiyor; burada kodun kendisi gönderiliyor."""
+    return istemci.post("/oturum/totp", data={"kod": kod, "_csrf": _csrf(istemci)})
+
+
+def test_sabit_kod_varsayilan_olarak_yok(panel_istemci, personel_kur):
+    """
+    Ayar tanımlı değilken sabit kod diye bir şey **yok**.
+
+    Varsayılanın kapalı olması özelliğin tamamı: açıkça tanımlanmadan
+    ikinci faktörün yanından geçen bir yol bulunmamalı.
+    """
+    personel_kur(sir=sir_uret())
+    _giris(panel_istemci)
+    assert _ham_kod(panel_istemci, "123456").status_code == 401
+
+
+def test_sabit_kod_gelistirmede_gecebiliyor(panel_istemci, personel_kur, monkeypatch):
+    """Ayar tanımlıyken sabit kod doğrulayıcı uygulamanın yerine geçiyor."""
+    from app.ayarlar import ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_sabit_totp", "123456")
+
+    personel_kur(sir=sir_uret())
+    _giris(panel_istemci)
+    yanit = _ham_kod(panel_istemci, "123456")
+    assert yanit.status_code == 303
+    assert yanit.headers["location"] == "/yonetim/gosterge"
+
+
+def test_sabit_kod_yanlis_girilirse_yine_reddediliyor(
+    panel_istemci, personel_kur, monkeypatch
+):
+    """Ayarın açık olması her kodu kabul etmek demek değil."""
+    from app.ayarlar import ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_sabit_totp", "123456")
+
+    personel_kur(sir=sir_uret())
+    _giris(panel_istemci)
+    assert _ham_kod(panel_istemci, "000000").status_code == 401
+
+
+def test_sabit_kod_uretimde_calismiyor(panel_istemci, personel_kur, monkeypatch):
+    """
+    Kalkış kapısı atlansa bile doğrulama yolu üretimde kapalı.
+
+    `dogrula` üretimde bu değişkenle servisi hiç başlatmıyor; buradaki
+    ikinci kapı, kapının bir gün atlanması ihtimaline karşı — yanlış rol,
+    elle koşturulan bir kap.
+    """
+    from app.ayarlar import Ayarlar, ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_sabit_totp", "123456")
+    monkeypatch.setattr(Ayarlar, "uretim_mi", property(lambda self: True))
+
+    personel_kur(sir=sir_uret())
+    _giris(panel_istemci)
+    assert _ham_kod(panel_istemci, "123456").status_code == 401
+
+
+def test_uretim_kapisi_sabit_kodu_reddediyor():
+    """Üretimde tanımlıysa servis hiç açılmıyor."""
+    from app.ayarlar import Ayarlar, YapilandirmaHatasi
+
+    ayar = Ayarlar(
+        YESILIZ_ORTAM="production",
+        YESILIZ_JWT_ANAHTARI="x" * 48,
+        YESILIZ_VERITABANI_URL="postgresql+psycopg://a:b@c:5432/d",
+        YESILIZ_PANEL_SABIT_TOTP="123456",
+    )
+    with pytest.raises(YapilandirmaHatasi, match="PANEL_FIXED_TOTP"):
+        ayar.dogrula()

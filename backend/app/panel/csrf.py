@@ -42,6 +42,52 @@ FORM_ALANI = "_csrf"
 #: geçirilmiyor.
 URLENCODED = "application/x-www-form-urlencoded"
 
+#: Aynı makineyi gösteren adlar.
+#:
+#: Yerel geliştirmede panel hem `localhost:8001` hem `127.0.0.1:8001`
+#: üzerinden açılıyor (yer imi, yönlendirme, elle yazım) ve ikisi **aynı
+#: makine**. Kapı onları farklı sayınca giriş "Oturum doğrulaması
+#: başarısız" ile reddediliyordu — gerçek tarayıcıda bulundu.
+#:
+#: Eşitlik **yalnızca iki taraf da loopback ise** kuruluyor: yapılandırılan
+#: adres gerçek bir alan adıysa (üretim) hiçbir şey gevşemiyor.
+LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
+
+#: Tarayıcının "opak kaynak" dediği değer.
+#:
+#: **Kabul edilmiyor ve edilmemeli.** `null`, kaynağın kaybolduğu her yerden
+#: geliyor: `file://` sayfası, `sandbox`'lı iframe, `data:` belge. Bir
+#: saldırgan kendi sayfasına sandbox'lı bir iframe koyup panele POST
+#: atabiliyor ve o istek de `Origin: null` taşıyor — yani `null`'ı geçirmek
+#: kapıyı tam olarak korumak istediği saldırıya açardı.
+#:
+#: Kendi sayfalarımızın `null` göndermesinin **tek** sebebi yönlendirici
+#: politikasıydı (`basliklar.py`); çözüm burayı gevşetmek değil, orayı
+#: `same-origin` tutmak.
+OPAK_KAYNAK = "null"
+
+
+def _host_port(netloc: str) -> tuple[str, str]:
+    """`localhost:8001` → `("localhost", "8001")`. IPv6 köşeli parantezli."""
+    if netloc.startswith("["):
+        kapanis = netloc.find("]")
+        host = netloc[: kapanis + 1]
+        kalan = netloc[kapanis + 1 :]
+        return host, kalan[1:] if kalan.startswith(":") else ""
+    if ":" in netloc:
+        host, _, port = netloc.rpartition(":")
+        return host, port
+    return netloc, ""
+
+
+def ayni_kaynak(gelen_netloc: str, beklenen_netloc: str) -> bool:
+    """İki adres aynı kaynağı mı gösteriyor?"""
+    if gelen_netloc == beklenen_netloc:
+        return True
+    gh, gp = _host_port(gelen_netloc)
+    bh, bp = _host_port(beklenen_netloc)
+    return gh in LOOPBACK and bh in LOOPBACK and gp == bp
+
 
 class CsrfKapisi(BaseHTTPMiddleware):
     async def dispatch(self, istek: Request, cagir):
@@ -50,10 +96,17 @@ class CsrfKapisi(BaseHTTPMiddleware):
 
         hata = await self._sorun(istek)
         if hata:
-            gunluk.warning(
-                "CSRF reddi",
-                extra={"yol": istek.url.path, "hata_turu": hata},
-            )
+            # **Ne görüldüğü de yazılıyor.** "kaynak" tek başına neyin
+            # uyuşmadığını söylemiyor ve bu, üretimde de teşhis edilemez
+            # bir 403 demek: ters vekil `Origin`'i değiştirmiş olabilir,
+            # adres `localhost`/`127.0.0.1` ayrışmış olabilir. Değerler
+            # gizli bilgi taşımıyor (host adı), jeton **yazılmıyor**.
+            ayrinti = {"yol": istek.url.path, "hata_turu": hata}
+            if hata.startswith("kaynak"):
+                ayrinti["gelen_origin"] = istek.headers.get("origin", "")
+                ayrinti["gelen_referer"] = istek.headers.get("referer", "")
+                ayrinti["beklenen"] = ayarlar().panel_taban_url or ""
+            gunluk.warning("CSRF reddi", extra=ayrinti)
             return PlainTextResponse(
                 "Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.",
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -104,8 +157,14 @@ class CsrfKapisi(BaseHTTPMiddleware):
         beklenen = urlsplit(taban).netloc
         for baslik in ("origin", "referer"):
             deger = istek.headers.get(baslik)
-            if deger:
-                return None if urlsplit(deger).netloc == beklenen else "kaynak"
+            if not deger:
+                continue
+            if deger.strip().lower() == OPAK_KAYNAK:
+                # Ayrı bir tür: günlükte "yabancı site POST'ladı" ile
+                # "tarayıcı kaynağı düşürdü" birbirine karışmasın — ikisinin
+                # teşhisi tamamen farklı yerde.
+                return "kaynak_opak"
+            return None if ayni_kaynak(urlsplit(deger).netloc, beklenen) else "kaynak"
         return None
 
     async def _jetonu_oku(self, istek: Request) -> str | None:

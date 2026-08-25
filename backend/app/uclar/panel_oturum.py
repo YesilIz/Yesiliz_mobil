@@ -10,6 +10,7 @@ sunulamaz.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
 
@@ -72,12 +73,31 @@ def _giris_hedefi(personel: Personel) -> str:
     return giris_sonrasi_yol(personel.rol)
 
 
+def _giris_csrf(istek: Request) -> str:
+    """
+    Giriş formunun CSRF jetonu — **çerezden türetiliyor**.
+
+    Giriş sayfası oturum bağımlılığından geçmiyor, yani `istek.state.csrf`
+    boş. Tarayıcıda **eski bir oturum çerezi kalmışsa** CSRF kapısı jeton
+    istiyor ve form onu taşımadığı için giriş 403 ile reddediliyordu:
+    yarıda bırakılmış bir TOTP adımından sonra ya da sunucuda düşmüş bir
+    oturumdan sonra kullanıcı bir daha giremiyordu.
+
+    Jeton yalnızca çerezin ham değerinden hesaplanıyor (veritabanına
+    bakılmıyor), yani geçersiz bir çerez için de kapının beklediğiyle
+    aynı değer çıkıyor. Çerez yoksa boş dize: kapı zaten oturumsuz
+    isteklerde jeton aramıyor.
+    """
+    ham = istek.cookies.get(panel_oturum.CEREZ_ADI)
+    return panel_oturum.csrf_jetonu(jeton_ozetle(ham)) if ham else ""
+
+
 # --- 1. adım: parola ---
 
 
 @yonlendirici.get("/giris")
 def giris_formu(istek: Request, db: Session = Depends(oturum)):
-    return yanit(istek, "giris.html", {"hata": None, "eposta": ""})
+    return yanit(istek, "giris.html", {"hata": None, "eposta": "", "csrf": _giris_csrf(istek)})
 
 
 @yonlendirici.post("/giris")
@@ -94,7 +114,7 @@ def giris(
         return yanit(
             istek,
             "giris.html",
-            {"hata": KILIT_MESAJI, "eposta": temiz},
+            {"hata": KILIT_MESAJI, "eposta": temiz, "csrf": _giris_csrf(istek)},
             durum=status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
@@ -109,7 +129,7 @@ def giris(
         return yanit(
             istek,
             "giris.html",
-            {"hata": KIMLIK_HATASI, "eposta": temiz},
+            {"hata": KIMLIK_HATASI, "eposta": temiz, "csrf": _giris_csrf(istek)},
             durum=status.HTTP_401_UNAUTHORIZED,
         )
 
@@ -119,7 +139,7 @@ def giris(
         return yanit(
             istek,
             "giris.html",
-            {"hata": KIMLIK_HATASI, "eposta": temiz},
+            {"hata": KIMLIK_HATASI, "eposta": temiz, "csrf": _giris_csrf(istek)},
             durum=status.HTTP_401_UNAUTHORIZED,
         )
 
@@ -130,6 +150,25 @@ def giris(
     cevap = yonlendir(istek, hedef)
     panel_oturum.cerezi_yaz(cevap, ham)
     return cevap
+
+
+def _sabit_kod_gecerli(kod: str) -> bool:
+    """
+    Geliştirmede ikinci faktörün yerine geçen sabit kod (`ayarlar.panel_sabit_totp`).
+
+    **Üç kapı birden.** Ayar tanımlı olmalı (varsayılan boş — özellik yoksa
+    yol da yok), ortam üretim olmamalı, ve karşılaştırma sabit zamanlı
+    yapılmalı. Ortam kontrolü `dogrula`'nın açılışta yaptığı işi burada
+    **tekrar** ediyor: kalkış kapısı bir gün atlanacak olursa (yanlış rol,
+    elle koşturulan bir kap) doğrulama yolunun kendisi hâlâ kapalı kalsın.
+
+    Kabul edilen kod sayaç ilerletmiyor: gerçek bir TOTP adımı değil, o
+    yüzden `son_totp_sayaci` ile ilgisi yok.
+    """
+    a = ayarlar()
+    if not a.panel_sabit_totp or a.uretim_mi:
+        return False
+    return hmac.compare_digest(kod, a.panel_sabit_totp)
 
 
 # --- 2. adım: TOTP ---
@@ -191,6 +230,17 @@ def totp_dogrulama(
         )
 
     temiz = kod.strip()
+
+    if _sabit_kod_gecerli(temiz):
+        # Her kullanımda iz bırakıyor: geliştirme kabında bile "ikinci
+        # faktör baypas edildi" görünmeden geçmemeli.
+        gunluk.warning(
+            "Sabit geliştirme koduyla giriş", extra={"personel": personel.id}
+        )
+        panel_oturum.totp_dogrulandi_isaretle(kayit)
+        panel_oturum.denemeleri_sifirla(db, personel)
+        return yonlendir(istek, _giris_hedefi(personel))
+
     sayac = totp_dogrula(sir_coz(personel.totp_sir), temiz, int(time.time()))
 
     if sayac is not None:
