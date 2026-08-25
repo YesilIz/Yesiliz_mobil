@@ -100,7 +100,18 @@ def _veritabani_url_duzelt(url: str) -> str:
     psycopg **3** var. Sürücü açıkça belirtilmezse kap açılışta
     `ModuleNotFoundError: psycopg2` ile ölüyor — ve bu hata dağıtım
     günü sağlayıcı panelinde okunması en zor hatalardan biri.
+
+    **Çevresi kırpılıyor.** Değer sağlayıcı panelinde elle yapıştırılıyor
+    ve baştaki tek bir boşluk şemayı `" postgresql"` yapıp SQLAlchemy'yi
+    `ArgumentError: Could not parse SQLAlchemy URL from given URL string`
+    ile düşürüyor. Hata **hangi URL olduğunu söyleyemiyor** (parola
+    taşıyor), yani panel servisi 25 Ağu 2026'da tam olarak bu yüzden
+    açılamadı ve sebebi yalnızca kabın çıktısından bulunabildi. Kırpma
+    şema düzeltmesiyle aynı sınıf: sağlayıcıdan gelen değeri normalize
+    etmek. Sondaki boşluk zaten ayrıştırılıyordu, baştaki değil —
+    yani kusur sessizce yarım çalışıyordu.
     """
+    url = url.strip()
     for onek in ("postgresql+", "postgres+"):
         if url.startswith(onek):
             return url

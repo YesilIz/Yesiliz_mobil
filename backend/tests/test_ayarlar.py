@@ -76,6 +76,33 @@ def test_saglayicinin_url_semasi_psycopg3e_cevriliyor(gelen: str):
     )
 
 
+@pytest.mark.parametrize(
+    "gelen",
+    [
+        " postgresql://k:p@s:5432/d",
+        "postgresql://k:p@s:5432/d ",
+        "\n postgresql://k:p@s:5432/d \n",
+    ],
+)
+def test_url_cevresindeki_bosluk_kirpiliyor(gelen: str):
+    """
+    Sağlayıcı panelinde yapıştırılan değerin başındaki boşluk servisi
+    açtırmıyordu.
+
+    Baştaki tek bir boşluk şemayı `" postgresql"` yapıyor ve SQLAlchemy
+    `ArgumentError: Could not parse SQLAlchemy URL from given URL string`
+    ile düşüyor. Hata **hangi URL olduğunu söyleyemiyor** — parola
+    taşıyor — o yüzden panel servisi 25 Ağu 2026'da bu yüzden açılamadı
+    ve sebebi ancak kabın çıktısından bulunabildi. Sondaki boşluk zaten
+    ayrıştırılıyordu, yani kusur sessizce yarım çalışıyordu.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    duzeltilmis = _ayar(YESILIZ_VERITABANI_URL=gelen).veritabani_url
+    assert duzeltilmis == "postgresql+psycopg://k:p@s:5432/d"
+    make_url(duzeltilmis)  # ayrıştırılabiliyor: asıl kırılan yer burasıydı
+
+
 def test_acikca_verilen_surucu_korunuyor():
     assert _ayar(YESILIZ_VERITABANI_URL=PG).veritabani_url == PG
 
