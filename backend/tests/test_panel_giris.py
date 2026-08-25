@@ -483,3 +483,64 @@ def test_uretim_kapisi_sabit_kodu_reddediyor():
     )
     with pytest.raises(YapilandirmaHatasi, match="PANEL_FIXED_TOTP"):
         ayar.dogrula()
+
+
+# --- ikinci faktör bayrağı (geliştirme evresi) ---
+
+
+def test_2fa_varsayilan_olarak_zorunlu(panel_istemci, personel_kur):
+    """Varsayılan açık: parola tek başına paneli açmıyor."""
+    personel_kur(sir=sir_uret())
+    yanit = _giris(panel_istemci)
+    assert yanit.status_code == 303
+    assert yanit.headers["location"] == "/oturum/totp"
+
+
+def test_2fa_kapaliyken_parola_yetiyor(panel_istemci, personel_kur, monkeypatch):
+    """Bayrak kapalıyken TOTP adımı atlanıyor ve oturum tam yetkili."""
+    from app.ayarlar import ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_2fa_zorunlu", False)
+
+    personel_kur(sir=sir_uret())
+    yanit = _giris(panel_istemci)
+    assert yanit.status_code == 303
+    assert yanit.headers["location"] == "/yonetim/gosterge"
+
+    # Oturum yarım kalmıyor: korumalı sayfa gerçekten açılıyor.
+    assert panel_istemci.get("/yonetim/gosterge").status_code == 200
+
+
+def test_2fa_kapaliyken_yanlis_parola_yine_reddediliyor(
+    panel_istemci, personel_kur, monkeypatch
+):
+    """Bayrak ikinci faktörü kaldırıyor, kimlik doğrulamasını değil."""
+    from app.ayarlar import ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_2fa_zorunlu", False)
+
+    personel_kur(sir=sir_uret())
+    assert _giris(panel_istemci, sifre="yanlis").status_code == 401
+
+
+def test_2fa_kapaliyken_her_sayfada_serit_var(panel_istemci, personel_kur, monkeypatch):
+    """
+    Görünmeyen bir kapalı güvenlik kontrolü unutulur.
+
+    Bayrak tek bir ortam değişkeni; Yeşilay'a devretmeden önce açılması
+    gerektiğini ekranın kendisi söylemeli.
+    """
+    from app.ayarlar import ayarlar
+
+    monkeypatch.setattr(ayarlar(), "panel_2fa_zorunlu", False)
+
+    personel_kur(sir=sir_uret())
+    _giris(panel_istemci)
+    sayfa = panel_istemci.get("/yonetim/gosterge").text
+    assert "İki adımlı doğrulama kapalı" in sayfa
+
+    # Açıkken şerit yok.
+    monkeypatch.setattr(ayarlar(), "panel_2fa_zorunlu", True)
+    assert "İki adımlı doğrulama kapalı" not in panel_istemci.get(
+        "/yonetim/gosterge"
+    ).text

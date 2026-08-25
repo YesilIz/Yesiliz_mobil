@@ -18,7 +18,7 @@ from fastapi import Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.ayarlar import SURUM
+from app.ayarlar import SURUM, ayarlar
 
 SABLON_DIZINI = Path(__file__).resolve().parent / "sablonlar"
 STATIK_DIZINI = Path(__file__).resolve().parent / "statik"
@@ -55,6 +55,10 @@ def yanit(
     tam["request"] = istek
     tam.setdefault("csrf", getattr(istek.state, "csrf", ""))
     tam.setdefault("personel", getattr(istek.state, "personel", None))
+    # İkinci faktör kapalıysa panelin HER sayfası bunu söylüyor: tek bir
+    # ortam değişkeniyle kapanan bir güvenlik kontrolü, görünmezse
+    # unutulur (`ayarlar.panel_2fa_zorunlu`).
+    tam.setdefault("iki_fa_kapali", not ayarlar().panel_2fa_zorunlu)
 
     secilen = parca if (parca and htmx_mi(istek)) else ad
     return sablonlar.TemplateResponse(request=istek, name=secilen, context=tam, status_code=durum)

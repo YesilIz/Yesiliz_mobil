@@ -55,6 +55,15 @@
     </nav>
 
     <main class="icerik">
+      {# İkinci faktör kapalıyken her sayfada görünüyor. Tek bir ortam
+         değişkeniyle kapanan bir güvenlik kontrolü görünmezse unutulur;
+         Yeşilay'a devretmeden önce açılması gereken şey bu. #}
+      {% if iki_fa_kapali %}
+        <p class="serit serit-uyari">
+          İki adımlı doğrulama kapalı. Bu panel yalnızca parolayla korunuyor;
+          devretmeden önce <code>PANEL_2FA_REQUIRED</code> açılmalı.
+        </p>
+      {% endif %}
       {% block icerik %}{% endblock %}
     </main>
   </div>
