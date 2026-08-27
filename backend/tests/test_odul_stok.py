@@ -103,6 +103,44 @@ def test_fidan_bagisi_da_stok_istiyor(db, istemci, kullanici_kur):
     assert _sec(istemci, baslik, secenek="fidan_bagisi").status_code == 503
 
 
+def test_durum_fidan_kademesini_de_bildiriyor(db, istemci):
+    """
+    `fidan` kademesi `SECILEBILIR_ODULLER`'de yoktu.
+
+    K62 "fidan bağışı da stok istiyor" diyor ama sözlük onu tanımadığı için
+    `/odul/durum` satır döndürmüyor, panel de ona parti yükleyemiyordu — yani
+    kademe finansman gelse bile açılamıyordu. Cihaz kapıyı bu uçtan okuduğu
+    için kademe kalıcı olarak "teslimat etkin değil" görünüyordu.
+    """
+    satirlar = istemci.get("/odul/durum").json()
+    kademeler = {s["kademeId"] for s in satirlar}
+
+    assert "fidan" in kademeler
+    fidan = [s for s in satirlar if s["kademeId"] == "fidan"]
+    assert [s["secenekId"] for s in fidan] == ["fidan_bagisi"]
+    assert fidan[0]["acik"] is False, "Stok yokken kapalı (fail-closed)"
+
+    # Dijital rozetin sunucuda karşılığı YOK ve olmamalı: tedarik zinciri
+    # gerektirmiyor, kapı ona cihazda hiç uygulanmıyor.
+    assert "rozet" not in kademeler
+
+
+def test_fidan_stogu_yuklenince_kademe_aciliyor(db, panel_istemci, girisli, istemci):
+    girisli()
+    assert _post(
+        panel_istemci,
+        "/yonetim/odul/stok",
+        kademe_id="fidan",
+        secenek_id="fidan_bagisi",
+        adet=5,
+        gerekce=GEREKCE,
+    ).status_code in (200, 303)
+
+    satirlar = istemci.get("/odul/durum").json()
+    fidan = next(s for s in satirlar if s["kademeId"] == "fidan")
+    assert fidan["acik"] is True
+
+
 def test_stok_sifirlaninca_kapaniyor(db, istemci, kullanici_kur):
     baslik, _ = kullanici_kur()
     _stok(db, adet=0)
