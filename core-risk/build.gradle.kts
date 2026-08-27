@@ -11,7 +11,7 @@ kotlin {
 
 dependencies {
     testImplementation(libs.junit)
-    // tests/test_vectors.json okunacak (CLAUDE.md §14 test kuralı)
+    // tests/test_vectors.json okunacak (CLAUDE.md §7 test kuralı)
     testImplementation(libs.kotlinx.serialization.json)
 }
 

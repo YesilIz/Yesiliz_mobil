@@ -614,7 +614,7 @@ prototip kapsamı dışı: kategori başına ayrı picker, örüntü denetimiyle
 | `app/data/tercih/` | DataStore: hedef · onboarding bayrağı · kurulum tarihi · gizlilik | yeniden başlatmada korunuyor |
 | `app/data/depo/RiskDeposu` | **hesap zinciri** — anket + `d` → skor → güvenlik → histerezis → trend → `risk_sonuc` | **8 emülatör testi** |
 | `app/data/depo/PuanDeposu` + `domain/puan/` | görev · seri · çarpan · günlük tavan | **7 birim testi** |
-| `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 7 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
+| `app/arkaplan/` | `GunlukOzetWorker` (gecelik + 30 gün telafi) · `IsPlanlayici` | emülatörde 8 gün telafi etti |
 | `app/data/saglik/` | Health Connect (adım + oturum bazlı egzersiz) **+** donanım adım sayacı yedeği; `AktiviteSaglayici` adımı birleştiriyor, spor dakikasını `domain/kullanim/AktiviteTekillestir` ile tekilleştiriyor (§12 K31) | **6 + 11 birim testi**; cihazda boru hattı uçtan uca koştu (`D < 1` ilk kez) — sayının kendisi gerçek bir günle **doğrulanmadı**, `debug.md` §5 |
 | `app/nudge/` | Tetikleyici (tüketim bloğu, saf) + `NudgeOverlayService` (canlı izleme, `WindowManager` overlay, blur API 31+) + `NudgeOverlay` UI + `NudgeIzni` | **8 birim testi**; Profil'de "Mola hatırlatıcı" anahtarı |
 | `ui/ekran/ana/AnaEkran` görev detayı | Alt sayfa (`GorevDetayi`) — tüm 7 görev için ortak; puan/süre/doğrulama/limit çipleri, göreve göre eylem | `AnaViewModel.gorevTiklandi` artık gerçekten çağrılıyor |
