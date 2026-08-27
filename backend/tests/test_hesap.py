@@ -381,6 +381,70 @@ def test_profil_bos_govde_hicbir_seyi_degistirmiyor(istemci, kullanici_kur, db):
     assert (kullanici.ad, kullanici.avatar) == ("Turan K", "AGAC")
 
 
+def test_sifre_degisince_eski_yenileme_jetonu_gecersiz(istemci, kullanici_kur):
+    """
+    Şifreyi değiştiren üç yoldan biri bu uçtu ve tek iptal etmeyeniydi.
+
+    `cikis` ve `sifre-yenile` iptal ediyor, panel de ediyor (K60). Buradaki
+    boşluk, ucun kendi KDoc'unda tarif ettiği tehdidi açık bırakıyordu:
+    telefonu ele geçirenin 30 günlük yenileme jetonu, kullanıcı şifresini
+    değiştirse de yaşamaya devam ediyordu.
+    """
+    baslik, jetonlar = kullanici_kur()
+    eski_yenileme = jetonlar["yenileme"]
+
+    yanit = istemci.patch(
+        "/auth/profil",
+        json={"mevcutSifre": "parola123", "yeniSifre": "yeniparola1"},
+        headers=baslik,
+    )
+    assert yanit.status_code == 200
+
+    assert istemci.post(
+        "/auth/yenile", json={"yenileme": eski_yenileme}
+    ).status_code == 401
+
+
+def test_sifre_degisince_bu_cihaza_yeni_jeton_donuyor(istemci, kullanici_kur):
+    """
+    Yeni jeton dönmeseydi kullanıcı KENDİ oturumundan da düşerdi: erişim
+    jetonu ≤30 dk sonra dolar, yenileme reddedilir ve oturum hiçbir
+    açıklama olmadan kapanırdı.
+    """
+    baslik, _ = kullanici_kur()
+
+    yanit = istemci.patch(
+        "/auth/profil",
+        json={"mevcutSifre": "parola123", "yeniSifre": "yeniparola1"},
+        headers=baslik,
+    )
+    yeni = yanit.json()["jetonlar"]
+    assert yeni is not None
+
+    # Yeni erişim jetonu korumalı uçta çalışıyor.
+    assert istemci.get(
+        "/auth/verilerim", headers={"Authorization": f"Bearer {yeni['erisim']}"}
+    ).status_code == 200
+    # Yeni yenileme jetonu da geçerli — iptal döngüsü onu kapsamamalı.
+    assert istemci.post(
+        "/auth/yenile", json={"yenileme": yeni["yenileme"]}
+    ).status_code == 200
+
+
+def test_sifresiz_profil_guncellemesi_oturumlari_dusurmuyor(istemci, kullanici_kur):
+    """Ad/avatar değişimi bir kimlik bilgisi değişimi değil."""
+    baslik, jetonlar = kullanici_kur()
+
+    yanit = istemci.patch("/auth/profil", json={"ad": "Turan K"}, headers=baslik)
+    assert yanit.status_code == 200
+    # Alan gövdede hiç yok: bu yolun sözleşmesi değişmedi.
+    assert "jetonlar" not in yanit.json()
+
+    assert istemci.post(
+        "/auth/yenile", json={"yenileme": jetonlar["yenileme"]}
+    ).status_code == 200
+
+
 def test_profilden_sifre_degistirince_yeni_sifre_geciyor(istemci, kullanici_kur):
     baslik, _ = kullanici_kur()
 

@@ -264,9 +264,16 @@
         <!--
           Aktif yürüyüş sayacı (debug.md İ-3).
 
-          `health` tipi egzersiz oturumunun doğru sınıfı. Servis yalnızca
-          kullanıcı yürüyüşü başlattığında çalışıyor ve hedef süre dolunca
-          kendini durduruyor; sürekli açık kalan bir servis değil.
+          Tip `specialUse`, `health` DEĞİL (§12 K21). `health` tipi
+          platformun sağlık/aktivite izinlerinden en az birini şart koşuyor;
+          ACTIVITY_RECOGNITION isteğe bağlı sayıldığı için izni reddetmiş
+          cihazda `startForeground` SecurityException atıp süreci
+          çökertiyordu. 15 dakikalık bir sayaç için meşru bir izin ön koşulu
+          yok; gerekçenin tamamı yukarıdaki izin bloğunda.
+
+          Servis yalnızca kullanıcı yürüyüşü başlattığında çalışıyor ve hedef
+          süre dolunca kendini durduruyor; sürekli açık kalan bir servis
+          değil.
         -->
         <service
             android:name=".arkaplan.YuruyusServisi"

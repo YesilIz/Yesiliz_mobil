@@ -83,18 +83,29 @@ class ProfilIstek(BaseModel):
         return deger.strip() if isinstance(deger, str) else deger
 
 
-class Profil(BaseModel):
-    ad: str
-    eposta: str
-    avatar: str
-
-
 class Jetonlar(BaseModel):
     erisim: str
     yenileme: str
     ad: str
     eposta: str
     avatar: str = ""
+
+
+class Profil(BaseModel):
+    ad: str
+    eposta: str
+    avatar: str
+
+    #: Şifre değiştiyse **yeni** oturum jetonları; değişmediyse `None`.
+    #:
+    #: Şifre değişimi kullanıcının bütün yenileme jetonlarını iptal ediyor
+    #: (`sifre-yenile` ve panel K60 ile aynı kural). Bu alan olmasaydı
+    #: şifresini değiştiren kullanıcının KENDİ cihazı da düşerdi: erişim
+    #: jetonu ≤30 dakika sonra dolar, yenileme reddedilir ve oturum hiçbir
+    #: açıklama olmadan kapanırdı. İstemci bunu görünce jetonlarını
+    #: tazeliyor; alanı tanımayan eski istemciler yalnızca yeniden giriş
+    #: yapmak zorunda kalır — güvenli taraf.
+    jetonlar: Jetonlar | None = None
 
 
 # --- özet senkronu ---

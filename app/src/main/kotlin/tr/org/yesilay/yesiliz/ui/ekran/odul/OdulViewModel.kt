@@ -25,7 +25,6 @@ import kotlinx.coroutines.launch
 import tr.org.yesilay.yesiliz.ui.ikonu
 import tr.org.yesilay.yesiliz.data.depo.OdulDeposu
 import tr.org.yesilay.yesiliz.data.depo.PuanDeposu
-import tr.org.yesilay.yesiliz.data.depo.MADDI_ODUL_TESLIMATI_ETKIN
 import tr.org.yesilay.yesiliz.data.yerel.entity.GorevTamamlamaEntity
 import tr.org.yesilay.yesiliz.data.zaman.GuncelGun
 import tr.org.yesilay.yesiliz.domain.gorev.Gorev
@@ -83,13 +82,15 @@ class OdulViewModel @Inject constructor(
         // Maddi ödül kapısı artık derlemeye gömülü değil, sunucudaki stok
         // (K28, A4'ün teknik ayağı). Ulaşılamazsa kapalı: "bilmiyoruz"u
         // "açık" saymak, karşılanamayacak bir ödülü seçtirmek olurdu.
+        //
+        // **Kapı yalnızca teslimat gerektiren kademelere uygulanıyor.**
+        // Eskiden koşulsuzdu ve sunucu yalnızca kuponları tanıdığı için
+        // dijital rozet de `false`'a düşüyordu: 500 puana ulaşan HER
+        // kullanıcı, tedarik zinciri gerektirmeyen bir başarı kartı için
+        // "teslimat etkin değil" görüyordu (§12 K64).
         val ham = KADEMELER.map { kademe ->
             kademe
-                .copy(
-                    teslimatEtkinMi = kademe.secenekler.any {
-                        (kademe.id to it.id) in acikSecenekler
-                    },
-                )
+                .copy(teslimatEtkinMi = kademe.teslimatAcikMi(acikSecenekler))
                 .duruma(puan, aktifGun, secimler[kademe.id])
         }
         // Kilitli kademelerin EN DÜŞÜĞÜ "aktif" — üzerinde ilerleme çubuğu
@@ -124,26 +125,62 @@ class OdulViewModel @Inject constructor(
         viewModelScope.launch { odulDeposu.sec(kademeId, secenekId) }
     }
 
-    /** `docs/spec-puan.md §9.1` — kademe tanımı. */
-    private data class SecenekTanimi(
+    /**
+     * `docs/spec-puan.md §9.1` — kademe tanımı.
+     *
+     * Metin **teslimat durumuna göre** değişiyor. Eskiden tek bir ad ve tek
+     * bir açıklama vardı, ikisi de "planlanan" dilindeydi ve kapı sunucudaki
+     * stoğa taşındığında (K62) güncellenmemişti: panelden parti yüklenince
+     * kademe seçilebilir oluyor ama kullanıcı "Planlanan market kuponu —
+     * sponsorluk ve teslimat altyapısı henüz etkin değil" yazan bir seçeneği
+     * seçiyordu. K62'nin "parti yüklenince kademe açılıyor" vaadi, metin
+     * derlemeye gömülü kaldığı için APK yayını olmadan tamamlanmıyordu.
+     */
+    internal data class SecenekTanimi(
         val id: String,
+        /** Teslimat açıkken görünen ad. */
         val ad: String,
         val ikon: ImageVector,
+        /** Teslimat açıkken görünen açıklama. */
         val aciklama: String,
-    )
+        /** Teslimat kapalıyken görünen ad; dijital ödüllerde ikisi aynı. */
+        val planlananAd: String = ad,
+        /** Teslimat kapalıyken görünen açıklama. */
+        val planlananAciklama: String = aciklama,
+    ) {
+        fun gorunen(teslimatEtkinMi: Boolean) = Secenek(
+            id = id,
+            ad = if (teslimatEtkinMi) ad else planlananAd,
+            ikon = ikon,
+            aciklama = if (teslimatEtkinMi) aciklama else planlananAciklama,
+        )
+    }
 
-    private data class Kademe(
+    internal data class Kademe(
         val id: String,
         val esik: Int,
         val aktifGunKosulu: Int,
         val secenekler: List<SecenekTanimi>,
+        /**
+         * Kademe fiziksel bir teslimat/bağış gerektiriyor mu?
+         *
+         * `false` olan tek kademe dijital rozet: karşılığı uygulama içi bir
+         * başarı kartı (K28), tedarik zinciri yok ve sunucunun
+         * `SECILEBILIR_ODULLER` sözlüğünde de yok — yani stok kapısı ona
+         * uygulanırsa kademe sonsuza kadar kapalı kalır.
+         */
+        val stogaBagli: Boolean = true,
         val teslimatEtkinMi: Boolean = true,
     ) {
+        /** Stoğa bağlı olmayan kademe her zaman açık; gerisi sunucudaki stoğa bakar. */
+        fun teslimatAcikMi(acikSecenekler: Set<Pair<String, String>>): Boolean =
+            !stogaBagli || secenekler.any { (id to it.id) in acikSecenekler }
+
         fun duruma(puan: Int, aktifGun: Int, secilenId: String?): Odul {
             val hakEdildi = puan >= esik && aktifGun >= aktifGunKosulu
             val cokluSecenek = secenekler.size > 1
             val secilen = secilenId?.let { id -> secenekler.firstOrNull { it.id == id } }
-            val gosterim = secilen ?: secenekler.first()
+            val gosterim = (secilen ?: secenekler.first()).gorunen(teslimatEtkinMi)
 
             val hal = odulHaliniBelirle(
                 hakEdildi = hakEdildi,
@@ -160,22 +197,42 @@ class OdulViewModel @Inject constructor(
                 hal = hal,
                 aciklama = gosterim.aciklama,
                 teslimatEtkinMi = teslimatEtkinMi,
-                secenekler = secenekler.map { Secenek(it.id, it.ad, it.ikon, it.aciklama) },
+                secenekler = secenekler.map { it.gorunen(teslimatEtkinMi) },
             )
         }
     }
 
-    private companion object {
+    /**
+     * `internal`, `private` değil: kademe tablosu ve stok kapısının ona nasıl
+     * uygulandığı testten görülebilmeli. Kapı bir kez koşulsuz uygulandığı
+     * için dijital rozet de kapanmıştı (§12 K64) ve bunu yakalayacak bir
+     * test yoktu.
+     */
+    internal companion object {
         /** Misafirin görünür adı — AnaViewModel ve Profil ile aynı. */
         const val SABIT_ISIM = "Misafir"
 
         const val AKIS_BEKLEME_MS = 5_000L
+
+        /** Üç kademede birden görünüyor; tanımı tek yerde dursun. */
+        val FIDAN_BAGISI = SecenekTanimi(
+            id = "fidan_bagisi",
+            ad = "Fidan bağışı",
+            ikon = Icons.Filled.Park,
+            aciklama = "Senin adına bir fidan dikilir; bağış belgesi " +
+                "uygulamada görünür.",
+            planlananAd = "Planlanan fidan desteği",
+            planlananAciklama = MADDI_ODUL_ACIKLAMASI,
+        )
 
         val KADEMELER = listOf(
             Kademe(
                 id = "rozet",
                 esik = 500,
                 aktifGunKosulu = 0,
+                // Uygulama içi başarı kartı — teslim edilecek bir şey yok,
+                // stok kapısı uygulanmıyor (bkz. [Kademe.stogaBagli]).
+                stogaBagli = false,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "rozet",
@@ -190,54 +247,40 @@ class OdulViewModel @Inject constructor(
                 id = "fidan",
                 esik = 2_000,
                 aktifGunKosulu = 14,
-                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
-                secenekler = listOf(
-                    SecenekTanimi(
-                        id = "fidan_bagisi",
-                        ad = "Planlanan fidan desteği",
-                        ikon = Icons.Filled.Park,
-                        aciklama = MADDI_ODUL_ACIKLAMASI,
-                    ),
-                ),
+                secenekler = listOf(FIDAN_BAGISI),
             ),
             Kademe(
                 id = "kupon_market",
                 esik = 5_000,
                 aktifGunKosulu = 30,
-                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "market_kuponu",
-                        ad = "Planlanan market kuponu",
+                        ad = "Market kuponu",
                         ikon = Icons.Filled.ShoppingBasket,
-                        aciklama = MADDI_ODUL_ACIKLAMASI,
+                        aciklama = "Yeşilay'ın anlaşmalı olduğu marketlerde " +
+                            "kullanabileceğin bir hediye kuponu.",
+                        planlananAd = "Planlanan market kuponu",
+                        planlananAciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
-                    SecenekTanimi(
-                        id = "fidan_bagisi",
-                        ad = "Planlanan fidan desteği",
-                        ikon = Icons.Filled.Park,
-                        aciklama = MADDI_ODUL_ACIKLAMASI,
-                    ),
+                    FIDAN_BAGISI,
                 ),
             ),
             Kademe(
                 id = "kupon_spor",
                 esik = 10_000,
                 aktifGunKosulu = 45,
-                teslimatEtkinMi = MADDI_ODUL_TESLIMATI_ETKIN,
                 secenekler = listOf(
                     SecenekTanimi(
                         id = "kupon_spor_kitap",
-                        ad = "Planlanan spor / kitap kuponu",
+                        ad = "Spor / kitap kuponu",
                         ikon = Icons.Filled.SportsScore,
-                        aciklama = MADDI_ODUL_ACIKLAMASI,
+                        aciklama = "Spor malzemesi ya da kitap için " +
+                            "kullanabileceğin bir hediye kuponu.",
+                        planlananAd = "Planlanan spor / kitap kuponu",
+                        planlananAciklama = MADDI_ODUL_ACIKLAMASI,
                     ),
-                    SecenekTanimi(
-                        id = "fidan_bagisi",
-                        ad = "Planlanan fidan desteği",
-                        ikon = Icons.Filled.Park,
-                        aciklama = MADDI_ODUL_ACIKLAMASI,
-                    ),
+                    FIDAN_BAGISI,
                 ),
             ),
         )

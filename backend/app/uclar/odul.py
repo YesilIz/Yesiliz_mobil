@@ -17,7 +17,11 @@ yonlendirici = APIRouter(prefix="/odul", tags=["odul"])
 # Sunucu puan hak edişini henüz bağımsız hesaplamıyor; yine de istemci
 # keyfî bir kimlikle kupon/bağış kaydı oluşturamamalı. Bu sözleşme
 # `OdulViewModel.KADEMELER` ve `docs/spec-puan.md §9.1` ile aynıdır.
+# `rozet` kademesi BİLEREK yok: dijital bir başarı kartı, tedarik zinciri
+# gerektirmiyor (K28) ve stok kapısına takılmamalı. Cihaz da o kademeye
+# kapıyı hiç uygulamıyor (`OdulViewModel.Kademe.stogaBagli`).
 SECILEBILIR_ODULLER = {
+    "fidan": {"fidan_bagisi"},
     "kupon_market": {"market_kuponu", "fidan_bagisi"},
     "kupon_spor": {"kupon_spor_kitap", "fidan_bagisi"},
 }
@@ -30,6 +34,13 @@ SECILEBILIR_ODULLER = {
 # Sabit `MADDI_ODUL_TESLIMATI_ETKIN = False` kaldırıldı. Stok satırı
 # yoksa kapı yine kapalı — "satır yok" "sınırsız" demek değil (fail-closed,
 # §4/K37), yani hiç parti yüklenmemiş bir kurulumda davranış aynı.
+#
+# `fidan` kademesi 27 Ağu 2026'da eklendi. K62 "fidan bağışı da stok
+# istiyor" diyor ama bu sözlük onu tanımıyordu: panel ona parti
+# yükleyemiyor, `/odul/durum` satır döndürmüyordu. Yani kademe finansman
+# gelse bile açılamıyordu — kararın vaat ettiğinin tersi. Tek seçenekli
+# olduğu için `POST /odul/sec` yolundan geçmiyor, ama doğrulama listesi ve
+# stok ekranı da aynı sözlükten türediği için burada durması gerekiyor.
 
 
 @yonlendirici.post("/sec", response_model=OdulSecimiDto, status_code=status.HTTP_201_CREATED)

@@ -179,10 +179,15 @@ private fun MolaEsigiBolumu(durum: HedefDurum, viewModel: HedefViewModel) {
             acik = durum.molaHatirlaticiAcik,
             onDegis = { acik ->
                 viewModel.molaHatirlaticiAyarla(acik)
-                // Overlay izni olmadan popup çizilemiyor; anahtarı açan
-                // kullanıcıyı sistem ekranına bir kez yönlendiriyoruz.
-                if (acik && !NudgeIzni.verildiMi(baglam) && NudgeIzni.ayarEkraniVarMi(baglam)) {
-                    baglam.startActivity(NudgeIzni.ayarIntent(baglam))
+                // Nudge'ın iki sistem izni (overlay, pil muafiyeti)
+                // YALNIZCA burada isteniyor: kullanıcı özelliği açtığı an.
+                // Eskiden `MainActivity.onResume` her dönüşte soruyor ve
+                // üçü de verildiyse anahtarı zorla açıyordu — yani anahtarı
+                // kapatmanın hiçbir yolu yoktu (§3 "zorlama yok", K45/K53).
+                // Çağrı başına en fazla bir ekran açılıyor; sıradaki izin
+                // anahtar bir daha açıldığında geliyor.
+                if (acik) {
+                    NudgeIzni.eksikIzinIntenti(baglam)?.let(baglam::startActivity)
                 }
             },
         )

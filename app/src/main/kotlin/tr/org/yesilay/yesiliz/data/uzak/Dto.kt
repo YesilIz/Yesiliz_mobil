@@ -49,8 +49,19 @@ data class ProfilIstek(
     val yeniSifre: String? = null,
 )
 
+/**
+ * @param jetonlar şifre değiştiyse **yeni** oturum jetonları, yoksa `null`.
+ *   Sunucu şifre değişiminde bütün yenileme jetonlarını iptal ediyor; bu
+ *   alan olmadan kullanıcının kendi cihazı da ≤30 dakika sonra sessizce
+ *   oturumdan düşerdi. Alan gövdede yalnızca şifre değişince bulunuyor.
+ */
 @Serializable
-data class ProfilDto(val ad: String, val eposta: String, val avatar: String = "")
+data class ProfilDto(
+    val ad: String,
+    val eposta: String,
+    val avatar: String = "",
+    val jetonlar: JetonlarDto? = null,
+)
 
 // --- özet senkronu ---
 

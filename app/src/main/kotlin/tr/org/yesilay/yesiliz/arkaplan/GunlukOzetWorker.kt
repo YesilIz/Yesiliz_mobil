@@ -90,10 +90,17 @@ class GunlukOzetWorker @AssistedInject constructor(
         val sonuc = try {
             val bugun = LocalDate.now(saat)
             val baslangic = bugun.minusDays(TELAFI_GUN)
+
+            // Kurulum tarihi `islenmis` hesabından ÖNCE okunuyor: kurulum
+            // öncesi günlerin "tamamlandı" ölçütü farklı (bkz.
+            // [tamamlanmisGunler]).
+            val kurulum = tercihler.anlik().ilkKurulumTarihi
+
             val islenmis = tamamlanmisGunler(
-                ozetDao.islenmisGunler(baslangic, bugun),
-                riskDao.islenmisGunler(baslangic, bugun),
-                puanDao.islenmisGunler(baslangic, bugun),
+                ozetGunleri = ozetDao.islenmisGunler(baslangic, bugun),
+                riskGunleri = riskDao.islenmisGunler(baslangic, bugun),
+                puanGunleri = puanDao.islenmisGunler(baslangic, bugun),
+                kurulum = kurulum,
             )
 
             // Kurulumdan ÖNCEsi telafi edilmiyor. UsageStats kurulumdan önceki
@@ -101,7 +108,6 @@ class GunlukOzetWorker @AssistedInject constructor(
             // izlemiyordu; o günleri işlemek geçmişi geriye doğru uydurmak olurdu.
             // Telafinin asıl işi, uygulama birkaç gün açılmadığında oluşan
             // BOŞLUKLARI kapatmak (`debug.md` K-4).
-            val kurulum = tercihler.anlik().ilkKurulumTarihi
             val veriBaslangici = tercihler.veriBaslangicAni.first()
 
             // Donanım sayacı özet hesaplanmadan HEMEN ÖNCE örnekleniyor. Sensör
@@ -269,17 +275,36 @@ class GunlukOzetWorker @AssistedInject constructor(
 }
 
 /**
- * Bir gün ancak üç kalıcı çıktısı da varsa tamamlanmıştır. Kesişim yerine
- * yalnızca özet satırına bakmak, risk/puan aşamasındaki kısmi hatayı kalıcı
- * bir veri boşluğuna dönüştürür.
+ * Bir gün ancak **beklenen bütün çıktıları** yazıldıysa tamamlanmıştır.
+ *
+ * Kurulumdan **sonraki** günlerde bu üç tablonun kesişimi demek. Yalnızca
+ * özet satırına bakmak, risk/puan aşamasındaki kısmi hatayı kalıcı bir veri
+ * boşluğuna dönüştürürdü.
+ *
+ * Kurulumdan **önceki** günlerde ölçüt yalnızca özet satırı: o günlere risk
+ * ve puan bilerek hiç yazılmıyor (kullanıcı o günlerde uygulamayı
+ * kullanmıyordu; geriye dönük seri/puan vermek `debug.md` K-4'ün ta
+ * kendisi). Kesişim onları da arayınca hiçbir zaman "tamamlandı"
+ * sayılmıyorlardı ve [GunlukOzetWorker.TELAFI_GUN] penceresi boyunca **her
+ * gece yeniden işleniyorlardı** — kurulumdan 30 gün sonra kendiliğinden
+ * biten ama ilk ay boyunca her koşumda 30'a yakın günü boşuna tarayan bir
+ * israf.
+ *
+ * @param kurulum ilk kurulum tarihi; `null` ise (henüz yazılmamış) hiçbir
+ *   gün "kurulum öncesi" sayılmaz ve davranış üçlü kesişimin aynısı olur.
  */
 internal fun tamamlanmisGunler(
     ozetGunleri: List<LocalDate>,
     riskGunleri: List<LocalDate>,
     puanGunleri: List<LocalDate>,
-): Set<LocalDate> = ozetGunleri.toSet()
-    .intersect(riskGunleri.toSet())
-    .intersect(puanGunleri.toSet())
+    kurulum: LocalDate?,
+): Set<LocalDate> {
+    val risk = riskGunleri.toSet()
+    val puan = puanGunleri.toSet()
+    return ozetGunleri.filterTo(mutableSetOf()) { gun ->
+        if (kurulum != null && gun < kurulum) true else gun in risk && gun in puan
+    }
+}
 
 /** Bir günün ham olay + özet + risk + puan yazılarını tek işlem yapar. */
 internal suspend fun <T> gunlukZinciriAtomik(db: YesilizDb, blok: suspend () -> T): T =

@@ -163,7 +163,10 @@ def yenile(istek: YenileIstek, db: Session = Depends(oturum)) -> Jetonlar:
     return _jetonlar(db, kullanici)
 
 
-@yonlendirici.patch("/profil", response_model=Profil)
+# `exclude_none`: `jetonlar` yalnızca şifre değiştiğinde gövdede görünüyor.
+# Alanı her yanıtta `null` olarak taşımak, ad/avatar güncellemesinin
+# sözleşmesini de değiştirirdi; bu yolda gövde bit-birebir eskisi kalıyor.
+@yonlendirici.patch("/profil", response_model=Profil, response_model_exclude_none=True)
 def profil_guncelle(
     istek: ProfilIstek,
     db: Session = Depends(oturum),
@@ -179,6 +182,14 @@ def profil_guncelle(
 
     Şifre değişimi **mevcut şifreyi** şart koşuyor. Erişim jetonu tek başına
     yetseydi, telefonu eline geçiren biri hesabı kalıcı olarak devralırdı.
+
+    Ve şifre değişince **bütün yenileme jetonları iptal ediliyor.** Bu uç
+    şifreyi değiştiren üç yoldan biriydi ve tek iptal etmeyeniydi: `cikis`
+    ve `sifre-yenile` ediyor, panel de ediyor (K60). Yani ucun kendi tarif
+    ettiği tehdit karşılanmıyordu — telefonu ele geçiren birinin 30 günlük
+    yenileme jetonu, kullanıcı şifresini değiştirse de yaşamaya devam
+    ediyordu. İptalden sonra bu cihaza yeni bir jeton çifti dönüyor
+    ([Profil.jetonlar]), yoksa kullanıcı kendi oturumundan da düşerdi.
 
     Uç `PATCH` semantiğinde: gövdede olmayan alan değişmiyor. Ayrıntı ve
     gerekçe [ProfilIstek] KDoc'unda.
@@ -202,9 +213,31 @@ def profil_guncelle(
         kilitli.ad = istek.ad
     if istek.avatar is not None:
         kilitli.avatar = istek.avatar
-    db.commit()
+
+    if istek.yeniSifre is None:
+        db.commit()
+        db.refresh(kilitli)
+        return Profil(ad=kilitli.ad, eposta=kilitli.eposta, avatar=kilitli.avatar or "")
+
+    # Sıra önemli: iptal `_jetonlar`'dan ÖNCE, yoksa yeni jeton da iptal
+    # edilir. `_jetonlar` ad ve avatarı okuduğu için alan yazımlarından
+    # sonra geliyor ve commit'i kendi yapıyor.
+    for jeton in db.scalars(
+        select(YenilemeJetonu).where(
+            YenilemeJetonu.kullanici_id == kilitli.id,
+            YenilemeJetonu.iptal == False,  # noqa: E712
+        )
+    ):
+        jeton.iptal = True
+
+    yeni_jetonlar = _jetonlar(db, kilitli)
     db.refresh(kilitli)
-    return Profil(ad=kilitli.ad, eposta=kilitli.eposta, avatar=kilitli.avatar or "")
+    return Profil(
+        ad=kilitli.ad,
+        eposta=kilitli.eposta,
+        avatar=kilitli.avatar or "",
+        jetonlar=yeni_jetonlar,
+    )
 
 
 @yonlendirici.post("/cikis")
