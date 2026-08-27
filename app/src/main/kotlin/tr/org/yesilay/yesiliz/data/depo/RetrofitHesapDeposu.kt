@@ -115,6 +115,10 @@ class RetrofitHesapDeposu @Inject constructor(
                     yeniSifre = yeniSifre?.takeIf { it.isNotBlank() },
                 ),
             )
+            // Şifre değiştiyse sunucu eski yenileme jetonlarını iptal edip
+            // bu cihaza yenilerini döndü. Kaydedilmezse kullanıcı kendi
+            // şifresini değiştirdikten sonra sessizce oturumdan düşerdi.
+            profil.jetonlar?.let { jetonDeposu.kaydet(it.erisim, it.yenileme) }
             tercihler.profilGuncelle(ad = profil.ad, avatarId = profil.avatar)
             HesapSonuc.Basarili
         } catch (hata: HttpException) {
