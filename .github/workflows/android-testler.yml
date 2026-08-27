@@ -1,0 +1,75 @@
+# Android — JVM testleri.
+#
+# Bu iş 27 Ağustos 2026'ya kadar YOKTU. `backend.yml` pytest'i koşuyordu,
+# `android-ag-guvenligi.yml` kaynak düzeyinde grep yapıyordu; Android'in
+# 400'den fazla birim testinin hiçbiri hiçbir PR'da çalışmıyordu. Yani
+# CLAUDE.md §7'nin "vektörü olmayan hesap kodu merge edilmez" kuralının
+# otomasyonu da yoktu: `core-risk`'e regresyon sokan bir PR yeşil geçiyordu.
+#
+# Emülatör gerektiren süit (`connectedDebugAndroidTest`) burada BİLEREK yok:
+# ücretsiz runner'da KVM olmadığı için emülatör başlatmak dakikalar sürüyor
+# ve kararsız koşuyor. O süit gerçek cihazda elle koşuluyor (CLAUDE.md §11).
+
+name: android-testler
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "app/**"
+      - "core-risk/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "tests/**"
+      - ".github/workflows/android-testler.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "core-risk/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "tests/**"
+      - ".github/workflows/android-testler.yml"
+  workflow_dispatch:
+
+jobs:
+  testler:
+    name: core-risk + app birim testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          # CLAUDE.md §1: Temurin 17. AGP 9 daha yenisini kabul ediyor ama
+          # ekibin yerelde koşturduğu sürümle aynı olsun.
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # compileSdk 37 runner imajında kurulu olmayabiliyor; Gradle onu
+      # kendi indiremez, `sdkmanager` gerekiyor. Bu adım olmadan
+      # `:app:testDebugUnitTest` "Failed to find target with hash string"
+      # ile düşüyor — `:core-risk:test` ise saf JVM olduğu için etkilenmiyor.
+      - uses: android-actions/setup-android@v3
+
+      - name: core-risk (saf JVM)
+        run: ./gradlew :core-risk:test --console=plain
+
+      - name: app birim testleri
+        run: ./gradlew :app:testDebugUnitTest --console=plain
+
+      # Kırmızı bir koşumda "hangi test düştü" sorusunun cevabı log'da
+      # kaybolabiliyor; HTML raporu indirilebilir kalsın.
+      - name: Test raporları
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-raporlari
+          path: |
+            app/build/reports/tests/
+            core-risk/build/reports/tests/
+          retention-days: 7
